@@ -60,10 +60,16 @@ function EditorPage() {
     setRunData(null);
     bumpHistory();
     try {
+      // Read latest store state at click time (avoid stale React closure)
+      const latest = useWorkflowStore.getState().workflow;
+      // Best-effort persist so DB stays in sync with canvas
+      if (useWorkflowStore.getState().dirty) {
+        void useWorkflowStore.getState().persist();
+      }
       const res = await fetch(`/api/v1/workflows/${id}/execute`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ workflow }),
+        body: JSON.stringify({ workflow: latest }),
       });
       if (!res.ok) throw new Error("Failed to start execution");
       const { executionId } = await res.json();

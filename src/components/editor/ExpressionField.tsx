@@ -10,10 +10,73 @@ import {
   isExpression,
   type ExpressionContext,
 } from "@/lib/expressions/evaluate";
+import type { Monaco } from "@monaco-editor/react";
+import type { editor, Position } from "monaco-editor";
 
 const MonacoEditor = lazy(() =>
   import("@monaco-editor/react").then((m) => ({ default: m.default })),
 );
+
+let providersRegistered = false;
+let currentNodeNames: string[] = [];
+
+function handleEditorWillMount(monaco: Monaco) {
+  if (providersRegistered) return;
+  providersRegistered = true;
+
+  monaco.languages.registerCompletionItemProvider("javascript", {
+    triggerCharacters: ["$", "("],
+    provideCompletionItems: (model: editor.ITextModel, position: Position) => {
+      const word = model.getWordUntilPosition(position);
+      const range = {
+        startLineNumber: position.lineNumber,
+        endLineNumber: position.lineNumber,
+        startColumn: word.startColumn,
+        endColumn: word.endColumn,
+      };
+
+      const suggestions = EXPRESSION_HELPERS.map((h) => ({
+        label: h.label,
+        kind: monaco.languages.CompletionItemKind.Function,
+        insertText: h.label,
+        detail: h.detail,
+        range,
+      }));
+
+      for (const name of currentNodeNames) {
+        suggestions.push({
+          label: `$("${name}")`,
+          kind: monaco.languages.CompletionItemKind.Variable,
+          insertText: `$("${name}")`,
+          detail: `Reference to node: ${name}`,
+          range,
+        });
+      }
+
+      return { suggestions };
+    },
+  });
+
+  monaco.languages.registerHoverProvider("javascript", {
+    provideHover: (model: editor.ITextModel, position: Position) => {
+      const word = model.getWordAtPosition(position);
+      if (!word) return null;
+
+      const helper = EXPRESSION_HELPERS.find((h) => h.label.includes(word.word));
+      if (!helper) return null;
+
+      return {
+        range: new monaco.Range(
+          position.lineNumber,
+          word.startColumn,
+          position.lineNumber,
+          word.endColumn,
+        ),
+        contents: [{ value: `**${helper.label}**` }, { value: helper.detail }],
+      };
+    },
+  });
+}
 
 interface Props {
   value: string;
@@ -55,12 +118,15 @@ function CodeArea({
   onChange,
   rows,
   language,
+  nodeNames,
 }: {
   value: string;
   onChange: (v: string) => void;
   rows: number;
   language: "javascript" | "json";
+  nodeNames: string[];
 }) {
+  currentNodeNames = nodeNames;
   return (
     <ClientOnly
       fallback={
@@ -87,6 +153,7 @@ function CodeArea({
             theme="vs-dark"
             value={value}
             onChange={(v) => onChange(v ?? "")}
+            beforeMount={handleEditorWillMount}
             options={{
               minimap: { enabled: false },
               fontSize: 12,
@@ -119,11 +186,18 @@ export function ExpressionField({
   );
   const [showHelpers, setShowHelpers] = useState(false);
   const active = alwaysCode ? "expression" : mode;
+  const nodeNames = useMemo(() => Object.keys(context.nodeData ?? {}), [context.nodeData]);
 
   if (alwaysCode) {
     return (
       <div className="space-y-2">
-        <CodeArea value={value} onChange={onChange} rows={rows} language={language} />
+        <CodeArea
+          value={value}
+          onChange={onChange}
+          rows={rows}
+          language={language}
+          nodeNames={nodeNames}
+        />
       </div>
     );
   }
@@ -148,7 +222,8 @@ export function ExpressionField({
             type="button"
             onClick={() => {
               setMode("expression");
-              if (!isExpression(value)) onChange(`={{ ${value ? JSON.stringify(value) : "$json"} }}`);
+              if (!isExpression(value))
+                onChange(`={{ ${value ? JSON.stringify(value) : "$json"} }}`);
             }}
             className={cn(
               "inline-flex items-center gap-1 rounded px-2 py-0.5 text-[11px] transition",
@@ -183,14 +258,24 @@ export function ExpressionField({
         />
       ) : (
         <>
-          <CodeArea value={value} onChange={onChange} rows={Math.max(rows, 3)} language="javascript" />
+          <CodeArea
+            value={value}
+            onChange={onChange}
+            rows={Math.max(rows, 3)}
+            language="javascript"
+            nodeNames={nodeNames}
+          />
           {showHelpers && (
             <div className="max-h-44 space-y-0.5 overflow-auto rounded-md border border-border bg-background/60 p-1.5">
               {EXPRESSION_HELPERS.map((h) => (
                 <button
                   key={h.label}
                   type="button"
-                  onClick={() => onChange(`${value}${value.includes("{{") ? "" : "={{ "}${h.label}${value.includes("{{") ? "" : " }}"}`)}
+                  onClick={() =>
+                    onChange(
+                      `${value}${value.includes("{{") ? "" : "={{ "}${h.label}${value.includes("{{") ? "" : " }}"}`,
+                    )
+                  }
                   className="flex w-full items-baseline justify-between gap-3 rounded px-2 py-1 text-left hover:bg-surface"
                 >
                   <span className="font-mono text-[11px] text-[var(--expression)]">{h.label}</span>

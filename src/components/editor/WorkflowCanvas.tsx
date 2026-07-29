@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Background,
   BackgroundVariant,
@@ -22,10 +22,20 @@ const edgeTypes = { openflow: OpenFlowEdge };
 function CanvasInner({ runData }: { runData: ExecutionRunData | null }) {
   const workflow = useWorkflowStore((s) => s.workflow);
   const selectedNode = useWorkflowStore((s) => s.selectedNode);
-  const { selectNode, moveNode, connect, addNode, deleteNode, duplicateNode, undo, redo } =
-    useWorkflowStore();
+  const {
+    selectNode,
+    moveNode,
+    connect,
+    addNode,
+    deleteNode,
+    duplicateNode,
+    disconnect,
+    undo,
+    redo,
+  } = useWorkflowStore();
   const wrapper = useRef<HTMLDivElement>(null);
   const { screenToFlowPosition } = useReactFlow();
+  const [selectedEdge, setSelectedEdge] = useState<string | null>(null);
 
   const nodes = useMemo(() => {
     const base = toFlowNodes(workflow, selectedNode);
@@ -72,16 +82,51 @@ function CanvasInner({ runData }: { runData: ExecutionRunData | null }) {
       } else if ((e.key === "Delete" || e.key === "Backspace") && selectedNode) {
         e.preventDefault();
         deleteNode(selectedNode);
+      } else if ((e.key === "Delete" || e.key === "Backspace") && !selectedNode && selectedEdge) {
+        e.preventDefault();
+        disconnect(selectedEdge);
+        setSelectedEdge(null);
       } else if (e.key === "Escape") {
         selectNode(null);
+        setSelectedEdge(null);
+      } else if (selectedNode && !meta && e.key.startsWith("Arrow")) {
+        const step = e.shiftKey ? 20 : 1;
+        const node = workflow.nodes.find((n) => n.name === selectedNode);
+        if (!node) return;
+        e.preventDefault();
+        if (e.key === "ArrowUp") {
+          moveNode(selectedNode, { x: node.position[0], y: node.position[1] - step });
+        } else if (e.key === "ArrowDown") {
+          moveNode(selectedNode, { x: node.position[0], y: node.position[1] + step });
+        } else if (e.key === "ArrowLeft") {
+          moveNode(selectedNode, { x: node.position[0] - step, y: node.position[1] });
+        } else if (e.key === "ArrowRight") {
+          moveNode(selectedNode, { x: node.position[0] + step, y: node.position[1] });
+        }
       }
     };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
-  }, [selectedNode, deleteNode, duplicateNode, undo, redo, selectNode]);
+  }, [
+    selectedNode,
+    selectedEdge,
+    workflow.nodes,
+    deleteNode,
+    disconnect,
+    duplicateNode,
+    moveNode,
+    undo,
+    redo,
+    selectNode,
+  ]);
 
   return (
-    <div ref={wrapper} className="group/canvas h-full w-full">
+    <div
+      ref={wrapper}
+      role="application"
+      aria-label="Workflow canvas"
+      className="group/canvas h-full w-full"
+    >
       <ReactFlow
         nodes={nodes}
         edges={edges}
@@ -90,7 +135,14 @@ function CanvasInner({ runData }: { runData: ExecutionRunData | null }) {
         onNodesChange={onNodesChange}
         onConnect={onConnect}
         onNodeClick={(_, n) => selectNode(n.id)}
-        onPaneClick={() => selectNode(null)}
+        onEdgeClick={(_, edge) => {
+          setSelectedEdge(edge.id);
+          selectNode(null);
+        }}
+        onPaneClick={() => {
+          selectNode(null);
+          setSelectedEdge(null);
+        }}
         onDragOver={(e) => {
           e.preventDefault();
           e.dataTransfer.dropEffect = "move";

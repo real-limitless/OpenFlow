@@ -44,7 +44,7 @@ const accentStyles: Record<string, { ring: string; text: string; bg: string }> =
   },
 };
 
-function BaseNodeInner({ data }: NodeProps<OpenFlowNode>) {
+function BaseNodeInner({ data, selected }: NodeProps<OpenFlowNode>) {
   const node = data.node;
   const exec = (data as Record<string, unknown>).executionStatus as string | undefined;
   const { description, inputs, outputs } = handlesFor(node);
@@ -80,15 +80,18 @@ function BaseNodeInner({ data }: NodeProps<OpenFlowNode>) {
       })}
 
       <div
+        aria-label={node.name}
         className={cn(
           "of-node-shell relative flex w-[228px] items-center gap-3 overflow-hidden border border-border border-l-4 bg-surface px-3 py-3 shadow-lg transition-all duration-300",
           isTrigger ? "rounded-l-2xl rounded-r-md" : "rounded-md",
           styles.ring,
+          selected && "ring-2 ring-primary ring-offset-2 ring-offset-background",
           node.disabled && "opacity-45 grayscale",
           isRunning &&
             "border-blue-500/60 shadow-[0_0_0_2px_rgba(59,130,246,0.35),0_0_20px_rgba(59,130,246,0.25)]",
           isSuccess && "border-emerald-500/50 shadow-[0_0_0_2px_rgba(16,185,129,0.25)]",
-          isError && "border-red-500/60 shadow-[0_0_0_2px_rgba(239,68,68,0.35)] animate-[shake_0.4s_ease-in-out]",
+          isError &&
+            "border-red-500/60 shadow-[0_0_0_2px_rgba(239,68,68,0.35)] animate-[shake_0.4s_ease-in-out]",
           isPending && "opacity-70",
           isSkipped && "opacity-50 grayscale",
         )}
@@ -134,7 +137,9 @@ function BaseNodeInner({ data }: NodeProps<OpenFlowNode>) {
         {description.placeholder && !exec && (
           <Icons.TriangleAlert className="relative size-4 shrink-0 text-[var(--warning)]" />
         )}
-        {node.disabled && <Icons.PowerOff className="relative size-4 shrink-0 text-muted-foreground" />}
+        {node.disabled && (
+          <Icons.PowerOff className="relative size-4 shrink-0 text-muted-foreground" />
+        )}
 
         {isRunning && (
           <div className="absolute bottom-0 left-0 right-0 h-0.5 overflow-hidden bg-blue-500/20">
