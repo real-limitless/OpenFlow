@@ -71,5 +71,9 @@ docs/
 
 1. Spec agent: `docs/prompts/01-spec-from-public-docs.md` → `docs/specs/nodes/*.md`
 2. Implement agent (separate session): `docs/prompts/02-implement-from-spec.md` → SDK nodes
+3. **OpenCode batches of 4:** `scripts/factory/README.md` + catalog `docs/specs/CATALOG.md`
+4. **Hot-load (dev):** `POST /api/v1/dev/reload-nodes` when `OPENFLOW_HOT_NODES=1`
+5. **Batch tests:** `npm run test:batch -- 00`
+6. **Dogfood:** `npm run test:dogfood` · fixtures in `workflows/dogfood/` · `docs/dogfood.md`
 
 See `docs/clean-room.md` and `docs/sdk/OVERVIEW.md`.

@@ -1,0 +1,50 @@
+{
+  "id": "dogfood-child",
+  "name": "Dogfood: Subflow Child",
+  "active": false,
+  "nodes": [
+    {
+      "id": "df-sc-1",
+      "name": "When Called",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1,
+      "position": [0, 0],
+      "parameters": {
+        "inputSource": "passthrough"
+      }
+    },
+    {
+      "id": "df-sc-2",
+      "name": "Mark Child",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3,
+      "position": [260, 0],
+      "parameters": {
+        "mode": "manual",
+        "includeOtherFields": true,
+        "fields": [
+          { "name": "fromChild", "type": "stringValue", "value": "yes" }
+        ]
+      }
+    },
+    {
+      "id": "df-sc-3",
+      "name": "Done",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [500, 0],
+      "parameters": {}
+    }
+  ],
+  "connections": {
+    "When Called": {
+      "main": [[{ "node": "Mark Child", "type": "main", "index": 0 }]]
+    },
+    "Mark Child": {
+      "main": [[{ "node": "Done", "type": "main", "index": 0 }]]
+    }
+  },
+  "settings": { "executionOrder": "v1" },
+  "pinData": {},
+  "meta": { "openflowDogfood": true, "phase": 3, "id": "WF3-child" }
+}

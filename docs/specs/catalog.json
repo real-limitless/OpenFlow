@@ -1,0 +1,229 @@
+{
+  "version": 1,
+  "updated": "2026-07-28",
+  "dogfoodP0": [
+    "n8n-nodes-base.executeWorkflow",
+    "n8n-nodes-base.manualTrigger",
+    "n8n-nodes-base.webhook",
+    "n8n-nodes-base.respondToWebhook",
+    "n8n-nodes-base.httpRequest",
+    "n8n-nodes-base.set",
+    "n8n-nodes-base.if",
+    "n8n-nodes-base.switch",
+    "n8n-nodes-base.merge",
+    "n8n-nodes-base.wait",
+    "n8n-nodes-base.noOp",
+    "n8n-nodes-base.code",
+    "n8n-nodes-base.scheduleTrigger",
+    "n8n-nodes-base.filter",
+    "n8n-nodes-base.limit",
+    "n8n-nodes-base.splitInBatches",
+    "n8n-nodes-base.stopAndError"
+  ],
+  "batches": {
+    "00": {
+      "slug": "foundation",
+      "types": []
+    },
+    "01": {
+      "slug": "composition",
+      "types": [
+        "n8n-nodes-base.executeWorkflow",
+        "n8n-nodes-base.stopAndError",
+        "n8n-nodes-base.wait",
+        "n8n-nodes-base.merge"
+      ]
+    },
+    "02": {
+      "slug": "triggers-flow",
+      "types": [
+        "n8n-nodes-base.scheduleTrigger",
+        "n8n-nodes-base.respondToWebhook",
+        "n8n-nodes-base.code",
+        "n8n-nodes-base.splitInBatches"
+      ]
+    },
+    "03": {
+      "slug": "transforms",
+      "types": [
+        "n8n-nodes-base.splitOut",
+        "n8n-nodes-base.aggregate",
+        "n8n-nodes-base.removeDuplicates",
+        "n8n-nodes-base.itemLists"
+      ]
+    },
+    "04": {
+      "slug": "core-extended",
+      "types": [
+        "n8n-nodes-base.dateTime",
+        "n8n-nodes-base.sort",
+        "n8n-nodes-base.renameKeys",
+        "n8n-nodes-base.errorTrigger"
+      ]
+    }
+  },
+  "nodes": {
+    "n8n-nodes-base.executeWorkflow": {
+      "priority": "P0",
+      "executor": "implemented",
+      "spec": "specced",
+      "dogfood": true
+    },
+    "n8n-nodes-base.manualTrigger": {
+      "priority": "P0",
+      "executor": "implemented",
+      "spec": "specced",
+      "dogfood": true
+    },
+    "n8n-nodes-base.webhook": {
+      "priority": "P0",
+      "executor": "implemented",
+      "spec": "specced",
+      "dogfood": true
+    },
+    "n8n-nodes-base.respondToWebhook": {
+      "priority": "P0",
+      "executor": "implemented",
+      "spec": "specced",
+      "dogfood": true
+    },
+    "n8n-nodes-base.httpRequest": {
+      "priority": "P0",
+      "executor": "implemented",
+      "spec": "specced",
+      "dogfood": true
+    },
+    "n8n-nodes-base.set": {
+      "priority": "P0",
+      "executor": "implemented",
+      "spec": "specced",
+      "dogfood": true
+    },
+    "n8n-nodes-base.if": {
+      "priority": "P0",
+      "executor": "implemented",
+      "spec": "specced",
+      "dogfood": true
+    },
+    "n8n-nodes-base.switch": {
+      "priority": "P0",
+      "executor": "implemented",
+      "spec": "specced",
+      "dogfood": true
+    },
+    "n8n-nodes-base.merge": {
+      "priority": "P0",
+      "executor": "implemented",
+      "spec": "specced",
+      "dogfood": true
+    },
+    "n8n-nodes-base.wait": {
+      "priority": "P0",
+      "executor": "implemented",
+      "spec": "specced",
+      "dogfood": true
+    },
+    "n8n-nodes-base.noOp": {
+      "priority": "P0",
+      "executor": "implemented",
+      "spec": "specced",
+      "dogfood": true
+    },
+    "n8n-nodes-base.code": {
+      "priority": "P0",
+      "executor": "implemented",
+      "spec": "specced",
+      "dogfood": true
+    },
+    "n8n-nodes-base.scheduleTrigger": {
+      "priority": "P0",
+      "executor": "implemented",
+      "spec": "specced",
+      "dogfood": true
+    },
+    "n8n-nodes-base.splitInBatches": {
+      "priority": "P0",
+      "executor": "implemented",
+      "spec": "specced",
+      "dogfood": true
+    },
+    "n8n-nodes-base.filter": {
+      "priority": "P0",
+      "executor": "implemented",
+      "spec": "specced",
+      "dogfood": true
+    },
+    "n8n-nodes-base.limit": {
+      "priority": "P0",
+      "executor": "implemented",
+      "spec": "specced",
+      "dogfood": true
+    },
+    "n8n-nodes-base.stopAndError": {
+      "priority": "P0",
+      "executor": "implemented",
+      "spec": "specced",
+      "dogfood": true
+    },
+    "n8n-nodes-base.executeWorkflowTrigger": {
+      "priority": "P0",
+      "executor": "implemented",
+      "spec": "n/a",
+      "dogfood": true
+    },
+    "n8n-nodes-base.stickyNote": {
+      "priority": "P0",
+      "executor": "ui-only",
+      "spec": "n/a",
+      "dogfood": false
+    },
+    "n8n-nodes-base.splitOut": {
+      "priority": "P0",
+      "executor": "implemented",
+      "spec": "specced",
+      "dogfood": true
+    },
+    "n8n-nodes-base.aggregate": {
+      "priority": "P0",
+      "executor": "implemented",
+      "spec": "specced",
+      "dogfood": true
+    },
+    "n8n-nodes-base.removeDuplicates": {
+      "priority": "P0",
+      "executor": "implemented",
+      "spec": "specced",
+      "dogfood": true
+    },
+    "n8n-nodes-base.itemLists": {
+      "priority": "P1",
+      "executor": "implemented",
+      "spec": "specced",
+      "dogfood": true
+    },
+    "n8n-nodes-base.dateTime": {
+      "priority": "P0",
+      "executor": "implemented",
+      "spec": "specced",
+      "dogfood": true
+    },
+    "n8n-nodes-base.sort": {
+      "priority": "P1",
+      "executor": "implemented",
+      "spec": "specced",
+      "dogfood": true
+    },
+    "n8n-nodes-base.renameKeys": {
+      "priority": "P1",
+      "executor": "implemented",
+      "spec": "specced",
+      "dogfood": true
+    },
+    "n8n-nodes-base.errorTrigger": {
+      "priority": "P0",
+      "executor": "implemented",
+      "spec": "specced",
+      "dogfood": true
+    }
+  }
+}

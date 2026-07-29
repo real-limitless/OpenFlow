@@ -1,0 +1,91 @@
+{
+  "id": "dogfood-transform-pipeline",
+  "name": "Dogfood: Transform Pipeline",
+  "active": false,
+  "nodes": [
+    {
+      "id": "df-tp-1",
+      "name": "Manual Trigger",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [0, 0],
+      "parameters": {}
+    },
+    {
+      "id": "df-tp-2",
+      "name": "Seed Rows",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [220, 0],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "return [\n  { json: { score: 1, label: 'low' } },\n  { json: { score: 9, label: 'high' } },\n  { json: { score: 5, label: 'mid' } },\n  { json: { score: 9, label: 'high-dup' } }\n];"
+      }
+    },
+    {
+      "id": "df-tp-3",
+      "name": "Sort",
+      "type": "n8n-nodes-base.sort",
+      "typeVersion": 1,
+      "position": [440, 0],
+      "parameters": {
+        "type": "simple",
+        "fieldName": "score",
+        "order": "descending"
+      }
+    },
+    {
+      "id": "df-tp-4",
+      "name": "Rename",
+      "type": "n8n-nodes-base.renameKeys",
+      "typeVersion": 1,
+      "position": [660, 0],
+      "parameters": {
+        "currentKey": "score",
+        "newKey": "points"
+      }
+    },
+    {
+      "id": "df-tp-5",
+      "name": "Dedupe",
+      "type": "n8n-nodes-base.removeDuplicates",
+      "typeVersion": 1,
+      "position": [880, 0],
+      "parameters": {
+        "compare": "selectedFields",
+        "fieldsToCompare": "points"
+      }
+    },
+    {
+      "id": "df-tp-6",
+      "name": "Aggregate",
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [1100, 0],
+      "parameters": {
+        "aggregate": "allFields",
+        "destinationFieldName": "data"
+      }
+    }
+  ],
+  "connections": {
+    "Manual Trigger": {
+      "main": [[{ "node": "Seed Rows", "type": "main", "index": 0 }]]
+    },
+    "Seed Rows": {
+      "main": [[{ "node": "Sort", "type": "main", "index": 0 }]]
+    },
+    "Sort": {
+      "main": [[{ "node": "Rename", "type": "main", "index": 0 }]]
+    },
+    "Rename": {
+      "main": [[{ "node": "Dedupe", "type": "main", "index": 0 }]]
+    },
+    "Dedupe": {
+      "main": [[{ "node": "Aggregate", "type": "main", "index": 0 }]]
+    }
+  },
+  "settings": { "executionOrder": "v1" },
+  "pinData": {},
+  "meta": { "openflowDogfood": true, "phase": 3, "id": "WF4" }
+}

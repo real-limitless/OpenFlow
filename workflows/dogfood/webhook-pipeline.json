@@ -1,0 +1,72 @@
+{
+  "id": "dogfood-webhook-pipeline",
+  "name": "Dogfood: Webhook Pipeline",
+  "active": false,
+  "nodes": [
+    {
+      "id": "df-wp-1",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [0, 0],
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "dogfood-hook",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "webhookId": "dogfood-hook"
+    },
+    {
+      "id": "df-wp-2",
+      "name": "Tag Payload",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3,
+      "position": [260, 0],
+      "parameters": {
+        "mode": "manual",
+        "includeOtherFields": true,
+        "fields": [
+          { "name": "source", "type": "stringValue", "value": "dogfood" },
+          { "name": "processed", "type": "booleanValue", "value": true }
+        ]
+      }
+    },
+    {
+      "id": "df-wp-3",
+      "name": "Limit",
+      "type": "n8n-nodes-base.limit",
+      "typeVersion": 1,
+      "position": [500, 0],
+      "parameters": {
+        "maxItems": 10,
+        "keep": "firstItems"
+      }
+    },
+    {
+      "id": "df-wp-4",
+      "name": "Respond",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [740, 0],
+      "parameters": {
+        "respondWith": "firstIncomingItem",
+        "options": { "responseCode": 200 }
+      }
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [[{ "node": "Tag Payload", "type": "main", "index": 0 }]]
+    },
+    "Tag Payload": {
+      "main": [[{ "node": "Limit", "type": "main", "index": 0 }]]
+    },
+    "Limit": {
+      "main": [[{ "node": "Respond", "type": "main", "index": 0 }]]
+    }
+  },
+  "settings": { "executionOrder": "v1" },
+  "pinData": {},
+  "meta": { "openflowDogfood": true, "phase": 3, "id": "WF2" }
+}

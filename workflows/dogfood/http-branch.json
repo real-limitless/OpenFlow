@@ -1,0 +1,86 @@
+{
+  "id": "dogfood-http-branch",
+  "name": "Dogfood: HTTP Branch",
+  "active": false,
+  "nodes": [
+    {
+      "id": "df-hb-1",
+      "name": "Manual Trigger",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [0, 0],
+      "parameters": {}
+    },
+    {
+      "id": "df-hb-2",
+      "name": "Fake API Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [240, 0],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "return [{ json: { status: 200, stargazers_count: 5000, full_name: 'openflow/demo' } }];"
+      }
+    },
+    {
+      "id": "df-hb-3",
+      "name": "IF Stars",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [480, 0],
+      "parameters": {
+        "combinator": "and",
+        "conditions": [
+          {
+            "leftValue": "={{ $json.stargazers_count }}",
+            "operator": "gt",
+            "rightValue": "1000"
+          }
+        ]
+      }
+    },
+    {
+      "id": "df-hb-4",
+      "name": "Build Headline",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3,
+      "position": [720, -80],
+      "parameters": {
+        "mode": "manual",
+        "includeOtherFields": true,
+        "fields": [
+          {
+            "name": "headline",
+            "type": "stringValue",
+            "value": "openflow/demo is popular"
+          }
+        ]
+      }
+    },
+    {
+      "id": "df-hb-5",
+      "name": "Low Stars",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [720, 100],
+      "parameters": {}
+    }
+  ],
+  "connections": {
+    "Manual Trigger": {
+      "main": [[{ "node": "Fake API Response", "type": "main", "index": 0 }]]
+    },
+    "Fake API Response": {
+      "main": [[{ "node": "IF Stars", "type": "main", "index": 0 }]]
+    },
+    "IF Stars": {
+      "main": [
+        [{ "node": "Build Headline", "type": "main", "index": 0 }],
+        [{ "node": "Low Stars", "type": "main", "index": 0 }]
+      ]
+    }
+  },
+  "settings": { "executionOrder": "v1" },
+  "pinData": {},
+  "meta": { "openflowDogfood": true, "phase": 3, "id": "WF1" }
+}

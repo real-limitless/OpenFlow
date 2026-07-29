@@ -1,0 +1,36 @@
+{
+  "id": "dogfood-subflow-parent",
+  "name": "Dogfood: Subflow Parent",
+  "active": false,
+  "nodes": [
+    {
+      "id": "df-sp-1",
+      "name": "Manual Trigger",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [0, 0],
+      "parameters": {}
+    },
+    {
+      "id": "df-sp-2",
+      "name": "Run Child",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1,
+      "position": [280, 0],
+      "parameters": {
+        "source": "database",
+        "workflowId": "dogfood-child",
+        "mode": "once",
+        "options": { "waitForCompletion": true }
+      }
+    }
+  ],
+  "connections": {
+    "Manual Trigger": {
+      "main": [[{ "node": "Run Child", "type": "main", "index": 0 }]]
+    }
+  },
+  "settings": { "executionOrder": "v1" },
+  "pinData": {},
+  "meta": { "openflowDogfood": true, "phase": 3, "id": "WF3-parent" }
+}

@@ -35,8 +35,12 @@ project.
 |------|----------------|--------|---------|
 | Spec agent | `docs/prompts/01-spec-from-public-docs.md`, skill `openflow-node-spec` | Public docs | `docs/specs/nodes/*.md` |
 | Implement agent | `docs/prompts/02-implement-from-spec.md`, skill `openflow-node-implement` | Specs + `src/sdk` | Definitions, executors, tests |
+| OpenCode batches | `scripts/factory/prompts/*-batch.md` | Catalog batch of ≤4 types | Specs + SDK nodes + batch tests |
 
 Implement agents must **not** fetch external product docs; the spec is the contract.
+
+**Catalog:** `docs/specs/CATALOG.md` · **Factory:** `scripts/factory/README.md`  
+**Hot-load (dev):** `POST /api/v1/dev/reload-nodes` when `OPENFLOW_HOT_NODES=1`
 
 ## Compatibility targets
 
@@ -79,6 +83,22 @@ documentation. No third-party source code was consulted for any entry below.
 | Spec batch 1 | Switch (`n8n-nodes-base.switch`) | https://docs.n8n.io/integrations/builtin/core-nodes/n8n-nodes-base.switch.md | Public docs only |
 | Spec batch 1 | HTTP Request (`n8n-nodes-base.httpRequest`) | https://docs.n8n.io/integrations/builtin/core-nodes/n8n-nodes-base.httprequest.md | Public docs only |
 | Spec batch 1 | Webhook (`n8n-nodes-base.webhook`) | https://docs.n8n.io/integrations/builtin/core-nodes/n8n-nodes-base.webhook.md | Public docs only |
+| Batch 01 | Execute Workflow | https://docs.n8n.io/integrations/builtin/core-nodes/n8n-nodes-base.executeworkflow.md | Public docs only |
+| Batch 01 | Stop and Error | https://docs.n8n.io/integrations/builtin/core-nodes/n8n-nodes-base.stopanderror.md | Public docs only |
+| Batch 01 | Wait | https://docs.n8n.io/integrations/builtin/core-nodes/n8n-nodes-base.wait.md | Public docs only |
+| Batch 01 | Merge | https://docs.n8n.io/integrations/builtin/core-nodes/n8n-nodes-base.merge.md | Public docs only |
+| Batch 02 | Schedule Trigger | https://docs.n8n.io/integrations/builtin/core-nodes/n8n-nodes-base.scheduletrigger.md | Public docs only |
+| Batch 02 | Respond to Webhook | https://docs.n8n.io/integrations/builtin/core-nodes/n8n-nodes-base.respondtowebhook.md | Public docs only |
+| Batch 02 | Code | https://docs.n8n.io/integrations/builtin/core-nodes/n8n-nodes-base.code.md | Public docs only |
+| Batch 02 | Split In Batches | https://docs.n8n.io/integrations/builtin/core-nodes/n8n-nodes-base.splitinbatches.md | Public docs only |
+| Batch 03 | Split Out | https://docs.n8n.io/integrations/builtin/core-nodes/n8n-nodes-base.splitout.md | Public docs only |
+| Batch 03 | Aggregate | https://docs.n8n.io/integrations/builtin/core-nodes/n8n-nodes-base.aggregate.md | Public docs only |
+| Batch 03 | Remove Duplicates | https://docs.n8n.io/integrations/builtin/core-nodes/n8n-nodes-base.removeduplicates.md | Public docs only |
+| Batch 03 | Item Lists (legacy) | Split Out + Aggregate public docs | Public docs only |
+| Batch 04 | Date & Time | https://docs.n8n.io/integrations/builtin/core-nodes/n8n-nodes-base.datetime.md | Public docs only |
+| Batch 04 | Sort | https://docs.n8n.io/integrations/builtin/core-nodes/n8n-nodes-base.sort.md | Public docs only |
+| Batch 04 | Rename Keys | https://docs.n8n.io/integrations/builtin/core-nodes/n8n-nodes-base.renamekeys.md | Public docs only |
+| Batch 04 | Error Trigger | https://docs.n8n.io/integrations/builtin/core-nodes/n8n-nodes-base.errortrigger.md | Public docs only |
 | Phase 8 | Split Out (`n8n-nodes-base.splitOut`) | https://docs.n8n.io/integrations/builtin/core-nodes/n8n-nodes-base.splitout/ | Public docs only |
 | Phase 8 | Aggregate (`n8n-nodes-base.aggregate`) | https://docs.n8n.io/integrations/builtin/core-nodes/n8n-nodes-base.aggregate/ | Public docs only |
 | Phase 8 | Filter (`n8n-nodes-base.filter`) | https://docs.n8n.io/integrations/builtin/core-nodes/n8n-nodes-base.filter/ | Public docs only |
