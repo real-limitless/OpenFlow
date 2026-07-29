@@ -96,6 +96,48 @@ export default function workflowsRoute(app: Hono<AppEnv>) {
     if (!parsed.ok) return c.json({ error: parsed.error }, 400);
 
     const wf = parsed.workflow!;
+    const clientId =
+      typeof wf.id === "string" && wf.id.length > 0 && wf.id !== "draft" ? wf.id : undefined;
+
+    // If client sends an id that already exists, update instead of failing unique
+    if (clientId) {
+      const existing = await prisma.workflow.findUnique({ where: { id: clientId } });
+      if (existing) {
+        const data = serializeJsonFields({
+          name: wf.name,
+          active: wf.active,
+          versionId: wf.versionId ?? existing.versionId,
+          nodes: wf.nodes,
+          connections: wf.connections,
+          settings: wf.settings,
+          staticData: wf.staticData ?? null,
+          pinData: wf.pinData ?? null,
+          meta: wf.meta ?? null,
+          ...Object.fromEntries(
+            Object.entries(wf as Record<string, unknown>).filter(
+              ([k]) => !KNOWN_WORKFLOW_FIELDS.has(k),
+            ),
+          ),
+        });
+        const row = await prisma.workflow.update({
+          where: { id: clientId },
+          data: {
+            name: data.name as string,
+            active: data.active as boolean,
+            versionId: data.versionId as string,
+            nodes: data.nodes as string,
+            connections: data.connections as string,
+            settings: (data.settings as string) ?? null,
+            staticData: (data.staticData as string) ?? null,
+            pinData: (data.pinData as string) ?? null,
+            meta: (data.meta as string) ?? null,
+            extra: (data.extra as string) ?? null,
+          },
+        });
+        return c.json(deserializeJsonFields(row as unknown as Record<string, unknown>));
+      }
+    }
+
     const data = serializeJsonFields({
       name: wf.name,
       active: wf.active,
@@ -115,6 +157,8 @@ export default function workflowsRoute(app: Hono<AppEnv>) {
 
     const row = await prisma.workflow.create({
       data: {
+        // Honor client-generated ids so editor URLs and execute lookups stay aligned
+        ...(clientId ? { id: clientId } : {}),
         userId: "local",
         name: data.name as string,
         active: data.active as boolean,
@@ -134,18 +178,17 @@ export default function workflowsRoute(app: Hono<AppEnv>) {
 
   app.put("/api/v1/workflows/:id", async (c) => {
     const { id } = c.req.param();
-    const existing = await prisma.workflow.findUnique({ where: { id } });
-    if (!existing) return c.json({ error: "Not found" }, 404);
-
     const body = await c.req.json();
     const parsed = parseWorkflowJson(body, id);
     if (!parsed.ok) return c.json({ error: parsed.error }, 400);
 
     const wf = parsed.workflow!;
+    const existing = await prisma.workflow.findUnique({ where: { id } });
+
     const data = serializeJsonFields({
       name: wf.name,
       active: wf.active,
-      versionId: wf.versionId ?? existing.versionId,
+      versionId: wf.versionId ?? existing?.versionId ?? crypto.randomUUID(),
       nodes: wf.nodes,
       connections: wf.connections,
       settings: wf.settings,
@@ -159,21 +202,39 @@ export default function workflowsRoute(app: Hono<AppEnv>) {
       ),
     });
 
-    const row = await prisma.workflow.update({
-      where: { id },
-      data: {
-        name: data.name as string,
-        active: data.active as boolean,
-        versionId: data.versionId as string,
-        nodes: data.nodes as string,
-        connections: data.connections as string,
-        settings: (data.settings as string) ?? null,
-        staticData: (data.staticData as string) ?? null,
-        pinData: (data.pinData as string) ?? null,
-        meta: (data.meta as string) ?? null,
-        extra: (data.extra as string) ?? null,
-      },
-    });
+    // Upsert so first save of a client-side id lands in Postgres
+    const row = existing
+      ? await prisma.workflow.update({
+          where: { id },
+          data: {
+            name: data.name as string,
+            active: data.active as boolean,
+            versionId: data.versionId as string,
+            nodes: data.nodes as string,
+            connections: data.connections as string,
+            settings: (data.settings as string) ?? null,
+            staticData: (data.staticData as string) ?? null,
+            pinData: (data.pinData as string) ?? null,
+            meta: (data.meta as string) ?? null,
+            extra: (data.extra as string) ?? null,
+          },
+        })
+      : await prisma.workflow.create({
+          data: {
+            id,
+            userId: "local",
+            name: data.name as string,
+            active: data.active as boolean,
+            versionId: data.versionId as string,
+            nodes: data.nodes as string,
+            connections: data.connections as string,
+            settings: (data.settings as string) ?? null,
+            staticData: (data.staticData as string) ?? null,
+            pinData: (data.pinData as string) ?? null,
+            meta: (data.meta as string) ?? null,
+            extra: (data.extra as string) ?? null,
+          },
+        });
 
     return c.json(deserializeJsonFields(row as unknown as Record<string, unknown>));
   });

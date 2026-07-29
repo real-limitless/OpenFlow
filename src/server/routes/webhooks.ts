@@ -3,10 +3,11 @@ import { prisma } from "../db";
 import type { AppEnv } from "../middleware/auth";
 import type { IWorkflow } from "../../lib/workflow/types";
 import { executeWorkflow } from "../../lib/engine/runner";
-import { defaultExecutors } from "../../lib/engine";
+import { getExecutorMap } from "../../lib/engine";
 import { getWebhookResponse, clearWebhookResponse } from "../../lib/engine/executors/respond-to-webhook";
 import { resolveCredential } from "../credentials";
 import { enqueueOrRun } from "../execute";
+import { resolveSubWorkflowFromDb } from "../workflow-loader";
 
 export default function webhooksRoute(app: Hono<AppEnv>) {
   // Public webhook endpoint — no auth required
@@ -70,11 +71,12 @@ export default function webhooksRoute(app: Hono<AppEnv>) {
 
     const runOptions = {
       workflow: { ...definition, __executionId: execution.id },
-      nodeExecutors: defaultExecutors,
+      nodeExecutors: getExecutorMap(),
       pinData: webhookNodeName
         ? { [webhookNodeName]: [{ json: requestData }] }
         : undefined,
       credentialResolver: resolveCredential,
+      resolveSubWorkflow: resolveSubWorkflowFromDb,
     };
 
     const updateExecution = async (result: { success: boolean; runData: unknown }) => {

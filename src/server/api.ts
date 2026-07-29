@@ -9,7 +9,14 @@ import healthRoute from "./routes/health";
 import schedulesRoute, { initializeSchedules } from "./routes/schedules";
 import webhooksRoute from "./routes/webhooks";
 import workflowsRoute from "./routes/workflows";
+import devRoute from "./routes/dev";
 import { startWorker } from "./worker";
+import { seedBuiltinExecutors } from "../lib/engine";
+import { seedBuiltinDescriptions } from "../lib/nodes/registry";
+
+// Ensure live registry is populated when the API process boots.
+seedBuiltinExecutors();
+seedBuiltinDescriptions();
 
 const app = new Hono<AppEnv>();
 
@@ -23,6 +30,7 @@ executionsRoute(app);
 webhooksRoute(app);
 workflowsRoute(app);
 schedulesRoute(app);
+devRoute(app);
 
 initializeSchedules().catch(console.error);
 

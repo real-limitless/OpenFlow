@@ -16,6 +16,8 @@
     "lint": "eslint .",
     "format": "prettier --write .",
     "test": "vitest run",
+    "test:batch": "bash scripts/factory/test-batch.sh",
+    "test:dogfood": "vitest run src/lib/engine/__tests__/dogfood",
     "tui": "bash scripts/tui.sh"
   },
   "dependencies": {

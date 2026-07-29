@@ -1,8 +1,12 @@
 import { prisma } from "./db";
 import { executionQueue } from "./queue";
 import { executeWorkflow } from "../lib/engine/runner";
-import { defaultExecutors } from "../lib/engine";
+import { getExecutorMap } from "../lib/engine";
 import { resolveCredential } from "./credentials";
+import {
+  definitionFromRow,
+  resolveSubWorkflowFromDb,
+} from "./workflow-loader";
 import type { IWorkflow, INodeExecutionData } from "../lib/workflow/types";
 
 let redisAvailable: boolean | null = null;
@@ -20,32 +24,6 @@ async function checkRedis(): Promise<boolean> {
     redisAvailable = false;
   }
   return redisAvailable;
-}
-
-function definitionFromRow(row: {
-  id: string;
-  name: string;
-  active: boolean;
-  nodes: string;
-  connections: string;
-  settings: string | null;
-  staticData: string | null;
-  pinData: string | null;
-  meta: string | null;
-  versionId: string;
-}): IWorkflow {
-  return {
-    id: row.id,
-    name: row.name,
-    active: row.active,
-    nodes: JSON.parse(row.nodes),
-    connections: JSON.parse(row.connections),
-    settings: row.settings ? JSON.parse(row.settings) : undefined,
-    staticData: row.staticData ? JSON.parse(row.staticData) : undefined,
-    pinData: row.pinData ? JSON.parse(row.pinData) : undefined,
-    meta: row.meta ? JSON.parse(row.meta) : undefined,
-    versionId: row.versionId,
-  } as unknown as IWorkflow;
 }
 
 async function resolveDefinition(
@@ -87,9 +65,10 @@ export async function enqueueOrRun(
 
   executeWorkflow({
     workflow: definition,
-    nodeExecutors: defaultExecutors,
+    nodeExecutors: getExecutorMap(),
     pinData: pinData ?? (definition.pinData as Record<string, INodeExecutionData[]> | undefined),
     credentialResolver: resolveCredential,
+    resolveSubWorkflow: resolveSubWorkflowFromDb,
     onProgress: async (partial) => {
       await prisma.execution.update({
         where: { id: executionId },
@@ -104,6 +83,13 @@ export async function enqueueOrRun(
           status: result.success ? "success" : "error",
           finishedAt: new Date(),
           runData: JSON.stringify(result.runData),
+          error: result.success
+            ? null
+            : JSON.stringify({
+                message:
+                  Object.values(result.runData).find((d) => d.status === "error")?.error ??
+                  "Workflow failed",
+              }),
         },
       });
     })
