@@ -1,0 +1,223 @@
+import type { INodeTypeDescription } from "../types";
+
+const DOCS = "https://docs.n8n.io/integrations/builtin/core-nodes/";
+
+export const manualTrigger: INodeTypeDescription = {
+  name: "n8n-nodes-base.manualTrigger",
+  displayName: "Manual Trigger",
+  category: "Triggers",
+  group: ["trigger"],
+  version: 1,
+  description: "Runs the workflow when you click Execute.",
+  defaults: { name: "When clicking 'Execute workflow'" },
+  inputs: [],
+  outputs: ["main"],
+  icon: "MousePointerClick",
+  sources: [`${DOCS}n8n-nodes-base.manualworkflowtrigger/`],
+  properties: [
+    {
+      displayName:
+        "This node starts the workflow when you run it manually from the editor. It emits a single empty item.",
+      name: "notice",
+      type: "notice",
+      default: "",
+    },
+  ],
+};
+
+export const scheduleTrigger: INodeTypeDescription = {
+  name: "n8n-nodes-base.scheduleTrigger",
+  displayName: "Schedule Trigger",
+  category: "Triggers",
+  group: ["trigger"],
+  version: 1.2,
+  description: "Runs the workflow on a fixed interval or cron expression.",
+  defaults: { name: "Schedule Trigger" },
+  inputs: [],
+  outputs: ["main"],
+  icon: "Clock",
+  sources: [`${DOCS}n8n-nodes-base.scheduletrigger/`],
+  properties: [
+    {
+      displayName: "Trigger Interval",
+      name: "field",
+      type: "options",
+      default: "hours",
+      noDataExpression: true,
+      options: [
+        { name: "Seconds", value: "seconds" },
+        { name: "Minutes", value: "minutes" },
+        { name: "Hours", value: "hours" },
+        { name: "Days", value: "days" },
+        { name: "Weeks", value: "weeks" },
+        { name: "Months", value: "months" },
+        { name: "Custom (Cron)", value: "cronExpression" },
+      ],
+    },
+    {
+      displayName: "Interval",
+      name: "intervalSize",
+      type: "number",
+      default: 1,
+      typeOptions: { minValue: 1 },
+      displayOptions: { hide: { field: ["cronExpression"] } },
+    },
+    {
+      displayName: "Trigger At Hour",
+      name: "triggerAtHour",
+      type: "number",
+      default: 0,
+      typeOptions: { minValue: 0, maxValue: 23 },
+      displayOptions: { show: { field: ["days", "weeks", "months"] } },
+    },
+    {
+      displayName: "Cron Expression",
+      name: "cronExpression",
+      type: "string",
+      default: "0 * * * *",
+      placeholder: "0 * * * *",
+      displayOptions: { show: { field: ["cronExpression"] } },
+    },
+    {
+      displayName: "Timezone",
+      name: "timezone",
+      type: "string",
+      default: "",
+      placeholder: "Europe/Berlin",
+      description: "Leave empty to use the instance timezone.",
+    },
+  ],
+};
+
+export const webhook: INodeTypeDescription = {
+  name: "n8n-nodes-base.webhook",
+  displayName: "Webhook",
+  category: "Triggers",
+  group: ["trigger"],
+  version: 2,
+  description: "Starts the workflow when an HTTP request hits its URL.",
+  defaults: { name: "Webhook" },
+  inputs: [],
+  outputs: ["main"],
+  icon: "Webhook",
+  sources: [`${DOCS}n8n-nodes-base.webhook/`],
+  properties: [
+    {
+      displayName: "HTTP Method",
+      name: "httpMethod",
+      type: "options",
+      default: "GET",
+      noDataExpression: true,
+      options: [
+        { name: "GET", value: "GET" },
+        { name: "POST", value: "POST" },
+        { name: "PUT", value: "PUT" },
+        { name: "PATCH", value: "PATCH" },
+        { name: "DELETE", value: "DELETE" },
+        { name: "HEAD", value: "HEAD" },
+      ],
+    },
+    {
+      displayName: "Path",
+      name: "path",
+      type: "string",
+      default: "",
+      placeholder: "my-webhook",
+      required: true,
+      description: "Path segment appended to the instance webhook base URL.",
+    },
+    {
+      displayName: "Authentication",
+      name: "authentication",
+      type: "options",
+      default: "none",
+      options: [
+        { name: "None", value: "none" },
+        { name: "Basic Auth", value: "basicAuth" },
+        { name: "Header Auth", value: "headerAuth" },
+      ],
+    },
+    {
+      displayName: "Respond",
+      name: "responseMode",
+      type: "options",
+      default: "onReceived",
+      options: [
+        { name: "Immediately", value: "onReceived" },
+        { name: "When Last Node Finishes", value: "lastNode" },
+        { name: "Using 'Respond to Webhook' Node", value: "responseNode" },
+      ],
+    },
+    {
+      displayName: "Options",
+      name: "options",
+      type: "collection",
+      default: {},
+      options: [
+        { displayName: "Raw Body", name: "rawBody", type: "boolean", default: false },
+        { displayName: "Response Code", name: "responseCode", type: "number", default: 200 },
+        { displayName: "Ignore Bots", name: "ignoreBots", type: "boolean", default: false },
+      ],
+    },
+  ],
+};
+
+export const respondToWebhook: INodeTypeDescription = {
+  name: "n8n-nodes-base.respondToWebhook",
+  displayName: "Respond to Webhook",
+  category: "Actions",
+  group: ["output"],
+  version: 1.1,
+  description: "Returns a response to the caller of the Webhook node.",
+  defaults: { name: "Respond to Webhook" },
+  inputs: ["main"],
+  outputs: ["main"],
+  icon: "Reply",
+  sources: [`${DOCS}n8n-nodes-base.respondtowebhook/`],
+  properties: [
+    {
+      displayName: "Respond With",
+      name: "respondWith",
+      type: "options",
+      default: "firstIncomingItem",
+      options: [
+        { name: "All Incoming Items", value: "allIncomingItems" },
+        { name: "First Incoming Item", value: "firstIncomingItem" },
+        { name: "JSON", value: "json" },
+        { name: "Text", value: "text" },
+        { name: "No Data", value: "noData" },
+        { name: "Redirect", value: "redirect" },
+      ],
+    },
+    {
+      displayName: "Response Body",
+      name: "responseBody",
+      type: "json",
+      default: "{\n  \"ok\": true\n}",
+      displayOptions: { show: { respondWith: ["json"] } },
+    },
+    {
+      displayName: "Response Text",
+      name: "responseBody",
+      type: "string",
+      default: "",
+      displayOptions: { show: { respondWith: ["text"] } },
+    },
+    {
+      displayName: "Redirect URL",
+      name: "redirectURL",
+      type: "string",
+      default: "",
+      displayOptions: { show: { respondWith: ["redirect"] } },
+    },
+    {
+      displayName: "Options",
+      name: "options",
+      type: "collection",
+      default: {},
+      options: [
+        { displayName: "Response Code", name: "responseCode", type: "number", default: 200 },
+      ],
+    },
+  ],
+};

@@ -1,0 +1,138 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ─── Users ──────────────────────────────────────────────
+
+model User {
+  id           String    @id @default(cuid())
+  email        String    @unique
+  passwordHash String
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  workflows   Workflow[]
+  credentials Credential[]
+  apiKeys     ApiKey[]
+
+  @@map("users")
+}
+
+// ─── Workflows ──────────────────────────────────────────
+
+model Workflow {
+  id          String   @id @default(cuid())
+  userId      String
+  name        String
+  active      Boolean  @default(false)
+  versionId   String
+  nodes       String   @default("[]")   // JSON array of nodes
+  connections String   @default("{}")   // JSON object of connections
+  settings    String?                     // JSON IWorkflowSettings
+  staticData  String?                     // JSON
+  pinData     String?                     // JSON
+  meta        String?                     // JSON
+  extra       String?                     // JSON – unknown top-level fields preserved verbatim
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  executions  Execution[]
+  webhookRoutes WebhookRoute[]
+  scheduledTriggers ScheduledTrigger[]
+
+  @@index([userId])
+  @@map("workflows")
+}
+
+// ─── Executions ─────────────────────────────────────────
+
+model Execution {
+  id         String    @id @default(cuid())
+  workflowId String
+  status     String    @default("running") // running | success | error | waiting
+  mode       String                         // manual | webhook | trigger
+  startedAt  DateTime  @default(now())
+  finishedAt DateTime?
+  runData    String    @default("{}")       // JSON: node-level results keyed by node name
+  error      String?                        // JSON error payload
+
+  workflow   Workflow  @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+
+  @@index([workflowId])
+  @@index([status])
+  @@map("executions")
+}
+
+// ─── Credentials ────────────────────────────────────────
+
+model Credential {
+  id            String   @id @default(cuid())
+  userId        String
+  name          String
+  type          String   // e.g. httpBasicAuth, httpHeaderAuth
+  dataEncrypted String   // AES-256-GCM encrypted JSON blob
+  createdAt     DateTime @default(now())
+
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("credentials")
+}
+
+// ─── API Keys ───────────────────────────────────────────
+
+model ApiKey {
+  id        String   @id @default(cuid())
+  userId    String
+  name      String
+  keyHash   String   // hashed API key — never store raw
+  scopes    String   @default("[]")  // JSON array of scope strings
+  createdAt DateTime @default(now())
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([keyHash])
+  @@map("api_keys")
+}
+
+// ─── Webhook Routes ─────────────────────────────────────
+
+model WebhookRoute {
+  id         String  @id @default(cuid())
+  path       String  @unique
+  workflowId String
+  nodeId     String
+  method     String  @default("*") // GET | POST | PUT | DELETE | * (any)
+  active     Boolean @default(true)
+
+  workflow   Workflow @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+
+  @@index([workflowId])
+  @@index([path])
+  @@map("webhook_routes")
+}
+
+// ─── Scheduled Triggers (cron) ──────────────────────────
+
+model ScheduledTrigger {
+  id          String    @id @default(cuid())
+  workflowId  String
+  nodeId      String
+  cronExpr    String
+  active      Boolean   @default(true)
+  lastRunAt   DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  workflow    Workflow  @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+
+  @@unique([workflowId, nodeId])
+  @@map("scheduled_triggers")
+}
