@@ -10,7 +10,13 @@ import {
   Workflow as WorkflowIcon,
 } from "lucide-react";
 import { toast } from "sonner";
-import { getRepository, apiRepository, localRepository } from "@/lib/storage/repository";
+import {
+  getRepository,
+  migrateLocalToApi,
+  countLocalWorkflows,
+  probeApi,
+  getStorageKind,
+} from "@/lib/storage/repository";
 import { EMPTY_WORKFLOW, type IWorkflow } from "@/lib/workflow/types";
 import { newId, parseWorkflowJson } from "@/lib/workflow/schema";
 import { SAMPLE_WORKFLOW } from "@/lib/workflow/sample";
@@ -50,26 +56,46 @@ function WorkflowList() {
   useEffect(refresh, []);
 
   useEffect(() => {
-    if (!import.meta.env.VITE_API_BASE_URL) return;
-    localRepository.list().then((list) => setMigrateCount(list.length || null));
+    void (async () => {
+      const apiUp = await probeApi();
+      if (!apiUp) return;
+      const n = await countLocalWorkflows();
+      setMigrateCount(n > 0 ? n : null);
+      // Auto-migrate so execute/subflows see the same ids as the editor
+      if (n > 0) {
+        try {
+          const migrated = await migrateLocalToApi();
+          if (migrated > 0) {
+            toast.success(`Synced ${migrated} browser workflow${migrated > 1 ? "s" : ""} to the database`);
+            setMigrateCount(null);
+            refresh();
+          }
+        } catch (err) {
+          console.error(err);
+          toast.error("Could not sync browser workflows to the database");
+        }
+      }
+    })();
   }, []);
 
   const migrateFromLocalStorage = async () => {
-    const localWorkflows = await localRepository.list();
-    if (localWorkflows.length === 0) return;
-    let migrated = 0;
-    for (const wf of localWorkflows) {
-      await apiRepository.save(wf);
-      migrated++;
+    try {
+      const migrated = await migrateLocalToApi();
+      if (migrated === 0) {
+        toast.message("No local workflows to migrate");
+        return;
+      }
+      toast.success(`Migrated ${migrated} workflow${migrated > 1 ? "s" : ""} from localStorage`);
+      setMigrateCount(null);
+      refresh();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Migration failed");
     }
-    toast.success(`Migrated ${migrated} workflow${migrated > 1 ? "s" : ""} from localStorage`);
-    setMigrateCount(null);
-    refresh();
   };
 
   const create = async (workflow: IWorkflow) => {
-    await getRepository().save(workflow);
-    navigate({ to: "/workflow/$id", params: { id: workflow.id } });
+    const saved = await getRepository().save(workflow);
+    navigate({ to: "/workflow/$id", params: { id: saved.id } });
   };
 
   const onImport = async (file: File) => {
@@ -133,14 +159,14 @@ function WorkflowList() {
         </Button>
       </div>
 
-      {migrateCount !== null && (
-        <div className="mt-5 flex items-center gap-3 rounded-lg border border-dashed border-primary/40 bg-primary/5 p-4">
+      {migrateCount !== null && migrateCount > 0 && (
+        <div className="mt-5 flex flex-wrap items-center gap-3 rounded-lg border border-dashed border-primary/40 bg-primary/5 p-4">
           <p className="text-[13px] text-foreground">
-            You have {migrateCount} local workflow{migrateCount > 1 ? "s" : ""} stored in this
-            browser.
+            {migrateCount} workflow{migrateCount > 1 ? "s" : ""} still only in this browser
+            (localStorage). Execution and sub-workflows use the database.
           </p>
-          <Button size="sm" variant="outline" onClick={migrateFromLocalStorage}>
-            Migrate from localStorage
+          <Button size="sm" variant="outline" onClick={() => void migrateFromLocalStorage()}>
+            Sync to database
           </Button>
         </div>
       )}
@@ -148,6 +174,9 @@ function WorkflowList() {
       <section className="mt-14">
         <h2 className="font-mono text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
           Your workflows
+          <span className="ml-2 normal-case tracking-normal text-muted-foreground/80">
+            · storage: {getStorageKind() === "api" ? "database" : "browser only"}
+          </span>
         </h2>
 
         <div className="mt-3 divide-y divide-border overflow-hidden rounded-lg border border-border bg-card">
@@ -161,7 +190,11 @@ function WorkflowList() {
             </div>
           )}
           {workflows?.map((wf) => {
-            const rows = migrationReport(wf);
+            const nodeCount =
+              Array.isArray(wf.nodes) && wf.nodes.length > 0
+                ? wf.nodes.length
+                : Number((wf as { nodeCount?: number }).nodeCount ?? 0);
+            const rows = Array.isArray(wf.nodes) && wf.nodes.length > 0 ? migrationReport(wf) : [];
             const unsupported = rows.filter((r) => r.status === "placeholder").length;
             return (
               <div key={wf.id} className="flex items-center gap-3 px-4 py-3">
@@ -172,9 +205,10 @@ function WorkflowList() {
                 >
                   <p className="truncate text-[14px] font-medium">{wf.name}</p>
                   <p className="mt-0.5 font-mono text-[11px] text-muted-foreground">
-                    {wf.nodes.length} nodes
+                    {nodeCount} nodes
                     {unsupported > 0 && ` · ${unsupported} unsupported`}
                     {wf.updatedAt && ` · updated ${new Date(wf.updatedAt).toLocaleString()}`}
+                    <span className="ml-1 opacity-70">· {wf.id}</span>
                   </p>
                 </Link>
                 {wf.active && (

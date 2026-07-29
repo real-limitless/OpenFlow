@@ -1,4 +1,4 @@
-import { Fragment, useState } from "react";
+import { Fragment, useEffect, useState } from "react";
 import { ArrowDown, ArrowUp, ChevronDown, ChevronRight, Plus, Trash2 } from "lucide-react";
 import type {
   INodeProperties,
@@ -22,6 +22,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { ExpressionField } from "./ExpressionField";
 import type { ExpressionContext } from "@/lib/expressions/evaluate";
 import { cn } from "@/lib/utils";
+import { useWorkflowStore } from "@/store/workflow-store";
 
 type Values = Record<string, unknown>;
 
@@ -186,6 +187,9 @@ export function ParameterField({ prop, value, onChange, context }: FieldProps) {
         </FieldShell>
       );
     }
+
+    case "workflowSelect":
+      return <WorkflowSelectField prop={prop} value={value} onChange={onChange} />;
 
     case "collection": {
       const current = (value ?? {}) as Values;
@@ -455,6 +459,103 @@ function FixedCollectionRow({
         </CollapsibleContent>
       </div>
     </Collapsible>
+  );
+}
+
+type WorkflowListItem = { id: string; name: string; active?: boolean; nodeCount?: number };
+
+function coerceWorkflowSelectValue(value: unknown): string {
+  if (value == null) return "";
+  if (typeof value === "string" || typeof value === "number") return String(value);
+  if (typeof value === "object") {
+    const o = value as Record<string, unknown>;
+    if (o.value != null) return String(o.value);
+    if (o.id != null) return String(o.id);
+  }
+  return "";
+}
+
+function WorkflowSelectField({
+  prop,
+  value,
+  onChange,
+}: {
+  prop: INodeProperties;
+  value: unknown;
+  onChange: (value: unknown) => void;
+}) {
+  const currentWorkflowId = useWorkflowStore((s) => s.workflow.id);
+  const [workflows, setWorkflows] = useState<WorkflowListItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const selected = coerceWorkflowSelectValue(value);
+
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    fetch("/api/v1/workflows")
+      .then(async (res) => {
+        if (!res.ok) throw new Error(`Failed to load workflows (${res.status})`);
+        return res.json() as Promise<WorkflowListItem[]>;
+      })
+      .then((list) => {
+        if (cancelled) return;
+        setWorkflows(Array.isArray(list) ? list : []);
+        setError(null);
+      })
+      .catch((err) => {
+        if (cancelled) return;
+        setError(err instanceof Error ? err.message : String(err));
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const choices = workflows.filter((w) => w.id !== currentWorkflowId);
+  const missingSelection =
+    selected && !choices.some((w) => w.id === selected) && !workflows.some((w) => w.id === selected);
+
+  return (
+    <FieldShell prop={prop}>
+      <Select
+        value={selected || undefined}
+        onValueChange={(v) => onChange(v === "__none__" ? "" : v)}
+        disabled={loading}
+      >
+        <SelectTrigger className="h-9 w-full text-[13px]">
+          <SelectValue placeholder={loading ? "Loading workflows…" : "Select a workflow…"} />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="__none__">— None —</SelectItem>
+          {choices.map((w) => (
+            <SelectItem key={w.id} value={w.id}>
+              {w.name}
+              <span className="ml-2 font-mono text-[10px] text-muted-foreground">{w.id}</span>
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+      {error && <p className="text-[11px] text-destructive">{error}</p>}
+      {!loading && !error && choices.length === 0 && (
+        <p className="text-[11px] text-muted-foreground">
+          No other saved workflows. Create and save a child workflow first (e.g. with When Executed
+          by Another Workflow).
+        </p>
+      )}
+      {missingSelection && (
+        <p className="text-[11px] text-[var(--warning)]">
+          Saved id <span className="font-mono">{selected}</span> was not found in the database.
+          Pick a workflow from the list.
+        </p>
+      )}
+      {selected && !missingSelection && (
+        <p className="font-mono text-[10px] text-muted-foreground">id: {selected}</p>
+      )}
+    </FieldShell>
   );
 }
 

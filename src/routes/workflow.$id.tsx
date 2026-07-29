@@ -60,13 +60,18 @@ function EditorPage() {
     setRunData(null);
     bumpHistory();
     try {
-      // Read latest store state at click time (avoid stale React closure)
-      const latest = useWorkflowStore.getState().workflow;
-      // Best-effort persist so DB stays in sync with canvas
-      if (useWorkflowStore.getState().dirty) {
-        void useWorkflowStore.getState().persist();
+      // Always persist before execute so DB has latest graph + ids for sub-workflows
+      try {
+        await useWorkflowStore.getState().persist();
+      } catch (err) {
+        console.error("Persist before execute failed:", err);
+        toast.error("Could not save workflow to the database before execute");
+        setIsExecuting(false);
+        return;
       }
-      const res = await fetch(`/api/v1/workflows/${id}/execute`, {
+      const latest = useWorkflowStore.getState().workflow;
+      const execId = latest.id || id;
+      const res = await fetch(`/api/v1/workflows/${execId}/execute`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ workflow: latest }),

@@ -308,8 +308,20 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
   },
 
   persist: async () => {
-    await getRepository().save(get().workflow);
-    set({ dirty: false });
+    const current = get().workflow;
+    const saved = await getRepository().save(current);
+    // Keep editor graph; adopt server-confirmed id / timestamps
+    set({
+      workflow: {
+        ...current,
+        id: saved.id || current.id,
+        name: saved.name ?? current.name,
+        active: saved.active ?? current.active,
+        updatedAt: saved.updatedAt ?? current.updatedAt,
+        versionId: saved.versionId ?? current.versionId,
+      },
+      dirty: false,
+    });
   },
 
   markSaved: () => set({ dirty: false }),
