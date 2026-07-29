@@ -1,7 +1,8 @@
 # Clean-room process
 
-OpenFlow is an independent implementation of a workflow automation editor. It is
-not affiliated with, endorsed by, or derived from any other project.
+OpenFlow is an independent implementation of a workflow automation editor and
+engine. It is not affiliated with, endorsed by, or derived from any other
+project.
 
 ## Non-negotiable rules
 
@@ -13,6 +14,7 @@ not affiliated with, endorsed by, or derived from any other project.
    - Publicly shared workflow export JSON (templates, community shares, starter kits).
    - Observed runtime behaviour of a publicly reachable instance.
    - Public API documentation of third-party services (Slack, Google, Postgres, …).
+   - OpenFlow specs under `docs/specs/` (for implementers).
 3. **Cite your sources.** Every node description carries a `sources: string[]`
    array of the public URLs it was written from. Every significant architectural
    choice gets an ADR under `docs/adr/`.
@@ -21,6 +23,20 @@ not affiliated with, endorsed by, or derived from any other project.
    JSON in the widely used public export format").
 5. **Review gate.** Pull requests that add a node or engine behaviour must state
    which permitted source class each behaviour came from.
+6. **SDK only.** New node executors are authored against the **OpenFlow Plugin
+   SDK** (`src/sdk/`). See `docs/sdk/OVERVIEW.md` and `docs/sdk/NON_GOALS.md`.
+7. **No third-party node packages.** Do not load or execute `n8n-nodes-*` (or
+   similar) packages inside OpenFlow. Native reimplementations and future
+   OpenFlow plugins only.
+
+## Spec pipeline
+
+| Role | Prompt / skill | Inputs | Outputs |
+|------|----------------|--------|---------|
+| Spec agent | `docs/prompts/01-spec-from-public-docs.md`, skill `openflow-node-spec` | Public docs | `docs/specs/nodes/*.md` |
+| Implement agent | `docs/prompts/02-implement-from-spec.md`, skill `openflow-node-implement` | Specs + `src/sdk` | Definitions, executors, tests |
+
+Implement agents must **not** fetch external product docs; the spec is the contract.
 
 ## Compatibility targets
 
@@ -33,6 +49,9 @@ The public interfaces we target are enumerated in the in-app compatibility page
 - Expression syntax `{{ … }}` and the documented helper surface.
 - The documented node property types and `displayOptions`.
 
+Wire type strings (e.g. `n8n-nodes-base.httpRequest`) are **identifiers in the
+export format**, not product branding.
+
 ## Decision log
 
 | Date | Decision | Rationale |
@@ -41,14 +60,25 @@ The public interfaces we target are enumerated in the in-app compatibility page
 | Phase 1 | Unsupported node types import as placeholders that preserve parameters. | Import success matters more than node count; nothing is silently dropped. |
 | Phase 1 | Storage sits behind `WorkflowRepository`; Phase 1 implements it with browser storage. | Server persistence swaps in without touching the editor. |
 | Phase 1 | Expression evaluation in the editor is preview-only and unsandboxed-but-inert. | Real evaluation belongs in the server engine with an isolated sandbox. |
+| SDK | Extract in-tree OpenFlow Plugin SDK; builtins migrate onto it; AI implements via SDK. | Stable clean-room authoring surface; avoids ad-hoc executor APIs. |
+| SDK | No loading of third-party node packages. | Keeps clean-room posture; user extensibility = OpenFlow plugins later. |
 
 ## Node citations
 
 Every node definition carries a `sources` array pointing exclusively at public
-documentation. No n8n source code was consulted for any entry below.
+documentation. No third-party source code was consulted for any entry below.
 
 | Phase | Node | Source | Source class |
 | --- | --- | --- | --- |
+| Spec batch 1 | Manual Trigger (`n8n-nodes-base.manualTrigger`) | https://docs.n8n.io/integrations/builtin/core-nodes/n8n-nodes-base.manualworkflowtrigger.md | Public docs only |
+| Spec batch 1 | No Operation (`n8n-nodes-base.noOp`) | https://docs.n8n.io/integrations/builtin/core-nodes/n8n-nodes-base.noop.md | Public docs only |
+| Spec batch 1 | Edit Fields / Set (`n8n-nodes-base.set`) | https://docs.n8n.io/integrations/builtin/core-nodes/n8n-nodes-base.set.md | Public docs only |
+| Spec batch 1 | IF (`n8n-nodes-base.if`) | https://docs.n8n.io/integrations/builtin/core-nodes/n8n-nodes-base.if.md | Public docs only |
+| Spec batch 1 | Limit (`n8n-nodes-base.limit`) | https://docs.n8n.io/integrations/builtin/core-nodes/n8n-nodes-base.limit.md | Public docs only |
+| Spec batch 1 | Filter (`n8n-nodes-base.filter`) | https://docs.n8n.io/integrations/builtin/core-nodes/n8n-nodes-base.filter.md | Public docs only |
+| Spec batch 1 | Switch (`n8n-nodes-base.switch`) | https://docs.n8n.io/integrations/builtin/core-nodes/n8n-nodes-base.switch.md | Public docs only |
+| Spec batch 1 | HTTP Request (`n8n-nodes-base.httpRequest`) | https://docs.n8n.io/integrations/builtin/core-nodes/n8n-nodes-base.httprequest.md | Public docs only |
+| Spec batch 1 | Webhook (`n8n-nodes-base.webhook`) | https://docs.n8n.io/integrations/builtin/core-nodes/n8n-nodes-base.webhook.md | Public docs only |
 | Phase 8 | Split Out (`n8n-nodes-base.splitOut`) | https://docs.n8n.io/integrations/builtin/core-nodes/n8n-nodes-base.splitout/ | Public docs only |
 | Phase 8 | Aggregate (`n8n-nodes-base.aggregate`) | https://docs.n8n.io/integrations/builtin/core-nodes/n8n-nodes-base.aggregate/ | Public docs only |
 | Phase 8 | Filter (`n8n-nodes-base.filter`) | https://docs.n8n.io/integrations/builtin/core-nodes/n8n-nodes-base.filter/ | Public docs only |

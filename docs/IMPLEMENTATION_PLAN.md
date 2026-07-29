@@ -223,7 +223,7 @@ isolated-vm for Code node
 - [ ] **8.8** Migration report hardening
 - [ ] **8.9** Gate: imported workflows improve unsupported count
 
-### Phase 9 — FE polish (no backend) [PENDING] ← NEXT
+### Phase 9 — FE polish (no backend) [COMPLETE]
 
 - [ ] **9.1** Add-node-on-edge `+`
 - [ ] **9.2** AI channel handles/visuals (`ai_*`)
@@ -234,7 +234,7 @@ isolated-vm for Code node
 - [ ] **9.7** Canvas a11y keyboard
 - [ ] **9.8** Broader unit tests
 
-### Phase 10 — Production baseline [PENDING]
+### Phase 10 — Production baseline [PENDING] ← NEXT
 
 - [ ] **10.1** Multi-user/roles if required
 - [ ] **10.2** Tags, variables
@@ -268,9 +268,12 @@ isolated-vm for Code node
 
 ## Clean-room (every Bigpickle prompt)
 
-- No n8n source read/copy/reference
+- No third-party engine source read/copy/reference
 - Cite public docs in `docs/clean-room.md` for new nodes/executors
-- No n8n trademarks in UI
+- No third-party trademarks in UI
+- Author nodes via **OpenFlow Plugin SDK** (`src/sdk`, skill `openflow-sdk`)
+- Spec pipeline: `docs/prompts/01-spec-from-public-docs.md` / skill `openflow-node-spec`
+- Implement pipeline: `docs/prompts/02-implement-from-spec.md` / skill `openflow-node-implement`
 
 ---
 
@@ -280,5 +283,6 @@ isolated-vm for Code node
 - Loading binary n8n community node packages
 - Full enterprise multi-project parity
 - Claiming “n8n-compatible” as a trademark phrase in marketing
+- Vendoring third-party workflow runtimes (`n8n-workflow`, etc.)
 
 *This document supersedes the handoff’s “Blocked until Lovable Cloud” section.*

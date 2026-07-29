@@ -54,9 +54,22 @@ docker-compose up
 src/
   server/         # Hono API server (routes, middleware)
   lib/            # Shared logic (workflow engine, node definitions, expressions)
+  sdk/            # OpenFlow Plugin SDK (node authoring surface)
   components/     # React UI components
 prisma/
   schema.prisma   # Database schema
+docs/
+  clean-room.md   # Clean-room rules
+  sdk/            # SDK overview + non-goals
+  specs/          # Per-node behavioral specs
+  prompts/        # Spec / implement agent prompts
 ```
 
-> `src/lib/workflow`, `src/lib/nodes`, and `src/lib/expressions` are framework-agnostic and contain no React imports.
+> `src/lib/workflow`, `src/lib/nodes`, `src/lib/expressions`, and `src/sdk` are framework-agnostic and contain no React imports.
+
+## Clean-room node pipeline
+
+1. Spec agent: `docs/prompts/01-spec-from-public-docs.md` → `docs/specs/nodes/*.md`
+2. Implement agent (separate session): `docs/prompts/02-implement-from-spec.md` → SDK nodes
+
+See `docs/clean-room.md` and `docs/sdk/OVERVIEW.md`.
