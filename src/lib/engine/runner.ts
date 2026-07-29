@@ -1,8 +1,9 @@
 import type { IWorkflow, INodeExecutionData } from "../workflow/types";
-import type { ExecutionPlan, ExecutionRunData, IExecuteFunctions, NodeExecutor } from "./types";
+import type { ExecutionPlan, ExecutionRunData, NodeExecutor } from "./types";
 import type { CredentialResolver } from "./credentials";
 import { buildAdjacency, buildIncoming, resolveStartNodes, topologicalSort } from "./graph";
 import { evaluateExpression, isExpression } from "../expressions/evaluate";
+import { createExecutionContext } from "@/sdk";
 
 export function createExecutionPlan(workflow: IWorkflow): ExecutionPlan {
   const adjacency = buildAdjacency(workflow.connections);
@@ -28,7 +29,7 @@ export interface RunResult {
 function resolveParameters(
   params: Record<string, unknown>,
   nodeOutputs: Map<string, INodeExecutionData[][]>,
-  nodeName: string,
+  _nodeName: string,
 ): Record<string, unknown> {
   const nodeData: Record<string, INodeExecutionData[]> = {};
   for (const [name, outputs] of nodeOutputs) {
@@ -59,7 +60,6 @@ export async function executeWorkflow(options: RunOptions): Promise<RunResult> {
 
   const emitProgress = async () => {
     if (!onProgress) return;
-    // Clone so consumers don't mutate engine state
     const snapshot = JSON.parse(JSON.stringify(runData)) as ExecutionRunData;
     await onProgress(snapshot);
   };
@@ -78,6 +78,17 @@ export async function executeWorkflow(options: RunOptions): Promise<RunResult> {
 
   const executedNodes: Set<string> = new Set();
   const incoming = buildIncoming(workflow.connections);
+
+  const lookupInputItems = (nodeName: string, inputIndex: number): INodeExecutionData[] => {
+    const edges = incoming.get(nodeName) ?? [];
+    const items: INodeExecutionData[] = [];
+    for (const e of edges) {
+      if (e.targetInput !== inputIndex) continue;
+      const outs = nodeOutputs.get(e.source);
+      if (outs) items.push(...(outs[e.sourceOutput] ?? []));
+    }
+    return items;
+  };
 
   for (const nodeName of plan.runOrder) {
     const node = workflow.nodes.find((n) => n.name === nodeName);
@@ -115,31 +126,13 @@ export async function executeWorkflow(options: RunOptions): Promise<RunResult> {
 
     const nodeContinueOnFail = node.continueOnFail || node.onError === "continueRegularOutput";
 
-    const ctx: IExecuteFunctions = {
-      getNodeInputItems: (sourceName: string, inputIndex: number) => {
-        if (sourceName !== nodeName) {
-          const outputs = nodeOutputs.get(sourceName);
-          if (!outputs) return [];
-          return outputs[inputIndex] ?? [];
-        }
-        const edges = incoming.get(nodeName) ?? [];
-        const items: INodeExecutionData[] = [];
-        for (const e of edges) {
-          if (e.targetInput !== inputIndex) continue;
-          const outs = nodeOutputs.get(e.source);
-          if (outs) items.push(...(outs[e.sourceOutput] ?? []));
-        }
-        return items;
-      },
-      getWorkflow: () => workflow,
-      continueOnFail: () => nodeContinueOnFail,
-      getCredential: options.credentialResolver
-        ? async (name: string) => {
-            const ref = node.credentials?.[name];
-            if (!ref) return null;
-            return options.credentialResolver!(ref);
-          }
-        : undefined,
+    const getNodeInputItems = (sourceName: string, inputIndex: number): INodeExecutionData[] => {
+      if (sourceName !== nodeName) {
+        const outputs = nodeOutputs.get(sourceName);
+        if (!outputs) return [];
+        return outputs[inputIndex] ?? [];
+      }
+      return lookupInputItems(nodeName, inputIndex);
     };
 
     runData[nodeName].status = "running";
@@ -150,12 +143,33 @@ export async function executeWorkflow(options: RunOptions): Promise<RunResult> {
     let lastError: Error | null = null;
     let outputs: INodeExecutionData[][] | null = null;
 
+    const nodeData: Record<string, INodeExecutionData[]> = {};
+    for (const [name, outs] of nodeOutputs) {
+      nodeData[name] = outs.flat();
+    }
+
     for (let attempt = 1; attempt <= maxAttempts; attempt++) {
       try {
         const resolvedNode = {
           ...node,
           parameters: resolveParameters(node.parameters, nodeOutputs, nodeName),
         };
+
+        const ctx = createExecutionContext({
+          node: resolvedNode,
+          workflow,
+          getNodeInputItems,
+          continueOnFail: nodeContinueOnFail,
+          getCredential: options.credentialResolver
+            ? async (name: string) => {
+                const ref = node.credentials?.[name];
+                if (!ref) return null;
+                return options.credentialResolver!(ref);
+              }
+            : undefined,
+          nodeData,
+        });
+
         outputs = await executor(ctx, resolvedNode);
         lastError = null;
         break;
@@ -191,7 +205,7 @@ export async function executeWorkflow(options: RunOptions): Promise<RunResult> {
       ) {
         outputs = [[{ json: {} }]];
       }
-      const inputItems = ctx.getNodeInputItems(nodeName, 0);
+      const inputItems = getNodeInputItems(nodeName, 0);
       outputs = outputs.map((outputItems) =>
         outputItems.map((item, idx) => {
           if (item.pairedItem) return item;

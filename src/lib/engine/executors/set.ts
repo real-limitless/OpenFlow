@@ -1,5 +1,5 @@
-import type { NodeExecutor } from "../types";
-import type { INodeExecutionData } from "../../workflow/types";
+import type { NodeExecutor, INodeExecutionData } from "@/sdk";
+import { ensureItems } from "@/sdk";
 import { evaluateExpression } from "../../expressions/evaluate";
 
 interface FieldValue {
@@ -16,14 +16,12 @@ const TYPE_MAP: Record<string, string> = {
   objectValue: "object",
 };
 
-export const setExecutor: NodeExecutor = async (ctx, node) => {
-  const inputItems = ctx.getNodeInputItems(node.name, 0);
-  const items: INodeExecutionData[] = inputItems.length > 0 ? inputItems : [{ json: {} }];
-
-  const mode = (node.parameters.mode as string) ?? "manual";
+export const setExecutor: NodeExecutor = async (ctx) => {
+  const items: INodeExecutionData[] = ensureItems(ctx.getInputItems(0));
+  const mode = ctx.getParam<string>("mode", "manual");
 
   if (mode === "raw") {
-    const rawJson = node.parameters.jsonOutput;
+    const rawJson = ctx.getParam("jsonOutput");
     const parsed = typeof rawJson === "string" ? safeParse(rawJson) : rawJson;
     return [
       items.map((item, idx) => ({
@@ -37,14 +35,15 @@ export const setExecutor: NodeExecutor = async (ctx, node) => {
     ];
   }
 
-  const fieldsContainer = node.parameters.fields as
-    { values?: FieldValue[] } | FieldValue[] | undefined;
+  const fieldsContainer = ctx.getParam<{ values?: FieldValue[] } | FieldValue[] | undefined>(
+    "fields",
+  );
 
   const fields: FieldValue[] = Array.isArray(fieldsContainer)
     ? fieldsContainer
     : (fieldsContainer?.values ?? []);
 
-  const includeOther = node.parameters.includeOtherFields === true;
+  const includeOther = ctx.getParam<boolean>("includeOtherFields", false) === true;
 
   return [
     items.map((item, idx) => {

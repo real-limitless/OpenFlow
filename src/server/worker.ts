@@ -16,36 +16,43 @@ export function startWorker(concurrency = 5): Worker<ExecutionJobData> {
   worker = new Worker<ExecutionJobData>(
     "workflow-execution",
     async (job) => {
-      const { workflowId, executionId, pinData } = job.data;
+      const { workflowId, executionId, pinData, workflow: snapshot } = job.data;
 
       console.log(`[Worker] Processing execution ${executionId} for workflow ${workflowId}`);
 
-      const workflow = await prisma.workflow.findUnique({ where: { id: workflowId } });
-      if (!workflow) {
-        await prisma.execution.update({
-          where: { id: executionId },
-          data: { status: "error", finishedAt: new Date(), error: "Workflow not found" },
-        });
-        throw new Error("Workflow not found");
-      }
+      let definition: IWorkflow | null = null;
 
-      const definition = {
-        id: workflow.id,
-        name: workflow.name,
-        active: workflow.active,
-        nodes: JSON.parse(workflow.nodes),
-        connections: JSON.parse(workflow.connections),
-        settings: workflow.settings ? JSON.parse(workflow.settings) : undefined,
-        staticData: workflow.staticData ? JSON.parse(workflow.staticData) : undefined,
-        pinData: workflow.pinData ? JSON.parse(workflow.pinData) : undefined,
-        meta: workflow.meta ? JSON.parse(workflow.meta) : undefined,
-        versionId: workflow.versionId,
-      } as unknown as IWorkflow;
+      if (snapshot && Array.isArray((snapshot as IWorkflow).nodes)) {
+        definition = snapshot as unknown as IWorkflow;
+      } else {
+        const workflow = await prisma.workflow.findUnique({ where: { id: workflowId } });
+        if (!workflow) {
+          await prisma.execution.update({
+            where: { id: executionId },
+            data: { status: "error", finishedAt: new Date(), error: "Workflow not found" },
+          });
+          throw new Error("Workflow not found");
+        }
+        definition = {
+          id: workflow.id,
+          name: workflow.name,
+          active: workflow.active,
+          nodes: JSON.parse(workflow.nodes),
+          connections: JSON.parse(workflow.connections),
+          settings: workflow.settings ? JSON.parse(workflow.settings) : undefined,
+          staticData: workflow.staticData ? JSON.parse(workflow.staticData) : undefined,
+          pinData: workflow.pinData ? JSON.parse(workflow.pinData) : undefined,
+          meta: workflow.meta ? JSON.parse(workflow.meta) : undefined,
+          versionId: workflow.versionId,
+        } as unknown as IWorkflow;
+      }
 
       const result = await executeWorkflow({
         workflow: definition,
         nodeExecutors: defaultExecutors,
-        pinData: pinData as unknown as Record<string, INodeExecutionData[]>,
+        pinData:
+          (pinData as unknown as Record<string, INodeExecutionData[]>) ??
+          (definition.pinData as Record<string, INodeExecutionData[]> | undefined),
         credentialResolver: resolveCredential,
         onProgress: async (partial) => {
           await prisma.execution.update({

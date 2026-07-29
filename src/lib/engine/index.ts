@@ -1,5 +1,5 @@
 export type { ExecutionPlan, ExecutionRunData } from "./types";
-export type { NodeExecutor, IExecuteFunctions } from "./types";
+export type { NodeExecutor, IExecuteFunctions, ExecutionContext } from "./types";
 export type { CredentialData, CredentialResolver } from "./credentials";
 export { buildAdjacency, resolveStartNodes, topologicalSort } from "./graph";
 export { createExecutionPlan } from "./runner";

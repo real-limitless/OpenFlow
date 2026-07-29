@@ -1,5 +1,10 @@
 import type { INode, INodeExecutionData, IWorkflow } from "../workflow/types";
-import type { CredentialData } from "./credentials";
+import type { ExecutionContext, NodeExecutor } from "@/sdk";
+
+export type { ExecutionContext, NodeExecutor };
+
+/** @deprecated Use ExecutionContext from @/sdk */
+export type IExecuteFunctions = ExecutionContext;
 
 export interface ExecutionRunData {
   [nodeName: string]: {
@@ -18,14 +23,4 @@ export interface ExecutionPlan {
   runOrder: string[];
 }
 
-export interface IExecuteFunctions {
-  getNodeInputItems(nodeName: string, inputIndex: number): INodeExecutionData[];
-  getWorkflow(): IWorkflow;
-  continueOnFail(): boolean;
-  getCredential?(name: string): Promise<CredentialData | null>;
-}
-
-export type NodeExecutor = (
-  ctx: IExecuteFunctions,
-  node: INode,
-) => Promise<INodeExecutionData[][]>;
+export type { INode, IWorkflow, INodeExecutionData };

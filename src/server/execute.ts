@@ -22,28 +22,19 @@ async function checkRedis(): Promise<boolean> {
   return redisAvailable;
 }
 
-export async function enqueueOrRun(
-  workflowId: string,
-  executionId: string,
-  mode: "manual" | "webhook" | "trigger",
-  pinData?: Record<string, INodeExecutionData[]>,
-): Promise<void> {
-  if (await checkRedis()) {
-    await executionQueue.add("execute", { workflowId, executionId, mode, pinData });
-    return;
-  }
-
-  // Fallback: run in-process
-  const row = await prisma.workflow.findUnique({ where: { id: workflowId } });
-  if (!row) {
-    await prisma.execution.update({
-      where: { id: executionId },
-      data: { status: "error", finishedAt: new Date(), error: "Workflow not found" },
-    });
-    return;
-  }
-
-  const definition = {
+function definitionFromRow(row: {
+  id: string;
+  name: string;
+  active: boolean;
+  nodes: string;
+  connections: string;
+  settings: string | null;
+  staticData: string | null;
+  pinData: string | null;
+  meta: string | null;
+  versionId: string;
+}): IWorkflow {
+  return {
     id: row.id,
     name: row.name,
     active: row.active,
@@ -55,11 +46,49 @@ export async function enqueueOrRun(
     meta: row.meta ? JSON.parse(row.meta) : undefined,
     versionId: row.versionId,
   } as unknown as IWorkflow;
+}
+
+async function resolveDefinition(
+  workflowId: string,
+  snapshot?: IWorkflow,
+): Promise<IWorkflow | null> {
+  if (snapshot?.nodes) return snapshot;
+  const row = await prisma.workflow.findUnique({ where: { id: workflowId } });
+  if (!row) return null;
+  return definitionFromRow(row);
+}
+
+export async function enqueueOrRun(
+  workflowId: string,
+  executionId: string,
+  mode: "manual" | "webhook" | "trigger",
+  pinData?: Record<string, INodeExecutionData[]>,
+  workflow?: IWorkflow,
+): Promise<void> {
+  if (await checkRedis()) {
+    await executionQueue.add("execute", {
+      workflowId,
+      executionId,
+      mode,
+      pinData,
+      workflow: workflow as unknown as Record<string, unknown> | undefined,
+    });
+    return;
+  }
+
+  const definition = await resolveDefinition(workflowId, workflow);
+  if (!definition) {
+    await prisma.execution.update({
+      where: { id: executionId },
+      data: { status: "error", finishedAt: new Date(), error: "Workflow not found" },
+    });
+    return;
+  }
 
   executeWorkflow({
     workflow: definition,
     nodeExecutors: defaultExecutors,
-    pinData,
+    pinData: pinData ?? (definition.pinData as Record<string, INodeExecutionData[]> | undefined),
     credentialResolver: resolveCredential,
     onProgress: async (partial) => {
       await prisma.execution.update({

@@ -1,14 +1,10 @@
-import type { NodeExecutor } from "../types";
+import type { NodeExecutor } from "@/sdk";
+import { withPairedItem } from "@/sdk";
 
-export const noopExecutor: NodeExecutor = async (ctx, node) => {
-  const inputItems = ctx.getNodeInputItems(node.name, 0);
+export const noopExecutor: NodeExecutor = async (ctx) => {
+  const inputItems = ctx.getInputItems(0);
   if (inputItems.length === 0) {
     return [[{ json: {} }]];
   }
-  return [
-    inputItems.map((item, idx) => ({
-      ...item,
-      pairedItem: item.pairedItem ?? { item: idx, input: 0 },
-    })),
-  ];
+  return [inputItems.map((item, idx) => withPairedItem(item, idx))];
 };

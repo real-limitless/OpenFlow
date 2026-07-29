@@ -266,37 +266,39 @@ export default function workflowsRoute(app: Hono<AppEnv>) {
       /* no body is fine */
     }
 
-    let row = await prisma.workflow.findUnique({ where: { id } });
+    // Prefer the canvas snapshot from the client so edits are executed immediately
+    // even if autosave hasn't landed yet.
+    let snapshot: IWorkflow | undefined = body.workflow
+      ? { ...body.workflow, id: body.workflow.id || id }
+      : undefined;
 
-    if (!row) {
-      if (!body.workflow) return c.json({ error: "Workflow not found" }, 404);
-
+    if (snapshot) {
       await prisma.user.upsert({
         where: { id: userId },
         update: {},
         create: { id: userId, email: `${userId}@local`, passwordHash: "" },
       });
 
-      const wf = body.workflow;
       const data = serializeJsonFields({
-        name: wf.name,
-        active: wf.active,
-        versionId: wf.versionId ?? crypto.randomUUID(),
-        nodes: wf.nodes,
-        connections: wf.connections,
-        settings: wf.settings,
-        staticData: wf.staticData ?? null,
-        pinData: wf.pinData ?? null,
-        meta: wf.meta ?? null,
+        name: snapshot.name,
+        active: snapshot.active,
+        versionId: snapshot.versionId ?? crypto.randomUUID(),
+        nodes: snapshot.nodes,
+        connections: snapshot.connections,
+        settings: snapshot.settings,
+        staticData: snapshot.staticData ?? null,
+        pinData: snapshot.pinData ?? null,
+        meta: snapshot.meta ?? null,
         ...Object.fromEntries(
-          Object.entries(wf as Record<string, unknown>).filter(
+          Object.entries(snapshot as Record<string, unknown>).filter(
             ([k]) => !KNOWN_WORKFLOW_FIELDS.has(k),
           ),
         ),
       });
 
-      row = await prisma.workflow.create({
-        data: {
+      await prisma.workflow.upsert({
+        where: { id },
+        create: {
           id,
           userId,
           name: data.name as string,
@@ -310,7 +312,23 @@ export default function workflowsRoute(app: Hono<AppEnv>) {
           meta: (data.meta as string) ?? null,
           extra: (data.extra as string) ?? null,
         },
+        update: {
+          name: data.name as string,
+          active: data.active as boolean,
+          versionId: data.versionId as string,
+          nodes: data.nodes as string,
+          connections: data.connections as string,
+          settings: (data.settings as string) ?? null,
+          staticData: (data.staticData as string) ?? null,
+          pinData: (data.pinData as string) ?? null,
+          meta: (data.meta as string) ?? null,
+          extra: (data.extra as string) ?? null,
+        },
       });
+    } else {
+      const row = await prisma.workflow.findUnique({ where: { id } });
+      if (!row) return c.json({ error: "Workflow not found" }, 404);
+      snapshot = deserializeJsonFields(row as unknown as Record<string, unknown>);
     }
 
     const execution = await prisma.execution.create({
@@ -321,7 +339,8 @@ export default function workflowsRoute(app: Hono<AppEnv>) {
       },
     });
 
-    await enqueueOrRun(id, execution.id, "manual", body.pinData);
+    const pinData = body.pinData ?? snapshot.pinData;
+    await enqueueOrRun(id, execution.id, "manual", pinData, snapshot);
 
     return c.json({ executionId: execution.id }, 202);
   });

@@ -11,6 +11,8 @@ export interface ExecutionJobData {
   executionId: string;
   mode: "manual" | "webhook" | "trigger";
   pinData?: Record<string, unknown>;
+  /** Canvas snapshot at enqueue time — preferred over DB row when present. */
+  workflow?: Record<string, unknown>;
 }
 
 export const executionQueue = new Queue<ExecutionJobData>("workflow-execution", {
