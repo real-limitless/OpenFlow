@@ -1,0 +1,44 @@
+services:
+  api:
+    build: .
+    ports:
+      - "3000:3000"
+    environment:
+        DATABASE_URL: postgresql://openflow:openflow@db:5432/openflow
+        AUTH_DISABLED: "true"
+        CREDENTIALS_KEY: ${CREDENTIALS_KEY:-replace-me-with-64-hex-chars}
+        REDIS_URL: redis://redis:6379
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  db:
+    image: postgres:16-alpine
+    ports:
+      - "15432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    environment:
+      POSTGRES_DB: openflow
+      POSTGRES_USER: openflow
+      POSTGRES_PASSWORD: openflow
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U openflow -d openflow"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+volumes:
+  pgdata:
