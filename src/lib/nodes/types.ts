@@ -16,6 +16,7 @@ export type NodePropertyType =
   | "dateTime"
   | "json"
   | "resourceLocator"
+  | "workflowSelect"
   | "notice"
   | "color";
 

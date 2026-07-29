@@ -1,13 +1,12 @@
-import type { NodeExecutor } from "../types";
-import type { INodeExecutionData } from "../../workflow/types";
+import type { NodeExecutor, INodeExecutionData } from "@/sdk";
 
-export const mergeExecutor: NodeExecutor = async (ctx, node) => {
-  const mode = (node.parameters.mode as string) ?? "append";
-  const inputCount = Math.max(2, Number(node.parameters.numberInputs ?? 2));
+export const mergeExecutor: NodeExecutor = async (ctx) => {
+  const mode = ctx.getParam<string>("mode", "append");
+  const inputCount = Math.max(2, Number(ctx.getParam("numberInputs", 2)));
 
   const inputs: INodeExecutionData[][] = [];
   for (let i = 0; i < inputCount; i++) {
-    inputs.push(ctx.getNodeInputItems(node.name, i));
+    inputs.push(ctx.getInputItems(i));
   }
 
   if (mode === "append") {
@@ -15,8 +14,8 @@ export const mergeExecutor: NodeExecutor = async (ctx, node) => {
   }
 
   if (mode === "combine") {
-    const combineBy = (node.parameters.combineBy as string) ?? "combineByFields";
-    const options = (node.parameters.options as Record<string, unknown>) ?? {};
+    const combineBy = ctx.getParam<string>("combineBy", "combineByFields");
+    const options = ctx.getParam<Record<string, unknown>>("options", {}) ?? {};
     const includeUnpaired = options.includeUnpaired === true;
 
     if (combineBy === "combineByPosition") {
@@ -42,7 +41,7 @@ export const mergeExecutor: NodeExecutor = async (ctx, node) => {
     }
 
     if (combineBy === "combineByFields") {
-      const fieldsRaw = (node.parameters.fieldsToMatchString as string) ?? "";
+      const fieldsRaw = ctx.getParam<string>("fieldsToMatchString", "") ?? "";
       const fields = fieldsRaw
         .split(",")
         .map((f) => f.trim())
@@ -55,7 +54,7 @@ export const mergeExecutor: NodeExecutor = async (ctx, node) => {
       for (const input of inputs) {
         for (const item of input) {
           const k = keyOf(item.json);
-          if (!k) {
+          if (!k && fields.length > 0) {
             unpaired.push(item);
             continue;
           }
@@ -89,7 +88,7 @@ export const mergeExecutor: NodeExecutor = async (ctx, node) => {
   }
 
   if (mode === "chooseBranch") {
-    const output = (node.parameters.output as string) ?? "0";
+    const output = ctx.getParam<string>("output", "0");
     const branchIdx = parseInt(String(output), 10);
     const idx = Number.isNaN(branchIdx) ? 0 : branchIdx;
     return [inputs[idx] ?? []];

@@ -263,6 +263,47 @@ export const code: INodeTypeDescription = {
   ],
 };
 
+export const stopAndError: INodeTypeDescription = {
+  name: "n8n-nodes-base.stopAndError",
+  displayName: "Stop and Error",
+  category: "Flow",
+  group: ["transform"],
+  version: 1,
+  description: "Stops the workflow and throws a custom error message or object.",
+  defaults: { name: "Stop and Error" },
+  inputs: ["main"],
+  outputs: ["main"],
+  icon: "OctagonAlert",
+  sources: [`${CORE}n8n-nodes-base.stopanderror/`],
+  properties: [
+    {
+      displayName: "Error Type",
+      name: "errorType",
+      type: "options",
+      default: "errorMessage",
+      noDataExpression: true,
+      options: [
+        { name: "Error Message", value: "errorMessage" },
+        { name: "Error Object", value: "errorObject" },
+      ],
+    },
+    {
+      displayName: "Error Message",
+      name: "errorMessage",
+      type: "string",
+      default: "Workflow stopped with an error",
+      displayOptions: { show: { errorType: ["errorMessage"] } },
+    },
+    {
+      displayName: "Error Object",
+      name: "errorObject",
+      type: "json",
+      default: '{"message":"Stopped"}',
+      displayOptions: { show: { errorType: ["errorObject"] } },
+    },
+  ],
+};
+
 export const noOp: INodeTypeDescription = {
   name: "n8n-nodes-base.noOp",
   displayName: "No Operation",

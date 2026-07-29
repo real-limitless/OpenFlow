@@ -1,5 +1,4 @@
-import type { NodeExecutor } from "../types";
-import type { INodeExecutionData } from "../../workflow/types";
+import type { NodeExecutor, INodeExecutionData } from "@/sdk";
 
 interface IVMModule {
   Isolate: new () => IIsolate;
@@ -26,14 +25,13 @@ interface IVMScript {
   run(context: IVMContext, options?: { copy?: boolean }): Promise<unknown>;
 }
 
-export const codeExecutor: NodeExecutor = async (ctx, node) => {
-  const inputItems = ctx.getNodeInputItems(node.name, 0);
-  const code = (node.parameters.jsCode as string) ?? "";
-  const mode = (node.parameters.mode as string) ?? "runOnceForAllItems";
+export const codeExecutor: NodeExecutor = async (ctx) => {
+  const inputItems = ctx.getInputItems(0);
+  const code = ctx.getParam<string>("jsCode", "") ?? "";
+  const mode = ctx.getParam<string>("mode", "runOnceForAllItems");
 
   let ivm: IVMModule;
   try {
-    // Dynamic import — native module, resolved from node_modules at runtime
     const mod = (await import(/* @vite-ignore */ "isolated-vm")) as {
       default?: IVMModule;
     } & IVMModule;
@@ -48,8 +46,9 @@ export const codeExecutor: NodeExecutor = async (ctx, node) => {
 
   if (mode === "runOnceForEachItem") {
     const outputItems: INodeExecutionData[] = [];
-    for (const item of inputItems) {
-      const result = await runInSandbox(ivm, code, inputItems, item.json ?? {});
+    const source = inputItems.length > 0 ? inputItems : [{ json: {} }];
+    for (const item of source) {
+      const result = await runInSandbox(ivm, code, source, item.json ?? {});
       if (Array.isArray(result)) {
         outputItems.push(...normalizeCodeResult(result));
       } else {
@@ -59,9 +58,13 @@ export const codeExecutor: NodeExecutor = async (ctx, node) => {
     return [outputItems];
   }
 
-  // runOnceForAllItems
   const firstItem = inputItems[0]?.json ?? {};
-  const result = await runInSandbox(ivm, code, inputItems, firstItem);
+  const result = await runInSandbox(
+    ivm,
+    code,
+    inputItems.length > 0 ? inputItems : [{ json: {} }],
+    firstItem,
+  );
 
   return [normalizeCodeResult(result)];
 };
@@ -103,7 +106,6 @@ async function runInSandbox(
   try {
     await context.global.set("global", context.global.derefInto());
 
-    // ExternalCopy can only transfer plain data — no functions
     const payload = {
       items: allItems.map((item) => ({
         json: item.json ?? {},

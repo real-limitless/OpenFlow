@@ -4,6 +4,8 @@ const TRIGGER_TYPES = new Set([
   "n8n-nodes-base.manualTrigger",
   "n8n-nodes-base.webhook",
   "n8n-nodes-base.scheduleTrigger",
+  "n8n-nodes-base.executeWorkflowTrigger",
+  "n8n-nodes-base.errorTrigger",
 ]);
 
 export function buildAdjacency(connections: IConnections): Map<string, string[]> {

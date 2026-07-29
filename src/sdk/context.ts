@@ -45,6 +45,7 @@ export function createExecutionContext(
       });
     },
     getNodeInputItems,
+    runSubWorkflow: options.runSubWorkflow,
   };
 
   return ctx;

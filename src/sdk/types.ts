@@ -43,6 +43,16 @@ export interface ExecutionContext {
    * Prefer getInputItems for new code.
    */
   getNodeInputItems(nodeName: string, inputIndex: number): INodeExecutionData[];
+
+  /**
+   * Run a nested workflow (Execute Workflow node).
+   * Optional — only present when the engine was given subWorkflows / a resolver.
+   */
+  runSubWorkflow?(options: {
+    workflowId?: string;
+    workflowJson?: IWorkflow;
+    items: INodeExecutionData[];
+  }): Promise<INodeExecutionData[]>;
 }
 
 /**
@@ -68,4 +78,5 @@ export interface CreateContextOptions {
   getCredential?: (name: string) => Promise<CredentialData | null>;
   /** Optional peer node outputs for expression evaluation. */
   nodeData?: Record<string, INodeExecutionData[]>;
+  runSubWorkflow?: ExecutionContext["runSubWorkflow"];
 }

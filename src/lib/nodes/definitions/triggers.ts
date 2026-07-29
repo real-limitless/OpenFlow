@@ -2,6 +2,56 @@ import type { INodeTypeDescription } from "../types";
 
 const DOCS = "https://docs.n8n.io/integrations/builtin/core-nodes/";
 
+export const errorTrigger: INodeTypeDescription = {
+  name: "n8n-nodes-base.errorTrigger",
+  displayName: "Error Trigger",
+  category: "Triggers",
+  group: ["trigger"],
+  version: 1,
+  description: "Starts when a linked workflow fails (error workflow).",
+  defaults: { name: "Error Trigger" },
+  inputs: [],
+  outputs: ["main"],
+  icon: "CircleAlert",
+  sources: [`${DOCS}n8n-nodes-base.errortrigger/`],
+  properties: [
+    {
+      displayName:
+        "This workflow runs when another workflow fails and points here as its Error workflow.",
+      name: "notice",
+      type: "notice",
+      default: "",
+    },
+  ],
+};
+
+export const executeWorkflowTrigger: INodeTypeDescription = {
+  name: "n8n-nodes-base.executeWorkflowTrigger",
+  displayName: "When Executed by Another Workflow",
+  category: "Triggers",
+  group: ["trigger"],
+  version: 1,
+  description: "Starts this workflow when called as a sub-workflow.",
+  defaults: { name: "When Executed by Another Workflow" },
+  inputs: [],
+  outputs: ["main"],
+  icon: "Workflow",
+  sources: [`${DOCS}n8n-nodes-base.executeworkflowtrigger/`],
+  properties: [
+    {
+      displayName: "Input data mode",
+      name: "inputSource",
+      type: "options",
+      default: "passthrough",
+      noDataExpression: true,
+      options: [
+        { name: "Accept all data", value: "passthrough" },
+        { name: "Define using fields below", value: "fields" },
+      ],
+    },
+  ],
+};
+
 export const manualTrigger: INodeTypeDescription = {
   name: "n8n-nodes-base.manualTrigger",
   displayName: "Manual Trigger",

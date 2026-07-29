@@ -19,6 +19,19 @@ export interface RunOptions {
   credentialResolver?: CredentialResolver;
   /** Called when node status changes (pending → running → success/error). */
   onProgress?: (runData: ExecutionRunData) => void | Promise<void>;
+  /**
+   * Nested workflows available to Execute Workflow, keyed by id and/or name.
+   */
+  subWorkflows?: Record<string, IWorkflow>;
+  /**
+   * Async loader for sub-workflows (e.g. database by id or name).
+   * Used when the id is not already present in `subWorkflows`.
+   */
+  resolveSubWorkflow?: (idOrName: string) => Promise<IWorkflow | null>;
+  /** Max nested executeWorkflow depth (default 5). */
+  maxSubWorkflowDepth?: number;
+  /** Internal recursion depth. */
+  _depth?: number;
 }
 
 export interface RunResult {
@@ -52,8 +65,29 @@ function resolveParameters(
   return resolved;
 }
 
+function collectTerminalItems(
+  workflow: IWorkflow,
+  runData: ExecutionRunData,
+  adjacency: Map<string, string[]>,
+): INodeExecutionData[] {
+  const terminals = workflow.nodes.filter((n) => {
+    const outs = adjacency.get(n.name);
+    return !outs || outs.length === 0;
+  });
+  const items: INodeExecutionData[] = [];
+  for (const n of terminals) {
+    const rd = runData[n.name];
+    if (rd?.status === "success" && rd.items) {
+      items.push(...rd.items.flat());
+    }
+  }
+  return items;
+}
+
 export async function executeWorkflow(options: RunOptions): Promise<RunResult> {
   const { workflow, nodeExecutors, pinData, onProgress } = options;
+  const depth = options._depth ?? 0;
+  const maxDepth = options.maxSubWorkflowDepth ?? 5;
   const plan = createExecutionPlan(workflow);
   const runData: ExecutionRunData = {};
   const nodeOutputs: Map<string, INodeExecutionData[][]> = new Map();
@@ -155,6 +189,74 @@ export async function executeWorkflow(options: RunOptions): Promise<RunResult> {
           parameters: resolveParameters(node.parameters, nodeOutputs, nodeName),
         };
 
+        const runSubWorkflow = async (subOpts: {
+          workflowId?: string;
+          workflowJson?: IWorkflow;
+          items: INodeExecutionData[];
+        }): Promise<INodeExecutionData[]> => {
+          if (depth >= maxDepth) {
+            throw new Error(`Sub-workflow depth limit exceeded (max ${maxDepth})`);
+          }
+          let child: IWorkflow | undefined = subOpts.workflowJson;
+          const idOrName = subOpts.workflowId?.trim();
+          if (!child && idOrName) {
+            if (options.subWorkflows) {
+              child =
+                options.subWorkflows[idOrName] ??
+                Object.values(options.subWorkflows).find(
+                  (w) => w.id === idOrName || w.name === idOrName,
+                );
+            }
+            if (!child && options.resolveSubWorkflow) {
+              child = (await options.resolveSubWorkflow(idOrName)) ?? undefined;
+            }
+          }
+          if (!child) {
+            const hint = idOrName
+              ? `Sub-workflow not found: "${idOrName}". Save the child workflow first, then select it from the Workflow dropdown (id must exist in the database).`
+              : "Sub-workflow not found: set workflowId or inline workflow JSON.";
+            throw new Error(hint);
+          }
+
+          const start =
+            child.nodes.find(
+              (n) =>
+                n.type === "n8n-nodes-base.executeWorkflowTrigger" ||
+                n.type === "n8n-nodes-base.manualTrigger" ||
+                n.type === "n8n-nodes-base.webhook",
+            ) ?? child.nodes[0];
+
+          const childPin =
+            start && subOpts.items.length > 0
+              ? { [start.name]: subOpts.items }
+              : undefined;
+
+          const childResult = await executeWorkflow({
+            workflow: child,
+            nodeExecutors,
+            pinData: childPin,
+            credentialResolver: options.credentialResolver,
+            subWorkflows: options.subWorkflows,
+            resolveSubWorkflow: options.resolveSubWorkflow,
+            maxSubWorkflowDepth: maxDepth,
+            _depth: depth + 1,
+          });
+
+          if (!childResult.success) {
+            const errNode = Object.entries(childResult.runData).find(
+              ([, v]) => v.status === "error",
+            );
+            throw new Error(
+              errNode
+                ? `Sub-workflow error in "${errNode[0]}": ${errNode[1].error ?? "unknown"}`
+                : "Sub-workflow failed",
+            );
+          }
+
+          const childPlan = createExecutionPlan(child);
+          return collectTerminalItems(child, childResult.runData, childPlan.adjacency);
+        };
+
         const ctx = createExecutionContext({
           node: resolvedNode,
           workflow,
@@ -168,6 +270,7 @@ export async function executeWorkflow(options: RunOptions): Promise<RunResult> {
               }
             : undefined,
           nodeData,
+          runSubWorkflow,
         });
 
         outputs = await executor(ctx, resolvedNode);

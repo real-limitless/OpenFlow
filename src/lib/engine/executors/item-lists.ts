@@ -1,5 +1,9 @@
-import type { NodeExecutor } from "../types";
-import type { INodeExecutionData } from "../../workflow/types";
+import type { NodeExecutor, INodeExecutionData } from "@/sdk";
+
+/**
+ * Legacy Item Lists node — public docs folded most ops into Split Out / Aggregate.
+ * OpenFlow keeps splitOut + aggregate modes for import compatibility.
+ */
 
 function getField(obj: Record<string, unknown>, path: string): unknown {
   return path.split(".").reduce<unknown>((acc, key) => {
@@ -10,20 +14,26 @@ function getField(obj: Record<string, unknown>, path: string): unknown {
   }, obj);
 }
 
-export const itemListsExecutor: NodeExecutor = async (ctx, node) => {
-  const inputItems = ctx.getNodeInputItems(node.name, 0);
-  const mode = (node.parameters.mode as string) ?? "splitOut";
-  const options = (node.parameters.options as Record<string, unknown>) ?? {};
+export const itemListsExecutor: NodeExecutor = async (ctx) => {
+  const inputItems = ctx.getInputItems(0);
+  const mode = ctx.getParam<string>("mode", "splitOutItems");
+  const options = ctx.getParam<Record<string, unknown>>("options", {}) ?? {};
   const ignoreMissingFields = options.ignoreMissingFields === true;
 
-  if (mode === "aggregate") {
-    const fieldName = (node.parameters.fieldName as string) ?? "data";
+  if (mode === "aggregateItems" || mode === "aggregate") {
+    const fieldName =
+      ctx.getParam<string>("fieldName", "") ||
+      ctx.getParam<string>("destinationFieldName", "data") ||
+      "data";
     const data = inputItems.map((item) => item.json);
     return [[{ json: { [fieldName]: data } }]];
   }
 
-  // splitOut
-  const arrayFieldName = (node.parameters.arrayFieldName as string) ?? "data";
+  // splitOutItems / splitOut
+  const arrayFieldName =
+    ctx.getParam<string>("arrayFieldName", "") ||
+    ctx.getParam<string>("fieldToSplitOut", "data") ||
+    "data";
   const output: INodeExecutionData[] = [];
 
   for (const item of inputItems) {
@@ -31,7 +41,7 @@ export const itemListsExecutor: NodeExecutor = async (ctx, node) => {
 
     if (!Array.isArray(value)) {
       if (ignoreMissingFields) continue;
-      output.push({ json: { ...item.json } });
+      output.push({ json: { ...item.json }, pairedItem: item.pairedItem });
       continue;
     }
 

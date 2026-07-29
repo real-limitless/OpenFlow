@@ -1,6 +1,13 @@
 import type { INodeTypeDescription, NodeCategory } from "./types";
-import { manualTrigger, scheduleTrigger, webhook, respondToWebhook } from "./definitions/triggers";
-import { httpRequest, set, code, noOp, stickyNote } from "./definitions/core";
+import {
+  manualTrigger,
+  scheduleTrigger,
+  webhook,
+  respondToWebhook,
+  executeWorkflowTrigger,
+  errorTrigger,
+} from "./definitions/triggers";
+import { httpRequest, set, code, noOp, stickyNote, stopAndError } from "./definitions/core";
 import { ifNode, switchNode, merge, wait, splitInBatches } from "./definitions/flow";
 import {
   splitOut,
@@ -11,10 +18,20 @@ import {
   itemLists,
   dateTime,
   executeWorkflow,
+  sort,
+  renameKeys,
 } from "./definitions/transform";
+import {
+  getDescription,
+  listDescriptions,
+  registerAlias,
+  registerDescription,
+} from "@/lib/engine/node-runtime";
 
-const definitions: INodeTypeDescription[] = [
+const BUILTIN_DESCRIPTIONS: INodeTypeDescription[] = [
   manualTrigger,
+  executeWorkflowTrigger,
+  errorTrigger,
   webhook,
   scheduleTrigger,
   respondToWebhook,
@@ -33,26 +50,39 @@ const definitions: INodeTypeDescription[] = [
   removeDuplicates,
   itemLists,
   dateTime,
+  sort,
+  renameKeys,
   executeWorkflow,
+  stopAndError,
   noOp,
   stickyNote,
 ];
 
-const byName = new Map<string, INodeTypeDescription>();
-for (const def of definitions) {
-  byName.set(def.name, def);
-  // Also register the bare key so both "nodes-base.x" and "n8n-nodes-base.x" resolve.
-  byName.set(def.name.replace(/^n8n-/, ""), def);
+const ALIAS_PAIRS: Array<[string, string]> = [
+  ["n8n-nodes-base.manualWorkflowTrigger", manualTrigger.name],
+  ["n8n-nodes-base.start", manualTrigger.name],
+  ["n8n-nodes-base.function", code.name],
+  ["n8n-nodes-base.functionItem", code.name],
+];
+
+let descriptionsSeeded = false;
+
+export function seedBuiltinDescriptions(): void {
+  for (const d of BUILTIN_DESCRIPTIONS) {
+    registerDescription(d);
+  }
+  for (const [from, to] of ALIAS_PAIRS) {
+    registerAlias(from, to);
+  }
+  descriptionsSeeded = true;
 }
 
-/** Aliases for type strings seen in public exports that map to the same node. */
-const aliases: Record<string, string> = {
-  "n8n-nodes-base.manualWorkflowTrigger": manualTrigger.name,
-  "n8n-nodes-base.start": manualTrigger.name,
-  "n8n-nodes-base.function": code.name,
-  "n8n-nodes-base.functionItem": code.name,
-  "n8n-nodes-base.noOp ": noOp.name,
-};
+if (!descriptionsSeeded) {
+  seedBuiltinDescriptions();
+}
+
+/** @deprecated prefer registerDescription from node-runtime */
+const aliases: Record<string, string> = Object.fromEntries(ALIAS_PAIRS);
 
 export const NODE_CATEGORIES: NodeCategory[] = [
   "Triggers",
@@ -63,11 +93,13 @@ export const NODE_CATEGORIES: NodeCategory[] = [
 ];
 
 export function allNodeTypes(): INodeTypeDescription[] {
-  return definitions;
+  return listDescriptions();
 }
 
 export function isSupportedType(type: string): boolean {
-  return byName.has(type) || type in aliases;
+  if (getDescription(type)) return true;
+  if (type in aliases) return true;
+  return false;
 }
 
 export function makePlaceholderDescription(type: string): INodeTypeDescription {
@@ -103,7 +135,11 @@ export function makePlaceholderDescription(type: string): INodeTypeDescription {
 
 export function getNodeType(type: string): INodeTypeDescription {
   const resolved = aliases[type] ?? type;
-  return byName.get(resolved) ?? makePlaceholderDescription(type);
+  return getDescription(resolved) ?? makePlaceholderDescription(type);
+}
+
+export function registerNodeDescription(description: INodeTypeDescription): void {
+  registerDescription(description);
 }
 
 export const STICKY_NOTE_TYPE = stickyNote.name;
