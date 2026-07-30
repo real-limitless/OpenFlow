@@ -75,5 +75,6 @@ docs/
 4. **Hot-load (dev):** `POST /api/v1/dev/reload-nodes` when `OPENFLOW_HOT_NODES=1`
 5. **Batch tests:** `npm run test:batch -- 00`
 6. **Dogfood:** `npm run test:dogfood` · fixtures in `workflows/dogfood/` · `docs/dogfood.md`
+7. **Factory:** `npm run factory:batch -- 05` · SPEC=`xai/grok-4.5` IMPL=`featherless/zai-org/GLM-5.2` VAL=`xai/grok-4.5` · `scripts/factory/README.md`
 
 See `docs/clean-room.md` and `docs/sdk/OVERVIEW.md`.

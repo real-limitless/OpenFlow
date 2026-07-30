@@ -108,3 +108,47 @@ documentation. No third-party source code was consulted for any entry below.
 | Phase 8 | Date & Time (`n8n-nodes-base.dateTime`) | https://docs.n8n.io/integrations/builtin/core-nodes/n8n-nodes-base.date-time/ | Public docs only |
 | Phase 8 | Split in Batches (`n8n-nodes-base.splitInBatches`) | https://docs.n8n.io/integrations/builtin/core-nodes/n8n-nodes-base.splitinbatches/ | Public docs only |
 | Phase 8 | Execute Workflow (`n8n-nodes-base.executeWorkflow`) | https://docs.n8n.io/integrations/builtin/core-nodes/n8n-nodes-base.executeworkflow/ | Public docs only |
+| Factory queue | Execute Sub-workflow Trigger (`n8n-nodes-base.executeWorkflowTrigger`) | https://docs.n8n.io/integrations/builtin/core-nodes/n8n-nodes-base.executeworkflowtrigger.md | Public docs only |
+| Factory queue | Code (`n8n-nodes-base.code`) refresh | https://docs.n8n.io/integrations/builtin/core-nodes/n8n-nodes-base.code.md | Public docs only |
+| Factory queue | IF (`n8n-nodes-base.if`) refresh | https://docs.n8n.io/integrations/builtin/core-nodes/n8n-nodes-base.if.md | Public docs only |
+| Factory queue | Filter (`n8n-nodes-base.filter`) refresh | https://docs.n8n.io/integrations/builtin/core-nodes/n8n-nodes-base.filter.md | Public docs only |
+| Factory queue | Aggregate (`n8n-nodes-base.aggregate`) refresh | https://docs.n8n.io/integrations/builtin/core-nodes/n8n-nodes-base.aggregate.md | Public docs only |
+| Factory queue | Split In Batches / Loop Over Items (`n8n-nodes-base.splitInBatches`) refresh | https://docs.n8n.io/integrations/builtin/core-nodes/n8n-nodes-base.splitinbatches.md | Public docs only |
+| Factory queue | FTP (`n8n-nodes-base.ftp`) | https://docs.n8n.io/integrations/builtin/core-nodes/n8n-nodes-base.ftp.md | Public docs only |
+| Factory queue | FTP credentials | https://docs.n8n.io/integrations/builtin/credentials/ftp.md | Public docs only |
+| Factory queue | DataTable (`n8n-nodes-base.dataTable`) | https://docs.n8n.io/integrations/builtin/core-nodes/n8n-nodes-base.datatable.md | Public docs only |
+| Factory queue | OpenAI Chat Model (`@n8n/n8n-nodes-langchain.lmChatOpenAi`) | https://docs.n8n.io/integrations/builtin/cluster-nodes/sub-nodes/n8n-nodes-langchain.lmchatopenai.md | Public docs only |
+| Factory queue | OpenAI Chat Model credentials | https://docs.n8n.io/integrations/builtin/credentials/openai.md | Public docs only |
+| Factory queue | OpenAI Chat Model common issues | https://docs.n8n.io/integrations/builtin/cluster-nodes/sub-nodes/n8n-nodes-langchain.lmchatopenai/common-issues.md | Public docs only |
+| Factory queue | AI Agent (`@n8n/n8n-nodes-langchain.agent`) | https://docs.n8n.io/integrations/builtin/cluster-nodes/root-nodes/n8n-nodes-langchain.agent.md | Public docs only |
+| Factory queue | AI Agent Tools mode | https://docs.n8n.io/integrations/builtin/cluster-nodes/root-nodes/n8n-nodes-langchain.agent/tools-agent.md | Public docs only |
+| Factory queue | AI Agent common issues | https://docs.n8n.io/integrations/builtin/cluster-nodes/root-nodes/n8n-nodes-langchain.agent/common-issues.md | Public docs only |
+| Factory queue | MCP Client Tool (`@n8n/n8n-nodes-langchain.mcpClientTool`) | https://docs.n8n.io/integrations/builtin/cluster-nodes/sub-nodes/n8n-nodes-langchain.toolmcp.md | Public docs only |
+| Factory queue | MCP Client (sibling core node) | https://docs.n8n.io/integrations/builtin/core-nodes/n8n-nodes-langchain.mcpclient.md | Public docs only |
+| Factory queue | MCP Client Tool auth (HTTP Request credentials) | https://docs.n8n.io/integrations/builtin/credentials/httprequest.md | Public docs only |
+| Factory queue | MCP protocol tools | https://modelcontextprotocol.io/specification/2024-11-05/server/tools | Third-party protocol docs |
+| Factory queue | MCP Client Tool public workflow JSON | n8n template gallery API exports | Public workflow JSON |
+| Factory queue | Sort (`n8n-nodes-base.sort`) refresh | https://docs.n8n.io/integrations/builtin/core-nodes/n8n-nodes-base.sort.md | Public docs only |
+| Factory queue | Compare Datasets (`n8n-nodes-base.compareDatasets`) | https://docs.n8n.io/integrations/builtin/core-nodes/n8n-nodes-base.comparedatasets.md | Public docs + public descriptor metadata |
+| Factory queue | Rename Keys (`n8n-nodes-base.renameKeys`) refresh | https://docs.n8n.io/integrations/builtin/core-nodes/n8n-nodes-base.renamekeys.md | Public docs + public descriptor metadata |
+| Factory queue | Crypto (`n8n-nodes-base.crypto`) | https://docs.n8n.io/integrations/builtin/core-nodes/n8n-nodes-base.crypto.md | Public docs + public descriptor metadata |
+| Factory queue | Crypto credentials | https://docs.n8n.io/integrations/builtin/credentials/crypto.md | Public docs only |
+| Factory queue | Date & Time (`n8n-nodes-base.dateTime`) refresh | https://docs.n8n.io/integrations/builtin/core-nodes/n8n-nodes-base.datetime.md | Public docs + public descriptor metadata |
+| Factory queue | Markdown (`n8n-nodes-base.markdown`) | https://docs.n8n.io/integrations/builtin/core-nodes/n8n-nodes-base.markdown.md | Public docs + public descriptor metadata |
+| Factory queue | HTML (`n8n-nodes-base.html`) | https://docs.n8n.io/integrations/builtin/core-nodes/n8n-nodes-base.html.md | Public docs + public descriptor metadata |
+| Factory queue | XML (`n8n-nodes-base.xml`) | https://docs.n8n.io/integrations/builtin/core-nodes/n8n-nodes-base.xml.md | Public docs + public descriptor metadata |
+| Factory queue | JWT (`n8n-nodes-base.jwt`) | https://docs.n8n.io/integrations/builtin/core-nodes/n8n-nodes-base.jwt.md | Public docs + public descriptor metadata |
+| Factory queue | JWT credentials | https://docs.n8n.io/integrations/builtin/credentials/jwt.md | Public docs only |
+| Factory queue | Compression (`n8n-nodes-base.compression`) | https://docs.n8n.io/integrations/builtin/core-nodes/n8n-nodes-base.compression.md | Public docs + public descriptor metadata |
+| Factory queue | Execution Data (`n8n-nodes-base.executionData`) | https://docs.n8n.io/integrations/builtin/core-nodes/n8n-nodes-base.executiondata.md | Public docs + public descriptor metadata |
+| Factory queue | Execution Data (custom-data API) | https://docs.n8n.io/build/understand-workflows/understand-executions/customize-executions-data.md | Public docs only |
+| Factory queue | Execute Workflow (`n8n-nodes-base.executeWorkflow`) refresh | https://docs.n8n.io/integrations/builtin/core-nodes/n8n-nodes-base.executeworkflow.md | Public docs + public descriptor metadata |
+| Factory queue | Respond to Webhook (`n8n-nodes-base.respondToWebhook`) refresh | https://docs.n8n.io/integrations/builtin/core-nodes/n8n-nodes-base.respondtowebhook.md | Public docs + public descriptor metadata |
+| Factory queue | Webhook (`n8n-nodes-base.webhook`) refresh | https://docs.n8n.io/integrations/builtin/core-nodes/n8n-nodes-base.webhook.md | Public docs + public descriptor metadata |
+| Factory queue | Webhook credentials | https://docs.n8n.io/integrations/builtin/credentials/webhook.md | Public docs only |
+| Factory queue | Chat Trigger (`@n8n/n8n-nodes-langchain.chatTrigger`) | https://docs.n8n.io/integrations/builtin/core-nodes/n8n-nodes-langchain.chattrigger.md | Public docs only |
+| Factory queue | Chat Trigger common issues | https://docs.n8n.io/integrations/builtin/core-nodes/n8n-nodes-langchain.chattrigger/common-issues.md | Public docs only |
+| Factory queue | n8n Form (`n8n-nodes-base.formTrigger`) | https://docs.n8n.io/integrations/builtin/core-nodes/n8n-nodes-base.formtrigger.md | Public docs + public descriptor metadata |
+| Factory queue | SSE Trigger (`n8n-nodes-base.sseTrigger`) | https://docs.n8n.io/integrations/builtin/core-nodes/n8n-nodes-base.ssetrigger.md | Public docs only |
+| Factory queue | Local File Trigger (`n8n-nodes-base.localFileTrigger`) | https://docs.n8n.io/integrations/builtin/core-nodes/n8n-nodes-base.localfiletrigger.md | Public docs + public descriptor metadata |
+| Factory queue | Local File Trigger (node exclude / security) | https://docs.n8n.io/deploy/host-n8n/configure-n8n/security/block-specific-nodes.md | Public docs only |

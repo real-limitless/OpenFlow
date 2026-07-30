@@ -40,15 +40,32 @@ Status legend:
 | 20b | `n8n-nodes-base.executeWorkflowTrigger` | P0 | implemented | n/a | yes | Sub-workflow entry |
 | 21 | `n8n-nodes-base.stickyNote` | P0 | ui-only | n/a | no | Canvas only |
 
+## Factory loop (OpenCode)
+
+| Setting | Value |
+|---------|--------|
+| Batch size | **5** |
+| Concurrency | **2** pipelines |
+| SPEC | `xai/grok-4.5` |
+| IMPLEMENT | `featherless/zai-org/GLM-5.2` |
+| VALIDATE | `xai/grok-4.5` |
+| On VAL fail | restart SPEC (max 3 cycles) → `partial` |
+
+```bash
+npm run factory:batch -- 05 --dry-run
+npm run factory:batch -- 05
+```
+
+See `scripts/factory/README.md`.
+
 ## OpenCode batch plan
 
-| Batch | Types (max 4) | Goal |
+| Batch | Types (max 5) | Goal |
 |-------|----------------|------|
-| **00** | foundation | Live registry, reload, helpers (this phase) |
-| **01** | executeWorkflow, stopAndError, (+ harden wait/merge specs) | Composition spine |
-| **02** | scheduleTrigger, respondToWebhook, code, merge | Triggers + flow dogfood |
-| **03** | splitOut, splitInBatches, aggregate, removeDuplicates | Transform completeness |
-| **04** | itemLists, dateTime, + catalog P1 as needed | Long-tail core |
+| **00** | foundation | Live registry, reload, helpers |
+| **01–04** | dogfood core | Done |
+| **05** | summarize, compareDatasets, html, markdown, crypto | Core gaps (factory) |
+| **06** | graphql, rssFeedRead, compression, xml, jwt | Files/HTTP utilities |
 
 ## Core extended (P1 — after dogfood WFs green)
 
