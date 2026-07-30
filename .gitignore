@@ -37,3 +37,16 @@ dist-ssr
 # Local databases
 *.db
 *.db-journal
+
+# Factory job logs / prompts
+scripts/factory/.jobs/
+
+# Never commit n8n package artifacts (SPEC corpus is /tmp only)
+n8n-nodes-base*.tgz
+n8n-nodes-base-*.tgz
+openflow-factory-*/
+**/n8n-nodes-base/
+
+# Python
+__pycache__/
+*.py[cod]

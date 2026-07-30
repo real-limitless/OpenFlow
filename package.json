@@ -18,6 +18,12 @@
     "test": "vitest run",
     "test:batch": "bash scripts/factory/test-batch.sh",
     "test:dogfood": "vitest run src/lib/engine/__tests__/dogfood",
+    "factory:batch": "bash scripts/factory/run_batch.sh",
+    "factory:tui": "python3 scripts/factory/tui.py",
+    "factory:start": "bash scripts/factory/run_queue.sh start",
+    "factory:resume": "bash scripts/factory/run_queue.sh resume",
+    "factory:stop": "bash scripts/factory/run_queue.sh stop",
+    "factory:status": "bash scripts/factory/run_queue.sh status",
     "tui": "bash scripts/tui.sh"
   },
   "dependencies": {
