@@ -318,6 +318,8 @@ Public docs do **not** publish a formal JSON schema for the emitted item. OpenFl
 ## OpenFlow mapping
 
 - **Definition group:** `triggers`
-- **Executor file:** `src/lib/engine/executors/localFileTrigger.ts`
+- **Executor file:** `src/lib/engine/executors/local-file-trigger.ts`
+- **Export:** `localFileTriggerExecutor`
 - **SDK:** `defineNode` + native `ExecutionContext` only
 - **Host note:** Requires a self-hosted (or otherwise FS-capable) runtime; gate behind the same class of node allowlist used for other local FS nodes
+- **Implement note (cycle 2):** Gate failures are implement-side (executor module parse / JSDoc backticks, vitest batch registration). Spec contract below is unchanged.
