@@ -125,13 +125,9 @@ describe("batch-04 core-extended", () => {
   });
 
   describe("errorTrigger", () => {
-    it("emits structured error payload on empty input", async () => {
+    it("does not fire on manual run (empty input emits nothing)", async () => {
       const out = await runNode("n8n-nodes-base.errorTrigger", {}, []);
-      expect(out[0][0].json.execution).toBeTruthy();
-      expect(out[0][0].json.workflow).toBeTruthy();
-      expect(
-        (out[0][0].json.execution as { error: { message: string } }).error.message,
-      ).toBeTruthy();
+      expect(out).toEqual([[]]);
     });
 
     it("starts a workflow as trigger", async () => {

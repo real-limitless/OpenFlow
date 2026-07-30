@@ -32,6 +32,7 @@ export function makeWorkflow(nodes: INode[], connections: IWorkflow["connections
 export function makeCtx(
   items: Array<Record<string, unknown> | INodeExecutionData> = [],
   node: INode = makeNode(),
+  continueOnFail = false,
 ): ExecutionContext {
   const normalized: INodeExecutionData[] = items.map((item) =>
     item && typeof item === "object" && "json" in item
@@ -43,7 +44,7 @@ export function makeCtx(
     node,
     workflow: makeWorkflow([node]),
     getNodeInputItems: () => normalized,
-    continueOnFail: false,
+    continueOnFail,
   });
 }
 
@@ -51,8 +52,9 @@ export async function runNode(
   type: string,
   parameters: Record<string, unknown> = {},
   inputItems: Array<Record<string, unknown>> = [{}],
+  opts?: { continueOnFail?: boolean },
 ): Promise<INodeExecutionData[][]> {
-  const { out } = await runNodeWithCtx(type, parameters, inputItems);
+  const { out } = await runNodeWithCtx(type, parameters, inputItems, opts);
   return out;
 }
 
@@ -60,6 +62,7 @@ export async function runNodeWithCtx(
   type: string,
   parameters: Record<string, unknown> = {},
   inputItems: Array<Record<string, unknown>> = [{}],
+  opts?: { continueOnFail?: boolean },
 ): Promise<{ out: INodeExecutionData[][]; ctx: ExecutionContext }> {
   const map = getExecutorMap();
   const executor = map[type];
@@ -67,7 +70,7 @@ export async function runNodeWithCtx(
     throw new Error(`No executor registered for ${type}`);
   }
   const node = makeNode({ name: "N", type, parameters });
-  const ctx = makeCtx(inputItems, node);
+  const ctx = makeCtx(inputItems, node, opts?.continueOnFail);
   const out = await executor(ctx, node);
   return { out, ctx };
 }
