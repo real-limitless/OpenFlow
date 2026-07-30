@@ -24,6 +24,11 @@ DEFAULT_SETTINGS = {
     "concurrency": 2,
     "maxCycles": 3,
     "implLock": True,
+    "implLockWaitSec": 300,
+    # waitout = re-queue on lock timeout (default); interrupt = mark interrupted
+    "lockWaitPolicy": "waitout",  # waitout | interrupt
+    "waitoutBackoffSec": 10,
+    "maxWaitoutRounds": 0,  # 0 = unlimited
 }
 
 ROLE_KEYS = ("spec", "implement", "validate")
@@ -123,6 +128,16 @@ def load_settings() -> dict:
                 s["maxCycles"] = max(1, min(5, int(raw["maxCycles"])))
             if "implLock" in raw:
                 s["implLock"] = bool(raw["implLock"])
+            if "implLockWaitSec" in raw:
+                s["implLockWaitSec"] = max(30, min(3600, int(raw["implLockWaitSec"])))
+            if "lockWaitPolicy" in raw:
+                pol = str(raw["lockWaitPolicy"]).lower()
+                if pol in ("waitout", "interrupt"):
+                    s["lockWaitPolicy"] = pol
+            if "waitoutBackoffSec" in raw:
+                s["waitoutBackoffSec"] = max(0, min(600, int(raw["waitoutBackoffSec"])))
+            if "maxWaitoutRounds" in raw:
+                s["maxWaitoutRounds"] = max(0, min(999, int(raw["maxWaitoutRounds"])))
         except Exception:
             pass
     if os.environ.get("FACTORY_CONCURRENCY"):
@@ -135,15 +150,29 @@ def load_settings() -> dict:
             s["maxCycles"] = max(1, min(5, int(os.environ["FACTORY_MAX_CYCLES"])))
         except ValueError:
             pass
+    if os.environ.get("FACTORY_IMPL_LOCK_WAIT"):
+        try:
+            s["implLockWaitSec"] = max(30, min(3600, int(os.environ["FACTORY_IMPL_LOCK_WAIT"])))
+        except ValueError:
+            pass
+    if os.environ.get("FACTORY_LOCK_WAIT_POLICY") in ("waitout", "interrupt"):
+        s["lockWaitPolicy"] = os.environ["FACTORY_LOCK_WAIT_POLICY"]
     return s
 
 
 def save_settings(settings: dict) -> None:
     JOBS.mkdir(parents=True, exist_ok=True)
+    pol = str(settings.get("lockWaitPolicy") or "waitout").lower()
+    if pol not in ("waitout", "interrupt"):
+        pol = "waitout"
     payload = {
         "concurrency": max(1, min(8, int(settings.get("concurrency", 2)))),
         "maxCycles": max(1, min(5, int(settings.get("maxCycles", 3)))),
         "implLock": bool(settings.get("implLock", True)),
+        "implLockWaitSec": max(30, min(3600, int(settings.get("implLockWaitSec", 300)))),
+        "lockWaitPolicy": pol,
+        "waitoutBackoffSec": max(0, min(600, int(settings.get("waitoutBackoffSec", 10)))),
+        "maxWaitoutRounds": max(0, min(999, int(settings.get("maxWaitoutRounds", 0)))),
     }
     SETTINGS.write_text(json.dumps(payload, indent=2) + "\n")
 
@@ -157,7 +186,15 @@ def export_shell(type_name: str | None = None) -> None:
     print(f'export FACTORY_MODEL_VAL={json.dumps(m["validate"])}')
     print(f'export FACTORY_MAX_CYCLES={json.dumps(str(s["maxCycles"]))}')
     print(f'export FACTORY_CONCURRENCY={json.dumps(str(s["concurrency"]))}')
-    print(f'export FACTORY_IMPL_LOCK={"1" if s["implLock"] else "0"}')
+    # Respect env override for per-job --no-lock (already set by caller)
+    if os.environ.get("FACTORY_IMPL_LOCK") in ("0", "false", "off"):
+        print('export FACTORY_IMPL_LOCK=0')
+    else:
+        print(f'export FACTORY_IMPL_LOCK={"1" if s["implLock"] else "0"}')
+    print(f'export FACTORY_IMPL_LOCK_WAIT={json.dumps(str(s.get("implLockWaitSec", 300)))}')
+    print(f'export FACTORY_LOCK_WAIT_POLICY={json.dumps(str(s.get("lockWaitPolicy", "waitout")))}')
+    print(f'export FACTORY_WAITOUT_BACKOFF={json.dumps(str(s.get("waitoutBackoffSec", 10)))}')
+    print(f'export FACTORY_MAX_WAITOUT_ROUNDS={json.dumps(str(s.get("maxWaitoutRounds", 0)))}')
 
 
 def main() -> None:
@@ -185,6 +222,10 @@ def main() -> None:
     ss.add_argument("--concurrency", type=int)
     ss.add_argument("--max-cycles", type=int)
     ss.add_argument("--impl-lock", choices=["on", "off", "true", "false", "1", "0"])
+    ss.add_argument("--impl-lock-wait", type=int, help="seconds to wait for impl.lock")
+    ss.add_argument("--lock-wait-policy", choices=["waitout", "interrupt"])
+    ss.add_argument("--waitout-backoff", type=int)
+    ss.add_argument("--max-waitout-rounds", type=int)
 
     args = p.parse_args()
 
@@ -218,6 +259,14 @@ def main() -> None:
             s["maxCycles"] = args.max_cycles
         if args.impl_lock is not None:
             s["implLock"] = args.impl_lock in ("on", "true", "1")
+        if args.impl_lock_wait is not None:
+            s["implLockWaitSec"] = args.impl_lock_wait
+        if args.lock_wait_policy is not None:
+            s["lockWaitPolicy"] = args.lock_wait_policy
+        if args.waitout_backoff is not None:
+            s["waitoutBackoffSec"] = args.waitout_backoff
+        if args.max_waitout_rounds is not None:
+            s["maxWaitoutRounds"] = args.max_waitout_rounds
         save_settings(s)
         print(json.dumps(s, indent=2))
 

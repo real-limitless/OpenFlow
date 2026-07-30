@@ -51,10 +51,15 @@ npm run factory:tui
 | **Enter** | **LIVE** log view (opens at **bottom**, follow on) |
 | **M** | **Job models** — SPEC/IMPL/VAL for this type only (`★` in list) |
 | **c** (in job models) | Clear job overrides (back to global) |
-| **r** | Retry selected (reset → re-queue) |
+| **y** | **Continue** stuck/failed job from last stage only (no full SPEC re-trial) |
+| **L** | **Bypass impl.lock** + continue IMPLEMENT for this job only |
+| **!** | **Steal lock** (kill current lock holder) + continue selected (confirm) |
+| **r** | **Full retry** (reset → SPEC cycle 1 again) |
 | **R** | Retry all failed/partial/interrupted (confirm y) |
 | **k** | Kill selected pipe only (confirm y) |
-| **n** | Run selected **now** (uses job models if set) |
+| **n** | Run selected **now** full pipeline (bg — TUI stays responsive) |
+
+`n` / `y` / `L` / `k` run in the **background** so the TUI does not freeze.
 | **x** | Skip (won’t schedule until unskip) |
 | **u** | Unskip |
 
@@ -63,14 +68,39 @@ npm run factory:tui
 | Key | Action |
 |-----|--------|
 | **m** | **Global** models (all jobs default) |
-| **b** | **Batch / parallel**: concurrency (1–8), max cycles (1–5), impl lock |
+| **b** | **Batch / parallel**: concurrency, max cycles, impl lock, **lock wait sec** |
 
 Settings → `scripts/factory/.jobs/settings.json`  
 Job models → `scripts/factory/.jobs/nodes/<type>/models.json`  
 
 Model resolve order: **env → job file → global models.json → catalog → defaults**.
 
-With **impl lock ON** (default), concurrency mainly parallelizes SPEC; IMPLEMENT shows `impl-WAIT`.
+With **impl lock ON** (default), concurrency mainly parallelizes SPEC; IMPLEMENT shows `impl-WAIT`.  
+
+**Lock wait policy** (settings **b**):
+
+| Policy | On wait timeout |
+|--------|-----------------|
+| **`waitout`** (default) | Job stays **queued** as `WAITOUT` — retries IMPLEMENT when lock free (no kill) |
+| **`interrupt`** | Mark `INTERRUPTED` with reason — manual **y**/**L** |
+
+Default wait attempt **300s**. WAITOUT jobs keep cycling until they get the lock (or **L** bypass / **!** steal).
+
+**Interrupted reasons** shown in TUI: `impl_lock_timeout`, `killed_by_operator`, etc.
+
+**Activity line** on running jobs: `streaming|quiet ~N tok/s · log B/s · silent Ns`  
+(`tok/s` is estimated from log growth; 0 during quiet reasoning while process is still alive).
+
+### Stage gates (no silent progression)
+
+| After | Gate | Blocks next stage if |
+|-------|------|----------------------|
+| **SPEC** | `gate_spec.sh` | missing/thin spec, agent rate-limit/timeout/error |
+| **IMPLEMENT** | `gate_impl.sh` | no executor/registration, agent error, missing spec |
+| **VALIDATE** | `validate_node.sh` | full gates; VAL LLM skipped when gates already red |
+
+Fails set `failedStage` + `failReason` in status (shown in TUI as `FAIL spec/rate_limit` etc.).  
+Next cycle retries the **failed stage** (not a blind march forward).
 
 ### Live logs
 
@@ -101,8 +131,13 @@ Bottom strip on the main list shows the selected node’s latest LLM tool lines 
 ```bash
 bash scripts/factory/lib/node_ctl.sh status  n8n-nodes-base.set
 bash scripts/factory/lib/node_ctl.sh reset   n8n-nodes-base.set
-bash scripts/factory/lib/node_ctl.sh kill    n8n-nodes-base.set
-bash scripts/factory/lib/node_ctl.sh run     n8n-nodes-base.set
+bash scripts/factory/lib/node_ctl.sh kill      n8n-nodes-base.set
+# resume stuck job from last stage only (one-shot; skips completed stages)
+bash scripts/factory/lib/node_ctl.sh continue  n8n-nodes-base.set
+bash scripts/factory/lib/node_ctl.sh continue  n8n-nodes-base.set --stage implement
+bash scripts/factory/lib/node_ctl.sh continue  n8n-nodes-base.set --no-lock   # bypass wait
+bash scripts/factory/lib/node_ctl.sh steal-lock n8n-nodes-base.set            # kill holder
+bash scripts/factory/lib/node_ctl.sh run       n8n-nodes-base.set --no-lock
 # one job + specific models (also saved as job overrides)
 bash scripts/factory/lib/node_ctl.sh run n8n-nodes-base.httpRequest \
   --spec opencode-go/grok-4.5 \

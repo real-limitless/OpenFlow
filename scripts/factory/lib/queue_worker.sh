@@ -64,13 +64,40 @@ while true; do
     (
       # Per-job model resolution (job override > global)
       eval "$(python3 "$RESOLVE" resolve --type "$t" --shell)"
-      export FACTORY_MAX_CYCLES FACTORY_IMPL_LOCK
+      export FACTORY_MAX_CYCLES FACTORY_IMPL_LOCK FACTORY_IMPL_LOCK_WAIT
+      export FACTORY_LOCK_WAIT_POLICY FACTORY_WAITOUT_BACKOFF FACTORY_MAX_WAITOUT_ROUNDS
+      # If previous stage was waitout, resume IMPLEMENT only (skip SPEC)
+      extra_job=("${extra[@]}")
+      safe_t="${t//\//_}"
+      stf="scripts/factory/.jobs/nodes/${safe_t}/status.json"
+      if [[ -f "$stf" ]]; then
+        eval "$(STF="$stf" python3 - <<'PY'
+import json, os
+from pathlib import Path
+p = Path(os.environ["STF"])
+d = json.loads(p.read_text())
+print(f"stg={d.get('stage') or ''!r}")
+print(f"cyc={int(d.get('cycle') or 1)}")
+PY
+)"
+        if [[ "$stg" == "implement-waitout" ]]; then
+          extra_job+=(--continue --from-stage implement --start-cycle "$cyc" --once)
+          echo "[queue_worker] resume $t from implement after WAITOUT c$cyc"
+        fi
+      fi
       echo "[queue_worker] start $t SPEC=$FACTORY_MODEL_SPEC IMPL=$FACTORY_MODEL_IMPL VAL=$FACTORY_MODEL_VAL"
       bash "$ROOT/scripts/factory/lib/run_node_pipeline.sh" \
         --type "$t" \
         --run-id "$FACTORY_RUN_ID" \
         --batch queue \
-        "${extra[@]}"
+        "${extra_job[@]}"
+      rc=$?
+      # 75 = waitout — still success for worker loop
+      if [[ "$rc" -eq 75 ]]; then
+        echo "[queue_worker] waitout $t — will re-queue"
+        exit 0
+      fi
+      exit $rc
     ) >>"$JOBS/factory.log" 2>&1 &
     pids+=("$!")
     started=$((started + 1))
@@ -86,6 +113,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path("scripts/factory/lib").resolve()))
 from run_state import load_state, save_state, build_pending
 s = load_state()
+# waitout + interrupted stay eligible via build_pending
 s["pending"] = build_pending(include_partial=True)
 s["active"] = []
 save_state(s)

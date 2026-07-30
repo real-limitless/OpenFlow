@@ -18,8 +18,17 @@ BATCH_TAG="${FACTORY_BATCH_TAG:-queue}"
 TIMEOUT_SPEC="${FACTORY_TIMEOUT_SPEC:-900}"       # 15m
 TIMEOUT_IMPL="${FACTORY_TIMEOUT_IMPL:-1200}"     # 20m
 TIMEOUT_VAL="${FACTORY_TIMEOUT_VAL:-600}"        # 10m
-LOCK_WAIT="${FACTORY_IMPL_LOCK_WAIT:-1800}"      # 30m max wait for impl lock
+LOCK_WAIT="${FACTORY_IMPL_LOCK_WAIT:-300}"       # default 5m (settings may override)
 IMPL_LOCK="${FACTORY_IMPL_LOCK:-1}"
+LOCK_WAIT_POLICY="${FACTORY_LOCK_WAIT_POLICY:-waitout}"  # waitout|interrupt
+WAITOUT_BACKOFF="${FACTORY_WAITOUT_BACKOFF:-10}"
+MAX_WAITOUT_ROUNDS="${FACTORY_MAX_WAITOUT_ROUNDS:-0}"
+# Continue / resume controls
+FROM_STAGE="spec"          # spec|implement|validate
+START_CYCLE=0              # 0 = default 1 (or status cycle when --continue)
+ONCE=0                     # 1 = at most one cycle then stop
+CONTINUE_MODE=0
+NO_LOCK=0                  # 1 = bypass impl.lock for this job only
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -28,11 +37,20 @@ while [[ $# -gt 0 ]]; do
     --dry-run) DRY_RUN=1; shift ;;
     --max-cycles) MAX_CYCLES="$2"; shift 2 ;;
     --run-id) RUN_ID="$2"; shift 2 ;;
+    --from-stage) FROM_STAGE="$2"; shift 2 ;;
+    --start-cycle) START_CYCLE="$2"; shift 2 ;;
+    --once) ONCE=1; shift ;;
+    --continue) CONTINUE_MODE=1; ONCE=1; shift ;;
+    --no-lock) NO_LOCK=1; IMPL_LOCK=0; export FACTORY_IMPL_LOCK=0; shift ;;
     *) echo "Unknown arg: $1" >&2; exit 2 ;;
   esac
 done
 
 [[ -n "$TYPE" ]] || { echo "need --type" >&2; exit 2; }
+case "$FROM_STAGE" in
+  spec|implement|validate) ;;
+  *) echo "bad --from-stage: $FROM_STAGE" >&2; exit 2 ;;
+esac
 
 # Fill models from job override / global if env not already set by parent
 if [[ -z "${FACTORY_MODEL_SPEC:-}" || -z "${FACTORY_MODEL_IMPL:-}" || -z "${FACTORY_MODEL_VAL:-}" ]]; then
@@ -41,7 +59,16 @@ if [[ -z "${FACTORY_MODEL_SPEC:-}" || -z "${FACTORY_MODEL_IMPL:-}" || -z "${FACT
   MODEL_IMPL="${FACTORY_MODEL_IMPL:-$MODEL_IMPL}"
   MODEL_VAL="${FACTORY_MODEL_VAL:-$MODEL_VAL}"
   MAX_CYCLES="${FACTORY_MAX_CYCLES:-$MAX_CYCLES}"
-  IMPL_LOCK="${FACTORY_IMPL_LOCK:-$IMPL_LOCK}"
+  if [[ "$NO_LOCK" -eq 0 ]]; then
+    IMPL_LOCK="${FACTORY_IMPL_LOCK:-$IMPL_LOCK}"
+  fi
+  LOCK_WAIT="${FACTORY_IMPL_LOCK_WAIT:-$LOCK_WAIT}"
+  LOCK_WAIT_POLICY="${FACTORY_LOCK_WAIT_POLICY:-$LOCK_WAIT_POLICY}"
+  WAITOUT_BACKOFF="${FACTORY_WAITOUT_BACKOFF:-$WAITOUT_BACKOFF}"
+  MAX_WAITOUT_ROUNDS="${FACTORY_MAX_WAITOUT_ROUNDS:-$MAX_WAITOUT_ROUNDS}"
+fi
+if [[ "$NO_LOCK" -eq 1 ]]; then
+  IMPL_LOCK=0
 fi
 
 SAFE="${TYPE//\//_}"
@@ -58,52 +85,67 @@ HEARTBEAT_FILE="$JOB_ROOT/heartbeat"
 CORPUS_BASE="/tmp/openflow-factory-${RUN_ID}"
 CORPUS_DIR="${CORPUS_BASE}/${SAFE}"
 
+# write_status stage cycle [verdict] [detail] [stage_log] [model] [oc_pid] [interrupt_reason]
 write_status() {
   local stage="$1" cycle="$2" verdict="${3:-}" detail="${4:-}"
   local stage_log="${5:-}"
   local model="${6:-}"
   local oc_pid="${7:-}"
+  local ireason="${8:-}"
+  STATUS_FILE_PATH="$STATUS_FILE" CORPUS_DIR_PATH="$CORPUS_DIR" \
   DETAIL="$detail" STAGE_LOG="$stage_log" MODEL="$model" OC_PID="$oc_pid" \
-  PIPE_PID="$$" python3 - <<PY
+  IREASON="$ireason" PIPE_PID="$$" STAGE_NAME="$stage" CYCLE_N="$cycle" \
+  VERDICT_N="$verdict" TYPE_N="$TYPE" BATCH_N="$BATCH_TAG" RUN_N="$RUN_ID" \
+  python3 - <<'PY'
 import json, os
 from pathlib import Path
 from datetime import datetime, timezone
-p = Path("$STATUS_FILE")
+p = Path(os.environ["STATUS_FILE_PATH"])
 prev = {}
 if p.exists():
-    try: prev = json.loads(p.read_text())
-    except Exception: pass
+    try:
+        prev = json.loads(p.read_text())
+    except Exception:
+        pass
+stage = os.environ.get("STAGE_NAME") or "queued"
 data = {
-  **prev,
-  "type": "$TYPE",
-  "batch": "$BATCH_TAG",
-  "runId": "$RUN_ID",
-  "stage": "$stage",
-  "cycle": int("$cycle"),
-  "verdict": ("""$verdict""" or None) or None,
-  "detail": os.environ.get("DETAIL") or None,
-  "pipelinePid": int(os.environ.get("PIPE_PID") or 0) or None,
-  "pid": int(os.environ.get("PIPE_PID") or 0) or None,
-  "updatedAt": datetime.now(timezone.utc).isoformat(),
+    **prev,
+    "type": os.environ.get("TYPE_N"),
+    "batch": os.environ.get("BATCH_N"),
+    "runId": os.environ.get("RUN_N"),
+    "stage": stage,
+    "cycle": int(os.environ.get("CYCLE_N") or 0),
+    "verdict": (os.environ.get("VERDICT_N") or None) or None,
+    "detail": os.environ.get("DETAIL") or None,
+    "pipelinePid": int(os.environ.get("PIPE_PID") or 0) or None,
+    "pid": int(os.environ.get("PIPE_PID") or 0) or None,
+    "updatedAt": datetime.now(timezone.utc).isoformat(),
 }
 sl = os.environ.get("STAGE_LOG") or ""
 if sl:
     data["stageLog"] = sl
-elif "$stage" in ("pass", "fail", "partial", "skipped", "queued", "interrupted"):
-    data["stageLog"] = None
-    data["opencodePid"] = None
+elif stage in ("pass", "fail", "partial", "skipped", "queued", "interrupted", "implement-waitout"):
+    if stage not in ("implement-waitout",):
+        data["opencodePid"] = None
 m = os.environ.get("MODEL") or ""
 if m:
     data["model"] = m
 oc = os.environ.get("OC_PID") or ""
 if oc.isdigit():
     data["opencodePid"] = int(oc)
-if Path("$CORPUS_DIR").exists():
-    data["corpusPath"] = "$CORPUS_DIR"
-else:
-    data["corpusPath"] = None
+ireason = os.environ.get("IREASON") or ""
+if ireason:
+    data["interruptReason"] = ireason
+    data["interruptMessage"] = os.environ.get("DETAIL") or ireason
+elif stage not in ("interrupted", "implement-waitout"):
+    data.pop("interruptReason", None)
+    data.pop("interruptMessage", None)
+corpus = os.environ.get("CORPUS_DIR_PATH") or ""
+data["corpusPath"] = corpus if corpus and Path(corpus).exists() else None
 p.write_text(json.dumps(data, indent=2) + "\n")
-print(json.dumps({k: data.get(k) for k in ("type","stage","cycle","verdict","detail","model","stageLog","pipelinePid","opencodePid")}))
+print(json.dumps({k: data.get(k) for k in (
+    "type", "stage", "cycle", "verdict", "detail", "interruptReason", "model"
+)}))
 PY
   echo "$$" >"$JOB_ROOT/pipeline.pid"
   date -u +%Y-%m-%dT%H:%M:%SZ >"$HEARTBEAT_FILE" 2>/dev/null || true
@@ -131,13 +173,72 @@ run_opencode() {
   # Compact message; full instructions live in --file
   local short_msg="$message"
 
-  : >"$out_log"
+  # Append resume banner rather than truncate when continuing
+  if [[ "$CONTINUE_MODE" -ne 1 || ! -f "$out_log" ]]; then
+    : >"$out_log"
+  fi
   set +e
-  # Heartbeat while running
+  # Heartbeat + log activity (bps / silent) while OpenCode runs
   (
+    prev_sz=0
+    prev_ts=$(date +%s)
+    last_grow=$prev_ts
+    [[ -f "$out_log" ]] && prev_sz=$(wc -c <"$out_log" 2>/dev/null || echo 0)
     while true; do
+      now=$(date +%s)
       date -u +%Y-%m-%dT%H:%M:%SZ >"$HEARTBEAT_FILE" 2>/dev/null || true
-      sleep 10
+      sz=0
+      [[ -f "$out_log" ]] && sz=$(wc -c <"$out_log" 2>/dev/null || echo 0)
+      dt=$((now - prev_ts))
+      [[ "$dt" -lt 1 ]] && dt=1
+      delta=$((sz - prev_sz))
+      [[ "$delta" -lt 0 ]] && delta=0
+      bps=$((delta / dt))
+      # rough token estimate ~ 4 bytes/token when streaming
+      tps=$(( (bps + 3) / 4 ))
+      if [[ "$delta" -gt 0 ]]; then
+        last_grow=$now
+      fi
+      silent=$((now - last_grow))
+      STATUS_FILE_PATH="$STATUS_FILE" OUT_LOG="$out_log" \
+      BPS="$bps" TPS="$tps" SILENT="$silent" SZ="$sz" \
+      python3 - <<'PY' 2>/dev/null || true
+import json, os
+from pathlib import Path
+from datetime import datetime, timezone
+p = Path(os.environ["STATUS_FILE_PATH"])
+if not p.exists():
+    raise SystemExit
+d = json.loads(p.read_text())
+bps = int(os.environ.get("BPS") or 0)
+tps = int(os.environ.get("TPS") or 0)
+silent = int(os.environ.get("SILENT") or 0)
+sz = int(os.environ.get("SZ") or 0)
+act = d.get("activity") or {}
+act.update({
+    "logBytes": sz,
+    "logBytesPerSec": bps,
+    "estTokensPerSec": tps,
+    "silentSec": silent,
+    "lastSampleAt": datetime.now(timezone.utc).isoformat(),
+    "note": "est tok/s from log growth (~4 B/tok); 0 during quiet reasoning",
+})
+if silent >= 90 and bps == 0:
+    act["state"] = "quiet"
+elif bps > 0:
+    act["state"] = "streaming"
+else:
+    act["state"] = "idle"
+d["activity"] = act
+# keep detail useful without wiping lock messages
+if d.get("stage") in ("spec", "implement", "validate-llm"):
+    tag = act["state"]
+    d["detail"] = f"model={d.get('model') or '?'} · {tag} ~{tps} tok/s · log {bps} B/s · silent {silent}s"
+p.write_text(json.dumps(d, indent=2) + "\n")
+PY
+      prev_sz=$sz
+      prev_ts=$now
+      sleep 5
     done
   ) &
   local hb_pid=$!
@@ -152,7 +253,13 @@ run_opencode() {
   fi
 
   # Launch in background to record opencode pid for kill/live status
-  "${runner[@]}" >"$out_log" 2>&1 &
+  if [[ "$CONTINUE_MODE" -eq 1 && -f "$out_log" ]]; then
+    echo "" >>"$out_log"
+    echo "=== RESUME $(date -u +%Y-%m-%dT%H:%M:%SZ) ===" >>"$out_log"
+    "${runner[@]}" >>"$out_log" 2>&1 &
+  else
+    "${runner[@]}" >"$out_log" 2>&1 &
+  fi
   local oc_pid=$!
   echo "$oc_pid" >"$JOB_ROOT/opencode.pid"
   # patch status with opencode pid + stage log (best-effort)
@@ -241,19 +348,131 @@ PY
 }
 
 acquire_impl_lock() {
+  # Returns: 0=got lock, 1=waitout (re-queue), 2=interrupted (give up)
   mkdir -p "$(dirname "$LOCK")"
   exec 9>"$LOCK"
   if ! command -v flock >/dev/null 2>&1; then
     return 0
   fi
-  write_status "implement-wait" "$cycle" "" "waiting for impl.lock (shared registry files)"
-  echo "[factory] $TYPE waiting for impl.lock (max ${LOCK_WAIT}s)" >&2
+  local holder=""
+  [[ -f "$LOCK_META" ]] && holder=$(cut -d' ' -f1 "$LOCK_META" 2>/dev/null || true)
+  local rounds
+  rounds=$(python3 -c "import json;from pathlib import Path;p=Path('$STATUS_FILE');print(int(json.load(open(p)).get('waitoutRounds') or 0) if p.exists() else 0)" 2>/dev/null || echo 0)
+
+  write_status "implement-wait" "$cycle" "" \
+    "waiting impl.lock max=${LOCK_WAIT}s holder=${holder:-?} policy=${LOCK_WAIT_POLICY} rounds=${rounds} (L=bypass)"
+  echo "[factory] $TYPE waiting impl.lock max=${LOCK_WAIT}s holder=${holder:-?} policy=$LOCK_WAIT_POLICY rounds=$rounds" >&2
+
+  (
+    local elapsed=0
+    while true; do
+      sleep 10
+      elapsed=$((elapsed + 10))
+      h=""
+      [[ -f "$LOCK_META" ]] && h=$(cut -d' ' -f1 "$LOCK_META" 2>/dev/null || true)
+      DETAIL="waiting impl.lock ${elapsed}s/${LOCK_WAIT}s holder=${h:-?} · L=bypass" \
+      STATUS_FILE_PATH="$STATUS_FILE" HEARTBEAT_FILE="$HEARTBEAT_FILE" python3 - <<'PY' 2>/dev/null || true
+import json, os
+from pathlib import Path
+from datetime import datetime, timezone
+p = Path(os.environ["STATUS_FILE_PATH"])
+if p.exists():
+    d = json.loads(p.read_text())
+    if d.get("stage") != "implement-wait":
+        raise SystemExit
+    d["detail"] = os.environ.get("DETAIL")
+    d["lockHolder"] = (d.get("detail") or "").split("holder=")[-1].split()[0] if "holder=" in (d.get("detail") or "") else d.get("lockHolder")
+    d["updatedAt"] = datetime.now(timezone.utc).isoformat()
+    p.write_text(json.dumps(d, indent=2) + "\n")
+Path(os.environ["HEARTBEAT_FILE"]).write_text(datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ") + "\n")
+PY
+    done
+  ) &
+  local wait_hb=$!
+
   if ! flock -w "$LOCK_WAIT" -x 9; then
-    echo "[factory] $TYPE failed to acquire impl.lock within ${LOCK_WAIT}s" >&2
-    write_status "fail" "$cycle" "fail" "impl.lock timeout"
+    kill "$wait_hb" 2>/dev/null || true
+    wait "$wait_hb" 2>/dev/null || true
+    rounds=$((rounds + 1))
+    local msg="impl.lock busy after ${LOCK_WAIT}s; holder=${holder:-?}; round=${rounds}"
+    echo "[factory] $TYPE $msg policy=$LOCK_WAIT_POLICY" >&2
+
+    if [[ "$LOCK_WAIT_POLICY" == "interrupt" ]]; then
+      write_status "interrupted" "$cycle" "" "$msg · press y/L to continue" "" "" "" "impl_lock_timeout"
+      # stash lastStage for continue
+      python3 - <<PY 2>/dev/null || true
+import json
+from pathlib import Path
+p=Path("$STATUS_FILE")
+d=json.loads(p.read_text())
+d["lastStage"]="implement-wait"
+d["lockHolder"]="$holder"
+d["lockWaitSec"]=int("$LOCK_WAIT")
+d["waitoutRounds"]=int("$rounds")
+p.write_text(json.dumps(d, indent=2)+"\n")
+PY
+      return 2
+    fi
+
+    # waitout: stay queued — exit cleanly so worker re-schedules
+    if [[ "$MAX_WAITOUT_ROUNDS" -gt 0 && "$rounds" -ge "$MAX_WAITOUT_ROUNDS" ]]; then
+      write_status "interrupted" "$cycle" "" \
+        "$msg; max waitout rounds ($MAX_WAITOUT_ROUNDS) reached" "" "" "" "impl_lock_timeout"
+      python3 - <<PY 2>/dev/null || true
+import json
+from pathlib import Path
+p=Path("$STATUS_FILE")
+d=json.loads(p.read_text())
+d["lastStage"]="implement-wait"
+d["lockHolder"]="$holder"
+d["waitoutRounds"]=int("$rounds")
+p.write_text(json.dumps(d, indent=2)+"\n")
+PY
+      return 2
+    fi
+
+    write_status "implement-waitout" "$cycle" "" \
+      "$msg · still queued (waitout); will retry" "" "" "" "impl_lock_waitout"
+    python3 - <<PY 2>/dev/null || true
+import json
+from pathlib import Path
+from datetime import datetime, timezone
+p=Path("$STATUS_FILE")
+d=json.loads(p.read_text())
+d["stage"]="implement-waitout"
+d["lastStage"]="implement-wait"
+d["lockHolder"]="$holder"
+d["lockWaitSec"]=int("$LOCK_WAIT")
+d["waitoutRounds"]=int("$rounds")
+d["interruptReason"]="impl_lock_waitout"
+d["interruptMessage"]=d.get("detail")
+d["pipelinePid"]=None
+d["pid"]=None
+d["opencodePid"]=None
+d["updatedAt"]=datetime.now(timezone.utc).isoformat()
+p.write_text(json.dumps(d, indent=2)+"\n")
+PY
+    if [[ "${WAITOUT_BACKOFF}" -gt 0 ]]; then
+      echo "[factory] waitout backoff ${WAITOUT_BACKOFF}s before re-queue"
+      sleep "$WAITOUT_BACKOFF"
+    fi
     return 1
   fi
+  kill "$wait_hb" 2>/dev/null || true
+  wait "$wait_hb" 2>/dev/null || true
   echo "$TYPE $$ $(date -u +%Y-%m-%dT%H:%M:%SZ)" >"$LOCK_META"
+  # clear waitout counters on success
+  python3 - <<PY 2>/dev/null || true
+import json
+from pathlib import Path
+p=Path("$STATUS_FILE")
+if p.exists():
+    d=json.loads(p.read_text())
+    d.pop("waitoutRounds", None)
+    d.pop("interruptReason", None)
+    d.pop("interruptMessage", None)
+    p.write_text(json.dumps(d, indent=2)+"\n")
+PY
   return 0
 }
 
@@ -282,16 +501,45 @@ if [[ -f "$STATUS_FILE" ]]; then
   fi
 fi
 
-cycle=1
+# Starting cycle
+if [[ "$START_CYCLE" -gt 0 ]]; then
+  cycle="$START_CYCLE"
+elif [[ -f "$STATUS_FILE" ]]; then
+  cycle=$(python3 -c "import json;print(int(json.load(open('$STATUS_FILE')).get('cycle') or 1))" 2>/dev/null || echo 1)
+  [[ "$cycle" -lt 1 ]] && cycle=1
+else
+  cycle=1
+fi
+# For full runs (not continue), always start at 1 unless --start-cycle set
+if [[ "$CONTINUE_MODE" -eq 0 && "$START_CYCLE" -eq 0 ]]; then
+  cycle=1
+  FROM_STAGE="spec"
+fi
+
+# When continuing to implement/validate, require existing spec if skipping SPEC
+SPEC_FILE="docs/specs/nodes/${TYPE}.md"
+if [[ "$FROM_STAGE" != "spec" && ! -f "$SPEC_FILE" ]]; then
+  echo "[factory] no spec at $SPEC_FILE — forcing FROM_STAGE=spec"
+  FROM_STAGE="spec"
+fi
+
 final="partial"
+STAGE_CURSOR="$FROM_STAGE"
+echo "[factory] start type=$TYPE cycle=$cycle/$MAX_CYCLES from=$STAGE_CURSOR once=$ONCE continue=$CONTINUE_MODE"
+
 while [[ "$cycle" -le "$MAX_CYCLES" ]]; do
-  echo "======== $TYPE cycle $cycle/$MAX_CYCLES run=$RUN_ID ========"
+  echo "======== $TYPE cycle $cycle/$MAX_CYCLES run=$RUN_ID from=$STAGE_CURSOR ========"
   CYCLE_DIR="$JOB_ROOT/cycle-${cycle}"
   mkdir -p "$CYCLE_DIR"
   FIX_HINTS="$(cat "$FIX_HINTS_FILE" 2>/dev/null || true)"
+  {
+    echo ""
+    echo "=== CONTINUE $(date -u +%Y-%m-%dT%H:%M:%SZ) from=$STAGE_CURSOR cycle=$cycle ==="
+  } >>"$CYCLE_DIR/continue.log" 2>/dev/null || true
 
-  # ── 1. SPEC corpus (tmp only) ───────────────────────────────────
-  write_status "spec-corpus" "$cycle"
+  # ── 1. SPEC (optional skip on continue) ─────────────────────────
+  if [[ "$STAGE_CURSOR" == "spec" ]]; then
+  write_status "spec-corpus" "$cycle" "" "continue=$CONTINUE_MODE"
   wipe_corpus
   if [[ "$DRY_RUN" -eq 1 ]]; then
     mkdir -p "$CORPUS_DIR"
@@ -323,11 +571,20 @@ while [[ "$cycle" -le "$MAX_CYCLES" ]]; do
     echo "Write the finished spec only to \`docs/specs/nodes/${TYPE}.md\`."
   } >>"$CYCLE_DIR/01-spec.prompt.md"
 
+  # Append resume banner rather than wiping prior SPEC log when continuing
+  if [[ "$CONTINUE_MODE" -eq 1 && -f "$CYCLE_DIR/01-spec.out.log" ]]; then
+    echo "" >>"$CYCLE_DIR/01-spec.out.log"
+    echo "=== RESUME SPEC $(date -u +%Y-%m-%dT%H:%M:%SZ) ===" >>"$CYCLE_DIR/01-spec.out.log"
+  fi
+
+  set +e
   run_opencode "$MODEL_SPEC" "factory SPEC $TYPE c$cycle" \
     "$CYCLE_DIR/01-spec.prompt.md" \
     "Execute the SPEC job for $TYPE. Use CORPUS_DIR only if present under /tmp. Write docs/specs/nodes/${TYPE}.md. Never copy n8n package files into the repo. Stop when done." \
     "$CYCLE_DIR/01-spec.out.log" \
-    "$TIMEOUT_SPEC" || true
+    "$TIMEOUT_SPEC"
+  SPEC_OC_RC=$?
+  set -e
 
   wipe_corpus
   bash "$ROOT/scripts/factory/lib/assert_no_n8n_in_repo.sh" \
@@ -336,7 +593,63 @@ while [[ "$cycle" -le "$MAX_CYCLES" ]]; do
       cat "$CYCLE_DIR/leak-after-spec.log" >&2 || true
     }
 
-  # ── 2. IMPLEMENT (serialized via lock — shared registry files) ──
+  # ── SPEC acceptance gate (do not advance without a real spec) ───
+  if [[ "$DRY_RUN" -eq 1 ]]; then
+    # ensure a stub spec exists for dry-run progression
+    if [[ ! -f "docs/specs/nodes/${TYPE}.md" ]]; then
+      mkdir -p "docs/specs/nodes"
+      printf '# %s\n\n## Purpose\nDry-run stub.\n\n## Behavior\nStub.\n\n## Acceptance\nStub.\n' "$TYPE" \
+        >"docs/specs/nodes/${TYPE}.md"
+    fi
+    SPEC_GATE_RC=0
+  else
+    set +e
+    bash "$ROOT/scripts/factory/lib/gate_spec.sh" "$TYPE" \
+      "$CYCLE_DIR/01-spec.out.log" "$SPEC_OC_RC" \
+      >"$CYCLE_DIR/gate-spec.log" 2>&1
+    SPEC_GATE_RC=$?
+    set -e
+  fi
+  if [[ "$SPEC_GATE_RC" -ne 0 ]]; then
+    primary=$(grep '^PRIMARY ' "$CYCLE_DIR/gate-spec.log" 2>/dev/null | awk '{print $2}' || echo spec_gate_fail)
+    reasons=$(grep '^REASON ' "$CYCLE_DIR/gate-spec.log" 2>/dev/null | sed 's/^REASON //' | head -5 | tr '\n' '; ' || true)
+    echo "[factory] SPEC GATE FAIL $TYPE: $primary — $reasons" | tee -a "$CYCLE_DIR/gate-spec.log"
+    echo "SPEC gate failed ($primary): $reasons" >"$FIX_HINTS_FILE"
+    write_status "fail" "$cycle" "fail" "SPEC gate: $primary — $reasons" \
+      "" "" "" "$primary"
+    python3 - <<PY 2>/dev/null || true
+import json
+from pathlib import Path
+from datetime import datetime, timezone
+p=Path("$STATUS_FILE")
+d=json.loads(p.read_text()) if p.exists() else {}
+d.update({
+  "failedStage": "spec",
+  "failReason": "$primary",
+  "lastStage": "spec",
+  "interruptMessage": d.get("detail"),
+  "updatedAt": datetime.now(timezone.utc).isoformat(),
+})
+p.write_text(json.dumps(d, indent=2)+"\n")
+PY
+    if [[ "$ONCE" -eq 1 ]]; then
+      final="fail"
+      break
+    fi
+    # retryable rate limits: stay on SPEC next cycle
+    STAGE_CURSOR="spec"
+    cycle=$((cycle + 1))
+    continue
+  fi
+  STAGE_CURSOR="implement"
+  fi  # end SPEC block
+
+  # ── 2. IMPLEMENT ────────────────────────────────────────────────
+  if [[ "$STAGE_CURSOR" == "implement" || "$STAGE_CURSOR" == "spec" ]]; then
+  # (spec path already advanced cursor to implement)
+  :
+  fi
+  if [[ "$STAGE_CURSOR" == "implement" ]]; then
   python3 "$ROOT/scripts/factory/lib/assemble_prompt.py" 02-implement-node.md \
     --type "$TYPE" --batch "$BATCH_TAG" --cycle "$cycle" --max-cycles "$MAX_CYCLES" \
     --fix-hints "$FIX_HINTS" \
@@ -351,6 +664,24 @@ while [[ "$cycle" -le "$MAX_CYCLES" ]]; do
     echo "Edit only what is required. Do not re-read the entire repo. Stop as soon as executor+tests+registration are done."
   } >>"$CYCLE_DIR/02-implement.prompt.md"
 
+  if [[ "$CONTINUE_MODE" -eq 1 && -f "$CYCLE_DIR/02-implement.out.log" ]]; then
+    echo "" >>"$CYCLE_DIR/02-implement.out.log"
+    echo "=== RESUME IMPL $(date -u +%Y-%m-%dT%H:%M:%SZ) ===" >>"$CYCLE_DIR/02-implement.out.log"
+  fi
+
+  # Hard require spec before implement (even on continue)
+  if [[ "$DRY_RUN" -eq 0 && ! -f "docs/specs/nodes/${TYPE}.md" ]]; then
+    echo "[factory] IMPL blocked: missing spec for $TYPE"
+    write_status "fail" "$cycle" "fail" "IMPLEMENT blocked: missing spec" \
+      "" "" "" "spec_missing"
+    echo "Missing spec — cannot implement. Re-run SPEC." >"$FIX_HINTS_FILE"
+    if [[ "$ONCE" -eq 1 ]]; then final="fail"; break; fi
+    STAGE_CURSOR="spec"
+    cycle=$((cycle + 1))
+    continue
+  fi
+
+  IMPL_OC_RC=0
   if [[ "$DRY_RUN" -eq 1 ]]; then
     write_status "implement" "$cycle" "" "dry-run model=$MODEL_IMPL" \
       "$CYCLE_DIR/02-implement.out.log" "$MODEL_IMPL"
@@ -359,26 +690,37 @@ while [[ "$cycle" -le "$MAX_CYCLES" ]]; do
       "dry-run" \
       "$CYCLE_DIR/02-implement.out.log" \
       1 || true
+    IMPL_OC_RC=0
   else
     if [[ "$IMPL_LOCK" == "1" || "$IMPL_LOCK" == "true" ]]; then
-      write_status "implement-wait" "$cycle" "" "waiting for impl.lock"
-      if ! acquire_impl_lock; then
-        final="partial"
+      set +e
+      acquire_impl_lock
+      lock_rc=$?
+      set -e
+      if [[ "$lock_rc" -eq 1 ]]; then
+        echo "RESULT waitout $TYPE"
+        exit 75
+      fi
+      if [[ "$lock_rc" -eq 2 ]]; then
+        final="interrupted"
         break
       fi
       trap 'release_impl_lock' EXIT
       write_status "implement" "$cycle" "" "model=$MODEL_IMPL lock=held" \
         "$CYCLE_DIR/02-implement.out.log" "$MODEL_IMPL"
     else
-      write_status "implement" "$cycle" "" "model=$MODEL_IMPL lock=off" \
+      write_status "implement" "$cycle" "" "model=$MODEL_IMPL lock=bypassed" \
         "$CYCLE_DIR/02-implement.out.log" "$MODEL_IMPL"
     fi
 
+    set +e
     run_opencode "$MODEL_IMPL" "factory IMPL $TYPE c$cycle" \
       "$CYCLE_DIR/02-implement.prompt.md" \
       "Implement $TYPE from its spec and SDK only. No n8n packages. Register + tests. Stop when done." \
       "$CYCLE_DIR/02-implement.out.log" \
-      "$TIMEOUT_IMPL" || true
+      "$TIMEOUT_IMPL"
+    IMPL_OC_RC=$?
+    set -e
 
     if [[ "$IMPL_LOCK" == "1" || "$IMPL_LOCK" == "true" ]]; then
       release_impl_lock
@@ -389,17 +731,100 @@ while [[ "$cycle" -le "$MAX_CYCLES" ]]; do
   bash "$ROOT/scripts/factory/lib/assert_no_n8n_in_repo.sh" \
     >"$CYCLE_DIR/leak-after-impl.log" 2>&1 || true
 
+  # ── IMPL acceptance gate (do not validate without registration) ─
+  if [[ "$DRY_RUN" -eq 1 ]]; then
+    IMPL_GATE_RC=0
+  else
+    set +e
+    bash "$ROOT/scripts/factory/lib/gate_impl.sh" "$TYPE" \
+      "$CYCLE_DIR/02-implement.out.log" "$IMPL_OC_RC" \
+      >"$CYCLE_DIR/gate-impl.log" 2>&1
+    IMPL_GATE_RC=$?
+    set -e
+  fi
+  if [[ "$IMPL_GATE_RC" -ne 0 ]]; then
+    primary=$(grep '^PRIMARY ' "$CYCLE_DIR/gate-impl.log" 2>/dev/null | awk '{print $2}' || echo impl_gate_fail)
+    reasons=$(grep '^REASON ' "$CYCLE_DIR/gate-impl.log" 2>/dev/null | sed 's/^REASON //' | head -5 | tr '\n' '; ' || true)
+    echo "[factory] IMPL GATE FAIL $TYPE: $primary — $reasons" | tee -a "$CYCLE_DIR/gate-impl.log"
+    echo "IMPLEMENT gate failed ($primary): $reasons" >"$FIX_HINTS_FILE"
+    write_status "fail" "$cycle" "fail" "IMPL gate: $primary — $reasons" \
+      "" "" "" "$primary"
+    python3 - <<PY 2>/dev/null || true
+import json
+from pathlib import Path
+from datetime import datetime, timezone
+p=Path("$STATUS_FILE")
+d=json.loads(p.read_text()) if p.exists() else {}
+d.update({
+  "failedStage": "implement",
+  "failReason": "$primary",
+  "lastStage": "implement",
+  "updatedAt": datetime.now(timezone.utc).isoformat(),
+})
+p.write_text(json.dumps(d, indent=2)+"\n")
+PY
+    if [[ "$ONCE" -eq 1 ]]; then
+      final="fail"
+      break
+    fi
+    # Next cycle: if agent/rate-limit, retry IMPL; if no spec, go SPEC
+    if [[ "$primary" == "spec_missing" ]]; then
+      STAGE_CURSOR="spec"
+    else
+      STAGE_CURSOR="implement"
+    fi
+    cycle=$((cycle + 1))
+    continue
+  fi
+  STAGE_CURSOR="validate"
+  fi  # end IMPLEMENT block
+
   # ── 3. Deterministic gates ──────────────────────────────────────
+  if [[ "$STAGE_CURSOR" != "validate" ]]; then
+    STAGE_CURSOR="validate"
+  fi
   write_status "validate-gates" "$cycle"
   set +e
-  bash "$ROOT/scripts/factory/lib/validate_node.sh" "$TYPE" "" \
-    >"$CYCLE_DIR/gate.log" 2>&1
-  GATE_RC=$?
-  bash "$ROOT/scripts/factory/lib/assert_no_n8n_in_repo.sh" >>"$CYCLE_DIR/gate.log" 2>&1
-  LEAK_RC=$?
+  if [[ "$DRY_RUN" -eq 1 ]]; then
+    echo "[dry-run] skip validate_node.sh" >"$CYCLE_DIR/gate.log"
+    echo "=== summary ok=1 fail=0 ===" >>"$CYCLE_DIR/gate.log"
+    GATE_RC=0
+    LEAK_RC=0
+  else
+    bash "$ROOT/scripts/factory/lib/validate_node.sh" "$TYPE" "" \
+      >"$CYCLE_DIR/gate.log" 2>&1
+    GATE_RC=$?
+    bash "$ROOT/scripts/factory/lib/assert_no_n8n_in_repo.sh" >>"$CYCLE_DIR/gate.log" 2>&1
+    LEAK_RC=$?
+  fi
   set -e
   if [[ "$LEAK_RC" -ne 0 ]]; then GATE_RC=1; fi
   cp "$CYCLE_DIR/gate.log" "$JOB_ROOT/gate-latest.log" 2>/dev/null || true
+
+  # Skip expensive VAL LLM when deterministic gates already failed
+  if [[ "$GATE_RC" -ne 0 && "$DRY_RUN" -eq 0 ]]; then
+    echo "[factory] skipping VAL LLM — deterministic gates failed"
+    VERDICT="fail"
+    HINTS="Deterministic gates failed before VAL LLM. See gate.log."
+    echo "$HINTS" >"$FIX_HINTS_FILE"
+    echo "$VERDICT" >"$CYCLE_DIR/verdict.txt"
+    write_status "fail" "$cycle" "fail" "validate gates failed" \
+      "" "" "" "validate_gates"
+    python3 - <<PY 2>/dev/null || true
+import json
+from pathlib import Path
+from datetime import datetime, timezone
+p=Path("$STATUS_FILE")
+d=json.loads(p.read_text()) if p.exists() else {}
+d.update({"failedStage":"validate","failReason":"validate_gates","lastStage":"validate-gates",
+          "updatedAt":datetime.now(timezone.utc).isoformat()})
+p.write_text(json.dumps(d, indent=2)+"\n")
+PY
+    if [[ "$ONCE" -eq 1 ]]; then final="fail"; break; fi
+    STAGE_CURSOR="implement"
+    cycle=$((cycle + 1))
+    continue
+  fi
 
   # ── 4. VALIDATE LLM ─────────────────────────────────────────────
   write_status "validate-llm" "$cycle" "" "model=$MODEL_VAL" \
@@ -418,11 +843,14 @@ while [[ "$cycle" -le "$MAX_CYCLES" ]]; do
     echo "Reply with ONE JSON object only, e.g. {\"type\":\"$TYPE\",\"verdict\":\"pass\",\"reasons\":[\"...\"],\"fix_hints\":[]}"
   } >>"$CYCLE_DIR/03-validate.prompt.md"
 
+  set +e
   run_opencode "$MODEL_VAL" "factory VAL $TYPE c$cycle" \
     "$CYCLE_DIR/03-validate.prompt.md" \
     "Return a single JSON object with verdict pass or fail for $TYPE. Then stop." \
     "$CYCLE_DIR/03-validate.out.log" \
-    "$TIMEOUT_VAL" || true
+    "$TIMEOUT_VAL"
+  VAL_OC_RC=$?
+  set -e
 
   if [[ "$DRY_RUN" -eq 1 ]]; then
     VERDICT="pass"
@@ -431,17 +859,14 @@ while [[ "$cycle" -le "$MAX_CYCLES" ]]; do
     PARSED=$(parse_verdict "$CYCLE_DIR/03-validate.out.log" || true)
     VERDICT=$(echo "$PARSED" | head -1)
     HINTS=$(echo "$PARSED" | tail -n +2)
-    # If gates green and LLM said pass → pass. If gates red → fail.
     if [[ "$GATE_RC" -ne 0 ]]; then
       VERDICT="fail"
       HINTS="Deterministic gates and/or leak guard failed. See gate.log.
 $HINTS"
     fi
-    # If gates green and LLM timed out / no verdict, trust gates
     if [[ "$GATE_RC" -eq 0 && "$VERDICT" != "pass" ]]; then
       if grep -q 'TIMEOUT after' "$CYCLE_DIR/03-validate.out.log" 2>/dev/null \
         || grep -q 'no JSON verdict' <<<"$HINTS" 2>/dev/null; then
-        # Prefer gate success when validator is mute/timeout
         if grep -q 'summary ok=' "$CYCLE_DIR/gate.log" 2>/dev/null \
           && ! grep -q 'fail=[1-9]' "$CYCLE_DIR/gate.log" 2>/dev/null; then
           VERDICT="pass"
@@ -466,7 +891,24 @@ $HINTS"
     break
   fi
 
-  write_status "fail" "$cycle" "fail" "cycle $cycle failed"
+  write_status "fail" "$cycle" "fail" "cycle $cycle validate failed" \
+    "" "" "" "validate_fail"
+  python3 - <<PY 2>/dev/null || true
+import json
+from pathlib import Path
+from datetime import datetime, timezone
+p=Path("$STATUS_FILE")
+d=json.loads(p.read_text()) if p.exists() else {}
+d.update({"failedStage":"validate","failReason":"validate_fail","lastStage":"validate-llm",
+          "updatedAt":datetime.now(timezone.utc).isoformat()})
+p.write_text(json.dumps(d, indent=2)+"\n")
+PY
+  if [[ "$ONCE" -eq 1 ]]; then
+    echo "[factory] --once: stopping after single cycle attempt"
+    break
+  fi
+  # next full cycle restarts at SPEC
+  STAGE_CURSOR="spec"
   cycle=$((cycle + 1))
 done
 
@@ -475,7 +917,16 @@ bash "$ROOT/scripts/factory/lib/assert_no_n8n_in_repo.sh" >/dev/null 2>&1 || tru
 release_impl_lock 2>/dev/null || true
 
 if [[ "$final" != "pass" ]]; then
-  write_status "partial" "$((cycle - 1))" "fail" "max cycles or lock timeout"
+  pc="$cycle"
+  [[ "$pc" -lt 1 ]] && pc=1
+  # Don't clobber interrupted (lock timeout) status
+  cur_stage=$(python3 -c "import json;print(json.load(open('$STATUS_FILE')).get('stage',''))" 2>/dev/null || true)
+  if [[ "$final" == "interrupted" || "$cur_stage" == "interrupted" ]]; then
+    python3 "$ROOT/scripts/factory/lib/run_state.py" mark "$TYPE" --bucket partial 2>/dev/null || true
+    echo "RESULT interrupted $TYPE (use TUI y/L to continue)"
+    exit 1
+  fi
+  write_status "partial" "$pc" "fail" "max cycles, once-stop, or lock timeout"
   python3 "$ROOT/scripts/factory/lib/catalog.py" set-status "$TYPE" --factory partial 2>/dev/null || true
   python3 "$ROOT/scripts/factory/lib/run_state.py" mark "$TYPE" --bucket partial 2>/dev/null || true
   echo "RESULT partial $TYPE"

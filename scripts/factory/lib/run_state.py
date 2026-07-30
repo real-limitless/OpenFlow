@@ -159,6 +159,10 @@ def build_pending(include_partial: bool = True) -> list[str]:
             continue
         if verdict == "pass" or stage == "pass":
             continue
+        # waitout: always re-queue (no live pipeline by design)
+        if stage == "implement-waitout":
+            pending.append(t)
+            continue
         # actively running with live process — do not double-queue
         if stage in (
             "spec",

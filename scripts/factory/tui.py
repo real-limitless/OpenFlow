@@ -89,6 +89,7 @@ RUNNING_STAGES = {
     "validate-gates",
     "validate-llm",
 }
+WAITOUT_STAGES = {"implement-waitout"}
 
 
 @dataclass
@@ -112,6 +113,13 @@ class PipeStatus:
     stale: bool = False
     job_models: dict[str, str] = field(default_factory=dict)  # overrides only
     resolved_models: dict[str, str] = field(default_factory=dict)
+    interrupt_reason: str = ""
+    interrupt_message: str = ""
+    activity: dict[str, Any] = field(default_factory=dict)
+    waitout_rounds: int = 0
+    lock_holder: str = ""
+    fail_reason: str = ""
+    failed_stage: str = ""
 
 
 @dataclass
@@ -139,7 +147,12 @@ class AppState:
     search_mode: bool = False
     models: dict[str, str] = field(default_factory=lambda: dict(DEFAULT_MODELS))
     settings: dict[str, Any] = field(
-        default_factory=lambda: {"concurrency": 2, "maxCycles": 3, "implLock": True}
+        default_factory=lambda: {
+            "concurrency": 2,
+            "maxCycles": 3,
+            "implLock": True,
+            "implLockWaitSec": 300,
+        }
     )
     run_state: dict[str, Any] = field(default_factory=dict)
     model_menu: bool = False
@@ -460,6 +473,17 @@ def discover_pipes() -> list[PipeStatus]:
                     st.updated_at = data.get("updatedAt") or ""
                     st.model = str(data.get("model") or "")
                     st.stage_log = str(data.get("stageLog") or "")
+                    st.interrupt_reason = str(data.get("interruptReason") or "")
+                    st.interrupt_message = str(
+                        data.get("interruptMessage") or data.get("detail") or ""
+                    )
+                    st.activity = (
+                        data.get("activity") if isinstance(data.get("activity"), dict) else {}
+                    )
+                    st.waitout_rounds = int(data.get("waitoutRounds") or 0)
+                    st.lock_holder = str(data.get("lockHolder") or "")
+                    st.fail_reason = str(data.get("failReason") or data.get("interruptReason") or "")
+                    st.failed_stage = str(data.get("failedStage") or "")
                     for key, attr in (
                         ("pipelinePid", "pipeline_pid"),
                         ("pid", "pipeline_pid"),
@@ -513,6 +537,8 @@ def pipe_bucket(st: PipeStatus) -> str:
         return "pass"
     if st.stage == "skipped":
         return "skipped"
+    if st.stage == "implement-waitout":
+        return "waitout"  # still queued — show as pending-ish
     if st.stage in ("partial", "interrupted") or st.verdict == "fail" or st.stage == "fail":
         return "failed"
     if st.stage in RUNNING_STAGES:
@@ -536,7 +562,9 @@ def apply_filter(state: AppState) -> None:
     for i, p in enumerate(state.pipes):
         b = pipe_bucket(p)
         fm = state.filter_mode
-        if fm == "pending" and b != "pending":
+        if fm == "pending" and b not in ("pending", "waitout"):
+            continue
+        if fm == "waitout" and b != "waitout":
             continue
         if fm == "running" and b != "running":
             continue
@@ -546,7 +574,9 @@ def apply_filter(state: AppState) -> None:
             continue
         if fm == "skipped" and b != "skipped":
             continue
-        if q and q not in p.type.lower() and q not in (p.stage or "").lower():
+        if q and q not in p.type.lower() and q not in (p.stage or "").lower() and q not in (
+            p.interrupt_reason or ""
+        ).lower() and q not in (p.detail or "").lower():
             continue
         state.filtered.append(i)
     if state.selected >= len(state.filtered):
@@ -563,6 +593,8 @@ def stage_color(st: PipeStatus) -> int:
         return 1
     if b == "running":
         return 3
+    if b == "waitout":
+        return 3  # yellow-ish wait
     if b == "skipped":
         return 5
     return 0
@@ -573,11 +605,27 @@ def stage_label(st: PipeStatus) -> str:
         return "PASS"
     if st.stage == "partial":
         return "PARTIAL"
+    if st.stage == "implement-waitout":
+        r = st.waitout_rounds or 0
+        return f"WAITOUT r{r}"
     if st.stage == "interrupted":
+        reason = st.interrupt_reason or ""
+        if reason == "impl_lock_timeout":
+            return "INT lock-wait"
+        if reason == "killed_by_operator":
+            return "INT killed"
+        if reason:
+            return f"INT {reason[:10]}"
         return "INTERRUPTED"
     if st.stage == "skipped":
         return "SKIPPED"
     if st.verdict == "fail" or st.stage == "fail":
+        fr = st.fail_reason or ""
+        fs = st.failed_stage or ""
+        if fr and fs:
+            return f"FAIL {fs[:4]}/{fr[:10]}"
+        if fr:
+            return f"FAIL {fr[:12]}"
         return f"FAIL c{st.cycle}"
     if st.stage == "queued":
         return "queued"
@@ -622,6 +670,7 @@ def selected_pipe(state: AppState) -> PipeStatus | None:
 
 
 def node_ctl(args: list[str], timeout: float = 20) -> str:
+    """Blocking ctl (prefer node_ctl_bg for TUI keys)."""
     try:
         r = subprocess.run(
             ["bash", str(NODE_CTL), *args],
@@ -634,6 +683,24 @@ def node_ctl(args: list[str], timeout: float = 20) -> str:
         return out[:200] or f"rc={r.returncode}"
     except Exception as e:
         return f"error: {e}"
+
+
+def node_ctl_bg(args: list[str]) -> None:
+    """Fire-and-forget — keeps TUI responsive (n/y/r/k/L)."""
+    log = JOBS / "factory.log"
+    JOBS.mkdir(parents=True, exist_ok=True)
+    try:
+        with open(log, "a", encoding="utf-8") as lf:
+            lf.write(f"\n=== TUI ctl {' '.join(args)} {datetime.now().isoformat()} ===\n")
+        subprocess.Popen(
+            ["bash", str(NODE_CTL), *args],
+            cwd=str(ROOT),
+            stdout=open(log, "a", encoding="utf-8"),
+            stderr=subprocess.STDOUT,
+            start_new_session=True,
+        )
+    except Exception as e:
+        raise RuntimeError(str(e)) from e
 
 
 def load_log_lines(path: Path | None, max_lines: int = 4000) -> list[str]:
@@ -723,6 +790,7 @@ def start_factory(state: AppState, resume: bool = False, dry: bool = False) -> N
         "FACTORY_CONCURRENCY": str(conc),
         "FACTORY_MAX_CYCLES": str(int(state.settings.get("maxCycles") or 3)),
         "FACTORY_IMPL_LOCK": "1" if state.settings.get("implLock", True) else "0",
+        "FACTORY_IMPL_LOCK_WAIT": str(int(state.settings.get("implLockWaitSec") or 300)),
     }
     if dry:
         env["FACTORY_DRY_RUN"] = "1"
@@ -777,7 +845,15 @@ def stop_factory(state: AppState) -> None:
 
 
 def counts(state: AppState) -> dict[str, int]:
-    c = {"all": 0, "pending": 0, "running": 0, "pass": 0, "failed": 0, "skipped": 0}
+    c = {
+        "all": 0,
+        "pending": 0,
+        "running": 0,
+        "pass": 0,
+        "failed": 0,
+        "skipped": 0,
+        "waitout": 0,
+    }
     for p in state.pipes:
         c["all"] += 1
         b = pipe_bucket(p)
@@ -785,11 +861,24 @@ def counts(state: AppState) -> dict[str, int]:
     return c
 
 
+def activity_line(st: PipeStatus) -> str:
+    act = st.activity or {}
+    if not act and st.stage not in RUNNING_STAGES:
+        if st.interrupt_message:
+            return st.interrupt_message[:70]
+        return st.detail[:70] if st.detail else ""
+    state = act.get("state") or "?"
+    tps = act.get("estTokensPerSec") or 0
+    bps = act.get("logBytesPerSec") or 0
+    silent = act.get("silentSec") or 0
+    return f"{state} ~{tps} tok/s log {bps}B/s silent {silent}s"
+
+
 def draw_footer(stdscr: Any, h: int, w: int, state: AppState) -> None:
     if state.confirm:
         keys = f"Confirm {state.confirm}? [y]es [n]o"
     elif state.settings_menu:
-        keys = "[↑↓]field [←/→]adjust [s]ave [Esc]back"
+        keys = "[↑↓]field [←/→]adjust [s]ave [Esc]  (incl. lock-wait sec)"
     elif state.model_menu:
         if state.model_menu_scope == "job":
             keys = "[Tab]role [↑↓] [Enter]set [s]ave [c]lear-job [/]filter [Esc]"
@@ -803,8 +892,8 @@ def draw_footer(stdscr: Any, h: int, w: int, state: AppState) -> None:
         )
     else:
         keys = (
-            "[S/C/X] [m]global-models [M]job-models [b]atch "
-            "[r]etry [n]ow [k]ill [Enter]LIVE [q]"
+            "[S/C/X] [m/M]models [b]atch [y]continue [L]bypass-lock "
+            "[r]retry [n]ow [k]ill [Enter]LIVE [q]"
         )
     try:
         stdscr.attron(curses.A_DIM)
@@ -945,7 +1034,7 @@ def draw_settings(stdscr: Any, state: AppState, h: int, w: int) -> None:
         stdscr.attroff(curses.A_BOLD)
         stdscr.addnstr(
             4, 2,
-            "Jobs at once = pipeline concurrency. IMPL serial if lock ON."[: w - 3],
+            "Jobs at once = concurrency. IMPL serial if lock ON. L bypasses per job."[: w - 3],
             w - 3,
         )
     except curses.error:
@@ -954,7 +1043,15 @@ def draw_settings(stdscr: Any, state: AppState, h: int, w: int) -> None:
         ("concurrency (jobs at once)", str(s.get("concurrency", 2)), "1-8"),
         ("max cycles per job", str(s.get("maxCycles", 3)), "1-5"),
         ("impl lock (serialize IMPLEMENT)", "ON" if s.get("implLock", True) else "OFF", "space"),
+        ("impl lock wait (seconds)", str(s.get("implLockWaitSec", 300)), "30-3600"),
+        (
+            "lock wait policy",
+            str(s.get("lockWaitPolicy", "waitout")),
+            "waitout|interrupt",
+        ),
+        ("waitout backoff (sec)", str(s.get("waitoutBackoffSec", 10)), "0-600"),
     ]
+    n = len(rows)
     for i, (label, val, hint) in enumerate(rows):
         y = 6 + i * 2
         mark = "▶" if i == state.settings_idx else " "
@@ -967,10 +1064,18 @@ def draw_settings(stdscr: Any, state: AppState, h: int, w: int) -> None:
             pass
     try:
         d = " *" if state.settings_dirty else ""
-        stdscr.addnstr(13, 2, f"s = save .jobs/settings.json{d} · used on next Start/Continue"[: w - 3], w - 3)
+        stdscr.addnstr(
+            6 + n * 2, 2,
+            f"s = save .jobs/settings.json{d} · next Start applies wait/conc"[: w - 3],
+            w - 3,
+        )
         if not s.get("implLock", True):
             stdscr.attron(curses.color_pair(1))
-            stdscr.addnstr(14, 2, "WARN: lock OFF may race shared registry files"[: w - 3], w - 3)
+            stdscr.addnstr(
+                7 + n * 2, 2,
+                "WARN: global lock OFF — parallel IMPL may race registry"[: w - 3],
+                w - 3,
+            )
             stdscr.attroff(curses.color_pair(1))
     except curses.error:
         pass
@@ -997,10 +1102,11 @@ def draw(stdscr: Any, state: AppState) -> None:
     st = state.settings
     lock_flag = "on" if st.get("implLock", True) else "off"
     meta = (
-        f" pipes={c['all']} pend={c['pending']} run={c['running']} "
-        f"pass={c['pass']} fail={c['failed']}  "
-        f"conc={st.get('concurrency', 2)} cycles={st.get('maxCycles', 3)} lock={lock_flag}{lock_s}  "
-        f"SPEC={state.models['spec']} IMPL={state.models['implement']}{dirty}"
+        f" pipes={c['all']} pend={c['pending']} waitout={c.get('waitout', 0)} "
+        f"run={c['running']} pass={c['pass']} fail={c['failed']}  "
+        f"conc={st.get('concurrency', 2)} lock={lock_flag}/{st.get('lockWaitPolicy', 'waitout')}"
+        f" wait={st.get('implLockWaitSec', 300)}s{lock_s}  "
+        f"IMPL={state.models['implement']}{dirty}"
     )
     try:
         stdscr.addnstr(1, 0, meta[: max(0, w - 1)], max(0, w - 1))
@@ -1020,14 +1126,14 @@ def draw(stdscr: Any, state: AppState) -> None:
 
     if state.show_help:
         help_lines = [
-            "FACTORY:  S start  C continue  X stop-all  m GLOBAL models  b batch/parallel",
-            "NODE:     M JOB models  r retry  R all-fail  k kill  n run-now  x skip  u unskip",
-            "LOGS:     Enter LIVE tail (bottom)  G/End bottom  g/Home top  Space follow",
-            "FILTER:   p pending  e running  f failed  a all  s skipped  / search",
+            "FACTORY:  S start  C resume-queue  X stop-all  m GLOBAL  b batch",
+            "NODE:     y continue last stage   L bypass impl.lock (this job)",
+            "          Shift+L steal lock (kill holder) + continue",
+            "          r full-retry  n run-now  k kill  M job-models",
+            "LOGS:     Enter LIVE  G bottom  g top  Space follow",
             "",
-            "Job models saved under .jobs/nodes/<type>/models.json (override global).",
-            "Batch settings: concurrency, max cycles, impl lock → .jobs/settings.json",
-            "With impl lock ON, concurrency parallelizes SPEC; IMPL shows impl-WAIT.",
+            "n/y/L/k run in background — TUI must not freeze.",
+            "impl-WAIT: L skips queue; b sets lock-wait seconds (default 300).",
             "Isolation: n8n pack only under /tmp for SPEC.",
         ]
         for i, line in enumerate(help_lines):
@@ -1085,7 +1191,12 @@ def draw(stdscr: Any, state: AppState) -> None:
         y = 4 + row_i
         mark = "▶" if fi == state.selected else " "
         star = "★" if pipe.job_models else " "
-        act = (pipe.last_activity or pipe.detail or "")[: max(8, w - 74)]
+        act = (
+            activity_line(pipe)
+            or pipe.last_activity
+            or pipe.detail
+            or ""
+        )[: max(8, w - 74)]
         row = (
             f"{mark}{fi + 1:>3}{star} {pipe.type:<36}  {stage_label(pipe):<14}  "
             f"{pipe.cycle:>2}  {short_time(pipe.updated_at):<8}  {act}"
@@ -1115,26 +1226,51 @@ def draw(stdscr: Any, state: AppState) -> None:
             jm = sel.resolved_models or {}
             jtag = ""
             if sel.job_models:
-                parts = [f"{k[0].upper()}={sel.job_models[k].split('/')[-1][:12]}" for k in ROLE_KEYS if k in sel.job_models]
+                parts = [
+                    f"{k[0].upper()}={sel.job_models[k].split('/')[-1][:12]}"
+                    for k in ROLE_KEYS
+                    if k in sel.job_models
+                ]
                 jtag = " ★" + ",".join(parts)
+            wait_hint = ""
+            if sel.stage in ("implement-wait", "implement-waitout"):
+                wait_hint = "  L=bypass-lock"
+            reason = ""
+            if sel.stage == "interrupted" and sel.interrupt_message:
+                reason = f"  WHY: {sel.interrupt_message[:40]}"
+            elif sel.stage == "fail" and (sel.fail_reason or sel.detail):
+                reason = f"  WHY: [{sel.failed_stage or '?'}] {sel.fail_reason or sel.detail[:36]}"
+            elif sel.stage == "implement-waitout":
+                reason = f"  WHY: {sel.detail[:40]}" if sel.detail else "  WHY: lock busy, still queued"
+            act = activity_line(sel)
             stdscr.addnstr(
                 dy + 1,
                 0,
                 (
                     f" [{fl}{stale}] {sel.type}  {stage_label(sel)}  "
-                    f"run={sel.model or jm.get('implement') or '-'}{jtag}  "
-                    f"oc={sel.opencode_pid or '-'}  M=job-models  Enter=full"
+                    f"{act or ('run=' + (sel.model or jm.get('implement') or '-'))}{jtag}  "
+                    f"oc={sel.opencode_pid or '-'}{reason}{wait_hint}"
                 )[: w - 1],
                 w - 1,
             )
             stdscr.attroff(curses.A_BOLD | curses.color_pair(3 if not sel.stale else 1))
+            # second line: full interrupt / waitout reason
+            if sel.interrupt_message or (sel.stage == "implement-waitout" and sel.detail):
+                try:
+                    msg = sel.interrupt_message or sel.detail
+                    stdscr.attron(curses.color_pair(1 if sel.stage == "interrupted" else 3))
+                    stdscr.addnstr(dy + 2, 2, f"reason: {msg}"[: w - 3], w - 3)
+                    stdscr.attroff(curses.color_pair(1 if sel.stage == "interrupted" else 3))
+                except curses.error:
+                    pass
             tail_lines = (sel.last_log_tail or "(no activity yet)").splitlines()
-            for j, line in enumerate(tail_lines[-(strip_h - 2) :]):
-                if dy + 2 + j >= h - 2:
+            log_base = dy + 3 if (sel.interrupt_message or sel.stage == "implement-waitout") else dy + 2
+            for j, line in enumerate(tail_lines[-(strip_h - 3) :]):
+                if log_base + j >= h - 2:
                     break
                 attr = curses.color_pair(4) if interesting_line(line) else curses.A_NORMAL
                 stdscr.attron(attr)
-                stdscr.addnstr(dy + 2 + j, 2, line[: w - 3], w - 3)
+                stdscr.addnstr(log_base + j, 2, line[: w - 3], w - 3)
                 stdscr.attroff(attr)
         else:
             stdscr.addnstr(dy + 1, 2, "(no selection)", w - 3)
@@ -1147,6 +1283,7 @@ def draw(stdscr: Any, state: AppState) -> None:
 
 def handle_settings_menu(state: AppState, ch: int) -> None:
     s = state.settings
+    nfields = 6
     if ch in (27, ord("q")):
         if state.settings_dirty:
             save_settings(s)
@@ -1155,44 +1292,61 @@ def handle_settings_menu(state: AppState, ch: int) -> None:
         state.settings_menu = False
         return
     if ch in (curses.KEY_UP, ord("k")):
-        state.settings_idx = (state.settings_idx - 1) % 3
+        state.settings_idx = (state.settings_idx - 1) % nfields
         return
     if ch in (curses.KEY_DOWN, ord("j")):
-        state.settings_idx = (state.settings_idx + 1) % 3
+        state.settings_idx = (state.settings_idx + 1) % nfields
         return
     if ch in (curses.KEY_LEFT, ord("h"), ord("-")):
         if state.settings_idx == 0:
             s["concurrency"] = max(1, int(s.get("concurrency", 2)) - 1)
-            state.settings_dirty = True
         elif state.settings_idx == 1:
             s["maxCycles"] = max(1, int(s.get("maxCycles", 3)) - 1)
-            state.settings_dirty = True
         elif state.settings_idx == 2:
             s["implLock"] = not bool(s.get("implLock", True))
-            state.settings_dirty = True
+        elif state.settings_idx == 3:
+            s["implLockWaitSec"] = max(30, int(s.get("implLockWaitSec", 300)) - 30)
+        elif state.settings_idx == 4:
+            s["lockWaitPolicy"] = (
+                "interrupt" if s.get("lockWaitPolicy", "waitout") == "waitout" else "waitout"
+            )
+        elif state.settings_idx == 5:
+            s["waitoutBackoffSec"] = max(0, int(s.get("waitoutBackoffSec", 10)) - 5)
+        state.settings_dirty = True
         return
     if ch in (curses.KEY_RIGHT, ord("l"), ord("+"), ord("=")):
         if state.settings_idx == 0:
             s["concurrency"] = min(8, int(s.get("concurrency", 2)) + 1)
-            state.settings_dirty = True
         elif state.settings_idx == 1:
             s["maxCycles"] = min(5, int(s.get("maxCycles", 3)) + 1)
-            state.settings_dirty = True
         elif state.settings_idx == 2:
             s["implLock"] = not bool(s.get("implLock", True))
-            state.settings_dirty = True
+        elif state.settings_idx == 3:
+            s["implLockWaitSec"] = min(3600, int(s.get("implLockWaitSec", 300)) + 30)
+        elif state.settings_idx == 4:
+            s["lockWaitPolicy"] = (
+                "interrupt" if s.get("lockWaitPolicy", "waitout") == "waitout" else "waitout"
+            )
+        elif state.settings_idx == 5:
+            s["waitoutBackoffSec"] = min(600, int(s.get("waitoutBackoffSec", 10)) + 5)
+        state.settings_dirty = True
         return
     if ch == ord(" "):
         if state.settings_idx == 2:
             s["implLock"] = not bool(s.get("implLock", True))
+            state.settings_dirty = True
+        elif state.settings_idx == 4:
+            s["lockWaitPolicy"] = (
+                "interrupt" if s.get("lockWaitPolicy", "waitout") == "waitout" else "waitout"
+            )
             state.settings_dirty = True
         return
     if ch == ord("s"):
         save_settings(s)
         state.settings_dirty = False
         state.message = (
-            f"Saved conc={s.get('concurrency')} cycles={s.get('maxCycles')} "
-            f"lock={'on' if s.get('implLock') else 'off'}"
+            f"Saved conc={s.get('concurrency')} wait={s.get('implLockWaitSec')}s "
+            f"policy={s.get('lockWaitPolicy', 'waitout')}"
         )
         return
 
@@ -1392,51 +1546,109 @@ def do_retry_selected(state: AppState) -> None:
     sel = selected_pipe(state)
     if not sel:
         return
-    out = node_ctl(["reset", sel.type])
-    state.message = f"Retry {sel.type}: {out}"
-    refresh_app(state, reload_models=False)
+    try:
+        node_ctl_bg(["reset", sel.type])
+        state.message = f"Full retry queued: {sel.type} (bg)"
+    except Exception as e:
+        state.message = f"retry error: {e}"
+    # light: don't full refresh now — auto-refresh will pick up
 
 
 def do_retry_all_failed(state: AppState) -> None:
-    out = node_ctl(["retry-all-failed"], timeout=120)
-    state.message = out
-    refresh_app(state, reload_models=False)
+    try:
+        node_ctl_bg(["retry-all-failed"])
+        state.message = "Retry-all-failed started (bg)…"
+    except Exception as e:
+        state.message = f"error: {e}"
 
 
 def do_kill_selected(state: AppState) -> None:
     sel = selected_pipe(state)
     if not sel:
         return
-    out = node_ctl(["kill", sel.type])
-    state.message = f"Kill: {out}"
-    refresh_app(state, reload_models=False)
+    try:
+        node_ctl_bg(["kill", sel.type])
+        state.message = f"Kill sent: {sel.type} (bg)…"
+    except Exception as e:
+        state.message = f"kill error: {e}"
 
 
-def do_run_now(state: AppState) -> None:
+def do_continue_selected(state: AppState, *, no_lock: bool = False) -> None:
+    """Resume stuck/failed job from last stage only (no full SPEC re-trial)."""
     sel = selected_pipe(state)
     if not sel:
         return
-    out = node_ctl(["run", sel.type])
-    state.message = f"Run now: {out}"
-    refresh_app(state, reload_models=False)
+    if sel.stage == "pass" or sel.verdict == "pass":
+        state.message = "Already PASS — use n for full re-run if needed"
+        return
+    args = ["continue", sel.type]
+    if no_lock:
+        args.append("--no-lock")
+        # Prefer implement when bypassing lock from wait
+        if sel.stage in ("implement-wait", "implement", "interrupted"):
+            args.extend(["--stage", "implement"])
+    try:
+        node_ctl_bg(args)
+        lock_s = " bypass-lock" if no_lock else ""
+        state.message = f"Continue{lock_s} sent: {sel.type} (bg)…"
+    except Exception as e:
+        state.message = f"continue error: {e}"
+
+
+def do_bypass_lock(state: AppState) -> None:
+    """Skip impl.lock for this job — continue IMPLEMENT immediately."""
+    sel = selected_pipe(state)
+    if not sel:
+        return
+    do_continue_selected(state, no_lock=True)
+
+
+def do_steal_lock(state: AppState) -> None:
+    sel = selected_pipe(state)
+    if not sel:
+        return
+    try:
+        node_ctl_bg(["steal-lock", sel.type])
+        state.message = f"Steal-lock + continue: {sel.type} (bg)…"
+    except Exception as e:
+        state.message = f"steal error: {e}"
+
+
+def do_run_now(state: AppState, *, no_lock: bool = False) -> None:
+    sel = selected_pipe(state)
+    if not sel:
+        return
+    args = ["run", sel.type]
+    if no_lock:
+        args.append("--no-lock")
+    try:
+        node_ctl_bg(args)
+        lock_s = " no-lock" if no_lock else ""
+        state.message = f"Run now{lock_s}: {sel.type} (bg) — UI stays live"
+    except Exception as e:
+        state.message = f"run error: {e}"
 
 
 def do_skip_selected(state: AppState) -> None:
     sel = selected_pipe(state)
     if not sel:
         return
-    out = node_ctl(["skip", sel.type])
-    state.message = f"Skip: {out}"
-    refresh_app(state, reload_models=False)
+    try:
+        node_ctl_bg(["skip", sel.type])
+        state.message = f"Skip sent: {sel.type}"
+    except Exception as e:
+        state.message = f"skip error: {e}"
 
 
 def do_unskip_selected(state: AppState) -> None:
     sel = selected_pipe(state)
     if not sel:
         return
-    out = node_ctl(["unskip", sel.type])
-    state.message = f"Unskip: {out}"
-    refresh_app(state, reload_models=False)
+    try:
+        node_ctl_bg(["unskip", sel.type])
+        state.message = f"Unskip sent: {sel.type}"
+    except Exception as e:
+        state.message = f"unskip error: {e}"
 
 
 def main_curses(stdscr: Any) -> None:
@@ -1502,6 +1714,12 @@ def main_curses(stdscr: Any) -> None:
                 state.confirm = ""
                 if action == "kill":
                     do_kill_selected(state)
+                elif action == "continue":
+                    do_continue_selected(state, no_lock=False)
+                elif action == "bypass-lock":
+                    do_bypass_lock(state)
+                elif action == "steal-lock":
+                    do_steal_lock(state)
                 elif action == "retry-all":
                     do_retry_all_failed(state)
                 elif action == "stop":
@@ -1574,19 +1792,45 @@ def main_curses(stdscr: Any) -> None:
             open_model_menu(state, scope="job")
         elif ch == ord("b"):
             open_settings_menu(state)
+        elif ch == ord("y"):
+            sel = selected_pipe(state)
+            if sel and sel.stage in RUNNING_STAGES:
+                state.confirm = "continue"
+                state.message = (
+                    f"Continue {sel.type} from last stage (no full re-trial)? y/n"
+                )
+            else:
+                do_continue_selected(state, no_lock=False)
+        elif ch == ord("L"):
+            # Bypass impl.lock for this job only
+            sel = selected_pipe(state)
+            if not sel:
+                state.message = "No selection"
+            else:
+                state.confirm = "bypass-lock"
+                state.message = (
+                    f"Bypass impl.lock & continue IMPLEMENT for {sel.type}? y/n"
+                )
+        elif ch == curses.KEY_SLEFT or ch == ord("!"):  # Shift+L may be ! on some terms
+            # Steal lock — aggressive
+            sel = selected_pipe(state)
+            holder = lock_holder()
+            state.confirm = "steal-lock"
+            state.message = (
+                f"STEAL lock (kill holder={holder or '?'}) then continue "
+                f"{sel.type if sel else '?'}? y/n"
+            )
         elif ch == ord("r"):
             do_retry_selected(state)
         elif ch == ord("R"):
             state.confirm = "retry-all"
             state.message = "Retry ALL failed/partial/interrupted? y/n"
-        elif ch == ord("K") or (ch == ord("k") and False):
-            pass
         elif ch == ord("k"):
             state.confirm = "kill"
             sel = selected_pipe(state)
             state.message = f"Kill {sel.type if sel else '?'}? y/n"
         elif ch == ord("n"):
-            do_run_now(state)
+            do_run_now(state, no_lock=False)
         elif ch == ord("x"):
             do_skip_selected(state)
         elif ch == ord("u"):
