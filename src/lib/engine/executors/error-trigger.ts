@@ -2,36 +2,19 @@ import type { NodeExecutor } from "@/sdk";
 
 /**
  * Error Trigger — starts an error workflow with failure context.
- * When run as a normal start (tests / manual), emits a structured error payload
- * from pinData or an empty placeholder shape matching public docs.
+ *
+ * Only fires when the platform routes a failed execution to it. On a manual /
+ * test run with no error context, emits nothing (downstream nodes receive no
+ * items). Pin data is handled by the runner short-circuit, so when pinned data
+ * is present the executor is not called.
+ *
+ * When the platform routes a failure, the error context (Shape A or Shape B per
+ * spec) is injected as input items; the trigger emits them verbatim.
  */
 export const errorTriggerExecutor: NodeExecutor = async (ctx) => {
   const input = ctx.getInputItems(0);
   if (input.length > 0) {
     return [input];
   }
-
-  const workflow = ctx.getWorkflow();
-  return [
-    [
-      {
-        json: {
-          execution: {
-            id: null,
-            url: null,
-            error: {
-              message: "No error context (manual/test run)",
-              stack: "",
-            },
-            lastNodeExecuted: null,
-            mode: "manual",
-          },
-          workflow: {
-            id: workflow.id ?? "",
-            name: workflow.name ?? "",
-          },
-        },
-      },
-    ],
-  ];
+  return [[]];
 };

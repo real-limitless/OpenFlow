@@ -41,8 +41,7 @@
       "typeVersion": 1,
       "position": [660, 0],
       "parameters": {
-        "currentKey": "score",
-        "newKey": "points"
+        "keys": { "key": [{ "currentKey": "score", "newKey": "points" }] }
       }
     },
     {

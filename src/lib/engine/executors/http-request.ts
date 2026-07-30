@@ -31,12 +31,10 @@ export const httpRequestExecutor: NodeExecutor = async (ctx, node) => {
   const headers: Record<string, string> = {};
   if (node.parameters.sendHeaders) {
     const headerContainer = node.parameters.headerParameters as
-      | { parameters?: HeaderParam[] }
-      | HeaderParam[]
-      | undefined;
+      { parameters?: HeaderParam[] } | HeaderParam[] | undefined;
     const headerParams: HeaderParam[] = Array.isArray(headerContainer)
       ? headerContainer
-      : headerContainer?.parameters ?? [];
+      : (headerContainer?.parameters ?? []);
     for (const h of headerParams) {
       if (h.name) {
         headers[h.name] = String(resolveValue(h.value, itemJson));
@@ -56,11 +54,11 @@ export const httpRequestExecutor: NodeExecutor = async (ctx, node) => {
       headers["Content-Type"] = headers["Content-Type"] ?? "application/json";
     } else if (contentType === "form-urlencoded") {
       const formContainer = node.parameters.bodyParameters as
-        | { parameters?: Array<{ name: string; value: string }> }
-        | undefined;
+        { parameters?: Array<{ name: string; value: string }> } | undefined;
       const params = formContainer?.parameters ?? [];
       const pairs = params.map(
-        (p) => `${encodeURIComponent(p.name)}=${encodeURIComponent(resolveValue(p.value, itemJson) as string)}`,
+        (p) =>
+          `${encodeURIComponent(p.name)}=${encodeURIComponent(resolveValue(p.value, itemJson) as string)}`,
       );
       bodyInit = pairs.join("&");
       headers["Content-Type"] = headers["Content-Type"] ?? "application/x-www-form-urlencoded";
@@ -102,12 +100,10 @@ export const httpRequestExecutor: NodeExecutor = async (ctx, node) => {
 
   if (node.parameters.sendQuery) {
     const queryContainer = node.parameters.queryParameters as
-      | { parameters?: QueryParam[] }
-      | QueryParam[]
-      | undefined;
+      { parameters?: QueryParam[] } | QueryParam[] | undefined;
     const queryParams: QueryParam[] = Array.isArray(queryContainer)
       ? queryContainer
-      : queryContainer?.parameters ?? [];
+      : (queryContainer?.parameters ?? []);
     if (queryParams.length > 0) {
       const u = new URL(url);
       for (const q of queryParams) {
@@ -129,9 +125,14 @@ async function executeWithUrl(
   body: string | undefined,
   node: { parameters: Record<string, unknown> },
 ): Promise<import("../../workflow/types").INodeExecutionData[][]> {
-  const options = node.parameters.options as Record<string, unknown> | undefined;
-  const timeout = (options?.timeout as number) ?? 10000;
-  const followRedirect = options?.followRedirect !== false;
+  const options = (node.parameters.options as Record<string, unknown> | undefined) ?? {};
+  const responseOptions = (options.response as Record<string, unknown> | undefined) ?? {};
+  const timeout = (options.timeout as number) ?? 10000;
+  const followRedirect = options.followRedirect !== false;
+
+  const fullResponse = responseOptions.fullResponse === true || options.fullResponse === true;
+  const neverError = responseOptions.neverError === true || options.neverError === true;
+  const responseFormat = (responseOptions.responseFormat as string) ?? "autodetect";
 
   try {
     const controller = new AbortController();
@@ -146,26 +147,51 @@ async function executeWithUrl(
     });
     clearTimeout(timer);
 
+    if (!response.ok && !neverError) {
+      throw new Error(`HTTP ${response.status} ${response.statusText ?? ""}`.trim());
+    }
+
     let responseData: unknown;
-    const contentType = response.headers.get("content-type") ?? "";
-    if (contentType.includes("application/json")) {
+    if (responseFormat === "json") {
       responseData = await response.json();
-    } else {
+    } else if (responseFormat === "text") {
       responseData = await response.text();
+    } else if (responseFormat === "file") {
+      // TODO: binary file handling not implemented; return text for now
+      responseData = await response.text();
+    } else {
+      const contentType = response.headers.get("content-type") ?? "";
+      if (contentType.includes("application/json")) {
+        responseData = await response.json();
+      } else {
+        responseData = await response.text();
+      }
     }
 
-    const fullResponse = options?.fullResponse === true;
     if (fullResponse) {
-      return [[{
-        json: {
-          statusCode: response.status,
-          headers: Object.fromEntries(response.headers.entries()),
-          body: responseData,
-        },
-      }]];
+      return [
+        [
+          {
+            json: {
+              statusCode: response.status,
+              headers: Object.fromEntries(response.headers.entries()),
+              body: responseData,
+            },
+          },
+        ],
+      ];
     }
 
-    return [[{ json: typeof responseData === "object" && responseData !== null ? (responseData as Record<string, unknown>) : { data: responseData } }]];
+    return [
+      [
+        {
+          json:
+            typeof responseData === "object" && responseData !== null
+              ? (responseData as Record<string, unknown>)
+              : { data: responseData },
+        },
+      ],
+    ];
   } catch (err) {
     throw new Error(`HTTP Request failed: ${err instanceof Error ? err.message : String(err)}`);
   }

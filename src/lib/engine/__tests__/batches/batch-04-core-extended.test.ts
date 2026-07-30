@@ -29,7 +29,7 @@ describe("batch-04 core-extended", () => {
         {
           operation: "formatDate",
           date: "2020-01-15T12:30:00.000Z",
-          format: "YYYY-MM-DD",
+          format: "yyyy-MM-dd",
           outputFieldName: "result",
         },
         [{}],
@@ -52,7 +52,7 @@ describe("batch-04 core-extended", () => {
         "n8n-nodes-base.dateTime",
         {
           operation: "addToDate",
-          date: "2020-01-01T00:00:00.000Z",
+          magnitude: "2020-01-01T00:00:00.000Z",
           duration: 2,
           timeUnit: "days",
           outputFieldName: "result",
@@ -101,7 +101,7 @@ describe("batch-04 core-extended", () => {
     it("renames a top-level key", async () => {
       const out = await runNode(
         "n8n-nodes-base.renameKeys",
-        { currentKey: "old", newKey: "new" },
+        { keys: { key: [{ currentKey: "old", newKey: "new" }] } },
         [{ old: 1, keep: true }],
       );
       expect(out[0][0].json).toEqual({ new: 1, keep: true });
@@ -112,7 +112,7 @@ describe("batch-04 core-extended", () => {
         "n8n-nodes-base.renameKeys",
         {
           keys: {
-            keys: [
+            key: [
               { currentKey: "a", newKey: "alpha" },
               { currentKey: "b", newKey: "beta" },
             ],
@@ -167,7 +167,7 @@ describe("batch-04 core-extended", () => {
           id: "3",
           name: "Rename",
           type: "n8n-nodes-base.renameKeys",
-          parameters: { currentKey: "score", newKey: "points" },
+          parameters: { keys: { key: [{ currentKey: "score", newKey: "points" }] } },
         }),
       ],
       {

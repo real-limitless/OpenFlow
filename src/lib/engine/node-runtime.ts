@@ -168,6 +168,11 @@ export const BUILTIN_EXECUTOR_MODULES: Array<{
     exportName: "switchExecutor",
   },
   { type: "n8n-nodes-base.merge", modulePath: "./executors/merge", exportName: "mergeExecutor" },
+  {
+    type: "n8n-nodes-base.compareDatasets",
+    modulePath: "./executors/compare-datasets",
+    exportName: "compareDatasetsExecutor",
+  },
   { type: "n8n-nodes-base.wait", modulePath: "./executors/wait", exportName: "waitExecutor" },
   {
     type: "n8n-nodes-base.splitOut",
@@ -178,6 +183,11 @@ export const BUILTIN_EXECUTOR_MODULES: Array<{
     type: "n8n-nodes-base.aggregate",
     modulePath: "./executors/aggregate",
     exportName: "aggregateExecutor",
+  },
+  {
+    type: "n8n-nodes-base.summarize",
+    modulePath: "./executors/summarize",
+    exportName: "summarizeExecutor",
   },
   {
     type: "n8n-nodes-base.filter",
@@ -239,6 +249,101 @@ export const BUILTIN_EXECUTOR_MODULES: Array<{
     type: "n8n-nodes-base.errorTrigger",
     modulePath: "./executors/error-trigger",
     exportName: "errorTriggerExecutor",
+  },
+  {
+    type: "n8n-nodes-base.ftp",
+    modulePath: "./executors/ftp",
+    exportName: "ftpExecutor",
+  },
+  {
+    type: "n8n-nodes-base.convertToFile",
+    modulePath: "./executors/convert-to-file",
+    exportName: "convertToFileExecutor",
+  },
+  {
+    type: "n8n-nodes-base.extractFromFile",
+    modulePath: "./executors/extract-from-file",
+    exportName: "extractFromFileExecutor",
+  },
+  {
+    type: "n8n-nodes-base.emailSend",
+    modulePath: "./executors/email-send",
+    exportName: "emailSendExecutor",
+  },
+  {
+    type: "n8n-nodes-base.dataTable",
+    modulePath: "./executors/data-table",
+    exportName: "dataTableExecutor",
+  },
+  {
+    type: "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+    modulePath: "./executors/lm-chat-openai",
+    exportName: "lmChatOpenAiExecutor",
+  },
+  {
+    type: "@n8n/n8n-nodes-langchain.agent",
+    modulePath: "./executors/langchain-agent",
+    exportName: "langchainAgentExecutor",
+  },
+  {
+    type: "@n8n/n8n-nodes-langchain.mcpClientTool",
+    modulePath: "./executors/mcp-client-tool",
+    exportName: "mcpClientToolExecutor",
+  },
+  {
+    type: "n8n-nodes-base.stickyNote",
+    modulePath: "./executors/sticky-note",
+    exportName: "stickyNoteExecutor",
+  },
+  {
+    type: "n8n-nodes-base.crypto",
+    modulePath: "./executors/crypto",
+    exportName: "cryptoExecutor",
+  },
+  {
+    type: "n8n-nodes-base.xml",
+    modulePath: "./executors/xml",
+    exportName: "xmlExecutor",
+  },
+  {
+    type: "n8n-nodes-base.html",
+    modulePath: "./executors/html",
+    exportName: "htmlExecutor",
+  },
+  {
+    type: "n8n-nodes-base.markdown",
+    modulePath: "./executors/markdown",
+    exportName: "markdownExecutor",
+  },
+  {
+    type: "n8n-nodes-base.jwt",
+    modulePath: "./executors/jwt",
+    exportName: "jwtExecutor",
+  },
+  {
+    type: "n8n-nodes-base.compression",
+    modulePath: "./executors/compression",
+    exportName: "compressionExecutor",
+  },
+  {
+    type: "n8n-nodes-base.executionData",
+    modulePath: "./executors/executionData",
+    exportName: "executionDataExecutor",
+  },
+  {
+    type: "n8n-nodes-base.formTrigger",
+    modulePath: "./executors/form-trigger",
+    exportName: "formTriggerExecutor",
+  },
+  {
+    type: "n8n-nodes-base.sseTrigger",
+    modulePath: "./executors/sse-trigger",
+    exportName: "sseTriggerExecutor",
+  },
+  {
+    type: "@n8n/n8n-nodes-langchain.chatTrigger",
+    modulePath: "./executors/langchain-chat-trigger",
+    exportName: "langchainChatTriggerExecutor",
   },
 ];
 

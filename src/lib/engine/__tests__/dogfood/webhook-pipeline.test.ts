@@ -40,7 +40,7 @@ describe("dogfood WF2 webhook-pipeline", () => {
     expect(limited[0].json.processed).toBe(true);
 
     const res = getWebhookResponse("dogfood-wp-exec");
-    expect(res?.status).toBe(200);
+    expect(res?.statusCode).toBe(200);
     expect(res?.body).toMatchObject({
       event: "ping",
       id: 1,

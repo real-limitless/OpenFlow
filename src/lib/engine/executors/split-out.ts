@@ -1,6 +1,6 @@
 import type { NodeExecutor, INodeExecutionData } from "@/sdk";
 
-function getField(obj: Record<string, unknown>, path: string, useDot = true): unknown {
+function getField(obj: Record<string, unknown>, path: string, useDot: boolean): unknown {
   if (!useDot) return obj[path];
   return path.split(".").reduce<unknown>((acc, key) => {
     if (acc && typeof acc === "object") {
@@ -10,20 +10,29 @@ function getField(obj: Record<string, unknown>, path: string, useDot = true): un
   }, obj);
 }
 
+function leafName(path: string): string {
+  return path.split(".").pop() ?? path;
+}
+
+function firstSegment(path: string): string {
+  return path.split(".")[0] ?? path;
+}
+
 export const splitOutExecutor: NodeExecutor = async (ctx) => {
   const inputItems = ctx.getInputItems(0);
-  const fieldToSplitOut = ctx.getParam<string>("fieldToSplitOut", "") ?? "";
+  const fieldToSplitOutRaw = ctx.getParam<string>("fieldToSplitOut", "") ?? "";
   const include = ctx.getParam<string>("include", "noOtherFields");
-  // Legacy boolean from earlier OpenFlow defs
-  const includePrefix = ctx.getParam<boolean>("includePrefix", false) === true;
-  const destinationFieldName =
-    ctx.getParam<string>("destinationFieldName", "") ||
-    ctx.getParam<string>("destinationPrefix", "") ||
-    "";
-  const options = ctx.getParam<Record<string, unknown>>("options", {}) ?? {};
-  const ignoreMissingFields = options.ignoreMissingFields === true;
-  const disableDotNotation = options.disableDotNotation === true;
   const fieldsToIncludeRaw = ctx.getParam<string>("fieldsToInclude", "") ?? "";
+  const options = ctx.getParam<Record<string, unknown>>("options", {}) ?? {};
+  const disableDotNotation = options.disableDotNotation === true;
+  const destinationFieldName = (options.destinationFieldName as string | undefined) ?? "";
+  const includeBinary = options.includeBinary === true;
+
+  const fields = fieldToSplitOutRaw
+    .split(",")
+    .map((f) => f.trim())
+    .filter(Boolean);
+
   const fieldsToInclude = fieldsToIncludeRaw
     .split(",")
     .map((f) => f.trim())
@@ -32,58 +41,51 @@ export const splitOutExecutor: NodeExecutor = async (ctx) => {
   const output: INodeExecutionData[] = [];
 
   for (const item of inputItems) {
-    const value = getField(item.json, fieldToSplitOut, !disableDotNotation);
+    const json = item.json as Record<string, unknown>;
 
-    if (!Array.isArray(value)) {
-      if (ignoreMissingFields) continue;
-      output.push({ json: { ...item.json }, pairedItem: item.pairedItem });
-      continue;
-    }
+    for (const field of fields) {
+      const value = getField(json, field, !disableDotNotation);
+      if (!Array.isArray(value)) continue;
 
-    for (const element of value) {
-      let base: Record<string, unknown> = {};
+      for (const element of value) {
+        let base: Record<string, unknown> = {};
 
-      if (include === "allOtherFields" || include === "all") {
-        base = { ...item.json };
-        // remove the split field from base when possible
-        if (!disableDotNotation && !fieldToSplitOut.includes(".")) {
-          delete base[fieldToSplitOut];
+        if (include === "allOtherFields") {
+          base = { ...json };
+          delete base[firstSegment(field)];
+        } else if (include === "selectedOtherFields") {
+          for (const f of fieldsToInclude) {
+            if (disableDotNotation) {
+              if (f in json) base[f] = json[f];
+            } else {
+              const v = getField(json, f, true);
+              if (v !== undefined) base[leafName(f)] = v;
+            }
+          }
         }
-      } else if (include === "selectedOtherFields" || include === "selected") {
-        for (const f of fieldsToInclude) {
-          if (f in item.json) base[f] = item.json[f];
-        }
-      }
 
-      if (element && typeof element === "object" && !Array.isArray(element)) {
-        const elementObj = element as Record<string, unknown>;
-        if (destinationFieldName) {
-          output.push({
-            json: { ...base, [destinationFieldName]: elementObj },
-            pairedItem: item.pairedItem,
-            binary: item.binary,
-          });
-        } else if (includePrefix && destinationFieldName) {
-          output.push({
-            json: { ...base, [destinationFieldName]: elementObj },
-            pairedItem: item.pairedItem,
-            binary: item.binary,
-          });
-        } else {
-          output.push({
-            json: { ...base, ...elementObj },
-            pairedItem: item.pairedItem,
-            binary: item.binary,
-          });
-        }
-      } else {
-        const key =
-          destinationFieldName || fieldToSplitOut.split(".").pop() || "value";
-        output.push({
-          json: { ...base, [key]: element },
+        const outItem: INodeExecutionData = {
+          json: {},
           pairedItem: item.pairedItem,
-          binary: item.binary,
-        });
+        };
+
+        if (element && typeof element === "object" && !Array.isArray(element)) {
+          const elementObj = element as Record<string, unknown>;
+          if (destinationFieldName) {
+            outItem.json = { ...base, [destinationFieldName]: elementObj };
+          } else {
+            outItem.json = { ...base, ...elementObj };
+          }
+        } else {
+          const key = destinationFieldName || leafName(field);
+          outItem.json = { ...base, [key]: element };
+        }
+
+        if (includeBinary && item.binary) {
+          outItem.binary = item.binary;
+        }
+
+        output.push(outItem);
       }
     }
   }

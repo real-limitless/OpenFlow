@@ -32,6 +32,22 @@ Register executors via `definitionToExecutor` or keep using
 | `getCredential(name)` | Resolved credential payload |
 | `evaluate(expr, json?)` | Expression preview/eval helper |
 
+## Per-execution custom data
+
+The Execution Data node writes searchable metadata; the Code node reads it via
+`$execution.customData`. Both go through the same per-execution store on
+`ExecutionContext` — no n8n packages required.
+
+| Method | Purpose |
+|--------|---------|
+| `setCustomData(key, value)` | Store one string entry (last-write-wins). Callers coerce+truncate before writing. |
+| `getCustomData(key)` | Read one entry (used by the Code node). |
+| `getAllCustomData()` | Snapshot of all entries (used by tests to assert the save side-effect). |
+
+The runner creates one store per `executeWorkflow` call and shares it across all
+nodes, so writes in an Execution Data node are visible to a later Code node.
+`createExecutionContext` defaults to a fresh store when `customData` is omitted.
+
 ## Aliases
 
 ```ts

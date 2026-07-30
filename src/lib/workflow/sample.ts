@@ -8,7 +8,7 @@ export const SAMPLE_WORKFLOW = {
       type: "n8n-nodes-base.scheduleTrigger",
       typeVersion: 1.2,
       position: [-160, 0],
-      parameters: { field: "hours", intervalSize: 6 },
+      parameters: { rule: { interval: [{ field: "hours", hoursInterval: 6 }] } },
     },
     {
       id: "sample-2",

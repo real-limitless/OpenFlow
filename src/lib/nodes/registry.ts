@@ -6,12 +6,30 @@ import {
   respondToWebhook,
   executeWorkflowTrigger,
   errorTrigger,
+  formTrigger,
+  sseTrigger,
+  chatTrigger,
 } from "./definitions/triggers";
-import { httpRequest, set, code, noOp, stickyNote, stopAndError } from "./definitions/core";
+import {
+  httpRequest,
+  set,
+  code,
+  noOp,
+  stickyNote,
+  stopAndError,
+  ftp,
+  emailSend,
+  lmChatOpenAi,
+  langchainAgent,
+  mcpClientTool,
+  crypto,
+  executionData,
+} from "./definitions/core";
 import { ifNode, switchNode, merge, wait, splitInBatches } from "./definitions/flow";
 import {
   splitOut,
   aggregate,
+  summarize,
   filter,
   limit,
   removeDuplicates,
@@ -20,6 +38,15 @@ import {
   executeWorkflow,
   sort,
   renameKeys,
+  convertToFile,
+  extractFromFile,
+  dataTable,
+  compareDatasets,
+  xml,
+  html,
+  markdown,
+  jwt,
+  compression,
 } from "./definitions/transform";
 import {
   getDescription,
@@ -45,6 +72,7 @@ const BUILTIN_DESCRIPTIONS: INodeTypeDescription[] = [
   splitInBatches,
   splitOut,
   aggregate,
+  summarize,
   filter,
   limit,
   removeDuplicates,
@@ -56,6 +84,25 @@ const BUILTIN_DESCRIPTIONS: INodeTypeDescription[] = [
   stopAndError,
   noOp,
   stickyNote,
+  ftp,
+  convertToFile,
+  extractFromFile,
+  emailSend,
+  dataTable,
+  compareDatasets,
+  lmChatOpenAi,
+  langchainAgent,
+  mcpClientTool,
+  crypto,
+  xml,
+  html,
+  markdown,
+  jwt,
+  compression,
+  executionData,
+  formTrigger,
+  sseTrigger,
+  chatTrigger,
 ];
 
 const ALIAS_PAIRS: Array<[string, string]> = [
@@ -63,6 +110,10 @@ const ALIAS_PAIRS: Array<[string, string]> = [
   ["n8n-nodes-base.start", manualTrigger.name],
   ["n8n-nodes-base.function", code.name],
   ["n8n-nodes-base.functionItem", code.name],
+  ["Parse", xml.name],
+  ["table", formTrigger.name],
+  ["submit", formTrigger.name],
+  ["post", formTrigger.name],
 ];
 
 let descriptionsSeeded = false;

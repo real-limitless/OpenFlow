@@ -52,6 +52,15 @@ export async function runNode(
   parameters: Record<string, unknown> = {},
   inputItems: Array<Record<string, unknown>> = [{}],
 ): Promise<INodeExecutionData[][]> {
+  const { out } = await runNodeWithCtx(type, parameters, inputItems);
+  return out;
+}
+
+export async function runNodeWithCtx(
+  type: string,
+  parameters: Record<string, unknown> = {},
+  inputItems: Array<Record<string, unknown>> = [{}],
+): Promise<{ out: INodeExecutionData[][]; ctx: ExecutionContext }> {
   const map = getExecutorMap();
   const executor = map[type];
   if (!executor) {
@@ -59,7 +68,8 @@ export async function runNode(
   }
   const node = makeNode({ name: "N", type, parameters });
   const ctx = makeCtx(inputItems, node);
-  return executor(ctx, node);
+  const out = await executor(ctx, node);
+  return { out, ctx };
 }
 
 export async function runWorkflowFixture(

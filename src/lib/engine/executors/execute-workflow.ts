@@ -1,4 +1,5 @@
 import type { NodeExecutor, INodeExecutionData, IWorkflow } from "@/sdk";
+import { evaluateExpression } from "../../expressions/evaluate";
 
 function parseWorkflowJson(raw: unknown): IWorkflow | undefined {
   if (!raw) return undefined;
@@ -29,6 +30,55 @@ export function coerceWorkflowId(raw: unknown): string {
   return String(raw).trim();
 }
 
+interface WorkflowInputField {
+  name?: string;
+  type?: string;
+}
+
+interface WorkflowInputsParam {
+  mappingMode?: string;
+  /** Child input schema; when present, unmapped fields are null-filled. */
+  schema?: WorkflowInputField[];
+  /** Per-field mappings: { fieldName: { value: expressionOrLiteral } }. */
+  value?: Record<string, { value?: unknown; [k: string]: unknown }>;
+}
+
+/**
+ * Map parent items onto the child's declared input schema via `workflowInputs`.
+ * - Evaluates each field's `value` expression against the source item.
+ * - Unmapped child schema fields (from `schema`) receive `null`.
+ * - When no schema is available, only the mapped fields are emitted.
+ */
+function applyWorkflowInputs(
+  items: INodeExecutionData[],
+  workflowInputs: WorkflowInputsParam | undefined,
+): INodeExecutionData[] {
+  if (!workflowInputs || workflowInputs.mappingMode !== "defineBelow") return items;
+  const value = workflowInputs.value ?? {};
+  const schemaFields = workflowInputs.schema ?? [];
+
+  return items.map((item, idx) => {
+    const json: Record<string, unknown> = {};
+    // Null-fill every declared child field first; mapped values overwrite.
+    for (const field of schemaFields) {
+      if (field.name) json[field.name] = null;
+    }
+    for (const [fieldName, entry] of Object.entries(value)) {
+      const rawValue = entry?.value;
+      if (typeof rawValue === "string") {
+        const result = evaluateExpression(rawValue, {
+          json: item.json,
+          itemIndex: idx,
+        });
+        json[fieldName] = result.ok ? result.value : rawValue;
+      } else {
+        json[fieldName] = rawValue;
+      }
+    }
+    return { json, pairedItem: item.pairedItem ?? { item: idx, input: 0 } };
+  });
+}
+
 export const executeWorkflowExecutor: NodeExecutor = async (ctx) => {
   const inputItems = ctx.getInputItems(0);
   const items: INodeExecutionData[] = inputItems.length > 0 ? inputItems : [{ json: {} }];
@@ -39,11 +89,35 @@ export const executeWorkflowExecutor: NodeExecutor = async (ctx) => {
   );
   const mode = ctx.getParam<string>("mode", "once");
   const options = ctx.getParam<Record<string, unknown>>("options", {}) ?? {};
-  const waitForCompletion = options.waitForCompletion !== false;
+  // v1.2+ uses waitForSubWorkflow; accept waitForCompletion as a legacy alias.
+  const waitForSubWorkflow =
+    options.waitForSubWorkflow !== undefined
+      ? options.waitForSubWorkflow !== false
+      : options.waitForCompletion !== false;
 
   const workflowJson = parseWorkflowJson(
     ctx.getParam("workflowJson") ?? ctx.getParam("workflowData"),
   );
+
+  const workflowInputs = ctx.getParam<WorkflowInputsParam>("workflowInputs");
+  const mappedItems = applyWorkflowInputs(items, workflowInputs);
+
+  // Non-wait (fire-and-forget): return the input items without awaiting child
+  // terminal output. The child run is still started when a runner is available,
+  // but the parent does not block on its terminal items.
+  if (!waitForSubWorkflow) {
+    if (ctx.runSubWorkflow) {
+      const batch = mode === "each" ? mappedItems.map((i) => [i]) : [mappedItems];
+      for (const batchItems of batch) {
+        void ctx.runSubWorkflow({
+          workflowId: workflowId || undefined,
+          workflowJson: source === "parameter" ? workflowJson : undefined,
+          items: batchItems,
+        });
+      }
+    }
+    return [items];
+  }
 
   if (!ctx.runSubWorkflow) {
     throw new Error(
@@ -51,17 +125,14 @@ export const executeWorkflowExecutor: NodeExecutor = async (ctx) => {
     );
   }
 
-  if (!waitForCompletion) {
-    // Fire-and-forget: still run synchronously in OpenFlow v1 but return input immediately shape
-    // after starting would need a job queue; for now run and return child output when complete.
-  }
+  const childWorkflowJson = source === "parameter" ? workflowJson : undefined;
 
   if (mode === "each") {
     const out: INodeExecutionData[] = [];
-    for (const item of items) {
+    for (const item of mappedItems) {
       const childItems = await ctx.runSubWorkflow({
         workflowId: workflowId || undefined,
-        workflowJson: source === "parameter" || source === "list" ? workflowJson : workflowJson,
+        workflowJson: childWorkflowJson,
         items: [item],
       });
       out.push(...(childItems.length > 0 ? childItems : [{ json: {} }]));
@@ -69,15 +140,11 @@ export const executeWorkflowExecutor: NodeExecutor = async (ctx) => {
     return [out];
   }
 
-  // once — all items in one sub-run
-  const idOrName = workflowId || undefined;
+  // once — all items in a single sub-run
   const childItems = await ctx.runSubWorkflow({
-    workflowId: idOrName,
-    workflowJson:
-      source === "parameter" || workflowJson
-        ? workflowJson
-        : undefined,
-    items,
+    workflowId: workflowId || undefined,
+    workflowJson: childWorkflowJson,
+    items: mappedItems,
   });
 
   return [childItems.length > 0 ? childItems : [{ json: {} }]];

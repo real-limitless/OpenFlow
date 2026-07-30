@@ -53,6 +53,18 @@ export interface ExecutionContext {
     workflowJson?: IWorkflow;
     items: INodeExecutionData[];
   }): Promise<INodeExecutionData[]>;
+
+  /**
+   * Per-execution custom-data store, shared with the Code node's
+   * `$execution.customData` API. The Execution Data node writes here; the
+   * Code node (and tests) read via {@link getAllCustomData}.
+   *
+   * Strings only — callers must coerce+truncate before writing.
+   * Last-write-wins for repeated keys.
+   */
+  setCustomData(key: string, value: string): void;
+  getCustomData(key: string): string | undefined;
+  getAllCustomData(): Record<string, string>;
 }
 
 /**
@@ -79,4 +91,10 @@ export interface CreateContextOptions {
   /** Optional peer node outputs for expression evaluation. */
   nodeData?: Record<string, INodeExecutionData[]>;
   runSubWorkflow?: ExecutionContext["runSubWorkflow"];
+  /**
+   * Per-execution custom-data store backing {@link ExecutionContext.setCustomData}
+   * et al. When omitted a fresh object is used. The runner passes one store
+   * shared across all nodes in an execution.
+   */
+  customData?: Record<string, string>;
 }

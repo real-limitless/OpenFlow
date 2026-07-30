@@ -2,10 +2,7 @@ import { describe, it, expect, beforeEach } from "vitest";
 import { hasExecutor, seedBuiltinExecutors, getExecutorMap } from "../../index";
 import { getNodeType, seedBuiltinDescriptions } from "@/lib/nodes/registry";
 import { makeNode, makeWorkflow, runNode, runWorkflowFixture } from "../helpers";
-import {
-  getWebhookResponse,
-  clearAllWebhookResponses,
-} from "../../executors/respond-to-webhook";
+import { getWebhookResponse, clearAllWebhookResponses } from "../../executors/respond-to-webhook";
 import { executeWorkflow } from "../../runner";
 import { createExecutionContext } from "@/sdk";
 
@@ -32,15 +29,12 @@ describe("batch-02 triggers-flow", () => {
   });
 
   describe("scheduleTrigger", () => {
-    it("emits timestamp and schedule metadata", async () => {
+    it("emits a timestamp item for a minutes rule", async () => {
       const out = await runNode("n8n-nodes-base.scheduleTrigger", {
-        field: "minutes",
-        intervalSize: 5,
+        rule: { interval: [{ field: "minutes", minutesInterval: 5 }] },
       });
       expect(out[0]).toHaveLength(1);
       expect(typeof out[0][0].json.timestamp).toBe("string");
-      expect((out[0][0].json.schedule as { field: string }).field).toBe("minutes");
-      expect((out[0][0].json.schedule as { intervalSize: number }).intervalSize).toBe(5);
     });
 
     it("starts a workflow as trigger", async () => {
@@ -50,7 +44,7 @@ describe("batch-02 triggers-flow", () => {
             id: "1",
             name: "Sched",
             type: "n8n-nodes-base.scheduleTrigger",
-            parameters: { field: "hours", intervalSize: 1 },
+            parameters: { rule: { interval: [{ field: "hours", hoursInterval: 1 }] } },
           }),
           makeNode({ id: "2", name: "Pass", type: "n8n-nodes-base.noOp" }),
         ],
@@ -85,7 +79,7 @@ describe("batch-02 triggers-flow", () => {
       await exec(ctx, node);
 
       const res = getWebhookResponse("exec-batch-02-a");
-      expect(res?.status).toBe(200);
+      expect(res?.statusCode).toBe(200);
       expect(res?.body).toEqual({ hello: "world" });
     });
 
@@ -111,11 +105,11 @@ describe("batch-02 triggers-flow", () => {
       await getExecutorMap()["n8n-nodes-base.respondToWebhook"]!(ctx, node);
 
       const res = getWebhookResponse("exec-batch-02-b");
-      expect(res?.status).toBe(201);
+      expect(res?.statusCode).toBe(201);
       expect(res?.body).toEqual({ ok: true, n: 1 });
     });
 
-    it("noData returns 204", async () => {
+    it("noData returns 200 with empty body", async () => {
       const node = makeNode({
         name: "Respond",
         type: "n8n-nodes-base.respondToWebhook",
@@ -130,7 +124,7 @@ describe("batch-02 triggers-flow", () => {
         continueOnFail: false,
       });
       await getExecutorMap()["n8n-nodes-base.respondToWebhook"]!(ctx, node);
-      expect(getWebhookResponse("exec-batch-02-c")?.status).toBe(204);
+      expect(getWebhookResponse("exec-batch-02-c")?.statusCode).toBe(200);
     });
   });
 
@@ -162,28 +156,114 @@ describe("batch-02 triggers-flow", () => {
       expect(out[0][0].json.doubled).toBe(6);
       expect(out[0][1].json.doubled).toBe(10);
     });
+
+    it("synthesizes items from scratch (all-items)", async () => {
+      const out = await runNode(
+        "n8n-nodes-base.code",
+        {
+          mode: "runOnceForAllItems",
+          jsCode: `return [1, 2, 3].map(n => ({ json: { n } }));`,
+        },
+        [{}],
+      );
+      expect(out[0]).toHaveLength(3);
+      expect(out[0][0].json.n).toBe(1);
+      expect(out[0][1].json.n).toBe(2);
+      expect(out[0][2].json.n).toBe(3);
+    });
+
+    it("errors when json property is an array", async () => {
+      await expect(
+        runNode(
+          "n8n-nodes-base.code",
+          {
+            mode: "runOnceForAllItems",
+            jsCode: `return [{ json: [1, 2, 3] }];`,
+          },
+          [{ a: 1 }],
+        ),
+      ).rejects.toThrow(/json.*object/i);
+    });
+
+    it("errors on undefined return (all-items)", async () => {
+      await expect(
+        runNode(
+          "n8n-nodes-base.code",
+          {
+            mode: "runOnceForAllItems",
+            jsCode: `// no return`,
+          },
+          [{ a: 1 }],
+        ),
+      ).rejects.toThrow(/doesn't return/i);
+    });
+
+    it("supports Promise return (all-items)", async () => {
+      const out = await runNode(
+        "n8n-nodes-base.code",
+        {
+          mode: "runOnceForAllItems",
+          jsCode: `return Promise.resolve($input.all().map(i => ({ json: { n: i.json.x } })));`,
+        },
+        [{ x: 1 }, { x: 2 }],
+      );
+      expect(out[0]).toHaveLength(2);
+      expect(out[0][0].json.n).toBe(1);
+      expect(out[0][1].json.n).toBe(2);
+    });
+
+    it("supports legacy items alias for $input.all()", async () => {
+      const out = await runNode(
+        "n8n-nodes-base.code",
+        {
+          mode: "runOnceForAllItems",
+          jsCode: `return items.map(i => ({ json: { n: i.json.x } }));`,
+        },
+        [{ x: 1 }, { x: 2 }],
+      );
+      expect(out[0]).toHaveLength(2);
+      expect(out[0][0].json.n).toBe(1);
+      expect(out[0][1].json.n).toBe(2);
+    });
+
+    it("errors on unsupported pythonNative language", async () => {
+      await expect(
+        runNode(
+          "n8n-nodes-base.code",
+          {
+            mode: "runOnceForAllItems",
+            language: "pythonNative",
+            pythonCode: `return []`,
+          },
+          [{ x: 1 }],
+        ),
+      ).rejects.toThrow(/pythonNative.*not supported/i);
+    });
   });
 
   describe("splitInBatches", () => {
-    it("splits 5 items with batch size 2", async () => {
-      const out = await runNode(
-        "n8n-nodes-base.splitInBatches",
-        { batchSize: 2 },
-        [{ i: 1 }, { i: 2 }, { i: 3 }, { i: 4 }, { i: 5 }],
-      );
-      expect(out[0]).toHaveLength(2);
-      expect(out[1]).toHaveLength(3);
-      expect(out[0][0].json.i).toBe(1);
-      expect(out[1][0].json.i).toBe(3);
+    it("splits 5 items with batch size 2 (v3 order: done=0, loop=1)", async () => {
+      const out = await runNode("n8n-nodes-base.splitInBatches", { batchSize: 2 }, [
+        { i: 1 },
+        { i: 2 },
+        { i: 3 },
+        { i: 4 },
+        { i: 5 },
+      ]);
+      // done (output[0]) is empty while iterations remain; loop (output[1]) has the batch
+      expect(out[0]).toHaveLength(0);
+      expect(out[1]).toHaveLength(2);
+      expect(out[1][0].json.i).toBe(1);
+      expect(out[1][1].json.i).toBe(2);
     });
 
-    it("marks done with full batch when exact fit", async () => {
-      const out = await runNode(
-        "n8n-nodes-base.splitInBatches",
-        { batchSize: 3 },
-        [{ i: 1 }, { i: 2 }, { i: 3 }],
-      );
-      expect(out[0]).toHaveLength(3);
+    it("single batch when exact fit: loop gets all, done empty", async () => {
+      const out = await runNode("n8n-nodes-base.splitInBatches", { batchSize: 3 }, [
+        { i: 1 },
+        { i: 2 },
+        { i: 3 },
+      ]);
+      expect(out[0]).toHaveLength(0);
       expect(out[1]).toHaveLength(3);
     });
 
@@ -212,6 +292,7 @@ describe("batch-02 triggers-flow", () => {
           id: "3",
           name: "Batch",
           type: "n8n-nodes-base.splitInBatches",
+          typeVersion: 3,
           parameters: { batchSize: 2 },
         }),
       ],
@@ -226,7 +307,8 @@ describe("batch-02 triggers-flow", () => {
       nodeExecutors: getExecutorMap(),
     });
     expect(result.success).toBe(true);
-    expect(result.runData.Batch?.items?.[0]).toHaveLength(2);
+    // v3 order: done (output[0]) empty, loop (output[1]) has first batch of 2
+    expect(result.runData.Batch?.items?.[0]).toHaveLength(0);
     expect(result.runData.Batch?.items?.[1]).toHaveLength(2);
   });
 });

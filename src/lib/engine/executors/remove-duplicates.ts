@@ -16,10 +16,7 @@ function normalize(value: unknown, caseInsensitive: boolean, trim: boolean): str
 export const removeDuplicatesExecutor: NodeExecutor = async (ctx) => {
   const inputItems = ctx.getInputItems(0);
   // Modern docs use operation; OpenFlow/legacy use compare
-  const operation = ctx.getParam<string>(
-    "operation",
-    "removeItemsRepeatedInCurrentInput",
-  );
+  const operation = ctx.getParam<string>("operation", "removeItemsRepeatedInCurrentInput");
   const compare = ctx.getParam<string>("compare", "allFields");
   const options = ctx.getParam<Record<string, unknown>>("options", {}) ?? {};
   const caseInsensitive = options.caseInsensitive === true;

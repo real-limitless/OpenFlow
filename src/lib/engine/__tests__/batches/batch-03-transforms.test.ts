@@ -23,21 +23,17 @@ describe("batch-03 transforms", () => {
 
   describe("splitOut", () => {
     it("splits an array of primitives", async () => {
-      const out = await runNode(
-        "n8n-nodes-base.splitOut",
-        { fieldToSplitOut: "names" },
-        [{ names: ["a", "b", "c"] }],
-      );
+      const out = await runNode("n8n-nodes-base.splitOut", { fieldToSplitOut: "names" }, [
+        { names: ["a", "b", "c"] },
+      ]);
       expect(out[0]).toHaveLength(3);
       expect(out[0].map((i) => i.json.names ?? i.json.value)).toEqual(["a", "b", "c"]);
     });
 
     it("splits an array of objects", async () => {
-      const out = await runNode(
-        "n8n-nodes-base.splitOut",
-        { fieldToSplitOut: "users" },
-        [{ users: [{ id: 1 }, { id: 2 }], keep: true }],
-      );
+      const out = await runNode("n8n-nodes-base.splitOut", { fieldToSplitOut: "users" }, [
+        { users: [{ id: 1 }, { id: 2 }], keep: true },
+      ]);
       expect(out[0]).toHaveLength(2);
       expect(out[0][0].json.id).toBe(1);
       expect(out[0][1].json.id).toBe(2);
@@ -86,11 +82,11 @@ describe("batch-03 transforms", () => {
 
   describe("removeDuplicates", () => {
     it("removes full-item duplicates", async () => {
-      const out = await runNode(
-        "n8n-nodes-base.removeDuplicates",
-        { compare: "allFields" },
-        [{ email: "a@x.com" }, { email: "a@x.com" }, { email: "b@x.com" }],
-      );
+      const out = await runNode("n8n-nodes-base.removeDuplicates", { compare: "allFields" }, [
+        { email: "a@x.com" },
+        { email: "a@x.com" },
+        { email: "b@x.com" },
+      ]);
       expect(out[0]).toHaveLength(2);
       expect(out[0][0].json.email).toBe("a@x.com");
       expect(out[0][1].json.email).toBe("b@x.com");

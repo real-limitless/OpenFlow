@@ -14,6 +14,11 @@ interface IIsolate {
 interface IVMContext {
   global: IVMGlobal;
   release(): void;
+  evalClosure(
+    code: string,
+    args?: unknown[],
+    options?: { result?: { promise?: boolean; copy?: boolean } },
+  ): Promise<unknown>;
 }
 
 interface IVMGlobal {
@@ -27,8 +32,18 @@ interface IVMScript {
 
 export const codeExecutor: NodeExecutor = async (ctx) => {
   const inputItems = ctx.getInputItems(0);
-  const code = ctx.getParam<string>("jsCode", "") ?? "";
   const mode = ctx.getParam<string>("mode", "runOnceForAllItems");
+  const language = ctx.getParam<string>("language", "javaScript");
+
+  if (language === "pythonNative" || language === "python") {
+    // TODO: Python runner not implemented — documented gap per spec.
+    throw new Error(
+      `Code node language '${language}' is not supported in this build; only 'javaScript' is available.`,
+    );
+  }
+
+  const code = ctx.getParam<string>("jsCode", "") ?? "";
+  const params = ctx.getParams();
 
   let ivm: IVMModule;
   try {
@@ -48,7 +63,7 @@ export const codeExecutor: NodeExecutor = async (ctx) => {
     const outputItems: INodeExecutionData[] = [];
     const source = inputItems.length > 0 ? inputItems : [{ json: {} }];
     for (const item of source) {
-      const result = await runInSandbox(ivm, code, source, item.json ?? {});
+      const result = await runInSandbox(ivm, code, source, item.json ?? {}, params);
       if (Array.isArray(result)) {
         outputItems.push(...normalizeCodeResult(result));
       } else {
@@ -64,12 +79,16 @@ export const codeExecutor: NodeExecutor = async (ctx) => {
     code,
     inputItems.length > 0 ? inputItems : [{ json: {} }],
     firstItem,
+    params,
   );
 
   return [normalizeCodeResult(result)];
 };
 
 function normalizeCodeResult(result: unknown): INodeExecutionData[] {
+  if (result === null || result === undefined) {
+    throw new Error("Code node doesn't return an object");
+  }
   if (Array.isArray(result)) {
     return result.map((r) => toExecutionData(r));
   }
@@ -77,20 +96,32 @@ function normalizeCodeResult(result: unknown): INodeExecutionData[] {
 }
 
 function toExecutionData(value: unknown): INodeExecutionData {
+  if (value === null || value === undefined) {
+    throw new Error("Code node doesn't return an object");
+  }
+
   if (value && typeof value === "object" && "json" in value) {
     const item = value as INodeExecutionData;
+    if (
+      item.json === null ||
+      typeof item.json !== "object" ||
+      Array.isArray(item.json)
+    ) {
+      throw new Error(
+        "Code node output 'json' property must be an object, not an array or primitive",
+      );
+    }
     return {
-      json:
-        item.json && typeof item.json === "object"
-          ? (item.json as Record<string, unknown>)
-          : { result: item.json },
+      json: item.json as Record<string, unknown>,
       pairedItem: item.pairedItem,
       binary: item.binary,
     };
   }
-  if (value && typeof value === "object") {
+
+  if (value && typeof value === "object" && !Array.isArray(value)) {
     return { json: value as Record<string, unknown> };
   }
+
   return { json: { result: value } };
 }
 
@@ -99,6 +130,7 @@ async function runInSandbox(
   code: string,
   allItems: INodeExecutionData[],
   activeJson: Record<string, unknown>,
+  params: Record<string, unknown>,
 ): Promise<unknown> {
   const isolate = new ivm.Isolate();
   const context = await isolate.createContext();
@@ -112,6 +144,7 @@ async function runInSandbox(
         pairedItem: item.pairedItem,
       })),
       activeJson,
+      params,
     };
     await context.global.set("__ofPayload", new ivm.ExternalCopy(payload).copyInto());
 
@@ -119,11 +152,14 @@ async function runInSandbox(
       const __items = __ofPayload.items;
       const __active = __ofPayload.activeJson;
       globalThis.$json = __active;
+      globalThis.items = __items;
       globalThis.$input = {
         all: () => __items,
         first: () => __items[0] ?? { json: {} },
         last: () => __items[__items.length - 1] ?? { json: {} },
         item: { json: __active },
+        params: __ofPayload.params,
+        context: { noItemsLeft: false },
       };
       globalThis.console = {
         log: (...args) => undefined,
@@ -134,13 +170,9 @@ async function runInSandbox(
     `);
     await bootstrap.run(context);
 
-    const wrapped = `
-      (function() {
-        ${code}
-      })()
-    `;
-    const script = await isolate.compileScript(wrapped);
-    return await script.run(context, { copy: true });
+    return await context.evalClosure(code, [], {
+      result: { promise: true, copy: true },
+    });
   } finally {
     context.release();
     isolate.dispose();

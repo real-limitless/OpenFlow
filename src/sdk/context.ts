@@ -14,6 +14,8 @@ export function createExecutionContext(
     nodeData,
   } = options;
 
+  const customData: Record<string, string> = options.customData ?? {};
+
   const ctx: ExecutionContext = {
     node,
     getInputItems(inputIndex = 0) {
@@ -46,6 +48,15 @@ export function createExecutionContext(
     },
     getNodeInputItems,
     runSubWorkflow: options.runSubWorkflow,
+    setCustomData(key: string, value: string) {
+      customData[key] = value;
+    },
+    getCustomData(key: string) {
+      return customData[key];
+    },
+    getAllCustomData() {
+      return { ...customData };
+    },
   };
 
   return ctx;

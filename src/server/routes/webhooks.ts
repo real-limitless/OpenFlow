@@ -125,7 +125,7 @@ export default function webhooksRoute(app: Hono<AppEnv>) {
       clearWebhookResponse(execution.id);
       const respHeaders: Record<string, string> = webhookResponse.headers ?? {};
       return new Response(JSON.stringify(webhookResponse.body), {
-        status: webhookResponse.status,
+        status: webhookResponse.statusCode,
         headers: { "Content-Type": "application/json", ...respHeaders },
       });
     }

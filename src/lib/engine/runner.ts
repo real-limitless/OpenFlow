@@ -91,6 +91,7 @@ export async function executeWorkflow(options: RunOptions): Promise<RunResult> {
   const plan = createExecutionPlan(workflow);
   const runData: ExecutionRunData = {};
   const nodeOutputs: Map<string, INodeExecutionData[][]> = new Map();
+  const customData: Record<string, string> = {};
 
   const emitProgress = async () => {
     if (!onProgress) return;
@@ -271,6 +272,7 @@ export async function executeWorkflow(options: RunOptions): Promise<RunResult> {
             : undefined,
           nodeData,
           runSubWorkflow,
+          customData,
         });
 
         outputs = await executor(ctx, resolvedNode);

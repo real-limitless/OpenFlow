@@ -72,7 +72,12 @@ export const ifNode: INodeTypeDescription = {
       default: {},
       options: [
         { displayName: "Ignore Case", name: "ignoreCase", type: "boolean", default: true },
-        { displayName: "Loose Type Validation", name: "looseTypeValidation", type: "boolean", default: false },
+        {
+          displayName: "Loose Type Validation",
+          name: "looseTypeValidation",
+          type: "boolean",
+          default: false,
+        },
       ],
     },
   ],
@@ -163,7 +168,12 @@ export const switchNode: INodeTypeDescription = {
             { name: "Extra Output", value: "extra" },
           ],
         },
-        { displayName: "Send To All Matching Outputs", name: "allMatchingOutputs", type: "boolean", default: false },
+        {
+          displayName: "Send To All Matching Outputs",
+          name: "allMatchingOutputs",
+          type: "boolean",
+          default: false,
+        },
       ],
     },
   ],
@@ -231,7 +241,12 @@ export const merge: INodeTypeDescription = {
       type: "collection",
       default: {},
       options: [
-        { displayName: "Include Any Unpaired Items", name: "includeUnpaired", type: "boolean", default: false },
+        {
+          displayName: "Include Any Unpaired Items",
+          name: "includeUnpaired",
+          type: "boolean",
+          default: false,
+        },
       ],
     },
   ],
@@ -239,19 +254,27 @@ export const merge: INodeTypeDescription = {
 
 export const splitInBatches: INodeTypeDescription = {
   name: "n8n-nodes-base.splitInBatches",
-  displayName: "Loop",
+  displayName: "Loop Over Items",
   category: "Flow",
   group: ["transform"],
-  version: 1,
+  version: 3,
   description:
     "Splits items into batches for iterative processing, looping until all batches are consumed.",
-  defaults: { name: "Loop" },
+  defaults: { name: "Loop Over Items" },
   inputs: ["main"],
   outputs: ["main", "main"],
-  outputNames: ["loop", "done"],
+  // typeVersion 3: output[0] = done, output[1] = loop (current descriptor order).
+  // typeVersion 2 swaps these (loop = 0, done = 1); v1 is single-output (inferred).
+  outputNames: ["done", "loop"],
   icon: "Repeat",
   sources: [`${CORE}n8n-nodes-base.splitinbatches/`],
   properties: [
+    {
+      displayName: "Not all nodes need this node. Many nodes already process each item separately.",
+      name: "splitInBatchesNotice",
+      type: "notice",
+      default: "",
+    },
     {
       displayName: "Batch Size",
       name: "batchSize",
