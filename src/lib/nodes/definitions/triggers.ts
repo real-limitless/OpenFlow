@@ -126,6 +126,44 @@ export const executeWorkflowTrigger: INodeTypeDescription = {
   ],
 };
 
+export const workflowTrigger: INodeTypeDescription = {
+  name: "n8n-nodes-base.workflowTrigger",
+  displayName: "Workflow Trigger",
+  category: "Triggers",
+  group: ["trigger"],
+  version: [1, 1.1],
+  defaultVersion: 1.1,
+  description: "Starts the workflow when a workflow event occurs (started or finished).",
+  defaults: { name: "Workflow Trigger" },
+  inputs: [],
+  outputs: ["main"],
+  icon: "Workflow",
+  sources: [`${DOCS}n8n-nodes-base.workflowtrigger/`],
+  properties: [
+    {
+      displayName: "Trigger On",
+      name: "workflowTrigger",
+      type: "options",
+      default: "workflowStarted",
+      noDataExpression: true,
+      description: "The workflow event to trigger on.",
+      options: [
+        { name: "When workflow starts", value: "workflowStarted" },
+        { name: "When workflow finishes", value: "workflowFinished" },
+      ],
+    },
+    {
+      displayName: "Workflow ID",
+      name: "workflowId",
+      type: "string",
+      default: "",
+      placeholder: "1",
+      description:
+        "Filter to a specific workflow ID. Leave empty to trigger on all workflows.",
+    },
+  ],
+};
+
 export const manualTrigger: INodeTypeDescription = {
   name: "n8n-nodes-base.manualTrigger",
   displayName: "Manual Trigger",
@@ -572,6 +610,136 @@ export const formTrigger: INodeTypeDescription = {
   ],
 };
 
+export const localFileTrigger: INodeTypeDescription = {
+  name: "n8n-nodes-base.localFileTrigger",
+  displayName: "Local File Trigger",
+  category: "Triggers",
+  group: ["trigger"],
+  version: 1,
+  description: "Starts the workflow when a local file or folder changes.",
+  defaults: { name: "Local File Trigger" },
+  inputs: [],
+  outputs: ["main"],
+  icon: "FileClock",
+  sources: [`${DOCS}n8n-nodes-base.localfiletrigger/`],
+  properties: [
+    {
+      displayName: "Trigger On",
+      name: "triggerOn",
+      type: "options",
+      default: "",
+      noDataExpression: true,
+      required: true,
+      description: "What to watch.",
+      options: [
+        { name: "Changes to a Specific File", value: "file" },
+        { name: "Changes Involving a Specific Folder", value: "folder" },
+      ],
+    },
+    {
+      displayName: "File to Watch",
+      name: "path",
+      type: "string",
+      default: "",
+      required: true,
+      placeholder: "/data/invoices/1.pdf",
+      displayOptions: { show: { triggerOn: ["file"] } },
+      description: "Absolute or host-local filesystem path of the file to watch.",
+    },
+    {
+      displayName: "Folder to Watch",
+      name: "path",
+      type: "string",
+      default: "",
+      required: true,
+      placeholder: "/data/invoices",
+      displayOptions: { show: { triggerOn: ["folder"] } },
+      description: "Absolute or host-local filesystem path of the folder to watch.",
+    },
+    {
+      displayName: "Watch for",
+      name: "events",
+      type: "multiOptions",
+      default: [],
+      displayOptions: { show: { triggerOn: ["folder"] } },
+      description: "Which folder-related change kinds to fire on.",
+      options: [
+        { name: "File Added", value: "add" },
+        { name: "File Changed", value: "change" },
+        { name: "File Deleted", value: "unlink" },
+        { name: "Folder Added", value: "addDir" },
+        { name: "Folder Deleted", value: "unlinkDir" },
+      ],
+    },
+    {
+      displayName: "Options",
+      name: "options",
+      type: "collection",
+      default: {},
+      placeholder: "Add option",
+      options: [
+        {
+          displayName: "Wait for Write to Finish",
+          name: "awaitWriteFinish",
+          type: "boolean",
+          default: false,
+          description: "Wait until a write settles before firing.",
+        },
+        {
+          displayName: "Include Linked Files/Folders",
+          name: "followSymlinks",
+          type: "boolean",
+          default: true,
+          description: "Also watch through symlinks / OS aliases / shortcuts.",
+        },
+        {
+          displayName: "Ignore",
+          name: "ignored",
+          type: "string",
+          default: "",
+          placeholder: "**/*.txt",
+          description:
+            "Path patterns to skip. Matched against the full path. Supports Anymatch syntax.",
+        },
+        {
+          displayName: "Ignore Existing Files/Folders",
+          name: "ignoreInitial",
+          type: "boolean",
+          default: true,
+          description: "Do not emit for paths already present when the watcher starts.",
+        },
+        {
+          displayName: "Max Folder Depth",
+          name: "depth",
+          type: "number",
+          default: -1,
+          typeOptions: { minValue: -1 },
+          description:
+            "How deep under the root folder to watch. -1 = unlimited, 0 = top folder only.",
+        },
+        {
+          displayName: "Use Polling",
+          name: "usePolling",
+          type: "boolean",
+          default: false,
+          description: "Use polling instead of native FS events (network mounts).",
+        },
+        {
+          displayName: "Ignore Mode",
+          name: "ignoreMode",
+          type: "options",
+          default: "match",
+          noDataExpression: true,
+          options: [
+            { name: "Match", value: "match" },
+            { name: "Contain", value: "contain" },
+          ],
+        },
+      ],
+    },
+  ],
+};
+
 export const sseTrigger: INodeTypeDescription = {
   name: "n8n-nodes-base.sseTrigger",
   displayName: "SSE Trigger",
@@ -753,6 +921,107 @@ export const chatTrigger: INodeTypeDescription = {
           type: "boolean",
           default: false,
           displayOptions: { show: { mode: ["hosted"] } },
+        },
+      ],
+    },
+  ],
+};
+
+const MCP_TRIGGER_DOCS =
+  "https://docs.n8n.io/integrations/builtin/core-nodes/n8n-nodes-langchain.mcptrigger.md";
+
+export const mcpTrigger: INodeTypeDescription = {
+  name: "@n8n/n8n-nodes-langchain.mcpTrigger",
+  displayName: "MCP Server Trigger",
+  category: "Triggers",
+  group: ["trigger"],
+  version: [1, 1.1, 1.2],
+  defaultVersion: 1.2,
+  description:
+    "Exposes the workflow as an MCP server. Starts on each tools/call from an external MCP client.",
+  defaults: { name: "MCP Server Trigger" },
+  inputs: [],
+  outputs: ["main"],
+  icon: "Webhook",
+  credentials: [{ name: "httpBearerAuth", required: false }, { name: "httpHeaderAuth", required: false }],
+  sources: [MCP_TRIGGER_DOCS],
+  properties: [
+    {
+      displayName: "Server Path",
+      name: "path",
+      type: "string",
+      default: "",
+      placeholder: "my-mcp-server",
+      required: true,
+      description: "URL path segment the MCP server listens on.",
+    },
+    {
+      displayName: "Tools",
+      name: "tools",
+      type: "fixedCollection",
+      default: {},
+      typeOptions: { multipleValues: true },
+      noDataExpression: true,
+      required: true,
+      description: "Tool definitions the MCP server exposes to clients.",
+      options: [
+        {
+          name: "values",
+          displayName: "Tool",
+          values: [
+            {
+              displayName: "Tool Name",
+              name: "name",
+              type: "string",
+              default: "",
+              required: true,
+              noDataExpression: true,
+            },
+            {
+              displayName: "Description",
+              name: "description",
+              type: "string",
+              default: "",
+              typeOptions: { rows: 2 },
+            },
+            {
+              displayName: "Input Schema (JSON)",
+              name: "schema",
+              type: "json",
+              default: '{"type":"object"}',
+              noDataExpression: true,
+              description: "JSON Schema for the tool's input arguments.",
+            },
+          ],
+        },
+      ],
+    },
+    {
+      displayName: "Authentication",
+      name: "authentication",
+      type: "options",
+      default: "none",
+      noDataExpression: true,
+      options: [
+        { name: "None", value: "none" },
+        { name: "Bearer Auth", value: "bearerAuth" },
+        { name: "Header Auth", value: "headerAuth" },
+      ],
+    },
+    {
+      displayName: "Options",
+      name: "options",
+      type: "collection",
+      default: {},
+      placeholder: "Add option",
+      options: [
+        {
+          displayName: "Timeout (ms)",
+          name: "timeout",
+          type: "number",
+          default: 60000,
+          typeOptions: { minValue: 1000 },
+          description: "Max wait for MCP connect / call in milliseconds.",
         },
       ],
     },

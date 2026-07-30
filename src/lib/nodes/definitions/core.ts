@@ -493,19 +493,58 @@ export const executionData: INodeTypeDescription = {
 };
 
 const SIGN_ALGORITHMS = [
-  "RSA-MD5", "RSA-RIPEMD160", "RSA-SHA1", "RSA-SHA1-2", "RSA-SHA224",
-  "RSA-SHA256", "RSA-SHA3-224", "RSA-SHA3-256", "RSA-SHA3-384",
-  "RSA-SHA3-512", "RSA-SHA384", "RSA-SHA512", "RSA-SHA512/224",
-  "RSA-SHA512/256", "RSA-SM3", "blake2b512", "blake2s256",
-  "id-rsassa-pkcs1-v1_5-with-sha3-224", "id-rsassa-pkcs1-v1_5-with-sha3-256",
-  "id-rsassa-pkcs1-v1_5-with-sha3-384", "id-rsassa-pkcs1-v1_5-with-sha3-512",
-  "md5", "md5-sha1", "md5WithRSAEncryption", "ripemd", "ripemd160",
-  "ripemd160WithRSA", "rmd160", "sha1", "sha1WithRSAEncryption", "sha224",
-  "sha224WithRSAEncryption", "sha256", "sha256WithRSAEncryption", "sha3-224",
-  "sha3-256", "sha3-384", "sha3-512", "sha384", "sha384WithRSAEncryption",
-  "sha512", "sha512-224", "sha512-224WithRSAEncryption", "sha512-256",
-  "sha512-256WithRSAEncryption", "sha512WithRSAEncryption", "shake128",
-  "shake256", "sm3", "sm3WithRSAEncryption", "ssl3-md5", "ssl3-sha1",
+  "RSA-MD5",
+  "RSA-RIPEMD160",
+  "RSA-SHA1",
+  "RSA-SHA1-2",
+  "RSA-SHA224",
+  "RSA-SHA256",
+  "RSA-SHA3-224",
+  "RSA-SHA3-256",
+  "RSA-SHA3-384",
+  "RSA-SHA3-512",
+  "RSA-SHA384",
+  "RSA-SHA512",
+  "RSA-SHA512/224",
+  "RSA-SHA512/256",
+  "RSA-SM3",
+  "blake2b512",
+  "blake2s256",
+  "id-rsassa-pkcs1-v1_5-with-sha3-224",
+  "id-rsassa-pkcs1-v1_5-with-sha3-256",
+  "id-rsassa-pkcs1-v1_5-with-sha3-384",
+  "id-rsassa-pkcs1-v1_5-with-sha3-512",
+  "md5",
+  "md5-sha1",
+  "md5WithRSAEncryption",
+  "ripemd",
+  "ripemd160",
+  "ripemd160WithRSA",
+  "rmd160",
+  "sha1",
+  "sha1WithRSAEncryption",
+  "sha224",
+  "sha224WithRSAEncryption",
+  "sha256",
+  "sha256WithRSAEncryption",
+  "sha3-224",
+  "sha3-256",
+  "sha3-384",
+  "sha3-512",
+  "sha384",
+  "sha384WithRSAEncryption",
+  "sha512",
+  "sha512-224",
+  "sha512-224WithRSAEncryption",
+  "sha512-256",
+  "sha512-256WithRSAEncryption",
+  "sha512WithRSAEncryption",
+  "shake128",
+  "shake256",
+  "sm3",
+  "sm3WithRSAEncryption",
+  "ssl3-md5",
+  "ssl3-sha1",
 ];
 
 export const crypto: INodeTypeDescription = {
@@ -791,6 +830,317 @@ export const ftp: INodeTypeDescription = {
           default: 5,
         },
         { displayName: "Chunk Size (KB)", name: "chunkSize", type: "number", default: 64 },
+      ],
+    },
+  ],
+};
+
+export const ssh: INodeTypeDescription = {
+  name: "n8n-nodes-base.ssh",
+  displayName: "SSH",
+  category: "Development",
+  group: ["input"],
+  version: 1,
+  description:
+    "Execute shell commands and transfer files to a remote host over the Secure Shell Protocol.",
+  defaults: { name: "SSH" },
+  inputs: ["main"],
+  outputs: ["main"],
+  icon: "Terminal",
+  credentials: [{ name: "sshPassword" }, { name: "sshPrivateKey" }],
+  sources: [`${CORE}n8n-nodes-base.ssh/`],
+  properties: [
+    {
+      displayName: "Authentication",
+      name: "authentication",
+      type: "options",
+      default: "password",
+      noDataExpression: true,
+      required: true,
+      options: [
+        { name: "Password", value: "password" },
+        { name: "Private Key", value: "privateKey" },
+      ],
+    },
+    {
+      displayName: "Resource",
+      name: "resource",
+      type: "options",
+      default: "command",
+      noDataExpression: true,
+      required: true,
+      options: [
+        { name: "Command", value: "command" },
+        { name: "File", value: "file" },
+      ],
+    },
+    {
+      displayName: "Operation",
+      name: "operation",
+      type: "options",
+      noDataExpression: true,
+      required: true,
+      displayOptions: {
+        show: {
+          resource: ["command"],
+        },
+      },
+      options: [{ name: "Execute", value: "execute" }],
+      default: "execute",
+    },
+    {
+      displayName: "Operation",
+      name: "operation",
+      type: "options",
+      noDataExpression: true,
+      required: true,
+      displayOptions: {
+        show: {
+          resource: ["file"],
+        },
+      },
+      options: [
+        { name: "Download", value: "download" },
+        { name: "Upload", value: "upload" },
+      ],
+      default: "download",
+    },
+    {
+      displayName: "Command",
+      name: "command",
+      type: "string",
+      default: "",
+      required: true,
+      displayOptions: {
+        show: {
+          resource: ["command"],
+          operation: ["execute"],
+        },
+      },
+    },
+    {
+      displayName: "Working Directory",
+      name: "cwd",
+      type: "string",
+      default: "/",
+      required: true,
+      displayOptions: {
+        show: {
+          resource: ["command"],
+          operation: ["execute"],
+        },
+      },
+    },
+    {
+      displayName: "Path",
+      name: "path",
+      type: "string",
+      default: "",
+      required: true,
+      displayOptions: {
+        show: {
+          resource: ["file"],
+          operation: ["download"],
+        },
+      },
+    },
+    {
+      displayName: "Target Directory",
+      name: "path",
+      type: "string",
+      default: "",
+      required: true,
+      displayOptions: {
+        show: {
+          resource: ["file"],
+          operation: ["upload"],
+        },
+      },
+    },
+    {
+      displayName: "Binary Property Name",
+      name: "binaryPropertyName",
+      type: "string",
+      default: "data",
+      required: true,
+      displayOptions: {
+        show: {
+          resource: ["file"],
+        },
+      },
+    },
+    {
+      displayName: "Options",
+      name: "options",
+      type: "collection",
+      default: {},
+      displayOptions: {
+        show: {
+          resource: ["file"],
+          operation: ["download", "upload"],
+        },
+      },
+      options: [
+        {
+          displayName: "File Name",
+          name: "fileName",
+          type: "string",
+          default: "",
+        },
+      ],
+    },
+  ],
+};
+
+export const readWriteFile: INodeTypeDescription = {
+  name: "n8n-nodes-base.readWriteFile",
+  displayName: "Read/Write Files from Disk",
+  category: "Actions",
+  group: ["input"],
+  version: 1.1,
+  description:
+    "Reads one or more files from, or writes a binary file to, the filesystem of the machine running the engine.",
+  defaults: { name: "Read/Write Files from Disk" },
+  inputs: ["main"],
+  outputs: ["main"],
+  icon: "FileOpen",
+  sources: [`${CORE}n8n-nodes-base.readwritefile/`],
+  properties: [
+    {
+      displayName: "Operation",
+      name: "operation",
+      type: "options",
+      default: "read",
+      noDataExpression: true,
+      options: [
+        { name: "Read File(s) From Disk", value: "read" },
+        { name: "Write File to Disk", value: "write" },
+      ],
+    },
+    {
+      displayName: "File(s) Selector",
+      name: "fileSelector",
+      type: "string",
+      default: "",
+      required: true,
+      placeholder: "/data/example.txt",
+      displayOptions: { show: { operation: ["read"] } },
+    },
+    {
+      displayName: "File Path and Name",
+      name: "fileName",
+      type: "string",
+      default: "",
+      required: true,
+      placeholder: "/data/out.txt",
+      displayOptions: { show: { operation: ["write"] } },
+    },
+    {
+      displayName: "Input Binary Field",
+      name: "dataPropertyName",
+      type: "string",
+      default: "data",
+      required: true,
+      displayOptions: { show: { operation: ["write"] } },
+    },
+    {
+      displayName: "Options",
+      name: "options",
+      type: "collection",
+      default: {},
+      displayOptions: { show: { operation: ["read"] } },
+      options: [
+        {
+          displayName: "File Extension",
+          name: "fileExtension",
+          type: "string",
+          default: "",
+          placeholder: "e.g. zip",
+        },
+        {
+          displayName: "File Name",
+          name: "fileName",
+          type: "string",
+          default: "",
+          placeholder: "e.g. data.zip",
+        },
+        {
+          displayName: "MIME Type",
+          name: "mimeType",
+          type: "string",
+          default: "",
+          placeholder: "e.g. application/zip",
+        },
+        {
+          displayName: "Put Output File in Field",
+          name: "dataPropertyName",
+          type: "string",
+          default: "data",
+        },
+      ],
+    },
+    {
+      displayName: "Options",
+      name: "options",
+      type: "collection",
+      default: {},
+      displayOptions: { show: { operation: ["write"] } },
+      options: [
+        {
+          displayName: "Append",
+          name: "append",
+          type: "boolean",
+          default: false,
+        },
+      ],
+    },
+  ],
+};
+
+export const rssFeedRead: INodeTypeDescription = {
+  name: "n8n-nodes-base.rssFeedRead",
+  displayName: "RSS Read",
+  category: "Actions",
+  group: ["input"],
+  version: 1.2,
+  description:
+    "Reads entries from a public RSS or Atom feed URL and emits one item per feed entry.",
+  defaults: { name: "RSS Read", color: "#b02020" },
+  inputs: ["main"],
+  outputs: ["main"],
+  icon: "Rss",
+  sources: [`${CORE}n8n-nodes-base.rssfeedread/`],
+  properties: [
+    {
+      displayName: "URL",
+      name: "url",
+      type: "string",
+      default: "",
+      required: true,
+      placeholder: "https://example.com/feed.xml",
+    },
+    {
+      displayName: "Options",
+      name: "options",
+      type: "collection",
+      default: {},
+      placeholder: "Add option",
+      options: [
+        {
+          displayName: "Custom Fields",
+          name: "customFields",
+          type: "string",
+          default: "",
+          placeholder: "author, contentSnippet",
+          description: "Comma-separated list of extra feed fields to include in each output item.",
+        },
+        {
+          displayName: "Ignore SSL Issues",
+          name: "ignoreSSL",
+          type: "boolean",
+          default: false,
+          description: "Ignore SSL/TLS certificate verification when fetching the feed.",
+        },
       ],
     },
   ],
@@ -1113,6 +1463,275 @@ export const lmChatOpenAi: INodeTypeDescription = {
   ],
 };
 
+const GEMINI_DOCS =
+  "https://docs.n8n.io/integrations/builtin/cluster-nodes/sub-nodes/n8n-nodes-langchain.lmchatgooglegemini.md";
+
+export const lmChatGoogleGemini: INodeTypeDescription = {
+  name: "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+  displayName: "Google Gemini Chat Model",
+  category: "Actions",
+  group: ["input"],
+  version: 1.2,
+  description:
+    "Configures a Google Gemini chat model and supplies it to an AI Agent or Chain on the ai_languageModel channel.",
+  defaults: { name: "Google Gemini Chat Model" },
+  inputs: [],
+  outputs: ["ai_languageModel"],
+  icon: "Robot",
+  credentials: [{ name: "googleApi", required: true }],
+  sources: [GEMINI_DOCS],
+  properties: [
+    {
+      displayName: "Model",
+      name: "model",
+      type: "resourceLocator",
+      default: "",
+      required: true,
+    },
+    {
+      displayName: "Options",
+      name: "options",
+      type: "collection",
+      default: {},
+      options: [
+        {
+          displayName: "Sampling Temperature",
+          name: "temperature",
+          type: "number",
+          default: 1,
+        },
+        {
+          displayName: "Maximum Number of Tokens",
+          name: "maxOutputTokens",
+          type: "number",
+          default: 0,
+        },
+        { displayName: "Top P", name: "topP", type: "number", default: 0 },
+        { displayName: "Top K", name: "topK", type: "number", default: 0 },
+        {
+          displayName: "Safety Settings",
+          name: "safetySettings",
+          type: "fixedCollection",
+          default: {},
+        },
+        {
+          displayName: "Timeout (ms)",
+          name: "timeout",
+          type: "number",
+          default: 120000,
+        },
+        {
+          displayName: "Max Retries",
+          name: "maxRetries",
+          type: "number",
+          default: 2,
+        },
+      ],
+    },
+  ],
+};
+
+const ANTHROPIC_DOCS =
+  "https://docs.n8n.io/integrations/builtin/cluster-nodes/sub-nodes/n8n-nodes-langchain.lmchatanthropic.md";
+
+export const lmChatAnthropic: INodeTypeDescription = {
+  name: "@n8n/n8n-nodes-langchain.lmChatAnthropic",
+  displayName: "Anthropic Chat Model",
+  category: "Actions",
+  group: ["input"],
+  version: 1,
+  description:
+    "Configures an Anthropic Claude chat model and supplies it to an AI Agent or Chain on the ai_languageModel channel.",
+  defaults: { name: "Anthropic Chat Model" },
+  inputs: [],
+  outputs: ["ai_languageModel"],
+  icon: "Robot",
+  credentials: [{ name: "anthropicApi", required: true }],
+  sources: [ANTHROPIC_DOCS],
+  properties: [
+    {
+      displayName: "Model",
+      name: "model",
+      type: "resourceLocator",
+      default: "",
+      required: true,
+    },
+    {
+      displayName: "Options",
+      name: "options",
+      type: "collection",
+      default: {},
+      options: [
+        {
+          displayName: "Maximum Number of Tokens",
+          name: "maxTokens",
+          type: "number",
+          default: 0,
+        },
+        {
+          displayName: "Sampling Temperature",
+          name: "temperature",
+          type: "number",
+          default: 1,
+        },
+        { displayName: "Top K", name: "topK", type: "number", default: 0 },
+        { displayName: "Top P", name: "topP", type: "number", default: 0 },
+        {
+          displayName: "Timeout (ms)",
+          name: "timeout",
+          type: "number",
+          default: 120000,
+        },
+        {
+          displayName: "Max Retries",
+          name: "maxRetries",
+          type: "number",
+          default: 2,
+        },
+      ],
+    },
+  ],
+};
+
+const OLLAMA_DOCS =
+  "https://docs.n8n.io/integrations/builtin/cluster-nodes/sub-nodes/n8n-nodes-langchain.lmchatollama.md";
+
+export const lmChatOllama: INodeTypeDescription = {
+  name: "@n8n/n8n-nodes-langchain.lmChatOllama",
+  displayName: "Ollama Chat Model",
+  category: "Actions",
+  group: ["input"],
+  version: 1,
+  description:
+    "Configures an Ollama chat model (locally hosted or remote) and supplies it to an AI Agent or Chain on the ai_languageModel channel.",
+  defaults: { name: "Ollama Chat Model" },
+  inputs: [],
+  outputs: ["ai_languageModel"],
+  icon: "Robot",
+  credentials: [{ name: "ollamaApi", required: true }],
+  sources: [OLLAMA_DOCS],
+  properties: [
+    {
+      displayName: "Model",
+      name: "model",
+      type: "resourceLocator",
+      default: "",
+      required: true,
+    },
+    {
+      displayName: "Options",
+      name: "options",
+      type: "collection",
+      default: {},
+      options: [
+        {
+          displayName: "Sampling Temperature",
+          name: "temperature",
+          type: "number",
+          default: 0.8,
+        },
+        { displayName: "Top K", name: "topK", type: "number", default: 0 },
+        { displayName: "Top P", name: "topP", type: "number", default: 0 },
+        {
+          displayName: "Timeout (ms)",
+          name: "timeout",
+          type: "number",
+          default: 120000,
+        },
+        {
+          displayName: "Max Retries",
+          name: "maxRetries",
+          type: "number",
+          default: 2,
+        },
+      ],
+    },
+  ],
+};
+
+const OPENROUTER_DOCS =
+  "https://docs.n8n.io/integrations/builtin/cluster-nodes/sub-nodes/n8n-nodes-langchain.lmchatopenrouter.md";
+
+export const lmChatOpenRouter: INodeTypeDescription = {
+  name: "@n8n/n8n-nodes-langchain.lmChatOpenRouter",
+  displayName: "OpenRouter Chat Model",
+  category: "Actions",
+  group: ["input"],
+  version: 1,
+  description:
+    "Configures an OpenRouter chat model and supplies it to an AI Agent or Chain on the ai_languageModel channel.",
+  defaults: { name: "OpenRouter Chat Model" },
+  inputs: [],
+  outputs: ["ai_languageModel"],
+  icon: "Robot",
+  credentials: [{ name: "openRouterApi", required: true }],
+  sources: [OPENROUTER_DOCS],
+  properties: [
+    {
+      displayName: "Model",
+      name: "model",
+      type: "resourceLocator",
+      default: "",
+      required: true,
+    },
+    {
+      displayName: "Options",
+      name: "options",
+      type: "collection",
+      default: {},
+      options: [
+        {
+          displayName: "Sampling Temperature",
+          name: "temperature",
+          type: "number",
+          default: 1,
+        },
+        {
+          displayName: "Maximum Number of Tokens",
+          name: "maxTokens",
+          type: "number",
+          default: 0,
+        },
+        {
+          displayName: "Frequency Penalty",
+          name: "frequencyPenalty",
+          type: "number",
+          default: 0,
+        },
+        {
+          displayName: "Presence Penalty",
+          name: "presencePenalty",
+          type: "number",
+          default: 0,
+        },
+        { displayName: "Top P", name: "topP", type: "number", default: 1 },
+        {
+          displayName: "Response Format",
+          name: "responseFormat",
+          type: "options",
+          default: "text",
+          options: [
+            { name: "Text", value: "text" },
+            { name: "JSON", value: "json" },
+          ],
+        },
+        {
+          displayName: "Timeout (ms)",
+          name: "timeout",
+          type: "number",
+          default: 120000,
+        },
+        {
+          displayName: "Max Retries",
+          name: "maxRetries",
+          type: "number",
+          default: 2,
+        },
+      ],
+    },
+  ],
+};
+
 const AGENT_DOCS =
   "https://docs.n8n.io/integrations/builtin/cluster-nodes/root-nodes/n8n-nodes-langchain.agent.md";
 
@@ -1195,13 +1814,302 @@ export const langchainAgent: INodeTypeDescription = {
           type: "boolean",
           default: true,
         },
-{
-      displayName: "Enable Streaming",
-      name: "enableStreaming",
-      type: "boolean",
-      default: true,
-    },
+        {
+          displayName: "Enable Streaming",
+          name: "enableStreaming",
+          type: "boolean",
+          default: true,
+        },
       ],
+    },
+  ],
+};
+
+const CHAIN_RETRIEVAL_QA_DOCS =
+  "https://docs.n8n.io/integrations/builtin/cluster-nodes/root-nodes/n8n-nodes-langchain.chainretrievalqa.md";
+
+export const chainRetrievalQa: INodeTypeDescription = {
+  name: "@n8n/n8n-nodes-langchain.chainRetrievalQa",
+  displayName: "Question and Answer Chain",
+  category: "Actions",
+  group: ["input"],
+  version: 1,
+  description:
+    "Retrieval-Augmented Generation chain: retrieves relevant document chunks via a connected retriever, then makes a single LLM call with the retrieved context to answer a user question.",
+  defaults: { name: "Question and Answer Chain" },
+  inputs: ["main", "ai_languageModel", "ai_retriever", "ai_outputParser"],
+  outputs: ["main"],
+  icon: "MessageSquare",
+  sources: [CHAIN_RETRIEVAL_QA_DOCS],
+  properties: [
+    {
+      displayName: "Prompt",
+      name: "promptType",
+      type: "options",
+      default: "auto",
+      noDataExpression: true,
+      options: [
+        { name: "Define below", value: "define" },
+        {
+          name: "Take from previous node automatically",
+          value: "auto",
+        },
+      ],
+    },
+    {
+      displayName: "Query",
+      name: "text",
+      type: "string",
+      default: "",
+      typeOptions: { rows: 4 },
+      displayOptions: { show: { promptType: ["define"] } },
+    },
+    {
+      displayName: "Require Specific Output Format",
+      name: "hasOutputParser",
+      type: "boolean",
+      default: false,
+    },
+  ],
+};
+
+const CHAIN_LLM_DOCS =
+  "https://docs.n8n.io/integrations/builtin/cluster-nodes/root-nodes/n8n-nodes-langchain.chainllm.md";
+
+export const chainLlm: INodeTypeDescription = {
+  name: "@n8n/n8n-nodes-langchain.chainLlm",
+  displayName: "Basic LLM Chain",
+  category: "Actions",
+  group: ["input"],
+  version: 1.4,
+  description:
+    "Basic LLM Chain: makes a single call to a connected chat model with an optional system prompt, few-shot chat messages, and a runtime prompt, returning the model response.",
+  defaults: { name: "Basic LLM Chain" },
+  inputs: ["main", "ai_languageModel", "ai_outputParser"],
+  outputs: ["main"],
+  icon: "MessageSquare",
+  sources: [CHAIN_LLM_DOCS],
+  properties: [
+    {
+      displayName: "Prompt",
+      name: "promptType",
+      type: "options",
+      default: "auto",
+      noDataExpression: true,
+      options: [
+        { name: "Define below", value: "define" },
+        {
+          name: "Take from previous node automatically",
+          value: "auto",
+        },
+      ],
+    },
+    {
+      displayName: "Prompt (User Message)",
+      name: "text",
+      type: "string",
+      default: "",
+      typeOptions: { rows: 4 },
+      displayOptions: { show: { promptType: ["define"] } },
+    },
+    {
+      displayName: "Require Specific Output Format",
+      name: "requireSpecificOutputFormat",
+      type: "boolean",
+      default: false,
+    },
+    {
+      displayName: "Messages",
+      name: "messages",
+      type: "fixedCollection",
+      default: {},
+      typeOptions: { multipleValues: true },
+      options: [
+        {
+          name: "messageValues",
+          displayName: "Message",
+          values: [
+            {
+              displayName: "Role",
+              name: "type",
+              type: "options",
+              default: "user",
+              options: [
+                { name: "AI", value: "ai" },
+                { name: "System", value: "system" },
+                { name: "User", value: "user" },
+              ],
+            },
+            {
+              displayName: "Message",
+              name: "message",
+              type: "string",
+              default: "",
+              typeOptions: { rows: 2 },
+            },
+            {
+              displayName: "Image",
+              name: "image",
+              type: "fixedCollection",
+              default: {},
+              displayOptions: { show: { "messages.messageValues.type": ["user"] } },
+              options: [
+                {
+                  name: "binaryProperty",
+                  displayName: "Binary Property",
+                  values: [
+                    {
+                      displayName: "Binary Property Name",
+                      name: "binaryPropertyName",
+                      type: "string",
+                      default: "data",
+                    },
+                  ],
+                },
+                {
+                  name: "url",
+                  displayName: "URL",
+                  values: [
+                    { displayName: "Image URL", name: "imageUrl", type: "string", default: "" },
+                    {
+                      displayName: "Detail",
+                      name: "detail",
+                      type: "options",
+                      default: "auto",
+                      options: [
+                        { name: "Auto", value: "auto" },
+                        { name: "Low", value: "low" },
+                        { name: "High", value: "high" },
+                      ],
+                    },
+                  ],
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    },
+  ],
+};
+
+const CHAIN_SUMMARIZATION_DOCS =
+  "https://docs.n8n.io/integrations/builtin/cluster-nodes/root-nodes/n8n-nodes-langchain.chainsummarization.md";
+
+export const chainSummarization: INodeTypeDescription = {
+  name: "@n8n/n8n-nodes-langchain.chainSummarization",
+  displayName: "Summarization Chain",
+  category: "Actions",
+  group: ["input"],
+  version: 1,
+  description:
+    "Summarization Chain: summarizes multiple documents using a connected chat model. Selects a data source (incoming JSON/binary items or a document-loader sub-node), optionally chunks the text, then runs a summarization strategy (Map Reduce / Refine / Stuff) to produce a single summary.",
+  defaults: { name: "Summarization Chain" },
+  inputs: ["main", "ai_languageModel", "ai_documentLoader", "ai_textSplitter"],
+  outputs: ["main"],
+  icon: "FileText",
+  sources: [CHAIN_SUMMARIZATION_DOCS],
+  properties: [
+    {
+      displayName: "Data to Summarize",
+      name: "dataType",
+      type: "options",
+      default: "json",
+      noDataExpression: true,
+      options: [
+        { name: "Use Node Input (JSON)", value: "json" },
+        { name: "Use Node Input (Binary)", value: "binary" },
+        { name: "Use Document Loader", value: "documentLoader" },
+      ],
+      description: "Source of the documents to summarize",
+    },
+    {
+      displayName: "Chunking Strategy",
+      name: "chunking",
+      type: "options",
+      default: "simple",
+      displayOptions: { show: { dataType: ["json", "binary"] } },
+      options: [
+        { name: "Simple (Define Below)", value: "simple" },
+        { name: "Advanced (Use Text Splitter)", value: "advanced" },
+      ],
+      description: "How to split documents into chunks",
+    },
+    {
+      displayName: "Characters Per Chunk",
+      name: "charactersPerChunk",
+      type: "number",
+      default: 1000,
+      displayOptions: { show: { dataType: ["json", "binary"], chunking: ["simple"] } },
+      typeOptions: { minValue: 100 },
+      description: "Maximum characters per chunk",
+    },
+    {
+      displayName: "Chunk Overlap (Characters)",
+      name: "chunkOverlap",
+      type: "number",
+      default: 200,
+      displayOptions: { show: { dataType: ["json", "binary"], chunking: ["simple"] } },
+      typeOptions: { minValue: 0 },
+      description: "Character overlap between adjacent chunks",
+    },
+    {
+      displayName: "Summarization Method",
+      name: "summarizationMethod",
+      type: "options",
+      default: "map_reduce",
+      noDataExpression: true,
+      options: [
+        { name: "Map Reduce", value: "map_reduce" },
+        { name: "Refine", value: "refine" },
+        { name: "Stuff", value: "stuff" },
+      ],
+      description: "Method to use for summarization",
+    },
+    {
+      displayName: "Individual Summary Prompt",
+      name: "individualSummaryPrompt",
+      type: "string",
+      default: "Write a concise summary of the following:\n\n{text}\n\nCONCISE SUMMARY:",
+      typeOptions: { rows: 4 },
+      displayOptions: { show: { summarizationMethod: ["map_reduce"] } },
+      description: "Prompt for summarizing each chunk. Must contain {text} placeholder",
+    },
+    {
+      displayName: "Final Prompt",
+      name: "finalPrompt",
+      type: "string",
+      default: "Write a concise summary of the following:\n\n{text}\n\nCONCISE SUMMARY:",
+      typeOptions: { rows: 4 },
+      displayOptions: { show: { summarizationMethod: ["map_reduce"] } },
+      description: "Prompt for combining chunk summaries. Must contain {text} placeholder",
+    },
+    {
+      displayName: "Refine Prompt",
+      name: "refinePrompt",
+      type: "string",
+      default: "Refine the existing summary using the new context below.\n\nExisting summary: {text}\n\nNew context:\n{context}\n\nREFINED SUMMARY:",
+      typeOptions: { rows: 4 },
+      displayOptions: { show: { summarizationMethod: ["refine"] } },
+      description: "Prompt for refining the summary with each new chunk. Must contain {text} and {context} placeholders",
+    },
+    {
+      displayName: "Initial Summary Prompt",
+      name: "initialSummaryPrompt",
+      type: "string",
+      default: "Write a concise summary of the following:\n\n{text}\n\nCONCISE SUMMARY:",
+      typeOptions: { rows: 4 },
+      displayOptions: { show: { summarizationMethod: ["refine"] } },
+      description: "Prompt for the initial summary. Must contain {text} placeholder",
+    },
+    {
+      displayName: "Stuff Prompt",
+      name: "stuffPrompt",
+      type: "string",
+      default: "Write a concise summary of the following:\n\n{text}\n\nCONCISE SUMMARY:",
+      typeOptions: { rows: 4 },
+      displayOptions: { show: { summarizationMethod: ["stuff"] } },
+      description: "Prompt for stuffing all documents into one prompt. Must contain {text} placeholder",
     },
   ],
 };
@@ -1221,10 +2129,7 @@ export const mcpClientTool: INodeTypeDescription = {
   inputs: [],
   outputs: ["ai_tool"],
   icon: "Robot",
-  credentials: [
-    { name: "httpHeaderAuth" },
-    { name: "httpBearerAuth" },
-  ],
+  credentials: [{ name: "httpHeaderAuth" }, { name: "httpBearerAuth" }],
   sources: [MCP_CLIENT_TOOL_DOCS],
   properties: [
     {
@@ -1294,8 +2199,2182 @@ export const mcpClientTool: INodeTypeDescription = {
       name: "options",
       type: "collection",
       default: {},
+      options: [{ displayName: "Timeout (ms)", name: "timeout", type: "number", default: 60000 }],
+    },
+  ],
+};
+
+export const git: INodeTypeDescription = {
+  name: "n8n-nodes-base.git",
+  displayName: "Git",
+  category: "Actions",
+  group: ["input"],
+  version: 1,
+  description: "Perform git operations on a repository.",
+  defaults: { name: "Git" },
+  inputs: ["main"],
+  outputs: ["main"],
+  icon: "GitBranch",
+  credentials: [{ name: "gitPassword" }, { name: "sshPrivateKey" }],
+  sources: [`${CORE}n8n-nodes-base.git/`],
+  properties: [
+    {
+      displayName: "Operation",
+      name: "operation",
+      type: "options",
+      default: "clone",
+      noDataExpression: true,
       options: [
-        { displayName: "Timeout (ms)", name: "timeout", type: "number", default: 60000 },
+        { name: "Add", value: "add" },
+        { name: "Add Config", value: "addConfig" },
+        { name: "Clone", value: "clone" },
+        { name: "Commit", value: "commit" },
+        { name: "Log", value: "log" },
+        { name: "Push", value: "push" },
+        { name: "Reflog", value: "reflog" },
+        { name: "Switch Branch", value: "switchBranch" },
+        { name: "Tag", value: "tag" },
+      ],
+    },
+    {
+      displayName: "Repository URL",
+      name: "repository",
+      type: "string",
+      default: "",
+      required: true,
+      displayOptions: { show: { operation: ["clone"] } },
+      placeholder: "https://github.com/example/repo.git",
+    },
+    {
+      displayName: "Local Path",
+      name: "clonePath",
+      type: "string",
+      default: "",
+      required: true,
+      displayOptions: { show: { operation: ["clone"] } },
+      placeholder: "/tmp/repo",
+    },
+    {
+      displayName: "Repository Path",
+      name: "path",
+      type: "string",
+      default: "",
+      required: true,
+      displayOptions: {
+        show: {
+          operation: ["add", "addConfig", "commit", "log", "push", "reflog", "switchBranch", "tag"],
+        },
+      },
+      placeholder: "/path/to/repo",
+    },
+    {
+      displayName: "Branch",
+      name: "branch",
+      type: "string",
+      default: "",
+      displayOptions: { show: { operation: ["clone", "switchBranch", "push"] } },
+    },
+    {
+      displayName: "Create Branch",
+      name: "createBranch",
+      type: "boolean",
+      default: false,
+      displayOptions: { show: { operation: ["switchBranch"] } },
+    },
+    {
+      displayName: "Paths to Add",
+      name: "pathsToAdd",
+      type: "string",
+      default: ".",
+      displayOptions: { show: { operation: ["add"] } },
+    },
+    {
+      displayName: "Commit Message",
+      name: "message",
+      type: "string",
+      default: "",
+      required: true,
+      displayOptions: { show: { operation: ["commit", "tag"] } },
+    },
+    {
+      displayName: "Allow Empty",
+      name: "allowEmpty",
+      type: "boolean",
+      default: false,
+      displayOptions: { show: { operation: ["commit"] } },
+    },
+    {
+      displayName: "Force",
+      name: "force",
+      type: "boolean",
+      default: false,
+      displayOptions: { show: { operation: ["push", "switchBranch"] } },
+    },
+    {
+      displayName: "Remote",
+      name: "remote",
+      type: "string",
+      default: "origin",
+      displayOptions: { show: { operation: ["push"] } },
+    },
+    {
+      displayName: "Max Commits",
+      name: "maxCommits",
+      type: "number",
+      default: 100,
+      displayOptions: { show: { operation: ["log", "reflog"] } },
+    },
+    {
+      displayName: "Tag Action",
+      name: "tagAction",
+      type: "options",
+      default: "add",
+      noDataExpression: true,
+      displayOptions: { show: { operation: ["tag"] } },
+      options: [
+        { name: "Add", value: "add" },
+        { name: "List", value: "list" },
+        { name: "Delete", value: "delete" },
+      ],
+    },
+    {
+      displayName: "Tag Name",
+      name: "tagName",
+      type: "string",
+      default: "",
+      required: true,
+      displayOptions: { show: { operation: ["tag"], tagAction: ["add", "delete"] } },
+    },
+    {
+      displayName: "Config Key",
+      name: "configKey",
+      type: "string",
+      default: "",
+      required: true,
+      displayOptions: { show: { operation: ["addConfig"] } },
+      placeholder: "user.name",
+    },
+    {
+      displayName: "Config Value",
+      name: "configValue",
+      type: "string",
+      default: "",
+      required: true,
+      displayOptions: { show: { operation: ["addConfig"] } },
+    },
+    {
+      displayName: "Options",
+      name: "options",
+      type: "collection",
+      default: {},
+      options: [{ displayName: "Timeout (ms)", name: "timeout", type: "number", default: 10000 }],
+    },
+  ],
+};
+
+export const graphql: INodeTypeDescription = {
+  name: "n8n-nodes-base.graphql",
+  displayName: "GraphQL",
+  category: "Actions",
+  group: ["input"],
+  version: 1.1,
+  defaultVersion: 1.1,
+  description: "Make a GraphQL request to an endpoint and return the received data.",
+  defaults: { name: "GraphQL" },
+  inputs: ["main"],
+  outputs: ["main"],
+  icon: "Network",
+  credentials: [
+    { name: "httpBasicAuth" },
+    { name: "httpCustomAuth" },
+    { name: "httpDigestAuth" },
+    { name: "httpHeaderAuth" },
+    { name: "httpQueryAuth" },
+    { name: "oAuth1Api" },
+    { name: "oAuth2Api" },
+  ],
+  sources: [`${CORE}n8n-nodes-base.graphql/`],
+  properties: [
+    {
+      displayName: "Authentication",
+      name: "authentication",
+      type: "options",
+      default: "none",
+      options: [
+        { name: "None", value: "none" },
+        { name: "Basic Auth", value: "basicAuth" },
+        { name: "Custom Auth", value: "customAuth" },
+        { name: "Digest Auth", value: "digestAuth" },
+        { name: "Header Auth", value: "headerAuth" },
+        { name: "OAuth1", value: "oAuth1" },
+        { name: "OAuth2", value: "oAuth2" },
+        { name: "Query Auth", value: "queryAuth" },
+      ],
+    },
+    {
+      displayName: "Request Method",
+      name: "requestMethod",
+      type: "options",
+      default: "POST",
+      options: [
+        { name: "GET", value: "GET" },
+        { name: "POST", value: "POST" },
+      ],
+    },
+    {
+      displayName: "URL",
+      name: "endpoint",
+      type: "string",
+      default: "",
+      required: true,
+      placeholder: "http://example.com/graphql",
+    },
+    {
+      displayName: "Ignore SSL Issues",
+      name: "allowUnauthorizedCerts",
+      type: "boolean",
+      default: false,
+    },
+    {
+      displayName: "Request Format",
+      name: "requestFormat",
+      type: "options",
+      default: "json",
+      displayOptions: { show: { requestMethod: ["POST"] } },
+      options: [
+        {
+          name: "JSON (Recommended) — standard and most widely supported format",
+          value: "json",
+        },
+        {
+          name: "Raw GraphQL query string. Not all servers support this format.",
+          value: "graphql",
+        },
+      ],
+    },
+    {
+      displayName: "Query",
+      name: "query",
+      type: "string",
+      default: "",
+      required: true,
+      typeOptions: { rows: 6 },
+    },
+    {
+      displayName: "Variables",
+      name: "variables",
+      type: "json",
+      default: "",
+      displayOptions: { show: { requestFormat: ["json"], requestMethod: ["POST"] } },
+    },
+    {
+      displayName: "Operation Name",
+      name: "operationName",
+      type: "string",
+      default: "",
+      displayOptions: { show: { requestFormat: ["json"], requestMethod: ["POST"] } },
+    },
+    {
+      displayName: "Response Format",
+      name: "responseFormat",
+      type: "options",
+      default: "json",
+      options: [
+        { name: "JSON", value: "json" },
+        { name: "String", value: "string" },
+      ],
+    },
+    {
+      displayName: "Property Name",
+      name: "dataPropertyName",
+      type: "string",
+      default: "data",
+      required: true,
+      displayOptions: { show: { responseFormat: ["string"] } },
+    },
+    {
+      displayName: "Headers",
+      name: "headerParametersUi",
+      type: "fixedCollection",
+      default: {},
+      typeOptions: { multipleValues: true },
+      options: [
+        {
+          name: "parameter",
+          displayName: "Header",
+          values: [
+            { displayName: "Name", name: "name", type: "string", default: "" },
+            { displayName: "Value", name: "value", type: "string", default: "" },
+          ],
+        },
+      ],
+    },
+  ],
+};
+
+const OPENAI_APP_DOCS =
+  "https://docs.n8n.io/integrations/builtin/app-nodes/n8n-nodes-langchain.openai.md";
+
+export const openAi: INodeTypeDescription = {
+  name: "@n8n/n8n-nodes-langchain.openAi",
+  displayName: "OpenAI",
+  category: "Actions",
+  group: ["input"],
+  version: 1.2,
+  defaultVersion: 1.2,
+  description:
+    "Wraps the OpenAI REST API across text, image, audio, file, video, and conversation resources.",
+  defaults: { name: "OpenAI" },
+  inputs: ["main"],
+  outputs: ["main"],
+  icon: "Robot",
+  credentials: [{ name: "openAiApi", required: true }],
+  sources: [OPENAI_APP_DOCS],
+  properties: [
+    {
+      displayName: "Resource",
+      name: "resource",
+      type: "options",
+      default: "text",
+      noDataExpression: true,
+      required: true,
+      options: [
+        { name: "Text", value: "text" },
+        { name: "Image", value: "image" },
+        { name: "Audio", value: "audio" },
+        { name: "File", value: "file" },
+        { name: "Video", value: "video" },
+        { name: "Conversation", value: "conversation" },
+      ],
+    },
+    {
+      displayName: "Operation",
+      name: "operation",
+      type: "options",
+      default: "chatCompletion",
+      noDataExpression: true,
+      required: true,
+      displayOptions: { show: { resource: ["text"] } },
+      options: [
+        { name: "Generate a Chat Completion", value: "chatCompletion" },
+        { name: "Generate a Model Response (V2)", value: "modelResponse" },
+        { name: "Classify Text for Violations", value: "moderation" },
+      ],
+    },
+    {
+      displayName: "Operation",
+      name: "operation",
+      type: "options",
+      default: "analyze",
+      noDataExpression: true,
+      required: true,
+      displayOptions: { show: { resource: ["image"] } },
+      options: [
+        { name: "Analyze Image", value: "analyze" },
+        { name: "Generate an Image", value: "generate" },
+        { name: "Edit an Image", value: "edit" },
+      ],
+    },
+    {
+      displayName: "Operation",
+      name: "operation",
+      type: "options",
+      default: "generate",
+      noDataExpression: true,
+      required: true,
+      displayOptions: { show: { resource: ["audio"] } },
+      options: [
+        { name: "Generate Audio", value: "generate" },
+        { name: "Transcribe a Recording", value: "transcribe" },
+        { name: "Translate a Recording", value: "translate" },
+      ],
+    },
+    {
+      displayName: "Operation",
+      name: "operation",
+      type: "options",
+      default: "list",
+      noDataExpression: true,
+      required: true,
+      displayOptions: { show: { resource: ["file"] } },
+      options: [
+        { name: "Delete", value: "delete" },
+        { name: "List", value: "list" },
+        { name: "Upload", value: "upload" },
+      ],
+    },
+    {
+      displayName: "Operation",
+      name: "operation",
+      type: "options",
+      default: "generate",
+      noDataExpression: true,
+      required: true,
+      displayOptions: { show: { resource: ["video"] } },
+      options: [{ name: "Generate", value: "generate" }],
+    },
+    {
+      displayName: "Operation",
+      name: "operation",
+      type: "options",
+      default: "create",
+      noDataExpression: true,
+      required: true,
+      displayOptions: { show: { resource: ["conversation"] } },
+      options: [
+        { name: "Create", value: "create" },
+        { name: "Get", value: "get" },
+        { name: "Update", value: "update" },
+        { name: "Remove", value: "remove" },
+      ],
+    },
+    {
+      displayName: "Model",
+      name: "model",
+      type: "resourceLocator",
+      default: "",
+      required: true,
+      displayOptions: {
+        show: {
+          resource: ["text"],
+          operation: ["chatCompletion", "modelResponse"],
+        },
+      },
+    },
+    {
+      displayName: "Messages",
+      name: "messages",
+      type: "fixedCollection",
+      default: {},
+      typeOptions: { multipleValues: true },
+      displayOptions: {
+        show: {
+          resource: ["text"],
+          operation: ["chatCompletion", "modelResponse"],
+        },
+      },
+      options: [
+        {
+          name: "messageValues",
+          displayName: "Message",
+          values: [
+            {
+              displayName: "Text",
+              name: "text",
+              type: "string",
+              default: "",
+              typeOptions: { rows: 4 },
+            },
+            {
+              displayName: "Role",
+              name: "role",
+              type: "options",
+              default: "user",
+              options: [
+                { name: "User", value: "user" },
+                { name: "Assistant", value: "assistant" },
+                { name: "System", value: "system" },
+              ],
+            },
+          ],
+        },
+      ],
+    },
+    {
+      displayName: "Simplify Output",
+      name: "simplifyOutput",
+      type: "boolean",
+      default: false,
+      displayOptions: {
+        show: { resource: ["text"], operation: ["chatCompletion"] },
+      },
+    },
+    {
+      displayName: "Output Content as JSON",
+      name: "outputContentAsJson",
+      type: "boolean",
+      default: false,
+      displayOptions: {
+        show: { resource: ["text"], operation: ["chatCompletion"] },
+      },
+    },
+    {
+      displayName: "Text to Classify",
+      name: "textInput",
+      type: "string",
+      default: "",
+      typeOptions: { rows: 4 },
+      displayOptions: {
+        show: { resource: ["text"], operation: ["moderation"] },
+      },
+    },
+    {
+      displayName: "Use Stable Model",
+      name: "useStableModel",
+      type: "boolean",
+      default: false,
+      displayOptions: {
+        show: { resource: ["text"], operation: ["moderation"] },
+      },
+    },
+    {
+      displayName: "Model",
+      name: "model",
+      type: "resourceLocator",
+      default: "",
+      required: true,
+      displayOptions: {
+        show: {
+          resource: ["image"],
+          operation: ["analyze", "generate", "edit"],
+        },
+      },
+    },
+    {
+      displayName: "Prompt",
+      name: "prompt",
+      type: "string",
+      default: "",
+      required: true,
+      typeOptions: { rows: 4 },
+      displayOptions: {
+        show: { resource: ["image"], operation: ["generate", "edit"] },
+      },
+    },
+    {
+      displayName: "Respond with Image URL",
+      name: "respondWithImageUrl",
+      type: "boolean",
+      default: false,
+      displayOptions: {
+        show: { resource: ["image"], operation: ["generate"] },
+      },
+    },
+    {
+      displayName: "Question",
+      name: "textInput",
+      type: "string",
+      default: "",
+      required: true,
+      typeOptions: { rows: 4 },
+      displayOptions: {
+        show: { resource: ["image"], operation: ["analyze"] },
+      },
+    },
+    {
+      displayName: "Input Type",
+      name: "inputType",
+      type: "options",
+      default: "url",
+      displayOptions: {
+        show: { resource: ["image"], operation: ["analyze"] },
+      },
+      options: [
+        { name: "Image URL(s)", value: "url" },
+        { name: "Binary File(s)", value: "binary" },
+      ],
+    },
+    {
+      displayName: "Binary Property",
+      name: "inputDataFieldName",
+      type: "string",
+      default: "data",
+      displayOptions: {
+        show: {
+          resource: ["audio"],
+          operation: ["transcribe", "translate"],
+        },
+      },
+    },
+    {
+      displayName: "Binary Property",
+      name: "inputDataFieldName",
+      type: "string",
+      default: "data",
+      displayOptions: {
+        show: { resource: ["file"], operation: ["upload"] },
+      },
+    },
+    {
+      displayName: "File ID",
+      name: "fileId",
+      type: "string",
+      default: "",
+      required: true,
+      displayOptions: {
+        show: { resource: ["file"], operation: ["delete"] },
+      },
+    },
+    {
+      displayName: "Options",
+      name: "options",
+      type: "collection",
+      default: {},
+      displayOptions: {
+        show: {
+          resource: ["text"],
+          operation: ["chatCompletion", "modelResponse", "moderation"],
+        },
+      },
+      options: [
+        { displayName: "Temperature", name: "temperature", type: "number", default: 1 },
+        { displayName: "Max Tokens", name: "maxTokens", type: "number", default: 0 },
+        { displayName: "Frequency Penalty", name: "frequencyPenalty", type: "number", default: 0 },
+        { displayName: "Presence Penalty", name: "presencePenalty", type: "number", default: 0 },
+        { displayName: "Top P", name: "topP", type: "number", default: 1 },
+        {
+          displayName: "Number of Completions",
+          name: "numberOfCompletions",
+          type: "number",
+          default: 1,
+        },
+        { displayName: "Timeout (ms)", name: "timeout", type: "number", default: 120000 },
+      ],
+    },
+    {
+      displayName: "Options",
+      name: "options",
+      type: "collection",
+      default: {},
+      displayOptions: {
+        show: { resource: ["image"], operation: ["generate"] },
+      },
+      options: [
+        {
+          displayName: "Quality",
+          name: "quality",
+          type: "options",
+          default: "standard",
+          options: [
+            { name: "Standard", value: "standard" },
+            { name: "HD", value: "hd" },
+          ],
+        },
+        {
+          displayName: "Resolution",
+          name: "resolution",
+          type: "options",
+          default: "1024x1024",
+          options: [
+            { name: "1024x1024", value: "1024x1024" },
+            { name: "1792x1024", value: "1792x1024" },
+            { name: "1024x1792", value: "1024x1792" },
+          ],
+        },
+        {
+          displayName: "Style",
+          name: "style",
+          type: "options",
+          default: "vivid",
+          options: [
+            { name: "Natural", value: "natural" },
+            { name: "Vivid", value: "vivid" },
+          ],
+        },
+        { displayName: "Timeout (ms)", name: "timeout", type: "number", default: 120000 },
+      ],
+    },
+    {
+      displayName: "Options",
+      name: "options",
+      type: "collection",
+      default: {},
+      displayOptions: {
+        show: {
+          resource: ["audio"],
+          operation: ["transcribe", "translate"],
+        },
+      },
+      options: [
+        { displayName: "Language", name: "language", type: "string", default: "" },
+        { displayName: "Temperature", name: "temperature", type: "number", default: 1 },
+        { displayName: "Timeout (ms)", name: "timeout", type: "number", default: 120000 },
+      ],
+    },
+    {
+      displayName: "Options",
+      name: "options",
+      type: "collection",
+      default: {},
+      displayOptions: {
+        show: { resource: ["file"], operation: ["list", "upload"] },
+      },
+      options: [
+        {
+          displayName: "Purpose",
+          name: "purpose",
+          type: "options",
+          default: "",
+          options: [
+            { name: "Assistants", value: "assistants" },
+            { name: "Fine-tune", value: "fine-tune" },
+          ],
+        },
+        { displayName: "Timeout (ms)", name: "timeout", type: "number", default: 120000 },
+      ],
+    },
+  ],
+};
+
+const MEMORY_BUFFER_WINDOW_DOCS =
+  "https://docs.n8n.io/integrations/builtin/cluster-nodes/sub-nodes/n8n-nodes-langchain.memorybufferwindow.md";
+
+export const memoryBufferWindow: INodeTypeDescription = {
+  name: "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+  displayName: "Simple Memory",
+  category: "Actions",
+  group: ["input"],
+  version: 1,
+  description:
+    "Provides an in-process conversation-memory handle to an AI Agent on the ai_memory channel, keeping a sliding window of the most recent chat interactions keyed by session.",
+  defaults: { name: "Simple Memory" },
+  inputs: [],
+  outputs: ["ai_memory"],
+  icon: "Robot",
+  sources: [MEMORY_BUFFER_WINDOW_DOCS],
+  properties: [
+    {
+      displayName: "Session Key",
+      name: "sessionId",
+      type: "string",
+      default: "",
+      placeholder: "my_test_session",
+      description:
+        "Key used to store the memory in the workflow data. When blank, the session ID is retrieved from the connected Chat Trigger.",
+    },
+    {
+      displayName: "Context Window Length",
+      name: "contextWindowLength",
+      type: "number",
+      default: 5,
+      description: "Number of previous interactions to consider for context.",
+    },
+  ],
+};
+
+const OUTPUT_PARSER_STRUCTURED_DOCS =
+  "https://docs.n8n.io/integrations/builtin/cluster-nodes/sub-nodes/n8n-nodes-langchain.outputparserstructured.md";
+
+export const outputParserStructured: INodeTypeDescription = {
+  name: "@n8n/n8n-nodes-langchain.outputParserStructured",
+  displayName: "Structured Output Parser",
+  category: "Actions",
+  group: ["input"],
+  version: 1.3,
+  description:
+    "Provides a structured-output parser handle to a root AI node on the ai_outputParser channel, coercing the final text answer into a JSON object that conforms to a user-defined schema.",
+  defaults: { name: "Structured Output Parser" },
+  inputs: [],
+  outputs: ["ai_outputParser"],
+  icon: "Robot",
+  sources: [OUTPUT_PARSER_STRUCTURED_DOCS],
+  properties: [
+    {
+      displayName: "Schema Type",
+      name: "schemaType",
+      type: "options",
+      default: "",
+      noDataExpression: true,
+      options: [
+        { name: "Generate from JSON Example", value: "" },
+        { name: "Define using JSON Schema", value: "manual" },
+      ],
+    },
+    {
+      displayName: "JSON Example",
+      name: "jsonSchemaExample",
+      type: "string",
+      default: "",
+      typeOptions: { rows: 8 },
+      displayOptions: { hide: { schemaType: ["manual"] } },
+      description:
+        "A JSON object whose property names and types are used to auto-generate the schema. Actual values are ignored. Every field is treated as mandatory.",
+    },
+    {
+      displayName: "JSON Schema",
+      name: "inputSchema",
+      type: "string",
+      default: "",
+      typeOptions: { rows: 8 },
+      displayOptions: { show: { schemaType: ["manual"] } },
+      description: "A hand-written JSON Schema string. $ref references are not supported.",
+    },
+    {
+      displayName: "Auto-Fix",
+      name: "autoFix",
+      type: "boolean",
+      default: false,
+      description: "When true, invalid model output is auto-corrected before parsing fails.",
+    },
+  ],
+};
+
+const WHATSAPP_DOCS =
+  "https://docs.n8n.io/integrations/builtin/app-nodes/n8n-nodes-base.whatsapp.md";
+
+export const vectorStoreInMemory: INodeTypeDescription = {
+  name: "@n8n/n8n-nodes-langchain.vectorStoreInMemory",
+  displayName: "Simple Vector Store",
+  category: "AI",
+  group: ["input"],
+  version: [1, 1.1, 1.2, 1.3],
+  defaultVersion: 1.3,
+  description:
+    "Provides an in-memory vector store for RAG workflows. Supports insert, retrieve, and load modes. Data is stored in server memory and lost on n8n restart. The memoryKey is shared across Insert/Retrieve/Load nodes in the same workflow.",
+  defaults: { name: "Simple Vector Store" },
+  inputs: ["main", "ai_embedding", "ai_document", "ai_reranker"],
+  outputs: ["main", "ai_tool", "ai_retriever"],
+  icon: "Database",
+  sources: ["https://docs.n8n.io/integrations/builtin/cluster-nodes/root-nodes/n8n-nodes-langchain.vectorstoreinmemory/"],
+  properties: [
+    {
+      displayName: "Mode",
+      name: "mode",
+      type: "options",
+      default: "insert",
+      noDataExpression: true,
+      options: [
+        { name: "Insert", value: "insert" },
+        { name: "Retrieve (as Retriever/Tool)", value: "retrieve" },
+        { name: "Load (Query & Return Documents)", value: "load" },
+      ],
+      description: "Operation mode for the vector store.",
+    },
+    {
+      displayName: "Memory Key",
+      name: "memoryKey",
+      type: "resourceLocator",
+      default: { mode: "list", value: "vector_store_key" },
+      required: true,
+      description:
+        'Key to identify the in-memory vector store. In v1.2+, this is a resourceLocator with "list" (search existing keys) and "manual" modes. Default: "vector_store_key". Keys are shared across workflows.',
+      modes: [
+        {
+          displayName: "From List",
+          name: "list",
+          type: "list",
+          typeOptions: {
+            searchListMethod: "getMemoryKeysList",
+            searchable: true,
+          },
+        },
+        {
+          displayName: "Manual",
+          name: "manual",
+          type: "string",
+          placeholder: "vector_store_key",
+        },
+      ],
+    },
+    {
+      displayName: "Clear Store Before Insert",
+      name: "clearStore",
+      type: "boolean",
+      default: false,
+      displayOptions: { show: { mode: ["insert"] } },
+      description: "Whether to clear the store before inserting new documents.",
+    },
+    {
+      displayName: "Use Reranker",
+      name: "useReranker",
+      type: "boolean",
+      default: false,
+      displayOptions: { show: { mode: ["retrieve"] } },
+      description: "When true, requires a Reranker sub-node on the ai_reranker channel.",
+    },
+    {
+      displayName: "Prompt",
+      name: "prompt",
+      type: "string",
+      default: "",
+      typeOptions: { rows: 4 },
+      required: true,
+      displayOptions: { show: { mode: ["load"] } },
+      description: "Query text to search for. Evaluated per input item via expressions.",
+    },
+    {
+      displayName: "Top K",
+      name: "topK",
+      type: "number",
+      default: 4,
+      displayOptions: { show: { mode: ["load"] } },
+      description: "Maximum number of documents to return.",
+    },
+    {
+      displayName: "Include Document Metadata",
+      name: "includeDocumentMetadata",
+      type: "boolean",
+      default: false,
+      displayOptions: { show: { mode: ["load"] } },
+      description: "Whether to include document metadata in the output.",
+    },
+    {
+      displayName: "Use Reranker",
+      name: "useReranker",
+      type: "boolean",
+      default: false,
+      displayOptions: { show: { mode: ["load"] } },
+      description: "When true, requires a Reranker sub-node on the ai_reranker channel.",
+    },
+  ],
+};
+
+export const whatsApp: INodeTypeDescription = {
+  name: "n8n-nodes-base.whatsApp",
+  displayName: "WhatsApp Business Cloud",
+  category: "Actions",
+  group: ["output"],
+  version: [1, 1.1],
+  defaultVersion: 1.1,
+  description: "Send messages and manage media via the WhatsApp Business Cloud API.",
+  defaults: { name: "WhatsApp" },
+  inputs: ["main"],
+  outputs: ["main"],
+  icon: "MessageCircle",
+  credentials: [{ name: "whatsAppApi", required: true }],
+  sources: [WHATSAPP_DOCS],
+  properties: [
+    {
+      displayName: "Resource",
+      name: "resource",
+      type: "options",
+      default: "message",
+      noDataExpression: true,
+      options: [
+        { name: "Message", value: "message" },
+        { name: "Media", value: "media" },
+      ],
+    },
+    {
+      displayName: "Operation",
+      name: "operation",
+      type: "options",
+      default: "send",
+      noDataExpression: true,
+      displayOptions: { show: { resource: ["message"] } },
+      options: [
+        { name: "Send", value: "send" },
+        { name: "Send and Wait", value: "sendAndWait" },
+        { name: "Send Template", value: "sendTemplate" },
+      ],
+    },
+    {
+      displayName: "Operation",
+      name: "operation",
+      type: "options",
+      default: "mediaUpload",
+      noDataExpression: true,
+      displayOptions: { show: { resource: ["media"] } },
+      options: [
+        { name: "Upload Media", value: "mediaUpload" },
+        { name: "Get Media URL", value: "mediaUrlGet" },
+        { name: "Delete Media", value: "mediaDelete" },
+      ],
+    },
+    {
+      displayName: "Phone Number ID",
+      name: "phoneNumberId",
+      type: "options",
+      default: "",
+      required: true,
+      displayOptions: {
+        show: {
+          resource: ["message"],
+          operation: ["send", "sendAndWait", "sendTemplate"],
+        },
+      },
+      description: "WhatsApp phone number ID to send from.",
+    },
+    {
+      displayName: "Recipient Phone Number",
+      name: "recipientPhoneNumber",
+      type: "string",
+      default: "",
+      required: true,
+      displayOptions: {
+        show: {
+          resource: ["message"],
+          operation: ["send", "sendAndWait", "sendTemplate"],
+        },
+      },
+      description: "Recipient phone number with country code.",
+    },
+    {
+      displayName: "Message Type",
+      name: "messageType",
+      type: "options",
+      default: "text",
+      displayOptions: { show: { resource: ["message"], operation: ["send", "sendAndWait"] } },
+      options: [
+        { name: "Text", value: "text" },
+        { name: "Image", value: "image" },
+        { name: "Video", value: "video" },
+        { name: "Audio", value: "audio" },
+        { name: "Document", value: "document" },
+        { name: "Sticker", value: "sticker" },
+        { name: "Location", value: "location" },
+        { name: "Contacts", value: "contacts" },
+      ],
+    },
+    {
+      displayName: "Message Text",
+      name: "textBody",
+      type: "string",
+      default: "",
+      required: true,
+      typeOptions: { rows: 4 },
+      displayOptions: {
+        show: {
+          resource: ["message"],
+          operation: ["send", "sendAndWait"],
+          messageType: ["text"],
+        },
+      },
+      description: "Text body of the message (max 4096 chars).",
+    },
+    {
+      displayName: "Media Source",
+      name: "mediaPath",
+      type: "options",
+      default: "useMediaLink",
+      displayOptions: {
+        show: {
+          resource: ["message"],
+          operation: ["send", "sendAndWait"],
+          messageType: ["image", "video", "audio", "document", "sticker"],
+        },
+      },
+      options: [
+        { name: "Use Media Link", value: "useMediaLink" },
+        { name: "Use Media ID", value: "useMediaId" },
+        { name: "Use n8n Binary", value: "useMedian8n" },
+      ],
+    },
+    {
+      displayName: "Media Link",
+      name: "mediaLink",
+      type: "string",
+      default: "",
+      displayOptions: {
+        show: {
+          resource: ["message"],
+          operation: ["send", "sendAndWait"],
+          messageType: ["image", "video", "audio", "document", "sticker"],
+          mediaPath: ["useMediaLink"],
+        },
+      },
+      description: "Public URL of the media file.",
+    },
+    {
+      displayName: "Media ID",
+      name: "mediaId",
+      type: "string",
+      default: "",
+      displayOptions: {
+        show: {
+          resource: ["message"],
+          operation: ["send", "sendAndWait"],
+          messageType: ["image", "video", "audio", "document", "sticker"],
+          mediaPath: ["useMediaId"],
+        },
+      },
+      description: "Previously uploaded media ID.",
+    },
+    {
+      displayName: "Binary Property",
+      name: "mediaPropertyName",
+      type: "string",
+      default: "data",
+      required: true,
+      displayOptions: {
+        show: {
+          resource: ["message"],
+          operation: ["send", "sendAndWait"],
+          messageType: ["image", "video", "audio", "document", "sticker"],
+          mediaPath: ["useMedian8n"],
+        },
+      },
+      description: "Name of the binary property containing the media file.",
+    },
+    {
+      displayName: "Filename",
+      name: "mediaFilename",
+      type: "string",
+      default: "",
+      displayOptions: {
+        show: {
+          resource: ["message"],
+          operation: ["send", "sendAndWait"],
+          messageType: ["document"],
+          mediaPath: ["useMediaId", "useMedian8n"],
+        },
+      },
+      description: "Filename for the document.",
+    },
+    {
+      displayName: "Caption",
+      name: "mediaCaption",
+      type: "string",
+      default: "",
+      displayOptions: {
+        show: {
+          resource: ["message"],
+          operation: ["send", "sendAndWait"],
+          messageType: ["image", "video", "audio", "document", "sticker"],
+        },
+      },
+      description: "Caption for the media file.",
+    },
+    {
+      displayName: "Longitude",
+      name: "longitude",
+      type: "number",
+      default: 0,
+      required: true,
+      typeOptions: { minValue: -180, maxValue: 180 },
+      displayOptions: {
+        show: {
+          resource: ["message"],
+          operation: ["send", "sendAndWait"],
+          messageType: ["location"],
+        },
+      },
+      description: "Longitude (-180 to 180).",
+    },
+    {
+      displayName: "Latitude",
+      name: "latitude",
+      type: "number",
+      default: 0,
+      required: true,
+      typeOptions: { minValue: -90, maxValue: 90 },
+      displayOptions: {
+        show: {
+          resource: ["message"],
+          operation: ["send", "sendAndWait"],
+          messageType: ["location"],
+        },
+      },
+      description: "Latitude (-90 to 90).",
+    },
+    {
+      displayName: "Location Name",
+      name: "locationName",
+      type: "string",
+      default: "",
+      displayOptions: {
+        show: {
+          resource: ["message"],
+          operation: ["send", "sendAndWait"],
+          messageType: ["location"],
+        },
+      },
+      description: "Name of the location.",
+    },
+    {
+      displayName: "Location Address",
+      name: "locationAddress",
+      type: "string",
+      default: "",
+      displayOptions: {
+        show: {
+          resource: ["message"],
+          operation: ["send", "sendAndWait"],
+          messageType: ["location"],
+        },
+      },
+      description: "Address of the location.",
+    },
+    {
+      displayName: "Template",
+      name: "template",
+      type: "options",
+      default: "",
+      required: true,
+      displayOptions: {
+        show: { resource: ["message"], operation: ["sendTemplate"] },
+      },
+      description: "Template in the format name|language.",
+    },
+    {
+      displayName: "Components",
+      name: "components",
+      type: "fixedCollection",
+      default: [],
+      typeOptions: { multipleValues: true },
+      displayOptions: {
+        show: { resource: ["message"], operation: ["sendTemplate"] },
+      },
+      options: [
+        {
+          name: "component",
+          displayName: "Component",
+          values: [
+            {
+              displayName: "Type",
+              name: "type",
+              type: "options",
+              default: "body",
+              options: [
+                { name: "Body", value: "body" },
+                { name: "Header", value: "header" },
+                { name: "Button", value: "button" },
+              ],
+            },
+            {
+              displayName: "Sub Type",
+              name: "sub_type",
+              type: "options",
+              default: "quick_reply",
+              displayOptions: { show: { type: ["button"] } },
+              options: [
+                { name: "Quick Reply", value: "quick_reply" },
+                { name: "URL", value: "url" },
+              ],
+            },
+            {
+              displayName: "Index",
+              name: "index",
+              type: "number",
+              default: 0,
+              typeOptions: { minValue: 0, maxValue: 2 },
+              displayOptions: { show: { type: ["button"] } },
+            },
+          ],
+        },
+      ],
+    },
+    {
+      displayName: "Phone Number ID",
+      name: "phoneNumberId",
+      type: "options",
+      default: "",
+      required: true,
+      displayOptions: { show: { resource: ["media"], operation: ["mediaUpload"] } },
+      description: "WhatsApp phone number ID for the upload.",
+    },
+    {
+      displayName: "Binary Property",
+      name: "mediaPropertyName",
+      type: "string",
+      default: "data",
+      required: true,
+      displayOptions: { show: { resource: ["media"], operation: ["mediaUpload"] } },
+      description: "Name of the binary property containing the media file.",
+    },
+    {
+      displayName: "Filename",
+      name: "mediaFileName",
+      type: "string",
+      default: "",
+      displayOptions: { show: { resource: ["media"], operation: ["mediaUpload"] } },
+      description: "Optional filename for the upload.",
+    },
+    {
+      displayName: "Media ID",
+      name: "mediaGetId",
+      type: "string",
+      default: "",
+      required: true,
+      displayOptions: { show: { resource: ["media"], operation: ["mediaUrlGet"] } },
+      description: "Media ID to retrieve the URL for.",
+    },
+    {
+      displayName: "Media ID",
+      name: "mediaDeleteId",
+      type: "string",
+      default: "",
+      required: true,
+      displayOptions: { show: { resource: ["media"], operation: ["mediaDelete"] } },
+      description: "Media ID to delete.",
+    },
+  ],
+};
+
+const TWILIO_DOCS = "https://docs.n8n.io/integrations/builtin/app-nodes/n8n-nodes-base.twilio/";
+
+export const twilio: INodeTypeDescription = {
+  name: "n8n-nodes-base.twilio",
+  displayName: "Twilio",
+  category: "Actions",
+  group: ["output"],
+  version: [1],
+  defaultVersion: 1,
+  description: "Send SMS/MMS messages, make calls, and manage messages via the Twilio API.",
+  defaults: { name: "Twilio" },
+  inputs: ["main"],
+  outputs: ["main"],
+  icon: "MessageCircle",
+  credentials: [{ name: "twilioApi", required: true }],
+  sources: [TWILIO_DOCS],
+  properties: [
+    {
+      displayName: "Resource",
+      name: "resource",
+      type: "options",
+      default: "sms",
+      noDataExpression: true,
+      options: [
+        { name: "SMS", value: "sms" },
+        { name: "Call", value: "call" },
+        { name: "Message", value: "message" },
+      ],
+    },
+    {
+      displayName: "Operation",
+      name: "operation",
+      type: "options",
+      default: "send",
+      noDataExpression: true,
+      displayOptions: { show: { resource: ["sms"] } },
+      options: [{ name: "Send", value: "send" }],
+    },
+    {
+      displayName: "Operation",
+      name: "operation",
+      type: "options",
+      default: "make",
+      noDataExpression: true,
+      displayOptions: { show: { resource: ["call"] } },
+      options: [{ name: "Make", value: "make" }],
+    },
+    {
+      displayName: "Operation",
+      name: "operation",
+      type: "options",
+      default: "get",
+      noDataExpression: true,
+      displayOptions: { show: { resource: ["message"] } },
+      options: [
+        { name: "Get", value: "get" },
+        { name: "Get All", value: "getAll" },
+        { name: "Delete", value: "delete" },
+      ],
+    },
+    {
+      displayName: "From Number",
+      name: "fromNumber",
+      type: "string",
+      default: "",
+      required: true,
+      displayOptions: { show: { resource: ["sms", "call"] } },
+      description: "Sender phone number in E.164 format.",
+    },
+    {
+      displayName: "To Number",
+      name: "toNumber",
+      type: "string",
+      default: "",
+      required: true,
+      displayOptions: { show: { resource: ["sms", "call"] } },
+      description: "Recipient phone number in E.164 format.",
+    },
+    {
+      displayName: "Message",
+      name: "message",
+      type: "string",
+      default: "",
+      required: true,
+      displayOptions: { show: { resource: ["sms"] } },
+      description: "The message body.",
+    },
+    {
+      displayName: "TwiML URL",
+      name: "twimlUrl",
+      type: "string",
+      default: "",
+      displayOptions: { show: { resource: ["call"] } },
+      description: "URL returning TwiML instructions.",
+    },
+    {
+      displayName: "TwiML Message",
+      name: "twimlMessage",
+      type: "string",
+      default: "",
+      displayOptions: { show: { resource: ["call"] } },
+      description: "Inline TwiML.",
+    },
+    {
+      displayName: "Message ID",
+      name: "messageId",
+      type: "string",
+      default: "",
+      required: true,
+      displayOptions: { show: { resource: ["message"], operation: ["get", "delete"] } },
+      description: "Message SID.",
+    },
+    {
+      displayName: "Return All",
+      name: "returnAll",
+      type: "boolean",
+      default: false,
+      displayOptions: { show: { resource: ["message"], operation: ["getAll"] } },
+      description: "Whether to return all results or only up to the limit.",
+    },
+    {
+      displayName: "Limit",
+      name: "limit",
+      type: "number",
+      default: 50,
+      displayOptions: {
+        show: { resource: ["message"], operation: ["getAll"], returnAll: [false] },
+      },
+      description: "Maximum number of results to return.",
+    },
+  ],
+};
+
+const DOCUMENT_DEFAULT_DATA_LOADER_DOCS =
+  "https://docs.n8n.io/integrations/builtin/cluster-nodes/sub-nodes/n8n-nodes-langchain.documentdefaultdataloader.md";
+
+export const documentDefaultDataLoader: INodeTypeDescription = {
+  name: "@n8n/n8n-nodes-langchain.documentDefaultDataLoader",
+  displayName: "Default Data Loader",
+  category: "AI",
+  group: ["input"],
+  version: 1,
+  description:
+    "Loads binary file content or JSON data from the input items, splits it into document chunks, and provides those documents to a parent root node (Vector Store Insert Documents, or Summarization Chain) on the ai_documentLoader channel.",
+  defaults: { name: "Default Data Loader" },
+  inputs: ["ai_textSplitter"],
+  outputs: ["ai_documentLoader"],
+  icon: "FileText",
+  sources: [DOCUMENT_DEFAULT_DATA_LOADER_DOCS],
+  properties: [
+    {
+      displayName: "Text Splitting",
+      name: "textSplitter",
+      type: "options",
+      default: "simple",
+      noDataExpression: true,
+      options: [
+        { name: "Simple (Recursive Character Text Splitter)", value: "simple" },
+        { name: "Custom (Connect a Text Splitter)", value: "custom" },
+      ],
+      description:
+        "Simple uses the built-in Recursive Character Text Splitter (chunk size 1000, overlap 200). Custom delegates to a text splitter sub-node connected on ai_textSplitter.",
+    },
+    {
+      displayName: "Type of Data",
+      name: "dataType",
+      type: "options",
+      default: "json",
+      noDataExpression: true,
+      options: [
+        { name: "JSON", value: "json" },
+        { name: "Binary", value: "binary" },
+      ],
+      description: "Whether to load JSON data or binary file content from the input items.",
+    },
+    {
+      displayName: "Mode",
+      name: "mode",
+      type: "options",
+      default: "all",
+      noDataExpression: true,
+      options: [
+        { name: "Load All Input Data", value: "all" },
+        { name: "Load Specific Data", value: "specific" },
+      ],
+      description:
+        "Load All uses all the node's input data. Load Specific defines the data with text and expressions.",
+    },
+    {
+      displayName: "Data",
+      name: "data",
+      type: "string",
+      default: "",
+      typeOptions: { rows: 4 },
+      displayOptions: { show: { mode: ["specific"] } },
+      description:
+        "A mix of text and {{ }} expressions defining the data to load. Expressions resolve against the first input item (sub-node rule).",
+    },
+    {
+      displayName: "Data Format",
+      name: "dataFormat",
+      type: "options",
+      default: "auto",
+      noDataExpression: true,
+      displayOptions: { show: { dataType: ["binary"] } },
+      options: [
+        { name: "Automatically Detect by MIME Type", value: "auto" },
+        { name: "Text", value: "text/plain" },
+        { name: "JSON", value: "application/json" },
+        { name: "PDF", value: "application/pdf" },
+      ],
+      description:
+        "File MIME type. A specific format that doesn't match the incoming MIME type causes an error. Auto-detect falls back to text when no MIME type matches.",
+    },
+    {
+      displayName: "Metadata",
+      name: "metadata",
+      type: "fixedCollection",
+      default: {},
+      typeOptions: { multipleValues: true },
+      description:
+        "Key/value metadata attached to each document so it travels into the vector store and can be filtered on retrieval.",
+      options: [
+        {
+          name: "values",
+          displayName: "Entry",
+          values: [
+            { displayName: "Key", name: "key", type: "string", default: "" },
+            { displayName: "Value", name: "value", type: "string", default: "" },
+          ],
+        },
+      ],
+    },
+  ],
+};
+
+const TEXT_SPLITTER_RECURSIVE_DOCS =
+  "https://docs.n8n.io/integrations/builtin/cluster-nodes/sub-nodes/n8n-nodes-langchain.textsplitterrecursivecharactertextsplitter.md";
+
+export const textSplitterRecursiveCharacterTextSplitter: INodeTypeDescription = {
+  name: "@n8n/n8n-nodes-langchain.textSplitterRecursiveCharacterTextSplitter",
+  displayName: "Recursive Character Text Splitter",
+  category: "AI",
+  group: ["input"],
+  version: 1,
+  description:
+    "Splits document text recursively by a hierarchy of separators (paragraphs, lines, words, characters) to keep related content together as long as possible. Provides a text-splitter handle on the ai_textSplitter channel for a parent root node to consume.",
+  defaults: { name: "Recursive Character Text Splitter" },
+  inputs: [],
+  outputs: ["ai_textSplitter"],
+  icon: "Scissors",
+  sources: [TEXT_SPLITTER_RECURSIVE_DOCS],
+  properties: [
+    {
+      displayName: "Chunk Size",
+      name: "chunkSize",
+      type: "number",
+      default: 1000,
+      description: "Maximum number of characters per chunk.",
+    },
+    {
+      displayName: "Chunk Overlap",
+      name: "chunkOverlap",
+      type: "number",
+      default: 200,
+      description:
+        "Number of characters of overlap between adjacent chunks to preserve context across boundaries.",
+    },
+    {
+      displayName: "Separators",
+      name: "separators",
+      type: "json",
+      default: {},
+      description:
+        'Hierarchy of separators to try in order (e.g. ["\\n\\n","\\n"," ",""]). Overrides the built-in default hierarchy.',
+    },
+    {
+      displayName: "Keep Separator",
+      name: "keepSeparator",
+      type: "boolean",
+      default: true,
+      description:
+        "Whether to keep the matched separator at the end of each chunk (except the last).",
+    },
+  ],
+};
+
+const EMBEDDINGS_OPENAI_DOCS =
+  "https://docs.n8n.io/integrations/builtin/cluster-nodes/sub-nodes/n8n-nodes-langchain.embeddingsopenai.md";
+
+export const embeddingsOpenAi: INodeTypeDescription = {
+  name: "@n8n/n8n-nodes-langchain.embeddingsOpenAi",
+  displayName: "Embeddings OpenAI",
+  category: "AI",
+  group: ["input"],
+  version: 1,
+  description:
+    "Configures an OpenAI embeddings model and supplies it to a parent root node on the ai_embedding channel. The parent invokes the provider with documents/text to embed.",
+  defaults: { name: "Embeddings OpenAI" },
+  inputs: [],
+  outputs: ["ai_embedding"],
+  icon: "Robot",
+  credentials: [{ name: "openAiApi", required: true }],
+  sources: [EMBEDDINGS_OPENAI_DOCS],
+  properties: [
+    {
+      displayName: "Model",
+      name: "model",
+      type: "options",
+      default: "text-embedding-3-small",
+      required: true,
+      options: [
+        { name: "text-embedding-ada-002", value: "text-embedding-ada-002" },
+        { name: "text-embedding-3-small", value: "text-embedding-3-small" },
+        { name: "text-embedding-3-large", value: "text-embedding-3-large" },
+      ],
+      description:
+        "The OpenAI embeddings model to use. Custom models can be supplied via expression.",
+    },
+    {
+      displayName: "Base URL",
+      name: "baseURL",
+      type: "string",
+      default: "",
+      description:
+        "Base URL for self-hosted / OpenAI-compatible endpoints. Empty = official OpenAI.",
+    },
+    {
+      displayName: "Batch Size",
+      name: "batchSize",
+      type: "number",
+      default: 512,
+      description: "Maximum number of documents to send in each request.",
+    },
+    {
+      displayName: "Strip New Lines",
+      name: "stripNewLines",
+      type: "boolean",
+      default: true,
+      description: "Whether to remove new lines from input text before embedding.",
+    },
+    {
+      displayName: "Timeout",
+      name: "timeout",
+      type: "number",
+      default: -1,
+      description: "Request timeout in seconds. Set to -1 for no timeout.",
+    },
+  ],
+};
+
+const TELEGRAM_DOCS =
+  "https://docs.n8n.io/integrations/builtin/app-nodes/n8n-nodes-base.telegram.md";
+
+export const telegram: INodeTypeDescription = {
+  name: "n8n-nodes-base.telegram",
+  displayName: "Telegram",
+  category: "Communication",
+  group: ["output"],
+  version: [1, 1.1, 1.2],
+  defaultVersion: 1.2,
+  description:
+    "Send, edit, delete, and pin messages in a Telegram chat; manage chats, members, and administrators; answer callback and inline queries; download files via the Telegram Bot API.",
+  defaults: { name: "Telegram" },
+  inputs: ["main"],
+  outputs: ["main"],
+  icon: "MessageCircle",
+  credentials: [{ name: "telegramApi", required: true }],
+  sources: [TELEGRAM_DOCS],
+  properties: [
+    {
+      displayName: "Resource",
+      name: "resource",
+      type: "options",
+      default: "message",
+      noDataExpression: true,
+      options: [
+        { name: "Chat", value: "chat" },
+        { name: "Callback", value: "callback" },
+        { name: "File", value: "file" },
+        { name: "Message", value: "message" },
+      ],
+    },
+    {
+      displayName: "Operation",
+      name: "operation",
+      type: "options",
+      default: "sendMessage",
+      noDataExpression: true,
+      displayOptions: { show: { resource: ["chat"] } },
+      options: [
+        { name: "Get", value: "get" },
+        { name: "Get Administrators", value: "getAdministrators" },
+        { name: "Get Member", value: "getMember" },
+        { name: "Leave", value: "leave" },
+        { name: "Set Description", value: "setDescription" },
+        { name: "Set Title", value: "setTitle" },
+      ],
+    },
+    {
+      displayName: "Operation",
+      name: "operation",
+      type: "options",
+      default: "answerQuery",
+      noDataExpression: true,
+      displayOptions: { show: { resource: ["callback"] } },
+      options: [
+        { name: "Answer Query", value: "answerQuery" },
+        { name: "Answer Inline Query", value: "answerInlineQuery" },
+      ],
+    },
+    {
+      displayName: "Operation",
+      name: "operation",
+      type: "options",
+      default: "get",
+      noDataExpression: true,
+      displayOptions: { show: { resource: ["file"] } },
+      options: [{ name: "Get", value: "get" }],
+    },
+    {
+      displayName: "Operation",
+      name: "operation",
+      type: "options",
+      default: "sendMessage",
+      noDataExpression: true,
+      displayOptions: { show: { resource: ["message"] } },
+      options: [
+        { name: "Delete Chat Message", value: "deleteMessage" },
+        { name: "Edit Message Text", value: "editMessageText" },
+        { name: "Pin Chat Message", value: "pinChatMessage" },
+        { name: "Send Animation", value: "sendAnimation" },
+        { name: "Send Audio", value: "sendAudio" },
+        { name: "Send Chat Action", value: "sendChatAction" },
+        { name: "Send Document", value: "sendDocument" },
+        { name: "Send Location", value: "sendLocation" },
+        { name: "Send Message", value: "sendMessage" },
+        { name: "Send Photo", value: "sendPhoto" },
+        { name: "Send Sticker", value: "sendSticker" },
+        { name: "Send Video", value: "sendVideo" },
+        { name: "Send and Wait for Response", value: "sendAndWait" },
+        { name: "Unpin Chat Message", value: "unpinChatMessage" },
+      ],
+    },
+    {
+      displayName: "Chat ID",
+      name: "chatId",
+      type: "string",
+      default: "",
+      displayOptions: {
+        show: {
+          resource: ["chat", "message"],
+          operation: [
+            "get",
+            "getAdministrators",
+            "getMember",
+            "leave",
+            "setDescription",
+            "setTitle",
+            "deleteMessage",
+            "editMessageText",
+            "pinChatMessage",
+            "sendAnimation",
+            "sendAudio",
+            "sendChatAction",
+            "sendDocument",
+            "sendLocation",
+            "sendMessage",
+            "sendPhoto",
+            "sendSticker",
+            "sendVideo",
+            "sendAndWait",
+            "unpinChatMessage",
+          ],
+        },
+      },
+      description: "Chat ID numeric or @channelusername.",
+    },
+    {
+      displayName: "Text",
+      name: "text",
+      type: "string",
+      typeOptions: { rows: 4 },
+      default: "",
+      displayOptions: {
+        show: {
+          resource: ["message"],
+          operation: ["sendMessage", "editMessageText"],
+        },
+      },
+      description: "Message text (max 4096 chars).",
+    },
+    {
+      displayName: "Message ID",
+      name: "messageId",
+      type: "string",
+      default: "",
+      displayOptions: {
+        show: {
+          resource: ["message"],
+          operation: ["deleteMessage", "editMessageText", "pinChatMessage", "unpinChatMessage"],
+        },
+      },
+      description: "Telegram message id.",
+    },
+    {
+      displayName: "File ID",
+      name: "fileId",
+      type: "string",
+      default: "",
+      required: true,
+      displayOptions: { show: { resource: ["file"], operation: ["get"] } },
+      description: "Telegram file_id.",
+    },
+    {
+      displayName: "Download",
+      name: "download",
+      type: "boolean",
+      default: false,
+      displayOptions: { show: { resource: ["file"], operation: ["get"] } },
+      description: "If true, fetch file bytes into output binary.",
+    },
+    {
+      displayName: "User ID",
+      name: "userId",
+      type: "string",
+      default: "",
+      displayOptions: {
+        show: { resource: ["chat"], operation: ["getMember"] },
+      },
+      description: "Target user id.",
+    },
+    {
+      displayName: "Description",
+      name: "description",
+      type: "string",
+      default: "",
+      displayOptions: {
+        show: { resource: ["chat"], operation: ["setDescription"] },
+      },
+      description: "New chat description (max 255 chars).",
+    },
+    {
+      displayName: "Title",
+      name: "title",
+      type: "string",
+      default: "",
+      displayOptions: {
+        show: { resource: ["chat"], operation: ["setTitle"] },
+      },
+      description: "New chat title (max 255 chars).",
+    },
+    {
+      displayName: "Query ID",
+      name: "queryId",
+      type: "string",
+      default: "",
+      required: true,
+      displayOptions: { show: { resource: ["callback"] } },
+      description: "Callback / inline query id.",
+    },
+    {
+      displayName: "Results",
+      name: "results",
+      type: "string",
+      default: "",
+      displayOptions: { show: { resource: ["callback"] } },
+      description: "JSON-serialized array of InlineQueryResults.",
+    },
+    {
+      displayName: "Latitude",
+      name: "latitude",
+      type: "number",
+      default: 0,
+      displayOptions: {
+        show: { resource: ["message"], operation: ["sendLocation"] },
+      },
+      description: "Latitude in degrees.",
+    },
+    {
+      displayName: "Longitude",
+      name: "longitude",
+      type: "number",
+      default: 0,
+      displayOptions: {
+        show: { resource: ["message"], operation: ["sendLocation"] },
+      },
+      description: "Longitude in degrees.",
+    },
+    {
+      displayName: "Chat Action",
+      name: "action",
+      type: "options",
+      default: "typing",
+      displayOptions: {
+        show: { resource: ["message"], operation: ["sendChatAction"] },
+      },
+      options: [
+        { name: "Find Location", value: "findLocation" },
+        { name: "Typing", value: "typing" },
+        { name: "Record Video", value: "record_video" },
+        { name: "Record Voice", value: "record_voice" },
+        { name: "Upload Video", value: "upload_video" },
+        { name: "Upload Voice", value: "upload_voice" },
+        { name: "Upload Photo", value: "upload_photo" },
+        { name: "Upload Document", value: "upload_document" },
+        { name: "Choose Sticker", value: "choose_sticker" },
+      ],
+    },
+    {
+      displayName: "Message",
+      name: "message",
+      type: "string",
+      typeOptions: { rows: 4 },
+      default: "",
+      displayOptions: {
+        show: { resource: ["message"], operation: ["sendAndWait"] },
+      },
+      description: "Message to send.",
+    },
+    {
+      displayName: "Response Type",
+      name: "responseType",
+      type: "options",
+      default: "approval",
+      displayOptions: {
+        show: { resource: ["message"], operation: ["sendAndWait"] },
+      },
+      options: [
+        { name: "Approval", value: "approval" },
+        { name: "Free Text", value: "freeText" },
+        { name: "Custom Form", value: "customForm" },
+      ],
+    },
+    {
+      displayName: "Type of Approval",
+      name: "typeOfApproval",
+      type: "options",
+      default: "single",
+      displayOptions: {
+        show: {
+          resource: ["message"],
+          operation: ["sendAndWait"],
+          responseType: ["approval"],
+        },
+      },
+      options: [
+        { name: "Approve Only", value: "single" },
+        { name: "Approve and Decline", value: "double" },
+      ],
+    },
+    {
+      displayName: "Button Label",
+      name: "buttonLabel",
+      type: "string",
+      default: "Approve",
+      displayOptions: {
+        show: { resource: ["message"], operation: ["sendAndWait"] },
+      },
+    },
+    {
+      displayName: "Decline Button Label",
+      name: "declineButtonLabel",
+      type: "string",
+      default: "Decline",
+      displayOptions: {
+        show: {
+          resource: ["message"],
+          operation: ["sendAndWait"],
+          responseType: ["approval"],
+          typeOfApproval: ["double"],
+        },
+      },
+    },
+    {
+      displayName: "Limit Wait Time",
+      name: "limitWaitTime",
+      type: "boolean",
+      default: false,
+      displayOptions: {
+        show: { resource: ["message"], operation: ["sendAndWait"] },
+      },
+    },
+    {
+      displayName: "Send Binary Data",
+      name: "binaryFile",
+      type: "boolean",
+      default: false,
+      displayOptions: {
+        show: {
+          resource: ["message"],
+          operation: [
+            "sendAnimation",
+            "sendAudio",
+            "sendDocument",
+            "sendPhoto",
+            "sendSticker",
+            "sendVideo",
+          ],
+        },
+      },
+    },
+    {
+      displayName: "Binary Property",
+      name: "binaryPropertyName",
+      type: "string",
+      default: "data",
+      displayOptions: {
+        show: {
+          resource: ["message"],
+          binaryFile: [true],
+        },
+      },
+      description: "Input binary field name to upload.",
+    },
+    {
+      displayName: "Animation",
+      name: "animation",
+      type: "string",
+      default: "",
+      displayOptions: {
+        show: {
+          resource: ["message"],
+          operation: ["sendAnimation"],
+          binaryFile: [false],
+        },
+      },
+      description: "file_id or HTTP URL.",
+    },
+    {
+      displayName: "Audio",
+      name: "audio",
+      type: "string",
+      default: "",
+      displayOptions: {
+        show: {
+          resource: ["message"],
+          operation: ["sendAudio"],
+          binaryFile: [false],
+        },
+      },
+      description: "file_id or HTTP URL.",
+    },
+    {
+      displayName: "Document",
+      name: "document",
+      type: "string",
+      default: "",
+      displayOptions: {
+        show: {
+          resource: ["message"],
+          operation: ["sendDocument"],
+          binaryFile: [false],
+        },
+      },
+      description: "file_id or HTTP URL.",
+    },
+    {
+      displayName: "Photo",
+      name: "photo",
+      type: "string",
+      default: "",
+      displayOptions: {
+        show: {
+          resource: ["message"],
+          operation: ["sendPhoto"],
+          binaryFile: [false],
+        },
+      },
+      description: "file_id or HTTP URL.",
+    },
+    {
+      displayName: "Sticker",
+      name: "sticker",
+      type: "string",
+      default: "",
+      displayOptions: {
+        show: {
+          resource: ["message"],
+          operation: ["sendSticker"],
+          binaryFile: [false],
+        },
+      },
+      description: "file_id or HTTP URL.",
+    },
+    {
+      displayName: "Video",
+      name: "video",
+      type: "string",
+      default: "",
+      displayOptions: {
+        show: {
+          resource: ["message"],
+          operation: ["sendVideo"],
+          binaryFile: [false],
+        },
+      },
+      description: "file_id or HTTP URL.",
+    },
+    {
+      displayName: "Additional Fields",
+      name: "additionalFields",
+      type: "collection",
+      default: {},
+      placeholder: "Add option",
+      options: [
+        {
+          displayName: "Parse Mode",
+          name: "parseMode",
+          type: "options",
+          default: "html",
+          options: [
+            { name: "HTML", value: "html" },
+            { name: "Markdown (Legacy)", value: "markdown" },
+            { name: "MarkdownV2", value: "markdownV2" },
+          ],
+        },
+        {
+          displayName: "Disable Notification",
+          name: "disableNotification",
+          type: "boolean",
+          default: false,
+          description: "Send silently.",
+        },
+        {
+          displayName: "Disable Web Page Preview",
+          name: "disableWebPagePreview",
+          type: "boolean",
+          default: false,
+        },
+        {
+          displayName: "Reply To Message ID",
+          name: "replyToMessageId",
+          type: "number",
+          default: 0,
+        },
+        {
+          displayName: "Message Thread ID",
+          name: "messageThreadId",
+          type: "number",
+          default: 0,
+        },
+        {
+          displayName: "Caption",
+          name: "caption",
+          type: "string",
+          default: "",
+          description: "Max 1024 chars.",
+        },
+        {
+          displayName: "Append Attribution",
+          name: "appendAttribution",
+          type: "boolean",
+          default: true,
+          description: "Append n8n attribution suffix to sendMessage.",
+        },
+        {
+          displayName: "Text",
+          name: "text",
+          type: "string",
+          default: "",
+          displayOptions: { show: { resource: ["callback"] } },
+        },
+        {
+          displayName: "Show Alert",
+          name: "showAlert",
+          type: "boolean",
+          default: false,
+          displayOptions: { show: { resource: ["callback"] } },
+        },
+        {
+          displayName: "URL",
+          name: "url",
+          type: "string",
+          default: "",
+          displayOptions: { show: { resource: ["callback"] } },
+        },
+        {
+          displayName: "Cache Time",
+          name: "cacheTime",
+          type: "number",
+          default: 0,
+          displayOptions: { show: { resource: ["callback"] } },
+        },
       ],
     },
   ],
