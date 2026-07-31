@@ -1,6 +1,7 @@
 import type { IWorkflow, INodeExecutionData } from "../workflow/types";
 import type { ExecutionPlan, ExecutionRunData, NodeExecutor } from "./types";
 import type { CredentialResolver } from "./credentials";
+import type { DataTableAccess } from "@/lib/data-tables/access";
 import { buildAdjacency, buildIncoming, resolveStartNodes, topologicalSort } from "./graph";
 import { evaluateExpression, isExpression } from "../expressions/evaluate";
 import { createExecutionContext } from "@/sdk";
@@ -32,6 +33,8 @@ export interface RunOptions {
   maxSubWorkflowDepth?: number;
   /** Internal recursion depth. */
   _depth?: number;
+  /** Product Data Tables access for Evaluation / DataTable nodes. */
+  dataTables?: DataTableAccess;
 }
 
 export interface RunResult {
@@ -244,6 +247,7 @@ export async function executeWorkflow(options: RunOptions): Promise<RunResult> {
             resolveSubWorkflow: options.resolveSubWorkflow,
             maxSubWorkflowDepth: maxDepth,
             _depth: depth + 1,
+            dataTables: options.dataTables,
           });
 
           if (!childResult.success) {
@@ -276,6 +280,7 @@ export async function executeWorkflow(options: RunOptions): Promise<RunResult> {
           nodeData,
           runSubWorkflow,
           customData,
+          dataTables: options.dataTables,
         });
 
         outputs = await executor(ctx, resolvedNode);

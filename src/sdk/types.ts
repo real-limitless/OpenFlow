@@ -1,6 +1,7 @@
 import type { INode, INodeExecutionData, IWorkflow } from "@/lib/workflow/types";
 import type { INodeTypeDescription } from "@/lib/nodes/types";
 import type { CredentialData } from "@/lib/engine/credentials";
+import type { DataTableAccess } from "@/lib/data-tables/access";
 
 /** Single item flowing between nodes (re-export for SDK consumers). */
 export type Item = INodeExecutionData;
@@ -65,6 +66,12 @@ export interface ExecutionContext {
   setCustomData(key: string, value: string): void;
   getCustomData(key: string): string | undefined;
   getAllCustomData(): Record<string, string>;
+
+  /**
+   * Product Data Tables access (when the engine was given a resolver).
+   * Optional — unit tests and offline runs may omit it.
+   */
+  dataTables?: DataTableAccess;
 }
 
 /**
@@ -97,4 +104,6 @@ export interface CreateContextOptions {
    * shared across all nodes in an execution.
    */
   customData?: Record<string, string>;
+  /** Product Data Tables access for nodes that read/write stored tables. */
+  dataTables?: DataTableAccess;
 }

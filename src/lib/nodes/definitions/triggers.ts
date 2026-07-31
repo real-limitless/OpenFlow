@@ -1141,11 +1141,13 @@ export const evaluationTrigger: INodeTypeDescription = {
       displayOptions: { hide: { source: ["dataTable"] } },
     },
     {
-      displayName: "Data Table ID",
+      displayName: "Data Table",
       name: "dataTableId",
       type: "resourceLocator",
       default: { mode: "list", value: "" },
       displayOptions: { show: { source: ["dataTable"] } },
+      typeOptions: { resource: "dataTable" },
+      description: "Stored data table to read rows from (by list, id, or name).",
     },
     {
       displayName: "Limit Rows",

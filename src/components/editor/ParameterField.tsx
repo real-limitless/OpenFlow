@@ -164,6 +164,9 @@ export function ParameterField({ prop, value, onChange, context }: FieldProps) {
       );
 
     case "resourceLocator": {
+      if (prop.typeOptions?.resource === "dataTable") {
+        return <DataTableLocatorField prop={prop} value={value} onChange={onChange} />;
+      }
       const rl = (value ?? { mode: "id", value: "" }) as { mode?: string; value?: string };
       return (
         <FieldShell prop={prop}>
@@ -473,6 +476,102 @@ function coerceWorkflowSelectValue(value: unknown): string {
     if (o.id != null) return String(o.id);
   }
   return "";
+}
+
+function DataTableLocatorField({
+  prop,
+  value,
+  onChange,
+}: {
+  prop: INodeProperties;
+  value: unknown;
+  onChange: (value: unknown) => void;
+}) {
+  const rl = (value ?? { mode: "list", value: "" }) as { mode?: string; value?: string };
+  const mode = rl.mode === "id" || rl.mode === "name" ? rl.mode : "list";
+  const [tables, setTables] = useState<Array<{ id: string; name: string }>>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    fetch("/api/v1/data-tables")
+      .then(async (res) => {
+        if (!res.ok) throw new Error(`Failed to load tables (${res.status})`);
+        return res.json() as Promise<Array<{ id: string; name: string }>>;
+      })
+      .then((list) => {
+        if (cancelled) return;
+        setTables(Array.isArray(list) ? list : []);
+        setError(null);
+      })
+      .catch((err) => {
+        if (cancelled) return;
+        setError(err instanceof Error ? err.message : String(err));
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  return (
+    <FieldShell prop={prop}>
+      <div className="flex flex-col gap-2">
+        <div className="flex gap-2">
+          <Select
+            value={mode}
+            onValueChange={(m) => onChange({ mode: m, value: rl.value ?? "" })}
+          >
+            <SelectTrigger className="h-9 w-28 text-[13px]">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="list">From list</SelectItem>
+              <SelectItem value="id">By ID</SelectItem>
+              <SelectItem value="name">By name</SelectItem>
+            </SelectContent>
+          </Select>
+          {mode === "list" ? (
+            <Select
+              value={rl.value || undefined}
+              onValueChange={(v) => onChange({ mode: "list", value: v === "__none__" ? "" : v })}
+              disabled={loading}
+            >
+              <SelectTrigger className="h-9 flex-1 text-[13px]">
+                <SelectValue placeholder={loading ? "Loading…" : "Select a data table…"} />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__none__">— None —</SelectItem>
+                {tables.map((t) => (
+                  <SelectItem key={t.id} value={t.id}>
+                    {t.name}
+                    <span className="ml-2 font-mono text-[10px] text-muted-foreground">{t.id}</span>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          ) : (
+            <Input
+              value={rl.value ?? ""}
+              onChange={(e) => onChange({ mode, value: e.target.value })}
+              className="h-9 flex-1 text-[13px]"
+              placeholder={mode === "name" ? "Table name" : "Table id"}
+            />
+          )}
+        </div>
+        {error && <p className="text-[11px] text-destructive">{error}</p>}
+        {!loading && !error && tables.length === 0 && mode === "list" && (
+          <p className="text-[11px] text-muted-foreground">
+            No data tables yet. Create one under Data tables.
+          </p>
+        )}
+      </div>
+    </FieldShell>
+  );
 }
 
 function WorkflowSelectField({

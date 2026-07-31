@@ -6,6 +6,7 @@ import { executeWorkflow } from "../../lib/engine/runner";
 import { getExecutorMap } from "../../lib/engine";
 import { getWebhookResponse, clearWebhookResponse } from "../../lib/engine/executors/respond-to-webhook";
 import { credentialResolverForUser } from "../credentials";
+import { dataTableAccessForUser } from "../services/data-tables-access";
 import { enqueueOrRun } from "../execute";
 import { resolveSubWorkflowFromDb } from "../workflow-loader";
 
@@ -76,6 +77,7 @@ export default function webhooksRoute(app: Hono<AppEnv>) {
         ? { [webhookNodeName]: [{ json: requestData }] }
         : undefined,
       credentialResolver: credentialResolverForUser("local"),
+      dataTables: dataTableAccessForUser("local"),
       resolveSubWorkflow: resolveSubWorkflowFromDb,
     };
 

@@ -1,5 +1,6 @@
 import type { NodeExecutor, INodeExecutionData } from "@/sdk";
 import { withPairedItem } from "@/sdk";
+import { resolveLocatorValue } from "@/lib/data-tables/access";
 
 const EVALUATION_FLAG = "__evaluation__";
 const METRICS_KEY = "__metrics__";
@@ -27,7 +28,7 @@ export const evaluationExecutor: NodeExecutor = async (ctx) => {
   }
 
   if (operation === "setOutputs") {
-    return handleSetOutputs(inputItems, ctx);
+    return await handleSetOutputs(inputItems, ctx);
   }
 
   return [inputItems.map((item, idx) => withPairedItem(item, idx))];
@@ -52,7 +53,7 @@ function handleSetMetrics(
   const values = Array.isArray(metricsContainer)
     ? metricsContainer
     : Array.isArray((metricsContainer as Record<string, unknown>)?.values)
-      ? (metricsContainer as Record<string, unknown>).values as OutputValue[]
+      ? ((metricsContainer as Record<string, unknown>).values as OutputValue[])
       : [];
 
   const existing = loadMetrics(ctx);
@@ -69,10 +70,10 @@ function handleSetMetrics(
   return [items.map((item, idx) => withPairedItem(item, idx))];
 }
 
-function handleSetOutputs(
+async function handleSetOutputs(
   items: INodeExecutionData[],
   ctx: Parameters<NodeExecutor>[0],
-): [INodeExecutionData[]] {
+): Promise<[INodeExecutionData[]]> {
   const source = ctx.getParam<string>("source", "dataTable");
 
   const values = collectOutputValues(ctx);
@@ -98,16 +99,28 @@ function handleSetOutputs(
     return [items.map((item, idx) => withPairedItem(item, idx))];
   }
 
-  const dataTable = ctx.getParam<string>("dataTable", "");
-  if (!dataTable) {
-    throw new Error("Set Outputs: dataTable name is required when source is dataTable");
+  const tableRef =
+    resolveLocatorValue(ctx.getParam<unknown>("dataTableId", null)) ||
+    resolveLocatorValue(ctx.getParam<unknown>("dataTable", ""));
+  if (!tableRef) {
+    throw new Error("Set Outputs: data table is required when source is dataTable");
   }
 
   const resolved = values.map((v) => ({
     name: coerceToString(resolveValue(v.name, items, ctx)),
     value: resolveValue(v.value, items, ctx),
   }));
-  ctx.setCustomData(`${DATA_TABLE_PREFIX}${dataTable}`, JSON.stringify(resolved));
+
+  const fields: Record<string, unknown> = {};
+  for (const r of resolved) {
+    if (r.name) fields[r.name] = r.value;
+  }
+
+  if (ctx.dataTables) {
+    await ctx.dataTables.appendOutputRow(tableRef, fields);
+  } else {
+    ctx.setCustomData(`${DATA_TABLE_PREFIX}${tableRef}`, JSON.stringify(resolved));
+  }
 
   return [items.map((item, idx) => withPairedItem(item, idx))];
 }

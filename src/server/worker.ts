@@ -5,6 +5,7 @@ import { connection } from "./queue";
 import { getExecutorMap } from "../lib/engine";
 import { executeWorkflow } from "../lib/engine/runner";
 import { credentialResolverForUser } from "./credentials";
+import { dataTableAccessForUser } from "./services/data-tables-access";
 import { resolveSubWorkflowFromDb } from "./workflow-loader";
 import type { ExecutionJobData } from "./queue";
 import type { INodeExecutionData, IWorkflow } from "../lib/workflow/types";
@@ -55,6 +56,7 @@ export function startWorker(concurrency = 5): Worker<ExecutionJobData> {
           (pinData as unknown as Record<string, INodeExecutionData[]>) ??
           (definition.pinData as Record<string, INodeExecutionData[]> | undefined),
         credentialResolver: credentialResolverForUser("local"),
+        dataTables: dataTableAccessForUser("local"),
         resolveSubWorkflow: resolveSubWorkflowFromDb,
         onProgress: async (partial) => {
           await prisma.execution.update({

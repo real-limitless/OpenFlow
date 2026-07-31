@@ -11,6 +11,8 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as CredentialsRouteImport } from './routes/credentials'
+import { Route as DataTablesRouteImport } from './routes/data-tables'
+import { Route as DataTablesIdRouteImport } from './routes/data-tables_.$id'
 import { Route as DocsCompatibilityRouteImport } from './routes/docs.compatibility'
 import { Route as WorkflowIdRouteImport } from './routes/workflow.$id'
 
@@ -22,6 +24,16 @@ const IndexRoute = IndexRouteImport.update({
 const CredentialsRoute = CredentialsRouteImport.update({
   id: '/credentials',
   path: '/credentials',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DataTablesRoute = DataTablesRouteImport.update({
+  id: '/data-tables',
+  path: '/data-tables',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DataTablesIdRoute = DataTablesIdRouteImport.update({
+  id: '/data-tables_/$id',
+  path: '/data-tables/$id',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DocsCompatibilityRoute = DocsCompatibilityRouteImport.update({
@@ -38,12 +50,16 @@ const WorkflowIdRoute = WorkflowIdRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/credentials': typeof CredentialsRoute
+  '/data-tables': typeof DataTablesRoute
+  '/data-tables/$id': typeof DataTablesIdRoute
   '/docs/compatibility': typeof DocsCompatibilityRoute
   '/workflow/$id': typeof WorkflowIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/credentials': typeof CredentialsRoute
+  '/data-tables': typeof DataTablesRoute
+  '/data-tables/$id': typeof DataTablesIdRoute
   '/docs/compatibility': typeof DocsCompatibilityRoute
   '/workflow/$id': typeof WorkflowIdRoute
 }
@@ -51,20 +67,43 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/credentials': typeof CredentialsRoute
+  '/data-tables': typeof DataTablesRoute
+  '/data-tables_/$id': typeof DataTablesIdRoute
   '/docs/compatibility': typeof DocsCompatibilityRoute
   '/workflow/$id': typeof WorkflowIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/credentials' | '/docs/compatibility' | '/workflow/$id'
+  fullPaths:
+    | '/'
+    | '/credentials'
+    | '/data-tables'
+    | '/data-tables/$id'
+    | '/docs/compatibility'
+    | '/workflow/$id'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/credentials' | '/docs/compatibility' | '/workflow/$id'
-  id: '__root__' | '/' | '/credentials' | '/docs/compatibility' | '/workflow/$id'
+  to:
+    | '/'
+    | '/credentials'
+    | '/data-tables'
+    | '/data-tables/$id'
+    | '/docs/compatibility'
+    | '/workflow/$id'
+  id:
+    | '__root__'
+    | '/'
+    | '/credentials'
+    | '/data-tables'
+    | '/data-tables_/$id'
+    | '/docs/compatibility'
+    | '/workflow/$id'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   CredentialsRoute: typeof CredentialsRoute
+  DataTablesRoute: typeof DataTablesRoute
+  DataTablesIdRoute: typeof DataTablesIdRoute
   DocsCompatibilityRoute: typeof DocsCompatibilityRoute
   WorkflowIdRoute: typeof WorkflowIdRoute
 }
@@ -83,6 +122,20 @@ declare module '@tanstack/react-router' {
       path: '/credentials'
       fullPath: '/credentials'
       preLoaderRoute: typeof CredentialsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/data-tables': {
+      id: '/data-tables'
+      path: '/data-tables'
+      fullPath: '/data-tables'
+      preLoaderRoute: typeof DataTablesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/data-tables_/$id': {
+      id: '/data-tables_/$id'
+      path: '/data-tables/$id'
+      fullPath: '/data-tables/$id'
+      preLoaderRoute: typeof DataTablesIdRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/docs/compatibility': {
@@ -105,19 +158,11 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   CredentialsRoute: CredentialsRoute,
+  DataTablesRoute: DataTablesRoute,
+  DataTablesIdRoute: DataTablesIdRoute,
   DocsCompatibilityRoute: DocsCompatibilityRoute,
   WorkflowIdRoute: WorkflowIdRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}

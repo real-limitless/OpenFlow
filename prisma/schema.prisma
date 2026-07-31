@@ -19,6 +19,7 @@ model User {
   workflows   Workflow[]
   credentials Credential[]
   apiKeys     ApiKey[]
+  dataTables  DataTable[]
 
   @@map("users")
 }
@@ -135,4 +136,36 @@ model ScheduledTrigger {
 
   @@unique([workflowId, nodeId])
   @@map("scheduled_triggers")
+}
+
+// ─── Data Tables ────────────────────────────────────────
+
+model DataTable {
+  id        String   @id @default(cuid())
+  userId    String
+  name      String
+  columns   String   @default("[]") // JSON: DataTableColumn[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  rows DataTableRow[]
+
+  @@unique([userId, name])
+  @@index([userId])
+  @@map("data_tables")
+}
+
+model DataTableRow {
+  id        String   @id @default(cuid())
+  tableId   String
+  data      String   @default("{}") // JSON object keyed by column id
+  position  Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  table DataTable @relation(fields: [tableId], references: [id], onDelete: Cascade)
+
+  @@index([tableId, position])
+  @@map("data_table_rows")
 }

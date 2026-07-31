@@ -7,6 +7,7 @@ import {
   LayoutGrid,
   Redo2,
   Save,
+  Table2,
   Undo2,
   Upload,
   Workflow as WorkflowIcon,
@@ -182,6 +183,11 @@ export function EditorTopBar({ actions }: { actions?: React.ReactNode }) {
         </Button>
         <Button variant="ghost" size="sm" className="h-8 text-[12px]" asChild>
           <Link to="/credentials">Vault</Link>
+        </Button>
+        <Button variant="ghost" size="sm" className="h-8 text-[12px]" asChild>
+          <Link to="/data-tables">
+            <Table2 className="mr-1 size-4" /> Tables
+          </Link>
         </Button>
 
         <span className="mx-1 h-5 w-px bg-border" />

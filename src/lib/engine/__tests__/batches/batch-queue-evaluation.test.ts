@@ -134,7 +134,7 @@ describe("batch-queue evaluation — n8n-nodes-base.evaluation", () => {
         },
         [{}],
       ),
-    ).rejects.toThrow("dataTable name is required");
+    ).rejects.toThrow("data table is required");
   });
 
   it("setOutputs resolves Google Sheets params (partial)", async () => {

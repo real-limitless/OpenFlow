@@ -57,6 +57,8 @@ export interface INodeProperties {
     numberPrecision?: number;
     editor?: "code" | "json";
     password?: boolean;
+    /** For resourceLocator: which resource list to load (e.g. dataTable). */
+    resource?: "dataTable" | "workflow" | string;
   };
 }
 

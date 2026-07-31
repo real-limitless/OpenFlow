@@ -31,3 +31,5 @@ export { ensureItems, mapItems, withPairedItem } from "./helpers/items";
 export { evaluateOnItem } from "./helpers/expressions";
 export { sdkHttpRequest, type SdkHttpRequestOptions, type SdkHttpResponse } from "./helpers/http";
 export { requireCredential } from "./helpers/credentials";
+export type { DataTableAccess, DataTableRef, LoadRowsOptions } from "@/lib/data-tables/access";
+export { resolveLocatorValue } from "@/lib/data-tables/access";

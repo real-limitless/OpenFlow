@@ -6,6 +6,7 @@ import {
   KeyRound,
   Plus,
   Sparkles,
+  Table2,
   Trash2,
   Upload,
   Workflow as WorkflowIcon,
@@ -168,6 +169,11 @@ function WorkflowList() {
         <Button variant="outline" asChild>
           <Link to="/credentials">
             <KeyRound className="mr-1 size-4" /> Credentials
+          </Link>
+        </Button>
+        <Button variant="outline" asChild>
+          <Link to="/data-tables">
+            <Table2 className="mr-1 size-4" /> Data tables
           </Link>
         </Button>
         <Button variant="ghost" asChild>

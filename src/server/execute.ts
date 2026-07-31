@@ -3,6 +3,7 @@ import { executionQueue } from "./queue";
 import { executeWorkflow } from "../lib/engine/runner";
 import { getExecutorMap } from "../lib/engine";
 import { credentialResolverForUser } from "./credentials";
+import { dataTableAccessForUser } from "./services/data-tables-access";
 import {
   definitionFromRow,
   resolveSubWorkflowFromDb,
@@ -68,6 +69,7 @@ export async function enqueueOrRun(
     nodeExecutors: getExecutorMap(),
     pinData: pinData ?? (definition.pinData as Record<string, INodeExecutionData[]> | undefined),
     credentialResolver: credentialResolverForUser("local"),
+    dataTables: dataTableAccessForUser("local"),
     resolveSubWorkflow: resolveSubWorkflowFromDb,
     onProgress: async (partial) => {
       await prisma.execution.update({

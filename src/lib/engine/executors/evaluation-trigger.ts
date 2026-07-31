@@ -1,4 +1,5 @@
 import type { NodeExecutor, INodeExecutionData } from "@/sdk";
+import { resolveLocatorValue } from "@/lib/data-tables/access";
 
 function matchRow(
   row: Record<string, unknown>,
@@ -23,28 +24,45 @@ function matchRow(
   }
 }
 
+async function loadDataTableRows(
+  ctx: Parameters<NodeExecutor>[0],
+  tableRef: string,
+): Promise<Record<string, unknown>[]> {
+  if (ctx.dataTables && tableRef) {
+    const rows = await ctx.dataTables.loadRows(tableRef);
+    return rows.map((row) => {
+      const { _rowId: _, ...rest } = row;
+      return rest;
+    });
+  }
+
+  const tableKey = `__datatable__${tableRef}`;
+  const stored = ctx.getAllCustomData()[tableKey];
+  if (!stored) return [];
+  try {
+    const parsed = JSON.parse(stored);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
 export const evaluationTriggerExecutor: NodeExecutor = async (ctx) => {
   const source = ctx.getParam<string>("source", "dataTable");
 
   let rows: Record<string, unknown>[] = [];
 
   if (source === "dataTable") {
-    const dataTableId = ctx.getParam<{ mode: string; value: string }>("dataTableId", { mode: "list", value: "" });
-    const tableKey = `__datatable__${dataTableId.value}`;
-    const stored = ctx.getAllCustomData()[tableKey];
-
-    if (stored) {
-      try {
-        rows = JSON.parse(stored);
-      } catch {
-        rows = [];
-      }
-    }
+    const dataTableId = ctx.getParam<unknown>("dataTableId", { mode: "list", value: "" });
+    const tableRef = resolveLocatorValue(dataTableId);
+    rows = await loadDataTableRows(ctx, tableRef);
 
     const filterRows = ctx.getParam<boolean>("filterRows", false);
     if (filterRows && rows.length > 0) {
       const matchType = ctx.getParam<string>("matchType", "anyCondition");
-      const filtersRaw = ctx.getParam<{ conditions?: Array<{ keyName: string; condition: string; keyValue: string }> }>("filters", {});
+      const filtersRaw = ctx.getParam<{
+        conditions?: Array<{ keyName: string; condition: string; keyValue: string }>;
+      }>("filters", {});
       const conditions = filtersRaw?.conditions ?? [];
 
       if (conditions.length > 0) {

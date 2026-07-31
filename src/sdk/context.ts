@@ -57,6 +57,7 @@ export function createExecutionContext(
     getAllCustomData() {
       return { ...customData };
     },
+    dataTables: options.dataTables,
   };
 
   return ctx;
