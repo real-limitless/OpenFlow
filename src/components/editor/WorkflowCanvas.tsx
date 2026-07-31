@@ -6,15 +6,19 @@ import {
   MiniMap,
   ReactFlow,
   ReactFlowProvider,
+  useConnection,
   useReactFlow,
   type Connection,
   type NodeChange,
+  type OnConnectStartParams,
 } from "@xyflow/react";
 import { useWorkflowStore } from "@/store/workflow-store";
 import { toFlowEdges, toFlowNodes, type OpenFlowNode } from "@/lib/workflow/graph";
+import { channelEdgeColor, isCompatibleConnection, parseHandle } from "@/lib/workflow/channels";
 import type { ExecutionRunData } from "@/lib/engine/types";
 import { BaseNode, StickyNode } from "./BaseNode";
 import { OpenFlowEdge } from "./OpenFlowEdge";
+import { SlotNodePicker } from "./SlotNodePicker";
 
 const nodeTypes = { openflow: BaseNode, sticky: StickyNode };
 const edgeTypes = { openflow: OpenFlowEdge };
@@ -22,6 +26,7 @@ const edgeTypes = { openflow: OpenFlowEdge };
 function CanvasInner({ runData }: { runData: ExecutionRunData | null }) {
   const workflow = useWorkflowStore((s) => s.workflow);
   const selectedNode = useWorkflowStore((s) => s.selectedNode);
+  const slotPicker = useWorkflowStore((s) => s.slotPicker);
   const {
     selectNode,
     moveNode,
@@ -32,10 +37,16 @@ function CanvasInner({ runData }: { runData: ExecutionRunData | null }) {
     disconnect,
     undo,
     redo,
+    closeSlotPicker,
+    addConnectedNode,
   } = useWorkflowStore();
   const wrapper = useRef<HTMLDivElement>(null);
   const { screenToFlowPosition } = useReactFlow();
   const [selectedEdge, setSelectedEdge] = useState<string | null>(null);
+  const [connectionLineStyle, setConnectionLineStyle] = useState<React.CSSProperties>({
+    stroke: "var(--primary)",
+    strokeWidth: 2,
+  });
 
   const nodes = useMemo(() => {
     const base = toFlowNodes(workflow, selectedNode);
@@ -61,10 +72,30 @@ function CanvasInner({ runData }: { runData: ExecutionRunData | null }) {
   const onConnect = useCallback(
     (c: Connection) => {
       if (!c.source || !c.target) return;
+      if (!isCompatibleConnection(c.sourceHandle, c.targetHandle)) return;
       connect(c.source, c.sourceHandle, c.target, c.targetHandle);
     },
     [connect],
   );
+
+  const isValidConnection = useCallback((c: Connection | EdgeLike) => {
+    if (!c.source || !c.target) return false;
+    if (c.source === c.target) return false;
+    return isCompatibleConnection(c.sourceHandle, c.targetHandle);
+  }, []);
+
+  const onConnectStart = useCallback((_: unknown, params: OnConnectStartParams) => {
+    const [channel] = parseHandle(params.handleId);
+    const stroke = channelEdgeColor(channel);
+    setConnectionLineStyle({
+      stroke,
+      strokeWidth: channel.startsWith("ai_") ? 2.5 : 2,
+    });
+  }, []);
+
+  const onConnectEnd = useCallback(() => {
+    setConnectionLineStyle({ stroke: "var(--primary)", strokeWidth: 2 });
+  }, []);
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -75,7 +106,8 @@ function CanvasInner({ runData }: { runData: ExecutionRunData | null }) {
 
       if (meta && e.key.toLowerCase() === "z") {
         e.preventDefault();
-        e.shiftKey ? redo() : undo();
+        if (e.shiftKey) redo();
+        else undo();
       } else if (meta && e.key.toLowerCase() === "d" && selectedNode) {
         e.preventDefault();
         duplicateNode(selectedNode);
@@ -89,6 +121,7 @@ function CanvasInner({ runData }: { runData: ExecutionRunData | null }) {
       } else if (e.key === "Escape") {
         selectNode(null);
         setSelectedEdge(null);
+        closeSlotPicker();
       } else if (selectedNode && !meta && e.key.startsWith("Arrow")) {
         const step = e.shiftKey ? 20 : 1;
         const node = workflow.nodes.find((n) => n.name === selectedNode);
@@ -118,6 +151,7 @@ function CanvasInner({ runData }: { runData: ExecutionRunData | null }) {
     undo,
     redo,
     selectNode,
+    closeSlotPicker,
   ]);
 
   return (
@@ -134,14 +168,23 @@ function CanvasInner({ runData }: { runData: ExecutionRunData | null }) {
         edgeTypes={edgeTypes}
         onNodesChange={onNodesChange}
         onConnect={onConnect}
-        onNodeClick={(_, n) => selectNode(n.id)}
+        onConnectStart={onConnectStart}
+        onConnectEnd={onConnectEnd}
+        isValidConnection={isValidConnection}
+        connectionLineStyle={connectionLineStyle}
+        onNodeClick={(_, n) => {
+          selectNode(n.id);
+          closeSlotPicker();
+        }}
         onEdgeClick={(_, edge) => {
           setSelectedEdge(edge.id);
           selectNode(null);
+          closeSlotPicker();
         }}
         onPaneClick={() => {
           selectNode(null);
           setSelectedEdge(null);
+          closeSlotPicker();
         }}
         onDragOver={(e) => {
           e.preventDefault();
@@ -162,7 +205,9 @@ function CanvasInner({ runData }: { runData: ExecutionRunData | null }) {
         maxZoom={2}
         deleteKeyCode={null}
         multiSelectionKeyCode="Shift"
+        className="of-flow"
       >
+        <ConnectModeClass />
         <Background
           variant={BackgroundVariant.Dots}
           gap={22}
@@ -178,8 +223,33 @@ function CanvasInner({ runData }: { runData: ExecutionRunData | null }) {
           nodeColor={() => "var(--primary)"}
         />
       </ReactFlow>
+      <SlotNodePicker
+        target={slotPicker}
+        onClose={closeSlotPicker}
+        onPick={(type, target) => addConnectedNode(type, target)}
+      />
     </div>
   );
+}
+
+/** Minimal shape so isValidConnection accepts RF Connection without extra imports. */
+type EdgeLike = {
+  source?: string | null;
+  target?: string | null;
+  sourceHandle?: string | null;
+  targetHandle?: string | null;
+};
+
+/** Toggles `.connecting` on the flow root while a wire is being dragged. */
+function ConnectModeClass() {
+  const inProgress = useConnection((c) => c.inProgress);
+  useEffect(() => {
+    const el = document.querySelector(".react-flow.of-flow");
+    if (!el) return;
+    el.classList.toggle("connecting", inProgress);
+    return () => el.classList.remove("connecting");
+  }, [inProgress]);
+  return null;
 }
 
 export function WorkflowCanvas({ runData }: { runData: ExecutionRunData | null }) {

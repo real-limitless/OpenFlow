@@ -188,6 +188,7 @@ export const merge: INodeTypeDescription = {
   description: "Combines items from two or more input branches.",
   defaults: { name: "Merge" },
   inputs: ["main", "main"],
+  inputNames: ["Input 1", "Input 2"],
   outputs: ["main"],
   icon: "Merge",
   sources: [`${CORE}n8n-nodes-base.merge/`],

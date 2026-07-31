@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { toFlowNodes, toFlowEdges, channelHandleIds, addConnection } from "../graph";
+import { toFlowNodes, toFlowEdges, channelHandleIds, addConnection, handlesFor } from "../graph";
 import type { IWorkflow } from "../types";
 
 const twoNodeWorkflow: IWorkflow = {
@@ -83,13 +83,7 @@ describe("graph mapping", () => {
   it("channelHandleIds uses per-channel ordinals (not flat array index)", () => {
     expect(
       channelHandleIds(["main", "ai_languageModel", "ai_tool", "ai_memory", "ai_outputParser"]),
-    ).toEqual([
-      "main-0",
-      "ai_languageModel-0",
-      "ai_tool-0",
-      "ai_memory-0",
-      "ai_outputParser-0",
-    ]);
+    ).toEqual(["main-0", "ai_languageModel-0", "ai_tool-0", "ai_memory-0", "ai_outputParser-0"]);
     expect(channelHandleIds(["main", "main", "ai_tool"])).toEqual([
       "main-0",
       "main-1",
@@ -187,5 +181,58 @@ describe("graph mapping", () => {
       type: "ai_languageModel",
       index: 0,
     });
+  });
+
+  it("toFlowEdges attaches channel color data for AI wires", () => {
+    const wf: IWorkflow = {
+      id: "wf",
+      name: "t",
+      active: false,
+      nodes: [
+        {
+          id: "a",
+          name: "AI Agent",
+          type: "@n8n/n8n-nodes-langchain.agent",
+          typeVersion: 1,
+          position: [0, 0],
+          parameters: {},
+        },
+        {
+          id: "m",
+          name: "Model",
+          type: "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+          typeVersion: 1,
+          position: [0, 0],
+          parameters: {},
+        },
+      ],
+      connections: {
+        Model: {
+          ai_languageModel: [[{ node: "AI Agent", type: "ai_languageModel", index: 0 }]],
+        },
+      },
+      settings: { executionOrder: "v1" },
+    };
+    const edge = toFlowEdges(wf)[0];
+    expect(edge.data).toMatchObject({ channel: "ai_languageModel" });
+    expect((edge.data as { color?: string }).color).toBeTruthy();
+  });
+
+  it("handlesFor expands ai_tool slots from connections", () => {
+    const agent = {
+      id: "a",
+      name: "AI Agent",
+      type: "@n8n/n8n-nodes-langchain.agent",
+      typeVersion: 1.9,
+      position: [0, 0] as [number, number],
+      parameters: {},
+    };
+    const connections = {
+      T1: { ai_tool: [[{ node: "AI Agent", type: "ai_tool", index: 0 }]] },
+      T2: { ai_tool: [[{ node: "AI Agent", type: "ai_tool", index: 1 }]] },
+    };
+    const { inputs } = handlesFor(agent, connections);
+    const tools = inputs.filter((c) => c === "ai_tool");
+    expect(tools.length).toBe(3); // 2 connected + 1 empty
   });
 });

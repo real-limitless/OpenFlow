@@ -3,6 +3,7 @@ import { BaseEdge, EdgeLabelRenderer, getBezierPath, type EdgeProps } from "@xyf
 import { Plus, Trash2 } from "lucide-react";
 import { useWorkflowStore } from "@/store/workflow-store";
 import { cn } from "@/lib/utils";
+import { channelEdgeColor, channelLabel, isAiChannel } from "@/lib/workflow/channels";
 
 const INSERTABLE_TYPES = [
   { type: "n8n-nodes-base.set", label: "Set" },
@@ -14,6 +15,8 @@ const INSERTABLE_TYPES = [
 
 type MenuPhase = "closed" | "actions" | "insert";
 
+type EdgeData = { channel?: string; color?: string };
+
 export function OpenFlowEdge({
   id,
   sourceX,
@@ -23,11 +26,17 @@ export function OpenFlowEdge({
   sourcePosition,
   targetPosition,
   selected,
+  data,
+  style,
 }: EdgeProps) {
   const disconnect = useWorkflowStore((s) => s.disconnect);
   const insertNodeOnEdge = useWorkflowStore((s) => s.insertNodeOnEdge);
   const [phase, setPhase] = useState<MenuPhase>("closed");
   const [hovered, setHovered] = useState(false);
+
+  const channel = (data as EdgeData | undefined)?.channel ?? "main";
+  const channelColor = (data as EdgeData | undefined)?.color ?? channelEdgeColor(channel);
+  const ai = isAiChannel(channel);
 
   const [path, labelX, labelY] = getBezierPath({
     sourceX,
@@ -55,15 +64,25 @@ export function OpenFlowEdge({
     setHovered(false);
   };
 
+  const stroke = active
+    ? ai
+      ? channelColor
+      : "var(--primary)"
+    : ai
+      ? channelColor
+      : ((style?.stroke as string | undefined) ?? "var(--border)");
+
   return (
     <>
       <BaseEdge
         id={id}
         path={path}
         style={{
-          stroke: active ? "var(--primary)" : "var(--border)",
-          strokeWidth: active ? 2.5 : 2,
-          transition: "stroke 150ms ease, stroke-width 150ms ease",
+          ...style,
+          stroke,
+          strokeWidth: active ? 2.5 : ai ? 2.25 : 2,
+          opacity: active ? 1 : ai ? 0.85 : 1,
+          transition: "stroke 150ms ease, stroke-width 150ms ease, opacity 150ms ease",
         }}
         interactionWidth={20}
       />
@@ -82,7 +101,6 @@ export function OpenFlowEdge({
             if (phase === "closed") setHovered(false);
           }}
         >
-          {/* Collapsed hub — only visible on edge hover / selected / open */}
           <div
             className={cn(
               "flex items-center justify-center transition-all duration-200 ease-out",
@@ -90,27 +108,36 @@ export function OpenFlowEdge({
             )}
           >
             {phase === "closed" && (
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setPhase("actions");
-                }}
-                className={cn(
-                  "grid size-6 place-items-center rounded-full border border-border bg-surface text-muted-foreground shadow-sm",
-                  "transition-all duration-200 hover:border-primary hover:text-primary",
-                  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary",
-                  !active && "pointer-events-none",
+              <div className="flex items-center gap-1">
+                {ai && (
+                  <span
+                    className="rounded-full border border-border bg-surface px-1.5 py-0.5 font-mono text-[9px] uppercase tracking-wide shadow-sm"
+                    style={{ color: channelColor, borderColor: channelColor }}
+                  >
+                    {channelLabel(channel)}
+                  </span>
                 )}
-                aria-label="Edge actions"
-                aria-expanded={false}
-                tabIndex={active ? 0 : -1}
-              >
-                <Plus className="size-3.5" />
-              </button>
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setPhase("actions");
+                  }}
+                  className={cn(
+                    "grid size-6 place-items-center rounded-full border border-border bg-surface text-muted-foreground shadow-sm",
+                    "transition-all duration-200 hover:border-primary hover:text-primary",
+                    "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary",
+                    !active && "pointer-events-none",
+                  )}
+                  aria-label="Edge actions"
+                  aria-expanded={false}
+                  tabIndex={active ? 0 : -1}
+                >
+                  <Plus className="size-3.5" />
+                </button>
+              </div>
             )}
 
-            {/* Expanded actions: Insert + Delete */}
             {phase === "actions" && (
               <div
                 className={cn(
@@ -120,23 +147,35 @@ export function OpenFlowEdge({
                 role="menu"
                 aria-label="Edge actions"
               >
-                <button
-                  type="button"
-                  role="menuitem"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setPhase("insert");
-                  }}
-                  className={cn(
-                    "flex h-7 items-center gap-1 rounded-full px-2.5 text-[11px] font-medium text-foreground",
-                    "transition-colors hover:bg-primary/10 hover:text-primary",
-                  )}
-                  aria-label="Insert node"
-                >
-                  <Plus className="size-3.5" />
-                  Insert
-                </button>
-                <span className="h-4 w-px bg-border" aria-hidden />
+                {!ai && (
+                  <>
+                    <button
+                      type="button"
+                      role="menuitem"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setPhase("insert");
+                      }}
+                      className={cn(
+                        "flex h-7 items-center gap-1 rounded-full px-2.5 text-[11px] font-medium text-foreground",
+                        "transition-colors hover:bg-primary/10 hover:text-primary",
+                      )}
+                      aria-label="Insert node"
+                    >
+                      <Plus className="size-3.5" />
+                      Insert
+                    </button>
+                    <span className="h-4 w-px bg-border" aria-hidden />
+                  </>
+                )}
+                {ai && (
+                  <span
+                    className="px-2 font-mono text-[10px] uppercase tracking-wide"
+                    style={{ color: channelColor }}
+                  >
+                    {channelLabel(channel)}
+                  </span>
+                )}
                 <button
                   type="button"
                   role="menuitem"
@@ -157,7 +196,6 @@ export function OpenFlowEdge({
               </div>
             )}
 
-            {/* Insert node type picker */}
             {phase === "insert" && (
               <div
                 className={cn(

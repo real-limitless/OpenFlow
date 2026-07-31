@@ -109,6 +109,18 @@
   --success: oklch(0.76 0.16 155);
   --warning: oklch(0.79 0.15 78);
   --ai-handle: oklch(0.65 0.18 300);
+  --ai-channel-model: oklch(0.72 0.16 285);
+  --ai-channel-tool: oklch(0.72 0.15 155);
+  --ai-channel-memory: oklch(0.74 0.14 55);
+  --ai-channel-parser: oklch(0.7 0.14 330);
+  --ai-channel-embedding: oklch(0.7 0.13 220);
+  --ai-channel-document: oklch(0.72 0.12 200);
+  --ai-channel-retriever: oklch(0.7 0.14 175);
+  --ai-channel-reranker: oklch(0.68 0.13 145);
+  --ai-channel-splitter: oklch(0.72 0.1 250);
+  --ai-channel-vector: oklch(0.68 0.14 265);
+  --ai-channel-agent: oklch(0.7 0.16 300);
+  --ai-channel-chain: oklch(0.7 0.14 310);
 
   --chart-1: oklch(0.78 0.13 178);
   --chart-2: oklch(0.74 0.15 60);
@@ -166,13 +178,44 @@
   border: 2px solid var(--color-border);
   transition:
     background 120ms ease,
-    border-color 120ms ease;
+    border-color 120ms ease,
+    opacity 120ms ease,
+    box-shadow 120ms ease,
+    width 120ms ease,
+    height 120ms ease;
 }
 
 .react-flow__handle:hover,
 .react-flow__handle.connectingfrom {
   background: var(--color-primary);
   border-color: var(--color-primary);
+}
+
+/* Phase 5: connect-time handle affinity */
+.react-flow.connecting .of-node-connect-dim {
+  opacity: 0.4;
+  filter: grayscale(0.35);
+  transition:
+    opacity 150ms ease,
+    filter 150ms ease;
+}
+
+.react-flow.connecting .of-handle-compatible {
+  cursor: crosshair;
+}
+
+.react-flow.connecting .of-handle-incompatible {
+  pointer-events: none;
+  cursor: not-allowed;
+}
+
+.react-flow.connecting .react-flow__handle.valid {
+  /* RF marks hovered valid targets — keep our glow dominant */
+  box-shadow: inherit;
+}
+
+.react-flow__connection-path {
+  stroke-linecap: round;
 }
 
 .react-flow__minimap {

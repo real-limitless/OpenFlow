@@ -70,3 +70,31 @@ describe("Workflow Store - insertNodeOnEdge", () => {
     expect(edges[1].target).toBe(target);
   });
 });
+
+describe("Workflow Store - addConnectedNode", () => {
+  it("adds a chat model left of agent and wires ai_languageModel", () => {
+    const { addNode, addConnectedNode } = useWorkflowStore.getState();
+    const agent = addNode("@n8n/n8n-nodes-langchain.agent", { x: 400, y: 0 });
+
+    const modelName = addConnectedNode("@n8n/n8n-nodes-langchain.lmChatOpenAi", {
+      nodeName: agent,
+      side: "input",
+      channel: "ai_languageModel",
+      handleId: "ai_languageModel-0",
+      x: 0,
+      y: 0,
+    });
+
+    expect(modelName).toBeTruthy();
+    const { workflow } = useWorkflowStore.getState();
+    const model = workflow.nodes.find((n) => n.name === modelName);
+    expect(model?.position[0]).toBe(120); // 400 - 280
+    const edges = toFlowEdges(workflow);
+    expect(edges).toHaveLength(1);
+    expect(edges[0].source).toBe(modelName);
+    expect(edges[0].target).toBe(agent);
+    expect(edges[0].sourceHandle).toBe("ai_languageModel-0");
+    expect(edges[0].targetHandle).toBe("ai_languageModel-0");
+    expect(useWorkflowStore.getState().slotPicker).toBeNull();
+  });
+});

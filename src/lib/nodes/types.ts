@@ -80,6 +80,9 @@ export interface INodeTypeDescription {
   inputs: string[];
   /** Output channel labels. Length defines the number of output handles. */
   outputs: string[];
+  /** Display labels for input handles (parallel to resolved inputs). */
+  inputNames?: string[];
+  /** Display labels for output handles (e.g. true/false on IF). */
   outputNames?: string[];
   /** Number of outputs is dynamic (e.g. Switch) — derived from parameters. */
   dynamicOutputs?: (parameters: Record<string, unknown>) => string[];

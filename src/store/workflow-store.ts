@@ -12,6 +12,9 @@ import { defaultParameters } from "@/lib/workflow/mutations";
 import { getNodeType } from "@/lib/nodes/registry";
 import { newId } from "@/lib/workflow/schema";
 import { getRepository } from "@/lib/storage/repository";
+import { channelHandleIds } from "@/lib/workflow/graph";
+import { resolveOutputs, resolveInputs } from "@/lib/nodes/types";
+import type { SlotPickerTarget } from "@/lib/workflow/channels";
 
 interface HistoryEntry {
   workflow: IWorkflow;
@@ -23,6 +26,7 @@ interface WorkflowState {
   dirty: boolean;
   past: HistoryEntry[];
   future: HistoryEntry[];
+  slotPicker: SlotPickerTarget | null;
 
   load: (workflow: IWorkflow) => void;
   /** Apply server/assistant snapshot without wiping selection when possible. */
@@ -55,6 +59,11 @@ interface WorkflowState {
   disconnect: (edgeId: string) => void;
   insertNodeOnEdge: (edgeId: string, type: string) => void;
 
+  openSlotPicker: (target: SlotPickerTarget) => void;
+  closeSlotPicker: () => void;
+  /** Add a node next to a host slot and auto-connect on the given channel. */
+  addConnectedNode: (type: string, target: SlotPickerTarget) => string | null;
+
   undo: () => void;
   redo: () => void;
   persist: () => Promise<void>;
@@ -83,8 +92,10 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
   dirty: false,
   past: [],
   future: [],
+  slotPicker: null,
 
-  load: (workflow) => set({ workflow, selectedNode: null, past: [], future: [], dirty: false }),
+  load: (workflow) =>
+    set({ workflow, selectedNode: null, past: [], future: [], dirty: false, slotPicker: null }),
   applyRemote: (workflow, options) => {
     const selected = get().selectedNode;
     const names = new Set(workflow.nodes.map((n) => n.name));
@@ -305,6 +316,67 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
       return { ...w, nodes: [...w.nodes, node], connections };
     });
     set({ selectedNode: name });
+  },
+
+  openSlotPicker: (target) => set({ slotPicker: target }),
+  closeSlotPicker: () => set({ slotPicker: null }),
+
+  addConnectedNode: (type, target) => {
+    const wf = get().workflow;
+    const host = wf.nodes.find((n) => n.name === target.nodeName);
+    if (!host) return null;
+
+    const description = getNodeType(type);
+    const existing = wf.nodes.map((n) => n.name);
+    const name = uniqueNodeName(existing, description.defaults.name);
+    const typeVersion = Array.isArray(description.version)
+      ? description.version[description.version.length - 1]
+      : description.version;
+
+    const offsetX = target.side === "input" ? -280 : 280;
+    const node: INode = {
+      id: newId("node"),
+      name,
+      type,
+      typeVersion,
+      position: [host.position[0] + offsetX, host.position[1]],
+      parameters: defaultParameters(description.properties),
+    };
+
+    // Prefer matching channel handle on the new node
+    const newOutputs = resolveOutputs(description, node.parameters ?? {});
+    const newInputs = resolveInputs(description, node.parameters ?? {});
+    const outIds = channelHandleIds(newOutputs);
+    const inIds = channelHandleIds(newInputs);
+
+    let source: string;
+    let sourceHandle: string;
+    let dest: string;
+    let destHandle: string;
+
+    if (target.side === "input") {
+      // New node feeds host input slot
+      const outIdx = newOutputs.findIndex((c) => c === target.channel);
+      source = name;
+      sourceHandle = outIdx >= 0 ? outIds[outIdx] : `${target.channel}-0`;
+      dest = target.nodeName;
+      destHandle = target.handleId;
+    } else {
+      // Host output feeds new node input
+      const inIdx = newInputs.findIndex((c) => c === target.channel);
+      source = target.nodeName;
+      sourceHandle = target.handleId;
+      dest = name;
+      destHandle = inIdx >= 0 ? inIds[inIdx] : `${target.channel}-0`;
+    }
+
+    get().commit((w) => ({
+      ...w,
+      nodes: [...w.nodes, node],
+      connections: addConnection(w.connections, source, sourceHandle, dest, destHandle),
+    }));
+    set({ selectedNode: name, slotPicker: null });
+    return name;
   },
 
   undo: () => {

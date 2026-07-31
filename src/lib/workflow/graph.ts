@@ -2,9 +2,20 @@ import type { Edge, Node as FlowNode } from "@xyflow/react";
 import type { IConnections, INode, IWorkflow } from "./types";
 import { getNodeType, STICKY_NOTE_TYPE } from "../nodes/registry";
 import { resolveInputs, resolveOutputs } from "../nodes/types";
+import {
+  channelEdgeColor,
+  countIncomingByChannel,
+  expandAiInputs,
+  isAiChannel,
+  parseHandle,
+} from "./channels";
 
 export interface OpenFlowNodeData extends Record<string, unknown> {
   node: INode;
+  /** Target-handle ids that already have at least one incoming edge. */
+  filledInputs?: string[];
+  /** Source-handle ids that already have at least one outgoing edge. */
+  filledOutputs?: string[];
 }
 
 export type OpenFlowNode = FlowNode<OpenFlowNodeData>;
@@ -17,13 +28,47 @@ export const edgeId = (
   inputIndex: number,
 ) => `${source}::${channel}::${outputIndex}->${target}::${inputIndex}`;
 
+function filledHandleSets(workflow: IWorkflow): {
+  inputs: Map<string, Set<string>>;
+  outputs: Map<string, Set<string>>;
+} {
+  const inputs = new Map<string, Set<string>>();
+  const outputs = new Map<string, Set<string>>();
+  const add = (map: Map<string, Set<string>>, node: string, handle: string) => {
+    let set = map.get(node);
+    if (!set) {
+      set = new Set();
+      map.set(node, set);
+    }
+    set.add(handle);
+  };
+
+  for (const [sourceName, channels] of Object.entries(workflow.connections ?? {})) {
+    for (const [channel, outs] of Object.entries(channels)) {
+      outs?.forEach((targets, outputIndex) => {
+        if (targets?.length) add(outputs, sourceName, `${channel}-${outputIndex}`);
+        targets?.forEach((t) => {
+          if (!t) return;
+          add(inputs, t.node, `${t.type ?? "main"}-${t.index ?? 0}`);
+        });
+      });
+    }
+  }
+  return { inputs, outputs };
+}
+
 /** Workflow model → React Flow nodes (a derived view, never a source of truth). */
 export function toFlowNodes(workflow: IWorkflow, selectedName?: string | null): OpenFlowNode[] {
+  const filled = filledHandleSets(workflow);
   return workflow.nodes.map((node) => ({
     id: node.name,
     type: node.type === STICKY_NOTE_TYPE ? "sticky" : "openflow",
     position: { x: node.position[0], y: node.position[1] },
-    data: { node },
+    data: {
+      node,
+      filledInputs: [...(filled.inputs.get(node.name) ?? [])],
+      filledOutputs: [...(filled.outputs.get(node.name) ?? [])],
+    },
     selected: selectedName === node.name,
     draggable: true,
     zIndex: node.type === STICKY_NOTE_TYPE ? 0 : 1,
@@ -48,20 +93,16 @@ export function toFlowEdges(workflow: IWorkflow): Edge[] {
             sourceHandle: `${channel}-${outputIndex}`,
             targetHandle: `${t.type ?? "main"}-${t.index ?? 0}`,
             type: "openflow",
-            data: { channel },
+            data: { channel, color: channelEdgeColor(channel) },
+            style: isAiChannel(channel)
+              ? { stroke: channelEdgeColor(channel), strokeWidth: 2 }
+              : undefined,
           });
         });
       });
     }
   }
   return edges;
-}
-
-function parseHandle(handle: string | null | undefined, fallback = "main"): [string, number] {
-  if (!handle) return [fallback, 0];
-  const idx = handle.lastIndexOf("-");
-  if (idx === -1) return [handle, 0];
-  return [handle.slice(0, idx), Number(handle.slice(idx + 1)) || 0];
 }
 
 export function addConnection(
@@ -141,12 +182,22 @@ export function uniqueNodeName(existing: string[], base: string): string {
   return `${base}${i}`;
 }
 
-export function handlesFor(node: INode) {
+export function handlesFor(node: INode, connections?: IConnections | null) {
   const description = getNodeType(node.type);
+  const params = node.parameters ?? {};
+  let inputs = resolveInputs(description, params);
+  const outputs = resolveOutputs(description, params);
+
+  const hasAi = inputs.some(isAiChannel) || outputs.some(isAiChannel);
+  if (hasAi) {
+    const counts = connections ? countIncomingByChannel(connections, node.name) : {};
+    inputs = expandAiInputs(inputs, params, counts);
+  }
+
   return {
     description,
-    inputs: resolveInputs(description, node.parameters ?? {}),
-    outputs: resolveOutputs(description, node.parameters ?? {}),
+    inputs,
+    outputs,
   };
 }
 
