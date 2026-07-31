@@ -5,7 +5,7 @@ import type { IWorkflow } from "../../lib/workflow/types";
 import { executeWorkflow } from "../../lib/engine/runner";
 import { getExecutorMap } from "../../lib/engine";
 import { getWebhookResponse, clearWebhookResponse } from "../../lib/engine/executors/respond-to-webhook";
-import { resolveCredential } from "../credentials";
+import { credentialResolverForUser } from "../credentials";
 import { enqueueOrRun } from "../execute";
 import { resolveSubWorkflowFromDb } from "../workflow-loader";
 
@@ -75,7 +75,7 @@ export default function webhooksRoute(app: Hono<AppEnv>) {
       pinData: webhookNodeName
         ? { [webhookNodeName]: [{ json: requestData }] }
         : undefined,
-      credentialResolver: resolveCredential,
+      credentialResolver: credentialResolverForUser("local"),
       resolveSubWorkflow: resolveSubWorkflowFromDb,
     };
 

@@ -1,8 +1,9 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import {
   Check,
   Download,
+  KeyRound,
   LayoutGrid,
   Redo2,
   Save,
@@ -14,10 +15,16 @@ import { toast } from "sonner";
 import { useWorkflowStore } from "@/store/workflow-store";
 import { parseWorkflowJson, serializeWorkflow } from "@/lib/workflow/schema";
 import { autoLayout } from "@/lib/workflow/layout";
+import {
+  collectWorkflowCredentials,
+  fetchLocalCredentials,
+} from "@/lib/workflow/credentials-inventory";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { MigrationReportDialog } from "./MigrationReport";
+import { ImportCredentialsDialog } from "@/components/credentials";
+import type { IWorkflow } from "@/lib/workflow/types";
 
 export function EditorTopBar({ actions }: { actions?: React.ReactNode }) {
   const workflow = useWorkflowStore((s) => s.workflow);
@@ -25,6 +32,21 @@ export function EditorTopBar({ actions }: { actions?: React.ReactNode }) {
   const { setName, setActive, commit, persist, undo, redo, load } = useWorkflowStore();
   const fileInput = useRef<HTMLInputElement>(null);
   const [reportOpen, setReportOpen] = useState(false);
+  const [credsOpen, setCredsOpen] = useState(false);
+  const [importDraft, setImportDraft] = useState<IWorkflow | null>(null);
+  const [missingCount, setMissingCount] = useState(0);
+
+  useEffect(() => {
+    let cancelled = false;
+    void fetchLocalCredentials().then((locals) => {
+      if (cancelled) return;
+      const inv = collectWorkflowCredentials(workflow, locals);
+      setMissingCount(inv.missingCount);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [workflow]);
 
   const handleActiveChange = async (active: boolean) => {
     setActive(active);
@@ -59,9 +81,23 @@ export function EditorTopBar({ actions }: { actions?: React.ReactNode }) {
       toast.error(result.error ?? "Import failed");
       return;
     }
+    const locals = await fetchLocalCredentials();
+    const inv = collectWorkflowCredentials(result.workflow, locals);
+    if (inv.missingCount > 0) {
+      setImportDraft(result.workflow);
+      return;
+    }
     load(result.workflow);
     await persist();
     setReportOpen(true);
+  };
+
+  const finishImport = async (wf: IWorkflow) => {
+    load(wf);
+    await persist();
+    setImportDraft(null);
+    setReportOpen(true);
+    toast.success("Workflow imported");
   };
 
   return (
@@ -131,6 +167,22 @@ export function EditorTopBar({ actions }: { actions?: React.ReactNode }) {
         >
           <Check className="mr-1 size-4" /> Report
         </Button>
+        <Button
+          variant="ghost"
+          size="sm"
+          className="h-8 text-[12px]"
+          onClick={() => setCredsOpen(true)}
+        >
+          <KeyRound className="mr-1 size-4" /> Credentials
+          {missingCount > 0 && (
+            <span className="ml-1 rounded bg-destructive/15 px-1.5 py-0.5 text-[10px] font-medium text-destructive">
+              {missingCount}
+            </span>
+          )}
+        </Button>
+        <Button variant="ghost" size="sm" className="h-8 text-[12px]" asChild>
+          <Link to="/credentials">Vault</Link>
+        </Button>
 
         <span className="mx-1 h-5 w-px bg-border" />
 
@@ -154,6 +206,28 @@ export function EditorTopBar({ actions }: { actions?: React.ReactNode }) {
       </div>
 
       <MigrationReportDialog open={reportOpen} onOpenChange={setReportOpen} />
+      <ImportCredentialsDialog
+        open={credsOpen}
+        onOpenChange={setCredsOpen}
+        workflow={workflow}
+        title="Workflow credentials"
+        allowSkip
+        onComplete={(wf) => {
+          load(wf);
+          void persist();
+          setCredsOpen(false);
+        }}
+      />
+      <ImportCredentialsDialog
+        open={importDraft != null}
+        onOpenChange={(o) => {
+          if (!o) setImportDraft(null);
+        }}
+        workflow={importDraft ?? workflow}
+        title="Map imported credentials"
+        allowSkip
+        onComplete={(wf) => void finishImport(wf)}
+      />
     </header>
   );
 }

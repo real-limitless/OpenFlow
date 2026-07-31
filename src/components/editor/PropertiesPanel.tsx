@@ -11,12 +11,21 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { ExpressionContext } from "@/lib/expressions/evaluate";
+import { CredentialPicker } from "@/components/credentials";
 
 export function PropertiesPanel() {
   const selected = useWorkflowStore((s) => s.selectedNode);
   const workflow = useWorkflowStore((s) => s.workflow);
-  const { selectNode, updateParameters, renameNode, deleteNode, duplicateNode, toggleDisabled, setNodeNotes } =
-    useWorkflowStore();
+  const {
+    selectNode,
+    updateParameters,
+    updateCredentials,
+    renameNode,
+    deleteNode,
+    duplicateNode,
+    toggleDisabled,
+    setNodeNotes,
+  } = useWorkflowStore();
   const node = workflow.nodes.find((n) => n.name === selected);
   const [nameDraft, setNameDraft] = useState<string | null>(null);
 
@@ -92,10 +101,29 @@ export function PropertiesPanel() {
       </div>
 
       <Tabs defaultValue="parameters" className="flex min-h-0 flex-1 flex-col">
-        <TabsList className="mx-3 mt-3 grid w-auto grid-cols-3">
-          <TabsTrigger value="parameters" className="text-[12px]">Parameters</TabsTrigger>
-          <TabsTrigger value="settings" className="text-[12px]">Settings</TabsTrigger>
-          <TabsTrigger value="json" className="text-[12px]">JSON</TabsTrigger>
+        <TabsList
+          className={`mx-3 mt-3 grid w-auto ${
+            (description.credentials?.length ?? 0) > 0 ||
+            Object.keys(node.credentials ?? {}).length > 0
+              ? "grid-cols-4"
+              : "grid-cols-3"
+          }`}
+        >
+          <TabsTrigger value="parameters" className="text-[12px]">
+            Parameters
+          </TabsTrigger>
+          {((description.credentials?.length ?? 0) > 0 ||
+            Object.keys(node.credentials ?? {}).length > 0) && (
+            <TabsTrigger value="credentials" className="text-[12px]">
+              Creds
+            </TabsTrigger>
+          )}
+          <TabsTrigger value="settings" className="text-[12px]">
+            Settings
+          </TabsTrigger>
+          <TabsTrigger value="json" className="text-[12px]">
+            JSON
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="parameters" className="mt-0 min-h-0 flex-1">
@@ -143,6 +171,54 @@ export function PropertiesPanel() {
                     />
                   ))
               )}
+            </div>
+          </ScrollArea>
+        </TabsContent>
+
+        <TabsContent value="credentials" className="mt-0 min-h-0 flex-1">
+          <ScrollArea className="h-full">
+            <div className="space-y-4 p-3">
+              <p className="text-[12px] leading-snug text-muted-foreground">
+                Secrets are stored encrypted on the server. Pick an existing credential or create
+                one. Changes save with the workflow.
+              </p>
+              {(description.credentials ?? []).map((cred) => (
+                <CredentialPicker
+                  key={cred.name}
+                  credentialType={cred.name}
+                  required={cred.required !== false}
+                  value={node.credentials?.[cred.name]?.id ?? null}
+                  defaultName={node.credentials?.[cred.name]?.name}
+                  onChange={(selectedCred) => {
+                    const next = { ...(node.credentials ?? {}) };
+                    if (!selectedCred) delete next[cred.name];
+                    else next[cred.name] = { id: selectedCred.id, name: selectedCred.name };
+                    updateCredentials(node.name, Object.keys(next).length ? next : null);
+                  }}
+                />
+              ))}
+              {Object.entries(node.credentials ?? {})
+                .filter(([type]) => !(description.credentials ?? []).some((c) => c.name === type))
+                .map(([type, ref]) => (
+                  <CredentialPicker
+                    key={type}
+                    credentialType={type}
+                    value={ref?.id ?? null}
+                    defaultName={ref?.name}
+                    onChange={(selectedCred) => {
+                      const next = { ...(node.credentials ?? {}) };
+                      if (!selectedCred) delete next[type];
+                      else next[type] = { id: selectedCred.id, name: selectedCred.name };
+                      updateCredentials(node.name, Object.keys(next).length ? next : null);
+                    }}
+                  />
+                ))}
+              {(description.credentials?.length ?? 0) === 0 &&
+                Object.keys(node.credentials ?? {}).length === 0 && (
+                  <p className="text-[12px] text-muted-foreground">
+                    This node type does not declare credentials.
+                  </p>
+                )}
             </div>
           </ScrollArea>
         </TabsContent>

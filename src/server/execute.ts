@@ -2,7 +2,7 @@ import { prisma } from "./db";
 import { executionQueue } from "./queue";
 import { executeWorkflow } from "../lib/engine/runner";
 import { getExecutorMap } from "../lib/engine";
-import { resolveCredential } from "./credentials";
+import { credentialResolverForUser } from "./credentials";
 import {
   definitionFromRow,
   resolveSubWorkflowFromDb,
@@ -67,7 +67,7 @@ export async function enqueueOrRun(
     workflow: definition,
     nodeExecutors: getExecutorMap(),
     pinData: pinData ?? (definition.pinData as Record<string, INodeExecutionData[]> | undefined),
-    credentialResolver: resolveCredential,
+    credentialResolver: credentialResolverForUser("local"),
     resolveSubWorkflow: resolveSubWorkflowFromDb,
     onProgress: async (partial) => {
       await prisma.execution.update({

@@ -65,7 +65,9 @@ function EditorPage() {
         await useWorkflowStore.getState().persist();
       } catch (err) {
         console.error("Persist before execute failed:", err);
-        toast.error("Could not save workflow to the database before execute");
+        toast.error("Could not save workflow to the database before execute", {
+          description: err instanceof Error ? err.message : undefined,
+        });
         setIsExecuting(false);
         return;
       }

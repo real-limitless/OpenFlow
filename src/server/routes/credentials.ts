@@ -13,9 +13,15 @@ export default function credentialsRoute(app: Hono<AppEnv>) {
       data?: unknown;
     }>();
 
-    if (!name || !type || !data) {
+    if (!name || !type || data === undefined || data === null) {
       return c.json({ error: "name, type, and data required" }, 400);
     }
+
+    await prisma.user.upsert({
+      where: { id: userId },
+      update: {},
+      create: { id: userId, email: `${userId}@local`, passwordHash: "" },
+    });
 
     const dataEncrypted = encrypt(JSON.stringify(data));
 
@@ -24,7 +30,16 @@ export default function credentialsRoute(app: Hono<AppEnv>) {
       select: { id: true, name: true, type: true, createdAt: true },
     });
 
-    return c.json(credential, 201);
+    return c.json(
+      {
+        ...credential,
+        createdAt:
+          credential.createdAt instanceof Date
+            ? credential.createdAt.toISOString()
+            : credential.createdAt,
+      },
+      201,
+    );
   });
 
   // GET /api/v1/credentials — list all credentials (metadata only)
@@ -37,7 +52,12 @@ export default function credentialsRoute(app: Hono<AppEnv>) {
       orderBy: { createdAt: "desc" },
     });
 
-    return c.json(credentials);
+    return c.json(
+      credentials.map((row) => ({
+        ...row,
+        createdAt: row.createdAt instanceof Date ? row.createdAt.toISOString() : row.createdAt,
+      })),
+    );
   });
 
   // GET /api/v1/credentials/:id — single credential metadata
@@ -74,7 +94,13 @@ export default function credentialsRoute(app: Hono<AppEnv>) {
       select: { id: true, name: true, type: true, createdAt: true },
     });
 
-    return c.json(credential);
+    return c.json({
+      ...credential,
+      createdAt:
+        credential.createdAt instanceof Date
+          ? credential.createdAt.toISOString()
+          : credential.createdAt,
+    });
   });
 
   // DELETE /api/v1/credentials/:id — remove credential

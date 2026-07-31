@@ -10,12 +10,18 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as CredentialsRouteImport } from './routes/credentials'
 import { Route as DocsCompatibilityRouteImport } from './routes/docs.compatibility'
 import { Route as WorkflowIdRouteImport } from './routes/workflow.$id'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CredentialsRoute = CredentialsRouteImport.update({
+  id: '/credentials',
+  path: '/credentials',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DocsCompatibilityRoute = DocsCompatibilityRouteImport.update({
@@ -31,30 +37,34 @@ const WorkflowIdRoute = WorkflowIdRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/credentials': typeof CredentialsRoute
   '/docs/compatibility': typeof DocsCompatibilityRoute
   '/workflow/$id': typeof WorkflowIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/credentials': typeof CredentialsRoute
   '/docs/compatibility': typeof DocsCompatibilityRoute
   '/workflow/$id': typeof WorkflowIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/credentials': typeof CredentialsRoute
   '/docs/compatibility': typeof DocsCompatibilityRoute
   '/workflow/$id': typeof WorkflowIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/docs/compatibility' | '/workflow/$id'
+  fullPaths: '/' | '/credentials' | '/docs/compatibility' | '/workflow/$id'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/docs/compatibility' | '/workflow/$id'
-  id: '__root__' | '/' | '/docs/compatibility' | '/workflow/$id'
+  to: '/' | '/credentials' | '/docs/compatibility' | '/workflow/$id'
+  id: '__root__' | '/' | '/credentials' | '/docs/compatibility' | '/workflow/$id'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  CredentialsRoute: typeof CredentialsRoute
   DocsCompatibilityRoute: typeof DocsCompatibilityRoute
   WorkflowIdRoute: typeof WorkflowIdRoute
 }
@@ -66,6 +76,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/credentials': {
+      id: '/credentials'
+      path: '/credentials'
+      fullPath: '/credentials'
+      preLoaderRoute: typeof CredentialsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/docs/compatibility': {
@@ -87,6 +104,7 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  CredentialsRoute: CredentialsRoute,
   DocsCompatibilityRoute: DocsCompatibilityRoute,
   WorkflowIdRoute: WorkflowIdRoute,
 }

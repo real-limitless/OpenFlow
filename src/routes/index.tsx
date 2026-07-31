@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import {
   ArrowRight,
   FileJson,
+  KeyRound,
   Plus,
   Sparkles,
   Trash2,
@@ -21,8 +22,13 @@ import { EMPTY_WORKFLOW, type IWorkflow } from "@/lib/workflow/types";
 import { newId, parseWorkflowJson } from "@/lib/workflow/schema";
 import { SAMPLE_WORKFLOW } from "@/lib/workflow/sample";
 import { migrationReport } from "@/lib/workflow/graph";
+import {
+  collectWorkflowCredentials,
+  fetchLocalCredentials,
+} from "@/lib/workflow/credentials-inventory";
 import { Button } from "@/components/ui/button";
 import { Link } from "@tanstack/react-router";
+import { ImportCredentialsDialog } from "@/components/credentials";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -49,6 +55,7 @@ export const Route = createFileRoute("/")({
 function WorkflowList() {
   const [workflows, setWorkflows] = useState<IWorkflow[] | null>(null);
   const [migrateCount, setMigrateCount] = useState<number | null>(null);
+  const [importDraft, setImportDraft] = useState<IWorkflow | null>(null);
   const navigate = useNavigate();
   const fileInput = useRef<HTMLInputElement>(null);
 
@@ -104,6 +111,12 @@ function WorkflowList() {
       toast.error(result.error ?? "Import failed");
       return;
     }
+    const locals = await fetchLocalCredentials();
+    const inv = collectWorkflowCredentials(result.workflow, locals);
+    if (inv.missingCount > 0) {
+      setImportDraft(result.workflow);
+      return;
+    }
     await create(result.workflow);
   };
 
@@ -152,12 +165,31 @@ function WorkflowList() {
         >
           <Sparkles className="mr-1 size-4" /> Start from example
         </Button>
+        <Button variant="outline" asChild>
+          <Link to="/credentials">
+            <KeyRound className="mr-1 size-4" /> Credentials
+          </Link>
+        </Button>
         <Button variant="ghost" asChild>
           <Link to="/docs/compatibility">
             Compatibility <ArrowRight className="ml-1 size-4" />
           </Link>
         </Button>
       </div>
+
+      <ImportCredentialsDialog
+        open={importDraft != null}
+        onOpenChange={(o) => {
+          if (!o) setImportDraft(null);
+        }}
+        workflow={importDraft ?? EMPTY_WORKFLOW("draft")}
+        title="Map imported credentials"
+        allowSkip
+        onComplete={(wf) => {
+          setImportDraft(null);
+          void create(wf);
+        }}
+      />
 
       {migrateCount !== null && migrateCount > 0 && (
         <div className="mt-5 flex flex-wrap items-center gap-3 rounded-lg border border-dashed border-primary/40 bg-primary/5 p-4">

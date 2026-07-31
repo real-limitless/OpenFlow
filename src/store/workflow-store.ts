@@ -40,6 +40,10 @@ interface WorkflowState {
   renameNode: (from: string, to: string) => void;
   toggleDisabled: (name: string) => void;
   updateParameters: (name: string, parameters: Record<string, unknown>) => void;
+  updateCredentials: (
+    name: string,
+    credentials: INode["credentials"] | null,
+  ) => void;
   setNodeNotes: (name: string, notes: string) => void;
   setPinData: (name: string, items: Array<{ json: Record<string, unknown> }> | null) => void;
 
@@ -208,6 +212,19 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
     get().commitCoalesced(`params:${name}`, (wf) => ({
       ...wf,
       nodes: wf.nodes.map((n) => (n.name === name ? { ...n, parameters } : n)),
+    })),
+
+  updateCredentials: (name, credentials) =>
+    get().commit((wf) => ({
+      ...wf,
+      nodes: wf.nodes.map((n) => {
+        if (n.name !== name) return n;
+        if (credentials == null || Object.keys(credentials).length === 0) {
+          const { credentials: _drop, ...rest } = n;
+          return rest as INode;
+        }
+        return { ...n, credentials };
+      }),
     })),
 
   setNodeNotes: (name, notes) =>
