@@ -1,9 +1,13 @@
 {
-  "name": "tanstack_start_ts",
+  "name": "openflow",
   "private": true,
   "sideEffects": false,
   "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
   "scripts": {
+    "setup": "bash scripts/setup.sh",
     "dev": "vite dev",
     "build": "npm run generate:executors && vite build",
     "build:dev": "vite build --mode development",
@@ -11,8 +15,14 @@
     "dev:api": "tsx watch src/server/api.ts",
     "dev:worker": "tsx watch src/server/worker.ts",
     "db:migrate": "prisma migrate dev",
+    "db:deploy": "prisma migrate deploy",
     "db:studio": "prisma studio",
     "db:generate": "prisma generate",
+    "postinstall": "node scripts/postinstall-prisma.mjs",
+    "docker:up": "docker compose up -d",
+    "docker:down": "docker compose down",
+    "docker:logs": "docker compose logs -f --tail=100",
+    "docker:prod": "docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d",
     "lint": "eslint .",
     "format": "prettier --write .",
     "test": "vitest run",

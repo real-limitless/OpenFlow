@@ -152,6 +152,7 @@ add_item() {
 init_menu() {
   menu_labels=()
   menu_actions=()
+  add_item setup          "⚡  First-time Setup"
   add_item install        "📦  Install Dependencies"
   add_item dev            "🚀  Run Dev Server"
   add_item api-dev        "⚡  Run API Only (dev)"
@@ -225,6 +226,7 @@ show_menu() {
 dispatch() {
   local id="$1"
   case "$id" in
+    setup)       run_foreground "bash scripts/setup.sh" "First-time Setup" ;;
     install)     needs_node   || return 1; run_quick      "npm install"                  "Dependency installation"    ;;
     dev)         needs_node   || return 1; check_deps     || return 1; run_foreground "npm run dev"                  "Dev Server"                 ;;
     api-dev)     needs_node   || return 1; check_deps     || return 1; run_foreground "npm run dev:api"              "API Dev Server"             ;;

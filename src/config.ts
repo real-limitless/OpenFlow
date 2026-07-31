@@ -1,3 +1,37 @@
+import { randomBytes } from "node:crypto";
+
+function isPlaceholderKey(key: string | undefined): boolean {
+  if (!key) return true;
+  return /^(replace-me|replace-with|changeme|change-me)/i.test(key);
+}
+
+let resolvedCredentialsKey: string | undefined;
+
+function resolveCredentialsKey(): string | undefined {
+  if (resolvedCredentialsKey !== undefined) return resolvedCredentialsKey;
+
+  const fromEnv = process.env.CREDENTIALS_KEY;
+  if (!isPlaceholderKey(fromEnv)) {
+    resolvedCredentialsKey = fromEnv;
+    return resolvedCredentialsKey;
+  }
+
+  const isProd = process.env.NODE_ENV === "production";
+  if (isProd) {
+    resolvedCredentialsKey = fromEnv; // may be empty — validateConfig handles it
+    return resolvedCredentialsKey;
+  }
+
+  resolvedCredentialsKey = randomBytes(32).toString("hex");
+  process.env.CREDENTIALS_KEY = resolvedCredentialsKey;
+  console.warn(
+    "[openflow] CREDENTIALS_KEY was missing; generated an ephemeral key for this process. " +
+      "Set CREDENTIALS_KEY in .env so encrypted credentials survive restarts " +
+      '(node -e "console.log(require(\'crypto\').randomBytes(32).toString(\'hex\'))").',
+  );
+  return resolvedCredentialsKey;
+}
+
 export const config = {
   database: {
     url: process.env.DATABASE_URL ?? "postgresql://openflow:openflow@localhost:15432/openflow",
@@ -12,7 +46,7 @@ export const config = {
   },
   credentials: {
     get key() {
-      return process.env.CREDENTIALS_KEY;
+      return resolveCredentialsKey();
     },
   },
   binary: {
@@ -91,10 +125,23 @@ export const config = {
 };
 
 export function validateConfig(): void {
-  if (!config.credentials.key) {
+  const key = config.credentials.key;
+  if (!key || isPlaceholderKey(key)) {
     throw new Error(
       "CREDENTIALS_KEY environment variable is not set. " +
         "Generate one with: node -e \"console.log(require('crypto').randomBytes(32).toString('hex'))\"",
     );
   }
+
+  const dbHost = (() => {
+    try {
+      return new URL(config.database.url).host;
+    } catch {
+      return "(invalid DATABASE_URL)";
+    }
+  })();
+
+  console.info(
+    `[openflow] boot · db=${dbHost} · auth=${config.auth.disabled ? "disabled" : "enabled"} · worker=${config.worker.enabled ? "on" : "off"}`,
+  );
 }

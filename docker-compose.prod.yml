@@ -1,0 +1,31 @@
+# Production overlay — use with the base compose file:
+#   docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+#
+# Before first start, set a strong CREDENTIALS_KEY in .env:
+#   node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
+#
+# Do not expose this stack on the public internet without TLS (Caddy/nginx/Traefik).
+
+services:
+  api:
+    environment:
+      # Literals so a try-out .env (AUTH_DISABLED=true) cannot silently win
+      AUTH_DISABLED: "false"
+      OPENFLOW_HOT_NODES: "false"
+      NODE_ENV: production
+      BINARY_STORAGE_DIR: /data/binary
+      OPENFLOW_SECRETS_DIR: /data/secrets
+    restart: unless-stopped
+    # Prefer binding only when behind a reverse proxy on the same host:
+    # ports:
+    #   - "127.0.0.1:3000:3000"
+
+  db:
+    ports: !override
+      - "127.0.0.1:15432:5432"
+    restart: unless-stopped
+
+  redis:
+    ports: !override
+      - "127.0.0.1:6379:6379"
+    restart: unless-stopped
