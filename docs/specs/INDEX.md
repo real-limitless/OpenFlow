@@ -8,7 +8,7 @@ n8n-nodes-base.odoo: specced, docs/specs/nodes/n8n-nodes-base.odoo.md
 n8n-edges.base.circleCi: specced, docs/specs/nodes/n8n-edges.base.circleCi.md
 n8n-nodes-base.zendesk: specced, docs/specs/nodes/n8n-nodes-base.zendesk.md
 n8n-edges.base.circleCi: specced, docs/specs/nodes/n8n-edges.base.circleCi.md
-n8n-nodes-base.jenkins: specced, docs/specs/nodes/n8n-nodes-base.jenkins.md
+n8n-nodes-base.jenkins: implemented, docs/specs/nodes/n8n-nodes-base.jenkins.md
 n8n-edges.base.circleCi: specced, docs/specs/nodes/n8n-edges.base.circleCi.md
 n8n-nodes-base.highLevel: specced, docs/specs/nodes/n8n-nodes-base.highLevel.md
 n8n-edges.base.circleCi: specced, docs/specs/nodes/n8n-edges.base.circleCi.md

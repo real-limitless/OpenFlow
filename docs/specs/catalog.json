@@ -1130,38 +1130,43 @@
       "priority": "P1",
       "executor": "implemented",
       "spec": "specced",
-      "dogfood": false
+      "dogfood": false,
+      "factory": "pass"
     },
     "n8n-nodes-base.jenkins": {
       "priority": "P1",
       "executor": "implemented",
       "spec": "specced",
-      "dogfood": false
+      "dogfood": false,
+      "factory": "pass"
     },
     "n8n-nodes-base.circleCi": {
       "priority": "P1",
       "executor": "implemented",
       "spec": "specced",
-      "dogfood": false
+      "dogfood": false,
+      "factory": "pass"
     },
     "n8n-nodes-base.salesforce": {
       "priority": "P1",
       "executor": "implemented",
       "spec": "specced",
       "dogfood": false,
-      "factory": "partial"
+      "factory": "pass"
     },
     "n8n-nodes-base.pipedrive": {
       "priority": "P1",
       "executor": "implemented",
       "spec": "specced",
-      "dogfood": false
+      "dogfood": false,
+      "factory": "partial"
     },
     "n8n-nodes-base.zendesk": {
       "priority": "P1",
       "executor": "implemented",
       "spec": "specced",
-      "dogfood": false
+      "dogfood": false,
+      "factory": "pass"
     },
     "n8n-nodes-base.zohoCrm": {
       "priority": "P1",
