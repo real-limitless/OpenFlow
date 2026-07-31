@@ -2,6 +2,7 @@ import type { Hono } from "hono";
 import type { AppEnv } from "../middleware/auth";
 import { config } from "../../config";
 import { prisma } from "../db";
+import { getRecentLogs } from "../log";
 
 async function checkDb(): Promise<"ok" | "error"> {
   try {
@@ -42,8 +43,15 @@ export default function healthRoute(app: Hono<AppEnv>) {
         redis,
         auth: config.auth.disabled ? "disabled" : "enabled",
         worker: config.worker.enabled,
+        logStream: config.log.streamType,
       },
       ready ? 200 : 503,
     );
+  });
+
+  /** Recent in-memory logs (auth required when AUTH_DISABLED is off). */
+  app.get("/api/v1/logs/recent", (c) => {
+    const limit = Math.min(200, Math.max(1, parseInt(c.req.query("limit") ?? "50", 10) || 50));
+    return c.json({ logs: getRecentLogs(limit) });
   });
 }

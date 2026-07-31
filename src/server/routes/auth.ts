@@ -3,33 +3,24 @@ import { getCookie, setCookie, deleteCookie } from "hono/cookie";
 import bcrypt from "bcryptjs";
 import { prisma } from "../db";
 import type { AppEnv } from "../middleware/auth";
+import {
+  SESSION_MAX_AGE_SEC,
+  createSession,
+  destroySession,
+  getSessionUserId,
+} from "../services/sessions";
 
-const SESSION_MAX_AGE = 86400; // 24 hours
+export { getSessionUserId } from "../services/sessions";
 
-const sessions = new Map<string, { userId: string; expiresAt: number }>();
-
-export function getSessionUserId(token: string | undefined): string | null {
-  if (!token) return null;
-  const session = sessions.get(token);
-  if (!session) return null;
-  if (Date.now() > session.expiresAt) {
-    sessions.delete(token);
-    return null;
-  }
-  return session.userId;
-}
-
-function createSession(
+function setSessionCookie(
   c: { req: { raw: Request }; json: (data: unknown, status?: number) => Response },
-  userId: string,
+  token: string,
 ) {
-  const token = crypto.randomUUID();
-  sessions.set(token, { userId, expiresAt: Date.now() + SESSION_MAX_AGE * 1000 });
   setCookie(c as never, "session", token, {
     httpOnly: true,
     path: "/",
     sameSite: "Lax",
-    maxAge: SESSION_MAX_AGE,
+    maxAge: SESSION_MAX_AGE_SEC,
   });
 }
 
@@ -56,11 +47,12 @@ export default function authRoute(app: Hono<AppEnv>) {
 
     const passwordHash = await bcrypt.hash(password, 10);
     const user = await prisma.user.create({
-      data: { email, passwordHash },
-      select: { id: true, email: true },
+      data: { email, passwordHash, role: "member" },
+      select: { id: true, email: true, role: true },
     });
 
-    createSession(c, user.id);
+    const token = await createSession(user.id);
+    setSessionCookie(c, token);
     return c.json(user, 201);
   });
 
@@ -73,7 +65,7 @@ export default function authRoute(app: Hono<AppEnv>) {
     }
 
     const user = await prisma.user.findUnique({ where: { email } });
-    if (!user) {
+    if (!user || !user.passwordHash) {
       return c.json({ error: "Invalid credentials" }, 401);
     }
 
@@ -82,27 +74,28 @@ export default function authRoute(app: Hono<AppEnv>) {
       return c.json({ error: "Invalid credentials" }, 401);
     }
 
-    createSession(c, user.id);
-    return c.json({ id: user.id, email: user.email });
+    const token = await createSession(user.id);
+    setSessionCookie(c, token);
+    return c.json({ id: user.id, email: user.email, role: user.role });
   });
 
-  app.post("/api/v1/auth/logout", (c) => {
+  app.post("/api/v1/auth/logout", async (c) => {
     const token = getCookie(c, "session");
-    if (token) sessions.delete(token);
+    await destroySession(token);
     deleteCookie(c, "session", { path: "/" });
     return c.json({ ok: true });
   });
 
   app.get("/api/v1/auth/me", async (c) => {
     const token = getCookie(c, "session");
-    const userId = getSessionUserId(token);
+    const userId = await getSessionUserId(token);
     if (!userId) {
       return c.json({ error: "Not authenticated" }, 401);
     }
 
     const user = await prisma.user.findUnique({
       where: { id: userId },
-      select: { id: true, email: true },
+      select: { id: true, email: true, role: true },
     });
     if (!user) {
       return c.json({ error: "User not found" }, 401);

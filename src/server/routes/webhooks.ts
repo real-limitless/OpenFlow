@@ -5,10 +5,12 @@ import type { IWorkflow } from "../../lib/workflow/types";
 import { executeWorkflow } from "../../lib/engine/runner";
 import { getExecutorMap } from "../../lib/engine";
 import { getWebhookResponse, clearWebhookResponse } from "../../lib/engine/executors/respond-to-webhook";
-import { credentialResolverForUser } from "../credentials";
-import { dataTableAccessForUser } from "../services/data-tables-access";
+import { credentialResolverForProject } from "../credentials";
+import { dataTableAccessForProject } from "../services/data-tables-access";
 import { enqueueOrRun } from "../execute";
 import { resolveSubWorkflowFromDb } from "../workflow-loader";
+import { loadVarsMap } from "../services/variables";
+import { getDefaultEnvironment } from "../services/environments";
 
 export default function webhooksRoute(app: Hono<AppEnv>) {
   // Public webhook endpoint — no auth required
@@ -70,14 +72,22 @@ export default function webhooksRoute(app: Hono<AppEnv>) {
     const responseMode = (webhookNode?.parameters as Record<string, unknown>)?.responseMode as string | undefined;
     const shouldWait = hasRespondNode || responseMode === "lastNode" || responseMode === "responseNode";
 
+    const ownerId = workflow.userId;
+    const projectId = workflow.projectId;
+
+    const defaultEnv = await getDefaultEnvironment(projectId);
+    const environmentId = defaultEnv?.id;
+    const vars = await loadVarsMap(projectId, environmentId ?? null);
+
     const runOptions = {
       workflow: { ...definition, __executionId: execution.id },
       nodeExecutors: getExecutorMap(),
       pinData: webhookNodeName
         ? { [webhookNodeName]: [{ json: requestData }] }
         : undefined,
-      credentialResolver: credentialResolverForUser("local"),
-      dataTables: dataTableAccessForUser("local"),
+      credentialResolver: credentialResolverForProject(projectId, ownerId),
+      dataTables: dataTableAccessForProject(projectId),
+      vars,
       resolveSubWorkflow: resolveSubWorkflowFromDb,
     };
 
@@ -110,6 +120,10 @@ export default function webhooksRoute(app: Hono<AppEnv>) {
         execution.id,
         "webhook",
         webhookNodeName ? { [webhookNodeName]: [{ json: requestData }] } : undefined,
+        undefined,
+        ownerId,
+        projectId,
+        environmentId,
       );
 
       return c.json(
@@ -143,11 +157,18 @@ export default function webhooksRoute(app: Hono<AppEnv>) {
 
   // Admin: register a webhook route
   app.post("/api/v1/webhooks", async (c) => {
+    const userId = c.get("userId");
     const { workflowId, path, nodeId, method = "*" } = await c.req.json();
 
     if (!workflowId || !path || !nodeId) {
       return c.json({ error: "workflowId, path, and nodeId required" }, 400);
     }
+
+    const owned = await prisma.workflow.findFirst({
+      where: { id: workflowId, project: { members: { some: { userId } } } },
+      select: { id: true },
+    });
+    if (!owned) return c.json({ error: "Workflow not found" }, 404);
 
     const webhook = await prisma.webhookRoute.create({
       data: { workflowId, path, nodeId, method, active: true },
@@ -158,7 +179,9 @@ export default function webhooksRoute(app: Hono<AppEnv>) {
 
   // Admin: list webhook routes
   app.get("/api/v1/webhooks", async (c) => {
+    const userId = c.get("userId");
     const routes = await prisma.webhookRoute.findMany({
+      where: { workflow: { project: { members: { some: { userId } } } } },
       include: { workflow: { select: { id: true, name: true } } },
     });
     return c.json(routes);
@@ -166,7 +189,12 @@ export default function webhooksRoute(app: Hono<AppEnv>) {
 
   // Admin: delete a webhook route
   app.delete("/api/v1/webhooks/:id", async (c) => {
+    const userId = c.get("userId");
     const id = c.req.param("id");
+    const existing = await prisma.webhookRoute.findFirst({
+      where: { id, workflow: { project: { members: { some: { userId } } } } },
+    });
+    if (!existing) return c.json({ error: "Not found" }, 404);
     await prisma.webhookRoute.delete({ where: { id } });
     return c.json({ success: true });
   });

@@ -44,6 +44,7 @@ export function createExecutionContext(
       return evaluateOnItem(expression, itemJson, {
         nodeData,
         env: typeof process !== "undefined" ? (process.env as Record<string, string>) : undefined,
+        vars: options.vars,
       });
     },
     getNodeInputItems,
@@ -58,6 +59,7 @@ export function createExecutionContext(
       return { ...customData };
     },
     dataTables: options.dataTables,
+    vars: options.vars,
   };
 
   return ctx;

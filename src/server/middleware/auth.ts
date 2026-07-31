@@ -1,25 +1,38 @@
 import type { Context, Next } from "hono";
 import { getCookie } from "hono/cookie";
 import bcrypt from "bcryptjs";
-import { randomBytes } from "node:crypto";
+import { createHash } from "node:crypto";
 import { prisma } from "../db";
-import { getSessionUserId } from "../routes/auth";
+import { getSessionUserId } from "../services/sessions";
+import { ensureUser, LOCAL_USER_ID } from "../services/users";
 import { config } from "../../config";
 
 export type AppEnv = { Variables: { userId: string } };
 
 const EXEMPT_PATHS = ["/health", "/api/v1/auth", "/webhook"];
 
+function hashApiKey(rawKey: string): string {
+  return createHash("sha256").update(rawKey).digest("hex");
+}
+
 async function getUserIdFromApiKey(header: string | undefined): Promise<string | null> {
   if (!header) return null;
   const key = header.startsWith("Bearer ") ? header.slice(7) : header;
   if (!key.startsWith("of_")) return null;
 
-  const keys = await prisma.apiKey.findMany({
+  const keyHash = hashApiKey(key);
+  const byHash = await prisma.apiKey.findUnique({
+    where: { keyHash },
+    select: { userId: true },
+  });
+  if (byHash) return byHash.userId;
+
+  // Legacy bcrypt-hashed keys (pre-E0)
+  const legacy = await prisma.apiKey.findMany({
+    where: { keyHash: { startsWith: "$2" } },
     select: { keyHash: true, userId: true },
   });
-
-  for (const row of keys) {
+  for (const row of legacy) {
     if (await bcrypt.compare(key, row.keyHash)) {
       return row.userId;
     }
@@ -29,7 +42,8 @@ async function getUserIdFromApiKey(header: string | undefined): Promise<string |
 
 export async function authMiddleware(c: Context<AppEnv>, next: Next) {
   if (config.auth.disabled) {
-    c.set("userId", "local");
+    await ensureUser(LOCAL_USER_ID);
+    c.set("userId", LOCAL_USER_ID);
     return next();
   }
 
@@ -48,7 +62,7 @@ export async function authMiddleware(c: Context<AppEnv>, next: Next) {
   }
 
   const token = getCookie(c, "session");
-  const userId = getSessionUserId(token);
+  const userId = await getSessionUserId(token);
   if (!userId) {
     return c.json({ error: "Authentication required" }, 401);
   }

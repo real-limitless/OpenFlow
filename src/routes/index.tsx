@@ -2,6 +2,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import {
   ArrowRight,
+  Braces,
   FileJson,
   KeyRound,
   Plus,
@@ -30,6 +31,18 @@ import {
 import { Button } from "@/components/ui/button";
 import { Link } from "@tanstack/react-router";
 import { ImportCredentialsDialog } from "@/components/credentials";
+import {
+  fetchProjects,
+  getSelectedProjectId,
+  setSelectedProjectId,
+  type ProjectSummary,
+} from "@/lib/projects/client";
+import {
+  fetchEnvironments,
+  getSelectedEnvironmentId,
+  setSelectedEnvironmentId,
+  type EnvironmentSummary,
+} from "@/lib/environments/client";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -57,11 +70,48 @@ function WorkflowList() {
   const [workflows, setWorkflows] = useState<IWorkflow[] | null>(null);
   const [migrateCount, setMigrateCount] = useState<number | null>(null);
   const [importDraft, setImportDraft] = useState<IWorkflow | null>(null);
+  const [projects, setProjects] = useState<ProjectSummary[]>([]);
+  const [projectId, setProjectId] = useState<string | null>(null);
+  const [environments, setEnvironments] = useState<EnvironmentSummary[]>([]);
+  const [environmentId, setEnvironmentId] = useState<string | null>(null);
   const navigate = useNavigate();
   const fileInput = useRef<HTMLInputElement>(null);
 
   const refresh = () => void getRepository().list().then(setWorkflows);
-  useEffect(refresh, []);
+  useEffect(refresh, [projectId]);
+
+  useEffect(() => {
+    void fetchProjects().then((list) => {
+      setProjects(list);
+      const stored = getSelectedProjectId();
+      const next =
+        (stored && list.find((p) => p.id === stored)?.id) ||
+        list.find((p) => p.type === "personal")?.id ||
+        list[0]?.id ||
+        null;
+      if (next && next !== stored) setSelectedProjectId(next);
+      setProjectId(next);
+    });
+  }, []);
+
+  useEffect(() => {
+    if (!projectId) {
+      setEnvironments([]);
+      setEnvironmentId(null);
+      return;
+    }
+    void fetchEnvironments(projectId).then((list) => {
+      setEnvironments(list);
+      const stored = getSelectedEnvironmentId();
+      const next =
+        (stored && list.find((e) => e.id === stored)?.id) ||
+        list.find((e) => e.isDefault)?.id ||
+        list[0]?.id ||
+        null;
+      if (next !== stored) setSelectedEnvironmentId(next);
+      setEnvironmentId(next);
+    });
+  }, [projectId]);
 
   useEffect(() => {
     void (async () => {
@@ -123,11 +173,55 @@ function WorkflowList() {
 
   return (
     <main className="mx-auto min-h-screen w-full max-w-5xl px-6 py-14">
-      <div className="flex items-center gap-2 text-primary">
-        <WorkflowIcon className="size-6" />
-        <span className="font-mono text-[15px] font-semibold tracking-tight text-foreground">
-          OpenFlow
-        </span>
+      <div className="flex flex-wrap items-center gap-3 text-primary">
+        <div className="flex items-center gap-2">
+          <WorkflowIcon className="size-6" />
+          <span className="font-mono text-[15px] font-semibold tracking-tight text-foreground">
+            OpenFlow
+          </span>
+        </div>
+        {projects.length > 0 && (
+          <label className="flex items-center gap-2 text-sm text-muted-foreground">
+            <span className="sr-only">Project</span>
+            <select
+              className="h-9 rounded-md border border-input bg-background px-2 text-sm text-foreground"
+              value={projectId ?? ""}
+              onChange={(e) => {
+                const id = e.target.value || null;
+                setSelectedProjectId(id);
+                setProjectId(id);
+              }}
+            >
+              {projects.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.name}
+                  {p.type === "personal" ? " (personal)" : ""} · {p.role}
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
+        {environments.length > 0 && (
+          <label className="flex items-center gap-2 text-sm text-muted-foreground">
+            <span className="sr-only">Environment</span>
+            <select
+              className="h-9 rounded-md border border-input bg-background px-2 text-sm text-foreground"
+              value={environmentId ?? ""}
+              onChange={(e) => {
+                const id = e.target.value || null;
+                setSelectedEnvironmentId(id);
+                setEnvironmentId(id);
+              }}
+            >
+              {environments.map((e) => (
+                <option key={e.id} value={e.id}>
+                  {e.name}
+                  {e.isDefault ? " ★" : ""}
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
       </div>
 
       <h1 className="mt-8 max-w-2xl text-4xl font-semibold leading-[1.1] tracking-tight">
@@ -169,6 +263,11 @@ function WorkflowList() {
         <Button variant="outline" asChild>
           <Link to="/credentials">
             <KeyRound className="mr-1 size-4" /> Credentials
+          </Link>
+        </Button>
+        <Button variant="outline" asChild>
+          <Link to="/variables">
+            <Braces className="mr-1 size-4" /> Variables
           </Link>
         </Button>
         <Button variant="outline" asChild>

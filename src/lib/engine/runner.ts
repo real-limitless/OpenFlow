@@ -35,6 +35,8 @@ export interface RunOptions {
   _depth?: number;
   /** Product Data Tables access for Evaluation / DataTable nodes. */
   dataTables?: DataTableAccess;
+  /** Instance + project custom variables exposed as `$vars`. */
+  vars?: Record<string, unknown>;
 }
 
 export interface RunResult {
@@ -46,6 +48,7 @@ function resolveParameters(
   params: Record<string, unknown>,
   nodeOutputs: Map<string, INodeExecutionData[][]>,
   _nodeName: string,
+  vars?: Record<string, unknown>,
 ): Record<string, unknown> {
   const nodeData: Record<string, INodeExecutionData[]> = {};
   for (const [name, outputs] of nodeOutputs) {
@@ -59,6 +62,7 @@ function resolveParameters(
         json: {},
         nodeData,
         env: process.env as Record<string, string>,
+        vars: vars ?? {},
       });
       resolved[key] = result.ok ? result.value : value;
     } else {
@@ -193,7 +197,7 @@ export async function executeWorkflow(options: RunOptions): Promise<RunResult> {
       try {
         const resolvedNode = {
           ...node,
-          parameters: resolveParameters(node.parameters, nodeOutputs, nodeName),
+          parameters: resolveParameters(node.parameters, nodeOutputs, nodeName, options.vars),
         };
 
         const runSubWorkflow = async (subOpts: {
@@ -248,6 +252,7 @@ export async function executeWorkflow(options: RunOptions): Promise<RunResult> {
             maxSubWorkflowDepth: maxDepth,
             _depth: depth + 1,
             dataTables: options.dataTables,
+            vars: options.vars,
           });
 
           if (!childResult.success) {
@@ -281,6 +286,7 @@ export async function executeWorkflow(options: RunOptions): Promise<RunResult> {
           runSubWorkflow,
           customData,
           dataTables: options.dataTables,
+          vars: options.vars,
         });
 
         outputs = await executor(ctx, resolvedNode);

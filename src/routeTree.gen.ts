@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as CredentialsRouteImport } from './routes/credentials'
+import { Route as VariablesRouteImport } from './routes/variables'
 import { Route as DataTablesRouteImport } from './routes/data-tables'
 import { Route as DataTablesIdRouteImport } from './routes/data-tables_.$id'
 import { Route as DocsCompatibilityRouteImport } from './routes/docs.compatibility'
@@ -24,6 +25,11 @@ const IndexRoute = IndexRouteImport.update({
 const CredentialsRoute = CredentialsRouteImport.update({
   id: '/credentials',
   path: '/credentials',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const VariablesRoute = VariablesRouteImport.update({
+  id: '/variables',
+  path: '/variables',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DataTablesRoute = DataTablesRouteImport.update({
@@ -50,6 +56,7 @@ const WorkflowIdRoute = WorkflowIdRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/credentials': typeof CredentialsRoute
+  '/variables': typeof VariablesRoute
   '/data-tables': typeof DataTablesRoute
   '/data-tables/$id': typeof DataTablesIdRoute
   '/docs/compatibility': typeof DocsCompatibilityRoute
@@ -58,6 +65,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/credentials': typeof CredentialsRoute
+  '/variables': typeof VariablesRoute
   '/data-tables': typeof DataTablesRoute
   '/data-tables/$id': typeof DataTablesIdRoute
   '/docs/compatibility': typeof DocsCompatibilityRoute
@@ -67,6 +75,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/credentials': typeof CredentialsRoute
+  '/variables': typeof VariablesRoute
   '/data-tables': typeof DataTablesRoute
   '/data-tables_/$id': typeof DataTablesIdRoute
   '/docs/compatibility': typeof DocsCompatibilityRoute
@@ -77,6 +86,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/credentials'
+    | '/variables'
     | '/data-tables'
     | '/data-tables/$id'
     | '/docs/compatibility'
@@ -85,6 +95,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/credentials'
+    | '/variables'
     | '/data-tables'
     | '/data-tables/$id'
     | '/docs/compatibility'
@@ -93,6 +104,7 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/credentials'
+    | '/variables'
     | '/data-tables'
     | '/data-tables_/$id'
     | '/docs/compatibility'
@@ -102,6 +114,7 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   CredentialsRoute: typeof CredentialsRoute
+  VariablesRoute: typeof VariablesRoute
   DataTablesRoute: typeof DataTablesRoute
   DataTablesIdRoute: typeof DataTablesIdRoute
   DocsCompatibilityRoute: typeof DocsCompatibilityRoute
@@ -122,6 +135,13 @@ declare module '@tanstack/react-router' {
       path: '/credentials'
       fullPath: '/credentials'
       preLoaderRoute: typeof CredentialsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/variables': {
+      id: '/variables'
+      path: '/variables'
+      fullPath: '/variables'
+      preLoaderRoute: typeof VariablesRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/data-tables': {
@@ -158,6 +178,7 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   CredentialsRoute: CredentialsRoute,
+  VariablesRoute: VariablesRoute,
   DataTablesRoute: DataTablesRoute,
   DataTablesIdRoute: DataTablesIdRoute,
   DocsCompatibilityRoute: DocsCompatibilityRoute,
@@ -166,3 +187,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}

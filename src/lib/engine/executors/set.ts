@@ -53,7 +53,7 @@ export const setExecutor: NodeExecutor = async (ctx) => {
     return [
       items.map((item, idx) => {
         const base = buildBase(item, include, includeOtherFields, includeFields, excludeFields);
-        const merged = mergeRaw(base, rawJson, item, idx);
+        const merged = mergeRaw(base, rawJson, item, idx, ctx.vars);
         return {
           json: merged,
           binary: item.binary,
@@ -71,7 +71,7 @@ export const setExecutor: NodeExecutor = async (ctx) => {
         if (!name) continue;
         const typeKey = field.type ?? "stringValue";
         const rawValue = field[typeKey] ?? field.value;
-        const resolved = resolveValue(rawValue, item, idx);
+        const resolved = resolveValue(rawValue, item, idx, ctx.vars);
         const targetType = TYPE_MAP[typeKey] ?? "string";
         const coerced = coerceType(resolved, targetType, ignoreErrors);
         assignField(json, name, coerced, dotNotation);
@@ -139,9 +139,18 @@ function buildBase(
   return includeOtherFields ? { ...item.json } : {};
 }
 
-function resolveValue(rawValue: unknown, item: INodeExecutionData, idx: number): unknown {
+function resolveValue(
+  rawValue: unknown,
+  item: INodeExecutionData,
+  idx: number,
+  vars?: Record<string, unknown>,
+): unknown {
   if (typeof rawValue === "string") {
-    const result = evaluateExpression(rawValue, { json: item.json, itemIndex: idx });
+    const result = evaluateExpression(rawValue, {
+      json: item.json,
+      itemIndex: idx,
+      vars: vars ?? {},
+    });
     if (result.ok) return result.value;
     return rawValue;
   }
@@ -177,11 +186,16 @@ function mergeRaw(
   rawJson: unknown,
   item: INodeExecutionData,
   idx: number,
+  vars?: Record<string, unknown>,
 ): Record<string, unknown> {
   const text =
     typeof rawJson === "string" ? rawJson : rawJson == null ? "{}" : JSON.stringify(rawJson);
 
-  const result = evaluateExpression(text, { json: item.json, itemIndex: idx });
+  const result = evaluateExpression(text, {
+    json: item.json,
+    itemIndex: idx,
+    vars: vars ?? {},
+  });
   const interpolated = typeof result.value === "string" ? result.value : text;
   const parsed = safeParse(interpolated);
 
@@ -212,7 +226,7 @@ function runLegacy(
     for (const entry of valuesContainer[bucket] ?? []) {
       const name = entry.name;
       if (!name) continue;
-      const resolved = resolveValue(entry.value, item, idx);
+      const resolved = resolveValue(entry.value, item, idx, ctx.vars);
       const coerced = coerceType(resolved, targetType, false);
       assignField(json, name, coerced, dotNotation);
     }

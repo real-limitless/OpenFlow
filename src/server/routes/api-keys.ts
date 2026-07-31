@@ -1,8 +1,12 @@
 import type { Hono } from "hono";
-import bcrypt from "bcryptjs";
-import { randomBytes } from "node:crypto";
+import { createHash, randomBytes } from "node:crypto";
 import { prisma } from "../db";
 import type { AppEnv } from "../middleware/auth";
+import { ensureUser } from "../services/users";
+
+function hashApiKey(rawKey: string): string {
+  return createHash("sha256").update(rawKey).digest("hex");
+}
 
 export default function apiKeysRoute(app: Hono<AppEnv>) {
   app.post("/api/v1/api-keys", async (c) => {
@@ -14,8 +18,10 @@ export default function apiKeysRoute(app: Hono<AppEnv>) {
       return c.json({ error: "name is required" }, 400);
     }
 
+    await ensureUser(userId);
+
     const rawKey = "of_" + randomBytes(32).toString("hex");
-    const keyHash = await bcrypt.hash(rawKey, 10);
+    const keyHash = hashApiKey(rawKey);
 
     const apiKey = await prisma.apiKey.create({
       data: {

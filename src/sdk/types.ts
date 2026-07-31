@@ -72,6 +72,9 @@ export interface ExecutionContext {
    * Optional — unit tests and offline runs may omit it.
    */
   dataTables?: DataTableAccess;
+
+  /** Custom variables for `$vars` in expressions. */
+  vars?: Record<string, unknown>;
 }
 
 /**
@@ -106,4 +109,6 @@ export interface CreateContextOptions {
   customData?: Record<string, string>;
   /** Product Data Tables access for nodes that read/write stored tables. */
   dataTables?: DataTableAccess;
+  /** Custom variables for `$vars` in expressions. */
+  vars?: Record<string, unknown>;
 }

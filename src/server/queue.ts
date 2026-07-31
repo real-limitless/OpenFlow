@@ -10,6 +10,12 @@ export interface ExecutionJobData {
   workflowId: string;
   executionId: string;
   mode: "manual" | "webhook" | "trigger";
+  /** Workflow owner (audit / fallback). */
+  userId: string;
+  /** Project scope for credential / data-table resolution. */
+  projectId: string;
+  /** Environment for $vars overrides (id). */
+  environmentId?: string;
   pinData?: Record<string, unknown>;
   /** Canvas snapshot at enqueue time — preferred over DB row when present. */
   workflow?: Record<string, unknown>;

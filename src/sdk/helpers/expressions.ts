@@ -7,6 +7,7 @@ export function evaluateOnItem(
   extras?: {
     nodeData?: Record<string, INodeExecutionData[]>;
     env?: Record<string, string>;
+    vars?: Record<string, unknown>;
   },
 ): unknown {
   const result = evaluateExpression(expression, {
@@ -20,6 +21,7 @@ export function evaluateOnItem(
         )
       : undefined,
     env: extras?.env,
+    vars: extras?.vars,
   });
   if (result.ok) return result.value;
   return expression;

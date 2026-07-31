@@ -18,12 +18,17 @@ export {
 // BUILTIN_EXECUTOR_MODULES — a named-export list would have to be hand-edited
 // for every new node.
 
-export type { BinaryRef } from "./binary";
+export type { BinaryRef, BinaryStore } from "./binary";
 export {
   storeBinary,
   getBinary,
   getBinaryData,
   getBinaryRef,
+  getBinaryRefAsync,
   deleteBinary,
   toIBinaryData,
+  setBinaryStore,
+  getBinaryStore,
+  createFsBinaryStore,
+  createS3BinaryStore,
 } from "./binary";

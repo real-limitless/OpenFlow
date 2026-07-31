@@ -4,12 +4,21 @@ import type { AppEnv } from "../middleware/auth";
 
 export default function executionsRoute(app: Hono<AppEnv>) {
   app.get("/api/v1/executions", async (c) => {
+    const userId = c.get("userId");
     const page = parseInt(c.req.query("page") ?? "1");
     const limit = Math.min(parseInt(c.req.query("limit") ?? "20"), 100);
     const offset = (page - 1) * limit;
+    const projectIds = (
+      await prisma.projectMember.findMany({
+        where: { userId },
+        select: { projectId: true },
+      })
+    ).map((m) => m.projectId);
+    const owned = { workflow: { projectId: { in: projectIds } } };
 
     const [list, total] = await Promise.all([
       prisma.execution.findMany({
+        where: owned,
         orderBy: { startedAt: "desc" },
         take: limit,
         skip: offset,
@@ -17,7 +26,7 @@ export default function executionsRoute(app: Hono<AppEnv>) {
           workflow: { select: { id: true, name: true } },
         },
       }),
-      prisma.execution.count(),
+      prisma.execution.count({ where: owned }),
     ]);
 
     return c.json({
@@ -27,6 +36,7 @@ export default function executionsRoute(app: Hono<AppEnv>) {
   });
 
   app.get("/api/v1/executions/:id/stream", async (c) => {
+    const userId = c.get("userId");
     const executionId = c.req.param("id");
     const abortSignal = c.req.raw.signal;
 
@@ -75,8 +85,11 @@ export default function executionsRoute(app: Hono<AppEnv>) {
               return;
             }
 
-            const execution = await prisma.execution.findUnique({
-              where: { id: executionId },
+            const execution = await prisma.execution.findFirst({
+              where: {
+                id: executionId,
+                workflow: { project: { members: { some: { userId } } } },
+              },
             });
 
             if (closed || abortSignal.aborted) {
@@ -140,10 +153,14 @@ export default function executionsRoute(app: Hono<AppEnv>) {
   });
 
   app.get("/api/v1/executions/:id", async (c) => {
+    const userId = c.get("userId");
     const executionId = c.req.param("id");
 
-    const execution = await prisma.execution.findUnique({
-      where: { id: executionId },
+    const execution = await prisma.execution.findFirst({
+      where: {
+        id: executionId,
+        workflow: { project: { members: { some: { userId } } } },
+      },
     });
 
     if (!execution) {

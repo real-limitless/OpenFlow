@@ -122,10 +122,15 @@ describe("Data Tables API", () => {
   });
 
   it("returns 404 for other user ownership", async () => {
+    const membership = await prisma.projectMember.findFirst({
+      where: { userId: "local", project: { type: "personal" } },
+      select: { projectId: true },
+    });
     const foreign = await withRetry(() =>
       prisma.dataTable.create({
         data: {
           userId: "local",
+          projectId: membership!.projectId,
           name: `dt-test-foreign-${Date.now()}`,
           columns: JSON.stringify([{ id: "c1", name: "A", type: "string" }]),
         },

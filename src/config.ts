@@ -49,8 +49,29 @@ export const config = {
       return resolveCredentialsKey();
     },
   },
+  /** Default secret backend: local | vault | aws-sm */
+  secrets: {
+    get backend() {
+      return (process.env.SECRETS_BACKEND ?? "local").trim() || "local";
+    },
+  },
   binary: {
     storageDir: process.env.BINARY_STORAGE_DIR ?? "./data/binary",
+    /** fs | s3 */
+    get storage() {
+      return (process.env.BINARY_STORAGE ?? "fs").trim().toLowerCase() || "fs";
+    },
+  },
+  log: {
+    get level() {
+      return (process.env.LOG_LEVEL ?? "info").trim().toLowerCase() || "info";
+    },
+    get format() {
+      return process.env.LOG_FORMAT === "pretty" ? "pretty" : "json";
+    },
+    get streamType() {
+      return (process.env.LOG_STREAM_TYPE ?? "none").trim().toLowerCase() || "none";
+    },
   },
   worker: {
     enabled: process.env.RUN_WORKER !== "false" && process.env.RUN_WORKER !== "0",

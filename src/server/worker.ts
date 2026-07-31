@@ -4,11 +4,21 @@ import { prisma } from "./db";
 import { connection } from "./queue";
 import { getExecutorMap } from "../lib/engine";
 import { executeWorkflow } from "../lib/engine/runner";
-import { credentialResolverForUser } from "./credentials";
-import { dataTableAccessForUser } from "./services/data-tables-access";
+import { credentialResolverForProject, credentialResolverForUser } from "./credentials";
+import {
+  dataTableAccessForProject,
+  dataTableAccessForUser,
+} from "./services/data-tables-access";
 import { resolveSubWorkflowFromDb } from "./workflow-loader";
+import { loadVarsMap } from "./services/variables";
+import { getDefaultEnvironment } from "./services/environments";
+import { initBinaryStorage } from "./binary-init";
+import { initLogStreaming, log } from "./log";
 import type { ExecutionJobData } from "./queue";
 import type { INodeExecutionData, IWorkflow } from "../lib/workflow/types";
+
+initLogStreaming();
+initBinaryStorage();
 
 let worker: Worker<ExecutionJobData> | null = null;
 
@@ -18,11 +28,26 @@ export function startWorker(concurrency = 5): Worker<ExecutionJobData> {
   worker = new Worker<ExecutionJobData>(
     "workflow-execution",
     async (job) => {
-      const { workflowId, executionId, pinData, workflow: snapshot } = job.data;
+      const {
+        workflowId,
+        executionId,
+        pinData,
+        workflow: snapshot,
+        userId: jobUserId,
+        projectId: jobProjectId,
+        environmentId: jobEnvironmentId,
+      } = job.data;
 
-      console.log(`[Worker] Processing execution ${executionId} for workflow ${workflowId}`);
+      const wlog = log.child({
+        executionId,
+        workflowId,
+        component: "worker",
+      });
+      wlog.info("execution started");
 
       let definition: IWorkflow | null = null;
+      let ownerId = jobUserId;
+      let projectId = jobProjectId;
 
       if (snapshot && Array.isArray((snapshot as IWorkflow).nodes)) {
         definition = snapshot as unknown as IWorkflow;
@@ -33,8 +58,11 @@ export function startWorker(concurrency = 5): Worker<ExecutionJobData> {
             where: { id: executionId },
             data: { status: "error", finishedAt: new Date(), error: "Workflow not found" },
           });
+          wlog.error("workflow not found");
           throw new Error("Workflow not found");
         }
+        ownerId = ownerId || workflow.userId;
+        projectId = projectId || workflow.projectId;
         definition = {
           id: workflow.id,
           name: workflow.name,
@@ -49,14 +77,36 @@ export function startWorker(concurrency = 5): Worker<ExecutionJobData> {
         } as unknown as IWorkflow;
       }
 
+      if (!ownerId || !projectId) {
+        const row = await prisma.workflow.findUnique({
+          where: { id: workflowId },
+          select: { userId: true, projectId: true },
+        });
+        ownerId = ownerId || row?.userId || "local";
+        projectId = projectId || row?.projectId || "";
+      }
+
+      const credentialResolver = projectId
+        ? credentialResolverForProject(projectId, ownerId)
+        : credentialResolverForUser(ownerId);
+      const dataTables = projectId
+        ? dataTableAccessForProject(projectId)
+        : dataTableAccessForUser(ownerId);
+      let environmentId = jobEnvironmentId;
+      if (!environmentId && projectId) {
+        environmentId = (await getDefaultEnvironment(projectId))?.id;
+      }
+      const vars = await loadVarsMap(projectId || null, environmentId ?? null);
+
       const result = await executeWorkflow({
         workflow: definition,
         nodeExecutors: getExecutorMap(),
         pinData:
           (pinData as unknown as Record<string, INodeExecutionData[]>) ??
           (definition.pinData as Record<string, INodeExecutionData[]> | undefined),
-        credentialResolver: credentialResolverForUser("local"),
-        dataTables: dataTableAccessForUser("local"),
+        credentialResolver,
+        dataTables,
+        vars,
         resolveSubWorkflow: resolveSubWorkflowFromDb,
         onProgress: async (partial) => {
           await prisma.execution.update({
@@ -75,7 +125,15 @@ export function startWorker(concurrency = 5): Worker<ExecutionJobData> {
         },
       });
 
-      console.log(`[Worker] Execution ${executionId} ${result.success ? "succeeded" : "failed"}`);
+      if (result.success) {
+        wlog.info("execution succeeded");
+      } else {
+        const errNode = Object.entries(result.runData).find(([, v]) => v.status === "error");
+        wlog.error("execution failed", {
+          node: errNode?.[0],
+          error: errNode?.[1]?.error,
+        });
+      }
       return { success: result.success };
     },
     {
@@ -85,18 +143,22 @@ export function startWorker(concurrency = 5): Worker<ExecutionJobData> {
   );
 
   worker.on("completed", (job) => {
-    console.log(`[Worker] Job ${job.id} completed`);
+    log.debug("job completed", { component: "worker", jobId: job.id });
   });
 
   worker.on("failed", (job, err) => {
-    console.error(`[Worker] Job ${job?.id} failed:`, err.message);
+    log.error("job failed", {
+      component: "worker",
+      jobId: job?.id,
+      error: err.message,
+    });
   });
 
   worker.on("error", (err) => {
-    console.error("[Worker] Worker error:", err);
+    log.error("worker error", { component: "worker", error: err.message });
   });
 
-  console.log(`[Worker] Started, concurrency: ${concurrency}, queue: workflow-execution`);
+  log.info("worker started", { component: "worker", concurrency, queue: "workflow-execution" });
   return worker;
 }
 
@@ -118,7 +180,7 @@ if (isMain || process.env.RUN_AS_WORKER === "true") {
   startWorker();
 
   const shutdown = async () => {
-    console.log("[Worker] Shutting down...");
+    log.info("worker shutting down", { component: "worker" });
     await stopWorker();
     await connection.quit();
     await prisma.$disconnect();

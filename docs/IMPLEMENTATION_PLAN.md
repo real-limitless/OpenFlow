@@ -234,10 +234,10 @@ isolated-vm for Code node
 - [ ] **9.7** Canvas a11y keyboard
 - [ ] **9.8** Broader unit tests
 
-### Phase 10 — Production baseline [PENDING] ← NEXT
+### Phase 10 — Production baseline [PENDING]
 
-- [ ] **10.1** Multi-user/roles if required
-- [ ] **10.2** Tags, variables
+- [ ] **10.1** Multi-user/roles → superseded by Phase E0–E1
+- [ ] **10.2** Tags, variables → Phase E3
 - [ ] **10.3** Docker prod docs + backup
 - [ ] **10.4** REST polish + OpenAPI
 - [ ] **10.5** Strip Lovable hard deps when leaving platform
@@ -249,6 +249,75 @@ isolated-vm for Code node
 - [ ] **11.2** Sub-workflow UX
 - [ ] **11.3** AI node executors (public APIs only)
 - [ ] **11.4** Ongoing integrations
+
+### Phase E0 — Multi-user auth foundation [COMPLETE]
+
+- [x] **E0.1** `Session` model; DB-backed sessions (token hash, multi-instance safe)
+- [x] **E0.2** API key lookup via SHA-256 index (legacy bcrypt fallback)
+- [x] **E0.3** Ownership filters on workflows / executions / webhooks admin
+- [x] **E0.4** Create/update workflows use `c.get("userId")`; `ensureUser` helper
+- [x] **E0.5** Execute path: pass owner `userId` through queue → worker → credentials/data tables
+- [x] **E0.6** Gate: two users isolated; AUTH_DISABLED still works with `local`
+
+### Phase E1 — Projects + RBAC [COMPLETE]
+
+- [x] **E1.1** Project, ProjectMember models; backfill personal projects
+- [x] **E1.2** `requireProjectPermission`; scope CRUD + execute
+- [x] **E1.3** Projects API + UI switcher / members
+
+### Phase E2 — Sharing [COMPLETE]
+
+- [x] **E2.1** Share model (workflow/credential ACLs)
+- [x] **E2.2** Credential `use` without decrypt-to-client
+- [x] **E2.3** Share UI + “shared with me”
+
+### Phase E3 — Custom variables [COMPLETE]
+
+- [x] **E3.1** Variable model + CRUD API/UI
+- [x] **E3.2** Inject `$vars` in engine `resolveParameters`
+- [ ] **E3.3** Tags (deferred)
+
+### Phase E4 — Environments [COMPLETE]
+
+- [x] **E4.1** Environment model; var overrides (per-env)
+- [x] **E4.2** Runtime env selection (`X-OpenFlow-Environment`); default production for webhooks
+- [x] **E4.3** Env switcher UI (home + variables)
+- [ ] **E4.4** Credential overrides + activation-per-env (deferred)
+
+### Phase E5 — External secrets [COMPLETE]
+
+- [x] **E5.1** `SecretBackend` interface; local AES default
+- [x] **E5.2** Vault / AWS SM backends (+ injectable test mocks)
+- [x] **E5.3** Secret providers API (`/api/v1/secret-providers`); UI deferred
+- [x] **E5.4** Credentials optional `secretProviderId` + `externalRef`
+
+### Phase E6 — External binary storage [COMPLETE]
+
+- [x] **E6.1** `BinaryStore` interface; FS impl (sidecar metadata)
+- [x] **E6.2** S3-compatible store (SigV4 + fetch) + env config
+- [x] **E6.3** MinIO notes in install.md; `BINARY_STORAGE=fs|s3`
+
+### Phase E7 — Log streaming [COMPLETE]
+
+- [x] **E7.1** Structured logger (JSON, correlation ids)
+- [x] **E7.2** stdout + HTTP/Datadog sinks
+- [x] **E7.3** Config + install docs + `/api/v1/logs/recent`
+
+### Phase E8 — Multi-main mode [PENDING] ← NEXT
+
+- [ ] **E8.1** `OPENFLOW_ROLE=all|main|worker`
+- [ ] **E8.2** Redis leader election for schedules/webhooks
+- [ ] **E8.3** Compose main + worker replicas; scaling docs
+
+### Phase E9 — Git version control [PENDING]
+
+- [ ] **E9.1** SourceControlConfig; push/pull workflow JSON
+- [ ] **E9.2** Branch ↔ environment mapping
+- [ ] **E9.3** Diff/conflict UI; never commit secrets
+
+### Deferred — SSO
+
+- SAML / LDAP / OIDC login (after E0–E1)
 
 ---
 
@@ -263,6 +332,9 @@ isolated-vm for Code node
 | 5–6 | Medium workflow + safe creds |
 | 7 | Concurrent queue runs |
 | 10 | Compose production path |
+| E0 | Two users isolated; sessions multi-instance; execute uses owner creds |
+| E1 | Project roles enforce view/edit |
+| E6+E8 | Multi-worker binary + multi-main stable |
 
 ---
 
@@ -281,7 +353,7 @@ isolated-vm for Code node
 
 - Lovable Cloud, Lovable Connectors, Worker-only runtime
 - Loading binary n8n community node packages
-- Full enterprise multi-project parity
+- SSO / SAML / LDAP login (deferred; see Phase list)
 - Claiming “n8n-compatible” as a trademark phrase in marketing
 - Vendoring third-party workflow runtimes (`n8n-workflow`, etc.)
 

@@ -13,15 +13,150 @@ model User {
   id           String    @id @default(cuid())
   email        String    @unique
   passwordHash String
+  /// Instance-level role: owner | admin | member (projects add finer RBAC in E1)
+  role         String    @default("member")
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
 
-  workflows   Workflow[]
-  credentials Credential[]
-  apiKeys     ApiKey[]
-  dataTables  DataTable[]
+  workflows       Workflow[]
+  credentials     Credential[]
+  apiKeys         ApiKey[]
+  dataTables      DataTable[]
+  sessions        Session[]
+  projectMembers  ProjectMember[]
+  sharesGranted   Share[]          @relation("ShareGranteeUser")
+  sharesCreated   Share[]          @relation("ShareCreatedBy")
 
   @@map("users")
+}
+
+// ─── Projects + RBAC ────────────────────────────────────
+
+model Project {
+  id        String   @id @default(cuid())
+  name      String
+  /// personal | team
+  type      String   @default("team")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  members      ProjectMember[]
+  workflows    Workflow[]
+  credentials  Credential[]
+  dataTables   DataTable[]
+  shares       Share[]
+  variables    Variable[]
+  environments Environment[]
+
+  @@map("projects")
+}
+
+// ─── Environments (dev / staging / prod) ────────────────
+
+model Environment {
+  id        String   @id @default(cuid())
+  projectId String?
+  name      String
+  /// URL-safe slug: development | staging | production | custom
+  slug      String
+  isDefault Boolean  @default(false)
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  project   Project?   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  variables Variable[]
+
+  @@index([projectId])
+  @@index([slug])
+  @@map("environments")
+}
+
+// ─── Custom variables ($vars) ───────────────────────────
+
+model Variable {
+  id            String   @id @default(cuid())
+  /// Unique within scope + environment (instance or project)
+  key           String
+  /// Stored as JSON string of the value (string/number/bool/object)
+  value         String   @default("null")
+  /// instance | project
+  scope         String   @default("project")
+  projectId     String?
+  /// null = base value for all envs; set = override for that environment
+  environmentId String?
+  /// When true, value is AES-encrypted and redacted in list APIs
+  secret        Boolean  @default(false)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  project     Project?     @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  environment Environment? @relation(fields: [environmentId], references: [id], onDelete: Cascade)
+
+  // Uniqueness: partial indexes in migration
+  @@index([projectId])
+  @@index([scope])
+  @@index([key])
+  @@index([environmentId])
+  @@map("variables")
+}
+
+// ─── Resource sharing (beyond project membership) ───────
+
+model Share {
+  id               String    @id @default(cuid())
+  /// workflow | credential
+  resourceType     String
+  resourceId       String
+  /// use | view | edit  (use = runtime resolve only, never decrypt to client)
+  permission       String
+  granteeUserId    String?
+  granteeProjectId String?
+  createdByUserId  String
+  expiresAt        DateTime?
+  createdAt        DateTime  @default(now())
+
+  granteeUser    User?    @relation("ShareGranteeUser", fields: [granteeUserId], references: [id], onDelete: Cascade)
+  granteeProject Project? @relation(fields: [granteeProjectId], references: [id], onDelete: Cascade)
+  createdBy      User     @relation("ShareCreatedBy", fields: [createdByUserId], references: [id], onDelete: Cascade)
+
+  @@index([resourceType, resourceId])
+  @@index([granteeUserId])
+  @@index([granteeProjectId])
+  @@map("shares")
+}
+
+model ProjectMember {
+  id        String   @id @default(cuid())
+  projectId String
+  userId    String
+  /// owner | admin | editor | viewer
+  role      String
+  createdAt DateTime @default(now())
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, userId])
+  @@index([userId])
+  @@map("project_members")
+}
+
+// ─── Sessions (multi-instance cookie auth) ──────────────
+
+model Session {
+  id        String   @id @default(cuid())
+  /// SHA-256 hex of the opaque session token (cookie value)
+  tokenHash String   @unique
+  userId    String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+  @@map("sessions")
 }
 
 // ─── Workflows ──────────────────────────────────────────
@@ -29,6 +164,7 @@ model User {
 model Workflow {
   id          String   @id @default(cuid())
   userId      String
+  projectId   String
   name        String
   active      Boolean  @default(false)
   versionId   String
@@ -43,11 +179,13 @@ model Workflow {
   updatedAt   DateTime @updatedAt
 
   user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  project     Project      @relation(fields: [projectId], references: [id], onDelete: Cascade)
   executions  Execution[]
   webhookRoutes WebhookRoute[]
   scheduledTriggers ScheduledTrigger[]
 
   @@index([userId])
+  @@index([projectId])
   @@map("workflows")
 }
 
@@ -70,19 +208,47 @@ model Execution {
   @@map("executions")
 }
 
+// ─── External secret providers ──────────────────────────
+
+model SecretProvider {
+  id              String   @id @default(cuid())
+  name            String
+  /// local | vault | aws-sm
+  type            String
+  /// AES-encrypted JSON connection config (token, addr, region, …)
+  configEncrypted String   @default("")
+  isDefault       Boolean  @default(false)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  credentials Credential[]
+
+  @@map("secret_providers")
+}
+
 // ─── Credentials ────────────────────────────────────────
 
 model Credential {
-  id            String   @id @default(cuid())
-  userId        String
-  name          String
-  type          String   // e.g. httpBasicAuth, httpHeaderAuth
-  dataEncrypted String   // AES-256-GCM encrypted JSON blob
-  createdAt     DateTime @default(now())
+  id               String   @id @default(cuid())
+  userId           String
+  projectId        String
+  name             String
+  type             String   // e.g. httpBasicAuth, httpHeaderAuth
+  /// Local AES blob; empty when fully external
+  dataEncrypted    String   @default("")
+  /// Optional external secret store
+  secretProviderId String?
+  /// Path/ARN/name in external store
+  externalRef      String?
+  createdAt        DateTime @default(now())
 
-  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user           User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  project        Project         @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  secretProvider SecretProvider? @relation(fields: [secretProviderId], references: [id], onDelete: SetNull)
 
   @@index([userId])
+  @@index([projectId])
+  @@index([secretProviderId])
   @@map("credentials")
 }
 
@@ -92,14 +258,15 @@ model ApiKey {
   id        String   @id @default(cuid())
   userId    String
   name      String
-  keyHash   String   // hashed API key — never store raw
+  /// SHA-256 hex of raw key (preferred). Legacy rows may store bcrypt ($2…).
+  keyHash   String
   scopes    String   @default("[]")  // JSON array of scope strings
   createdAt DateTime @default(now())
 
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
-  @@index([keyHash])
+  @@unique([keyHash])
   @@map("api_keys")
 }
 
@@ -143,16 +310,19 @@ model ScheduledTrigger {
 model DataTable {
   id        String   @id @default(cuid())
   userId    String
+  projectId String
   name      String
   columns   String   @default("[]") // JSON: DataTableColumn[]
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  user User          @relation(fields: [userId], references: [id], onDelete: Cascade)
-  rows DataTableRow[]
+  user    User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  project Project        @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  rows    DataTableRow[]
 
-  @@unique([userId, name])
+  @@unique([projectId, name])
   @@index([userId])
+  @@index([projectId])
   @@map("data_tables")
 }
 

@@ -2,6 +2,7 @@ import type { Hono } from "hono";
 import { prisma } from "../db";
 import type { AppEnv } from "../middleware/auth";
 import { enqueueOrRun } from "../execute";
+import { log } from "../log";
 
 const scheduledJobs = new Map<string, NodeJS.Timeout>();
 
@@ -44,14 +45,26 @@ async function startSchedule(schedule: { id: string; workflowId: string; cronExp
         },
       });
 
-      await enqueueOrRun(schedule.workflowId, execution.id, "trigger");
+      await enqueueOrRun(
+        schedule.workflowId,
+        execution.id,
+        "trigger",
+        undefined,
+        undefined,
+        workflow.userId,
+        workflow.projectId,
+      );
 
       await prisma.scheduledTrigger.update({
         where: { id: schedule.id },
         data: { lastRunAt: new Date() },
       });
     } catch (err) {
-      console.error("Schedule execution failed:", err);
+      log.error("schedule execution failed", {
+        component: "scheduler",
+        workflowId: schedule.workflowId,
+        error: err instanceof Error ? err.message : String(err),
+      });
     }
   }, intervalMs);
 
@@ -71,22 +84,31 @@ export async function initializeSchedules() {
   for (const schedule of schedules) {
     await startSchedule(schedule);
   }
-  console.log(`[Scheduler] Started ${schedules.length} scheduled triggers`);
+  log.info("scheduler started", { component: "scheduler", count: schedules.length });
 }
 
 export default function schedulesRoute(app: Hono<AppEnv>) {
   app.get("/api/v1/schedules", async (c) => {
+    const userId = c.get("userId");
     const list = await prisma.scheduledTrigger.findMany({
+      where: { workflow: { project: { members: { some: { userId } } } } },
       include: { workflow: { select: { id: true, name: true } } },
     });
     return c.json(list);
   });
 
   app.post("/api/v1/schedules", async (c) => {
+    const userId = c.get("userId");
     const { workflowId, nodeId, cronExpr } = await c.req.json();
     if (!workflowId || !nodeId || !cronExpr) {
       return c.json({ error: "workflowId, nodeId, and cronExpr required" }, 400);
     }
+
+    const owned = await prisma.workflow.findFirst({
+      where: { id: workflowId, project: { members: { some: { userId } } } },
+      select: { id: true },
+    });
+    if (!owned) return c.json({ error: "Workflow not found" }, 404);
 
     const schedule = await prisma.scheduledTrigger.create({
       data: { workflowId, nodeId, cronExpr, active: true },
@@ -97,7 +119,12 @@ export default function schedulesRoute(app: Hono<AppEnv>) {
   });
 
   app.delete("/api/v1/schedules/:id", async (c) => {
+    const userId = c.get("userId");
     const id = c.req.param("id");
+    const existing = await prisma.scheduledTrigger.findFirst({
+      where: { id, workflow: { project: { members: { some: { userId } } } } },
+    });
+    if (!existing) return c.json({ error: "Not found" }, 404);
     await stopSchedule(id);
     await prisma.scheduledTrigger.delete({ where: { id } });
     return c.json({ success: true });

@@ -1,9 +1,10 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useCallback, useEffect, useState } from "react";
-import { ArrowLeft, KeyRound, Pencil, Plus, Trash2 } from "lucide-react";
+import { ArrowLeft, KeyRound, Pencil, Plus, Share2, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { CredentialDialog } from "@/components/credentials";
+import { ShareDialog } from "@/components/share/share-dialog";
 import {
   getCredentialTypeDef,
   humanizeType,
@@ -27,9 +28,10 @@ function CredentialsPage() {
   const [list, setList] = useState<CredentialMeta[] | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
   const [edit, setEdit] = useState<CredentialMeta | null>(null);
+  const [share, setShare] = useState<CredentialMeta | null>(null);
 
   const refresh = useCallback(() => {
-    void fetch("/api/v1/credentials")
+    void fetch("/api/v1/credentials?includeUse=1")
       .then(async (res) => {
         if (!res.ok) throw new Error("Failed to load");
         return res.json() as Promise<CredentialMeta[]>;
@@ -103,7 +105,14 @@ function CredentialsPage() {
                   className="flex flex-wrap items-center gap-3 px-4 py-3 hover:bg-muted/30"
                 >
                   <div className="min-w-0 flex-1">
-                    <p className="truncate text-[14px] font-medium">{c.name}</p>
+                    <p className="truncate text-[14px] font-medium">
+                      {c.name}
+                      {c.shared ? (
+                        <span className="ml-2 rounded bg-muted px-1.5 py-0.5 text-[10px] font-normal text-muted-foreground">
+                          shared
+                        </span>
+                      ) : null}
+                    </p>
                     <p className="font-mono text-[11px] text-muted-foreground">
                       {def.displayName || humanizeType(c.type)}
                       <span className="mx-1.5 text-border">·</span>
@@ -113,24 +122,39 @@ function CredentialsPage() {
                   <p className="text-[11px] text-muted-foreground">
                     {c.createdAt ? new Date(c.createdAt).toLocaleString() : ""}
                   </p>
-                  <Button
-                    size="icon"
-                    variant="ghost"
-                    className="size-8"
-                    onClick={() => setEdit(c)}
-                    aria-label="Edit"
-                  >
-                    <Pencil className="size-3.5" />
-                  </Button>
-                  <Button
-                    size="icon"
-                    variant="ghost"
-                    className="size-8 text-destructive hover:text-destructive"
-                    onClick={() => void remove(c)}
-                    aria-label="Delete"
-                  >
-                    <Trash2 className="size-3.5" />
-                  </Button>
+                  {!c.shared && (
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      className="size-8"
+                      onClick={() => setShare(c)}
+                      aria-label="Share"
+                    >
+                      <Share2 className="size-3.5" />
+                    </Button>
+                  )}
+                  {!c.shared && (
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      className="size-8"
+                      onClick={() => setEdit(c)}
+                      aria-label="Edit"
+                    >
+                      <Pencil className="size-3.5" />
+                    </Button>
+                  )}
+                  {!c.shared && (
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      className="size-8 text-destructive hover:text-destructive"
+                      onClick={() => void remove(c)}
+                      aria-label="Delete"
+                    >
+                      <Trash2 className="size-3.5" />
+                    </Button>
+                  )}
                 </li>
               );
             })}
@@ -154,6 +178,17 @@ function CredentialsPage() {
           refresh();
         }}
       />
+      {share && (
+        <ShareDialog
+          open={share != null}
+          onOpenChange={(o) => {
+            if (!o) setShare(null);
+          }}
+          resourceType="credential"
+          resourceId={share.id}
+          resourceName={share.name}
+        />
+      )}
     </main>
   );
 }

@@ -1,4 +1,5 @@
 import type { IWorkflow } from "../workflow/types";
+import { getSelectedProjectId, projectHeaders } from "../projects/client";
 
 /**
  * Repository abstraction.
@@ -65,7 +66,7 @@ function apiUrl(path: string): string {
 export const apiRepository: WorkflowRepository = {
   kind: "api",
   async list() {
-    const res = await fetch(apiUrl("/api/v1/workflows"));
+    const res = await fetch(apiUrl("/api/v1/workflows"), { headers: projectHeaders() });
     if (!res.ok) throw new Error(`List failed: ${res.status}`);
     const rows = (await res.json()) as Array<Partial<IWorkflow> & { id: string; name: string }>;
     // List endpoint returns summaries; map to IWorkflow-shaped objects for the home page
@@ -81,18 +82,20 @@ export const apiRepository: WorkflowRepository = {
     })) as IWorkflow[];
   },
   async get(id: string) {
-    const res = await fetch(apiUrl(`/api/v1/workflows/${id}`));
+    const res = await fetch(apiUrl(`/api/v1/workflows/${id}`), { headers: projectHeaders() });
     if (res.status === 404) return null;
     if (!res.ok) throw new Error(`Get failed: ${res.status}`);
     return res.json() as Promise<IWorkflow>;
   },
   async save(workflow: IWorkflow) {
+    const projectId = getSelectedProjectId();
+    const payload = projectId ? { ...workflow, projectId } : workflow;
     // Upsert: try PUT first when id present; on 404 create with client id via POST
     if (workflow.id) {
       const putRes = await fetch(apiUrl(`/api/v1/workflows/${workflow.id}`), {
         method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(workflow),
+        headers: projectHeaders({ "Content-Type": "application/json" }),
+        body: JSON.stringify(payload),
       });
       if (putRes.ok) {
         return (await putRes.json()) as IWorkflow;
@@ -105,8 +108,8 @@ export const apiRepository: WorkflowRepository = {
 
     const postRes = await fetch(apiUrl("/api/v1/workflows"), {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(workflow),
+      headers: projectHeaders({ "Content-Type": "application/json" }),
+      body: JSON.stringify(payload),
     });
     if (!postRes.ok) {
       const text = await postRes.text().catch(() => "");
@@ -115,7 +118,10 @@ export const apiRepository: WorkflowRepository = {
     return (await postRes.json()) as IWorkflow;
   },
   async remove(id: string) {
-    const res = await fetch(apiUrl(`/api/v1/workflows/${id}`), { method: "DELETE" });
+    const res = await fetch(apiUrl(`/api/v1/workflows/${id}`), {
+      method: "DELETE",
+      headers: projectHeaders(),
+    });
     if (!res.ok && res.status !== 404) throw new Error(`Delete failed: ${res.status}`);
   },
 };

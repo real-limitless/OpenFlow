@@ -38,7 +38,7 @@ export function CredentialPicker({
   const fetchCredentials = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await fetch("/api/v1/credentials");
+      const res = await fetch("/api/v1/credentials?includeUse=1");
       if (res.ok) {
         const data = (await res.json()) as CredentialMeta[];
         setCredentials(data.filter((c) => c.type === credentialType));

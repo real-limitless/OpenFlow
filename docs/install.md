@@ -59,6 +59,42 @@ curl -fsSL https://raw.githubusercontent.com/real-limitless/OpenFlow/main/script
 
 Until GHCR packages are published for the repo, pull may fail — use `docker compose up -d --build` from a clone instead.
 
+## Binary storage (S3 / MinIO)
+
+Default is local filesystem (`BINARY_STORAGE=fs`, volume `binary-data` in Docker).
+
+For multi-worker or shared object storage:
+
+```sh
+# .env
+BINARY_STORAGE=s3
+BINARY_S3_BUCKET=openflow
+BINARY_S3_REGION=us-east-1
+BINARY_S3_ENDPOINT=http://minio:9000
+BINARY_S3_ACCESS_KEY=minioadmin
+BINARY_S3_SECRET_KEY=minioadmin
+BINARY_S3_FORCE_PATH_STYLE=true
+BINARY_S3_PREFIX=openflow/binary/
+```
+
+Optional MinIO service (add alongside `api` in compose):
+
+```yaml
+minio:
+  image: minio/minio:latest
+  command: server /data --console-address ":9001"
+  environment:
+    MINIO_ROOT_USER: minioadmin
+    MINIO_ROOT_PASSWORD: minioadmin
+  ports:
+    - "9000:9000"
+    - "9001:9001"
+  volumes:
+    - minio-data:/data
+```
+
+Create bucket `openflow` in the MinIO console (http://localhost:9001) before starting API workers.
+
 ## Development setup
 
 Requirements: **Node.js ≥ 22**, npm, Docker.
@@ -137,9 +173,32 @@ See [`.env.example`](../.env.example) for the full list. Common vars:
 | `CREDENTIALS_KEY` | auto-generated | AES key for stored credentials |
 | `DATABASE_URL` | compose internal | Host dev uses `localhost:15432` |
 | `REDIS_URL` | compose internal | Optional for execute (in-process fallback) |
-| `BINARY_STORAGE_DIR` | `/data/binary` | Workflow binary payloads |
+| `BINARY_STORAGE_DIR` | `/data/binary` | Workflow binary payloads (fs mode) |
+| `BINARY_STORAGE` | `fs` | `fs` or `s3` (MinIO/AWS-compatible) |
+| `LOG_LEVEL` | `info` | `debug` / `info` / `warn` / `error` |
+| `LOG_FORMAT` | `json` | `json` or `pretty` |
+| `LOG_STREAM_TYPE` | `none` | `none` / `http` / `datadog` |
+| `LOG_STREAM_URL` | — | HTTP sink URL when `LOG_STREAM_TYPE=http` |
+| `DD_API_KEY` | — | Datadog Logs API key when type=`datadog` |
 | `RUN_WORKER` | `true` | BullMQ worker inside API process |
 | `OPENFLOW_ASSISTANT_*` | optional | Editor AI assistant |
+
+## Logging
+
+Structured JSON logs go to stdout by default. Optional shipping:
+
+```sh
+# HTTP webhook (each line POSTed as JSON)
+LOG_STREAM_TYPE=http
+LOG_STREAM_URL=https://logs.example.com/ingest
+
+# Datadog Logs
+LOG_STREAM_TYPE=datadog
+DD_API_KEY=…
+# DD_SITE=datadoghq.com
+```
+
+Recent in-process logs: `GET /api/v1/logs/recent` (authenticated when auth is on).
 
 ## Health endpoints
 
@@ -147,6 +206,7 @@ See [`.env.example`](../.env.example) for the full list. Common vars:
 | --- | --- |
 | `GET /health` | Liveness (Docker healthcheck) |
 | `GET /health/ready` | DB + Redis readiness JSON |
+| `GET /api/v1/logs/recent` | Ring-buffer of recent structured logs |
 
 ## Troubleshooting
 

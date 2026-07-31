@@ -6,6 +6,8 @@ import { deserializeJsonFields, KNOWN_WORKFLOW_FIELDS, serializeJsonFields } fro
 import { emitWorkflowEvent } from "./workflow-events";
 import { allNodeTypes, getNodeType } from "../../lib/nodes/registry";
 import { enqueueOrRun } from "../execute";
+import { ensurePersonalProject } from "./projects";
+import { ensureUser } from "./users";
 
 export async function loadWorkflow(workflowId: string): Promise<IWorkflow | null> {
   const row = await prisma.workflow.findUnique({ where: { id: workflowId } });
@@ -41,6 +43,9 @@ export async function saveWorkflow(
     ),
   });
 
+  await ensureUser(userId);
+  const projectId = existing?.projectId ?? (await ensurePersonalProject(userId));
+
   const row = existing
     ? await prisma.workflow.update({
         where: { id: workflowId },
@@ -61,6 +66,7 @@ export async function saveWorkflow(
         data: {
           id: workflowId,
           userId,
+          projectId,
           name: data.name as string,
           active: data.active as boolean,
           versionId: data.versionId as string,
@@ -254,9 +260,11 @@ export async function editorDisconnect(workflowId: string, edgeId: string, userI
   );
 }
 
-export async function editorExecute(workflowId: string, _userId = "local") {
-  const wf = await loadWorkflow(workflowId);
-  if (!wf) throw new Error(`Workflow not found: ${workflowId}`);
+export async function editorExecute(workflowId: string, userId = "local") {
+  const row = await prisma.workflow.findUnique({ where: { id: workflowId } });
+  if (!row) throw new Error(`Workflow not found: ${workflowId}`);
+  const wf = deserializeJsonFields(row as unknown as Record<string, unknown>);
+  const ownerId = row.userId;
   const execution = await prisma.execution.create({
     data: {
       workflowId,
@@ -264,7 +272,7 @@ export async function editorExecute(workflowId: string, _userId = "local") {
       mode: "manual",
     },
   });
-  await enqueueOrRun(workflowId, execution.id, "manual", wf.pinData, wf);
+  await enqueueOrRun(workflowId, execution.id, "manual", wf.pinData, wf, ownerId, row.projectId);
   emitWorkflowEvent({
     type: "execution.started",
     workflowId,
@@ -303,8 +311,13 @@ export async function editorGetExecution(executionId: string) {
 }
 
 export async function editorListCredentials(userId = "local") {
+  const memberships = await prisma.projectMember.findMany({
+    where: { userId },
+    select: { projectId: true },
+  });
+  const projectIds = memberships.map((m) => m.projectId);
   const rows = await prisma.credential.findMany({
-    where: userId === "local" ? undefined : { userId },
+    where: { projectId: { in: projectIds } },
     select: { id: true, name: true, type: true },
     orderBy: { name: "asc" },
   });

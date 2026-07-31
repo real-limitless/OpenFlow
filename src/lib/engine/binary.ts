@@ -1,18 +1,29 @@
 import type { IBinaryData } from "../workflow/types";
-import { promises as fs } from "fs";
-import { join } from "path";
 import { randomUUID } from "crypto";
 import { config } from "../../config";
+import type { BinaryStore } from "./binary-store";
+import type { BinaryRef } from "./binary-types";
+import { createFsBinaryStore } from "./binary-fs";
 
-export interface BinaryRef {
-  id: string;
-  fileName?: string;
-  mimeType: string;
-  fileExtension?: string;
-  fileSize: number;
+export type { BinaryRef } from "./binary-types";
+export type { BinaryStore } from "./binary-store";
+export { createFsBinaryStore } from "./binary-fs";
+export { createS3BinaryStore } from "./binary-s3";
+export type { S3BinaryStoreConfig } from "./binary-s3";
+
+const memoryCache = new Map<string, BinaryRef>();
+
+let store: BinaryStore = createFsBinaryStore(config.binary.storageDir);
+
+/** Replace the active binary backend (FS default; S3/MinIO in production). */
+export function setBinaryStore(next: BinaryStore): void {
+  store = next;
+  memoryCache.clear();
 }
 
-const refs = new Map<string, BinaryRef>();
+export function getBinaryStore(): BinaryStore {
+  return store;
+}
 
 export async function storeBinary(
   data: string,
@@ -20,55 +31,56 @@ export async function storeBinary(
 ): Promise<BinaryRef> {
   const id = randomUUID();
   const buffer = Buffer.from(data, "base64");
-  const fileSize = buffer.length;
-
-  await fs.mkdir(config.binary.storageDir, { recursive: true });
-  await fs.writeFile(join(config.binary.storageDir, id), buffer);
-
   const ref: BinaryRef = {
     id,
     fileName: metadata.fileName,
     mimeType: metadata.mimeType,
     fileExtension: metadata.fileExtension,
-    fileSize,
+    fileSize: buffer.length,
   };
-  refs.set(id, ref);
+  await store.put(id, buffer, ref);
+  memoryCache.set(id, ref);
   return ref;
 }
 
 export async function getBinary(id: string): Promise<Buffer | null> {
-  try {
-    return await fs.readFile(join(config.binary.storageDir, id));
-  } catch {
-    return null;
-  }
+  return store.get(id);
 }
 
 export async function getBinaryData(id: string): Promise<IBinaryData | null> {
-  const ref = refs.get(id);
-  if (!ref) return null;
-  const buffer = await getBinary(id);
+  let ref = memoryCache.get(id) ?? undefined;
+  if (!ref) {
+    const meta = await store.getMeta(id);
+    if (!meta) return null;
+    ref = meta;
+    memoryCache.set(id, ref);
+  }
+  const buffer = await store.get(id);
   if (!buffer) return null;
   return {
     data: buffer.toString("base64"),
     mimeType: ref.mimeType,
     fileName: ref.fileName,
     fileExtension: ref.fileExtension,
-    fileSize: ref.fileSize,
+    fileSize: ref.fileSize || buffer.length,
   };
 }
 
 export function getBinaryRef(id: string): BinaryRef | undefined {
-  return refs.get(id);
+  return memoryCache.get(id);
+}
+
+export async function getBinaryRefAsync(id: string): Promise<BinaryRef | null> {
+  const cached = memoryCache.get(id);
+  if (cached) return cached;
+  const meta = await store.getMeta(id);
+  if (meta) memoryCache.set(id, meta);
+  return meta;
 }
 
 export async function deleteBinary(id: string): Promise<void> {
-  try {
-    await fs.unlink(join(config.binary.storageDir, id));
-    refs.delete(id);
-  } catch {
-    // already deleted
-  }
+  await store.delete(id);
+  memoryCache.delete(id);
 }
 
 export function toIBinaryData(ref: BinaryRef, data: string): IBinaryData {

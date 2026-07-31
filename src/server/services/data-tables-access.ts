@@ -49,12 +49,21 @@ function findColumn(columns: DataTableColumn[], nameOrId: string): DataTableColu
   return columns.find((c) => c.name === nameOrId || c.id === nameOrId);
 }
 
-async function resolveOwned(userId: string, ref: string): Promise<DataTableRef | null> {
+async function resolveScoped(
+  scope: { userId?: string; projectId?: string },
+  ref: string,
+): Promise<DataTableRef | null> {
   const trimmed = ref.trim();
   if (!trimmed) return null;
+  const base = scope.projectId
+    ? { projectId: scope.projectId }
+    : scope.userId
+      ? { userId: scope.userId }
+      : null;
+  if (!base) return null;
   const row =
-    (await prisma.dataTable.findFirst({ where: { userId, id: trimmed } })) ??
-    (await prisma.dataTable.findFirst({ where: { userId, name: trimmed } }));
+    (await prisma.dataTable.findFirst({ where: { ...base, id: trimmed } })) ??
+    (await prisma.dataTable.findFirst({ where: { ...base, name: trimmed } }));
   if (!row) return null;
   return {
     id: row.id,
@@ -63,11 +72,15 @@ async function resolveOwned(userId: string, ref: string): Promise<DataTableRef |
   };
 }
 
-export function dataTableAccessForUser(userId: string): DataTableAccess {
+function buildAccess(scope: { userId?: string; projectId?: string }): DataTableAccess {
   return {
     async listTables() {
       const tables = await prisma.dataTable.findMany({
-        where: { userId },
+        where: scope.projectId
+          ? { projectId: scope.projectId }
+          : scope.userId
+            ? { userId: scope.userId }
+            : { id: "__none__" },
         select: { id: true, name: true },
         orderBy: { name: "asc" },
       });
@@ -75,11 +88,11 @@ export function dataTableAccessForUser(userId: string): DataTableAccess {
     },
 
     async resolveTable(ref) {
-      return resolveOwned(userId, ref);
+      return resolveScoped(scope, ref);
     },
 
     async loadRows(ref, opts: LoadRowsOptions = {}) {
-      const table = await resolveOwned(userId, ref);
+      const table = await resolveScoped(scope, ref);
       if (!table) return [];
 
       const rows = await prisma.dataTableRow.findMany({
@@ -109,7 +122,7 @@ export function dataTableAccessForUser(userId: string): DataTableAccess {
     },
 
     async insertRows(ref, rows) {
-      const table = await resolveOwned(userId, ref);
+      const table = await resolveScoped(scope, ref);
       if (!table) throw new Error(`Data table not found: ${ref}`);
       if (rows.length === 0) return 0;
 
@@ -140,7 +153,7 @@ export function dataTableAccessForUser(userId: string): DataTableAccess {
     },
 
     async updateRows(ref, match, fields) {
-      const table = await resolveOwned(userId, ref);
+      const table = await resolveScoped(scope, ref);
       if (!table) throw new Error(`Data table not found: ${ref}`);
       const col = findColumn(table.columns, match.column);
       if (!col) throw new Error(`Column not found: ${match.column}`);
@@ -171,7 +184,7 @@ export function dataTableAccessForUser(userId: string): DataTableAccess {
     },
 
     async deleteRows(ref, match) {
-      const table = await resolveOwned(userId, ref);
+      const table = await resolveScoped(scope, ref);
       if (!table) throw new Error(`Data table not found: ${ref}`);
 
       if (!match) {
@@ -208,7 +221,7 @@ export function dataTableAccessForUser(userId: string): DataTableAccess {
     },
 
     async appendOutputRow(ref, fields) {
-      const table = await resolveOwned(userId, ref);
+      const table = await resolveScoped(scope, ref);
       if (!table) throw new Error(`Data table not found: ${ref}`);
 
       let columns = [...table.columns];
@@ -248,4 +261,12 @@ export function dataTableAccessForUser(userId: string): DataTableAccess {
       });
     },
   };
+}
+
+export function dataTableAccessForUser(userId: string): DataTableAccess {
+  return buildAccess({ userId });
+}
+
+export function dataTableAccessForProject(projectId: string): DataTableAccess {
+  return buildAccess({ projectId });
 }

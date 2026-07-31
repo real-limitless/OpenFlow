@@ -24,6 +24,8 @@ export interface CredentialMeta {
   name: string;
   type: string;
   createdAt: string;
+  shared?: boolean;
+  projectId?: string;
 }
 
 const CATALOG: Record<string, CredentialTypeDef> = {

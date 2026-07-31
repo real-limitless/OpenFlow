@@ -1,6 +1,12 @@
 import type { Hono } from "hono";
 import { prisma } from "../db";
 import type { AppEnv } from "../middleware/auth";
+import { ensureUser, ensureUserWithProject } from "../services/users";
+import {
+  listAccessibleProjectIds,
+  projectIdFromRequest,
+  requireProjectPermission,
+} from "../services/projects";
 import {
   defaultColumns,
   normalizeColumns,
@@ -53,25 +59,31 @@ function toRowDto(row: {
   };
 }
 
-async function ensureUser(userId: string) {
-  await prisma.user.upsert({
-    where: { id: userId },
-    update: {},
-    create: { id: userId, email: `${userId}@local`, passwordHash: "" },
-  });
-}
-
-async function findOwnedTable(id: string, userId: string) {
-  return prisma.dataTable.findFirst({ where: { id, userId } });
+async function findAccessibleTable(id: string, userId: string, minRole: "viewer" | "editor" = "viewer") {
+  const table = await prisma.dataTable.findUnique({ where: { id } });
+  if (!table) return null;
+  const access = await requireProjectPermission(table.projectId, userId, minRole);
+  if (!access.ok) return null;
+  return table;
 }
 
 export default function dataTablesRoute(app: Hono<AppEnv>) {
   // GET /api/v1/data-tables?q=
   app.get("/api/v1/data-tables", async (c) => {
     const userId = c.get("userId");
+    await ensureUser(userId);
     const q = (c.req.query("q") ?? "").trim().toLowerCase();
+    const filterProjectId = projectIdFromRequest(c);
+    let projectIds: string[];
+    if (filterProjectId) {
+      const access = await requireProjectPermission(filterProjectId, userId, "viewer");
+      if (!access.ok) return c.json({ error: access.error }, access.status);
+      projectIds = [filterProjectId];
+    } else {
+      projectIds = await listAccessibleProjectIds(userId, "viewer");
+    }
     const tables = await prisma.dataTable.findMany({
-      where: { userId },
+      where: { projectId: { in: projectIds } },
       orderBy: { updatedAt: "desc" },
       include: { _count: { select: { rows: true } } },
     });
@@ -89,9 +101,11 @@ export default function dataTablesRoute(app: Hono<AppEnv>) {
   // POST /api/v1/data-tables
   app.post("/api/v1/data-tables", async (c) => {
     const userId = c.get("userId");
+    const { projectId: personalId } = await ensureUserWithProject(userId);
     const body = (await c.req.json().catch(() => ({}))) as {
       name?: string;
       columns?: unknown;
+      projectId?: string;
     };
     const name = typeof body.name === "string" ? body.name.trim() : "";
     if (!name) return c.json({ error: "name required" }, 400);
@@ -105,12 +119,15 @@ export default function dataTablesRoute(app: Hono<AppEnv>) {
       columns = normalized.length > 0 ? normalized : defaultColumns();
     }
 
-    await ensureUser(userId);
+    const projectId = body.projectId || projectIdFromRequest(c) || personalId;
+    const access = await requireProjectPermission(projectId, userId, "editor");
+    if (!access.ok) return c.json({ error: access.error }, access.status);
 
     try {
       const table = await prisma.dataTable.create({
         data: {
           userId,
+          projectId,
           name,
           columns: JSON.stringify(columns),
         },
@@ -135,8 +152,11 @@ export default function dataTablesRoute(app: Hono<AppEnv>) {
     const limit = limitRaw != null && limitRaw !== "" ? Math.max(0, Number(limitRaw)) : undefined;
     const offset = offsetRaw != null && offsetRaw !== "" ? Math.max(0, Number(offsetRaw)) : 0;
 
-    const table = await prisma.dataTable.findFirst({
-      where: { id, userId },
+    const owned = await findAccessibleTable(id, userId, "viewer");
+    if (!owned) return c.json({ error: "Not found" }, 404);
+
+    const table = await prisma.dataTable.findUnique({
+      where: { id },
       include: {
         rows: { orderBy: [{ position: "asc" }, { createdAt: "asc" }] },
         _count: { select: { rows: true } },
@@ -171,7 +191,7 @@ export default function dataTablesRoute(app: Hono<AppEnv>) {
   app.patch("/api/v1/data-tables/:id", async (c) => {
     const userId = c.get("userId");
     const { id } = c.req.param();
-    const existing = await findOwnedTable(id, userId);
+    const existing = await findAccessibleTable(id, userId, "editor");
     if (!existing) return c.json({ error: "Not found" }, 404);
 
     const body = (await c.req.json().catch(() => ({}))) as {
@@ -226,7 +246,7 @@ export default function dataTablesRoute(app: Hono<AppEnv>) {
   app.delete("/api/v1/data-tables/:id", async (c) => {
     const userId = c.get("userId");
     const { id } = c.req.param();
-    const existing = await findOwnedTable(id, userId);
+    const existing = await findAccessibleTable(id, userId, "editor");
     if (!existing) return c.json({ error: "Not found" }, 404);
     await prisma.dataTable.delete({ where: { id } });
     return c.json({ success: true });
@@ -236,7 +256,7 @@ export default function dataTablesRoute(app: Hono<AppEnv>) {
   app.get("/api/v1/data-tables/:id/rows", async (c) => {
     const userId = c.get("userId");
     const { id } = c.req.param();
-    const existing = await findOwnedTable(id, userId);
+    const existing = await findAccessibleTable(id, userId, "viewer");
     if (!existing) return c.json({ error: "Not found" }, 404);
 
     const q = (c.req.query("q") ?? "").trim().toLowerCase();
@@ -272,7 +292,7 @@ export default function dataTablesRoute(app: Hono<AppEnv>) {
   app.post("/api/v1/data-tables/:id/rows", async (c) => {
     const userId = c.get("userId");
     const { id } = c.req.param();
-    const existing = await findOwnedTable(id, userId);
+    const existing = await findAccessibleTable(id, userId, "editor");
     if (!existing) return c.json({ error: "Not found" }, 404);
 
     const columns = parseColumns(existing.columns);
@@ -338,7 +358,7 @@ export default function dataTablesRoute(app: Hono<AppEnv>) {
   app.patch("/api/v1/data-tables/:id/rows/:rowId", async (c) => {
     const userId = c.get("userId");
     const { id, rowId } = c.req.param();
-    const existing = await findOwnedTable(id, userId);
+    const existing = await findAccessibleTable(id, userId, "editor");
     if (!existing) return c.json({ error: "Not found" }, 404);
 
     const row = await prisma.dataTableRow.findFirst({ where: { id: rowId, tableId: id } });
@@ -382,7 +402,7 @@ export default function dataTablesRoute(app: Hono<AppEnv>) {
   app.delete("/api/v1/data-tables/:id/rows/:rowId", async (c) => {
     const userId = c.get("userId");
     const { id, rowId } = c.req.param();
-    const existing = await findOwnedTable(id, userId);
+    const existing = await findAccessibleTable(id, userId, "editor");
     if (!existing) return c.json({ error: "Not found" }, 404);
 
     const row = await prisma.dataTableRow.findFirst({ where: { id: rowId, tableId: id } });
