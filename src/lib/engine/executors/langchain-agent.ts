@@ -3,9 +3,16 @@ import type { NodeExecutor, INodeExecutionData, ExecutionContext, IWorkflow } fr
 interface ChatMessage {
   role: "system" | "user" | "assistant" | "tool";
   content: string;
+  tool_call_id?: string;
+  tool_calls?: Array<{
+    id: string;
+    type: "function";
+    function: { name: string; arguments: string };
+  }>;
 }
 
 interface ToolCall {
+  id?: string;
   name: string;
   args: Record<string, unknown>;
 }
@@ -31,6 +38,8 @@ interface ToolHandle {
 
 interface MemoryHandle {
   loadMessages?(): ChatMessage[];
+  appendTurn?(user: ChatMessage, assistant: ChatMessage): void;
+  saveMessages?(messages: ChatMessage[]): void;
   [key: string]: unknown;
 }
 
@@ -50,6 +59,18 @@ interface ConnectedSubNodes {
   memory: SubNodeRef[];
   outputParser: SubNodeRef[];
 }
+
+interface McpBundleHandle {
+  type?: string;
+  tools?: Array<{
+    name: string;
+    description?: string;
+    inputSchema?: unknown;
+  }>;
+  invoke?(toolName: string, args: Record<string, unknown>): Promise<unknown> | unknown;
+}
+
+const MCP_CLIENT_TOOL_TYPE = "@n8n/n8n-nodes-langchain.mcpClientTool";
 
 function findConnectedSubNodes(
   connections: IWorkflow["connections"],
@@ -100,14 +121,64 @@ function getModelHandle(ctx: ExecutionContext, name: string): ModelHandle | null
   return null;
 }
 
+function observationFromMcpResult(result: unknown): string {
+  if (result == null) return "";
+  if (typeof result === "string") return result;
+  if (typeof result === "object") {
+    const r = result as { content?: unknown; isError?: boolean };
+    if (typeof r.content === "string") {
+      return r.isError ? `Error: ${r.content}` : r.content;
+    }
+  }
+  try {
+    return JSON.stringify(result);
+  } catch {
+    return String(result);
+  }
+}
+
+function expandToolJson(json: Record<string, unknown>): ToolHandle[] {
+  if (typeof json.name === "string") {
+    return [json as unknown as ToolHandle];
+  }
+
+  const bundle = json as unknown as McpBundleHandle;
+  const isMcpBundle =
+    bundle.type === MCP_CLIENT_TOOL_TYPE ||
+    (Array.isArray(bundle.tools) && typeof bundle.invoke === "function");
+
+  if (isMcpBundle && Array.isArray(bundle.tools) && typeof bundle.invoke === "function") {
+    const invokeBundle = bundle.invoke.bind(bundle);
+    return bundle.tools
+      .filter((t) => t && typeof t.name === "string" && t.name.length > 0)
+      .map((t) => ({
+        name: t.name,
+        description: t.description,
+        schema: t.inputSchema,
+        async invoke(args: Record<string, unknown>): Promise<string> {
+          const result = await invokeBundle(t.name, args ?? {});
+          return observationFromMcpResult(result);
+        },
+      }));
+  }
+
+  return [];
+}
+
 function getToolHandles(ctx: ExecutionContext, names: string[]): ToolHandle[] {
   const handles: ToolHandle[] = [];
+  const seen = new Set<string>();
   for (const name of names) {
     const items = ctx.getNodeInputItems(name, 0);
     if (!items || items.length === 0) continue;
-    const json = items[0].json;
-    if (json && typeof (json as { name?: unknown }).name === "string") {
-      handles.push(json as unknown as ToolHandle);
+    for (const item of items) {
+      const json = item.json;
+      if (!json || typeof json !== "object") continue;
+      for (const handle of expandToolJson(json as Record<string, unknown>)) {
+        if (seen.has(handle.name)) continue;
+        seen.add(handle.name);
+        handles.push(handle);
+      }
     }
   }
   return handles;
@@ -182,6 +253,11 @@ async function invokeWithFallback(
   }
 }
 
+function toolCallId(call: ToolCall, index: number): string {
+  if (call.id && typeof call.id === "string" && call.id.length > 0) return call.id;
+  return `call_${call.name}_${index}`;
+}
+
 export const langchainAgentExecutor: NodeExecutor = async (ctx, node) => {
   const items = ctx.getInputItems(0);
   const workflow = ctx.getWorkflow();
@@ -215,6 +291,11 @@ export const langchainAgentExecutor: NodeExecutor = async (ctx, node) => {
     ctx,
     subs.tools.map((t) => t.name),
   );
+  if (toolHandles.length === 0) {
+    throw new Error(
+      "Tool sub-nodes connected but no valid tool handles were produced",
+    );
+  }
   const toolDefs = toolHandles.map((t) => ({
     name: t.name,
     description: t.description,
@@ -281,8 +362,20 @@ export const langchainAgentExecutor: NodeExecutor = async (ctx, node) => {
 
       const toolCalls = Array.isArray(result.toolCalls) ? result.toolCalls : [];
       if (toolCalls.length > 0) {
-        messages.push({ role: "assistant", content: "" });
-        for (const call of toolCalls) {
+        messages.push({
+          role: "assistant",
+          content: result.text ?? "",
+          tool_calls: toolCalls.map((call, i) => ({
+            id: toolCallId(call, i),
+            type: "function" as const,
+            function: {
+              name: call.name,
+              arguments: JSON.stringify(call.args ?? {}),
+            },
+          })),
+        });
+        for (let i = 0; i < toolCalls.length; i++) {
+          const call = toolCalls[i];
           const tool = toolHandles.find((t) => t.name === call.name);
           if (!tool) {
             throw new Error(`Tool not found: ${call.name}`);
@@ -292,7 +385,11 @@ export const langchainAgentExecutor: NodeExecutor = async (ctx, node) => {
             const obs = await tool.invoke(call.args ?? {});
             observation = typeof obs === "string" ? obs : String(obs ?? "");
           }
-          messages.push({ role: "tool", content: observation });
+          messages.push({
+            role: "tool",
+            content: observation,
+            tool_call_id: toolCallId(call, i),
+          });
           intermediateSteps.push({
             action: { tool: call.name, toolInput: call.args ?? {} },
             observation,
@@ -307,6 +404,18 @@ export const langchainAgentExecutor: NodeExecutor = async (ctx, node) => {
 
     if (finalText === null) {
       throw new Error(`Agent did not produce a final answer within ${maxIterations} iterations`);
+    }
+
+    if (memoryHandle) {
+      const userMsg: ChatMessage = { role: "user", content: prompt };
+      const assistantMsg: ChatMessage = { role: "assistant", content: String(finalText) };
+      if (typeof memoryHandle.appendTurn === "function") {
+        memoryHandle.appendTurn(userMsg, assistantMsg);
+      } else if (typeof memoryHandle.saveMessages === "function") {
+        const prior =
+          typeof memoryHandle.loadMessages === "function" ? memoryHandle.loadMessages() : [];
+        memoryHandle.saveMessages([...(Array.isArray(prior) ? prior : []), userMsg, assistantMsg]);
+      }
     }
 
     let output: unknown = finalText;

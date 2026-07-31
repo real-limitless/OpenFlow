@@ -9,12 +9,32 @@ const DEFAULT_MAX_RETRIES = 2;
 export interface OpenAiChatMessage {
   role: "system" | "user" | "assistant" | "tool" | "developer";
   content: string;
+  tool_call_id?: string;
+  tool_calls?: Array<{
+    id: string;
+    type: "function";
+    function: { name: string; arguments: string };
+  }>;
+  name?: string;
+}
+
+export interface OpenAiToolCall {
+  id?: string;
+  name: string;
+  args: Record<string, unknown>;
 }
 
 export interface OpenAiCompletionResult {
   text: string;
   model: string;
   usage: { promptTokens: number; completionTokens: number; totalTokens: number };
+  toolCalls?: OpenAiToolCall[];
+}
+
+export interface OpenAiAgentToolDef {
+  name: string;
+  description?: string;
+  schema?: unknown;
 }
 
 export interface OpenAiModelHandle {
@@ -24,7 +44,10 @@ export interface OpenAiModelHandle {
   options: Record<string, unknown>;
   builtInTools: Record<string, unknown>;
   baseUrl: string;
-  invoke(messages: OpenAiChatMessage[]): Promise<OpenAiCompletionResult>;
+  invoke(
+    messages: OpenAiChatMessage[],
+    tools?: OpenAiAgentToolDef[] | unknown[],
+  ): Promise<OpenAiCompletionResult>;
 }
 
 export type OpenAiHttpClient = (options: SdkHttpRequestOptions) => Promise<SdkHttpResponse>;
@@ -93,27 +116,81 @@ function mapBuiltInToolsToOpenAi(builtInTools: Record<string, unknown>): unknown
     });
   }
   if (builtInTools.fileSearch) {
-    // TODO: nested file-search fields (vector store ids) are a spec gap
     tools.push({ type: "file_search" });
   }
   if (builtInTools.codeInterpreter) {
-    // TODO: nested code-interpreter fields are a spec gap
     tools.push({ type: "code_interpreter" });
   }
   return tools;
+}
+
+function normalizeAgentToolDefs(tools: unknown[] | undefined): OpenAiAgentToolDef[] {
+  if (!tools || tools.length === 0) return [];
+  const out: OpenAiAgentToolDef[] = [];
+  for (const t of tools) {
+    if (!t || typeof t !== "object") continue;
+    const o = t as Record<string, unknown>;
+    if (typeof o.name !== "string" || !o.name) continue;
+    out.push({
+      name: o.name,
+      description: typeof o.description === "string" ? o.description : undefined,
+      schema: o.schema ?? o.parameters,
+    });
+  }
+  return out;
+}
+
+function mapAgentToolsToOpenAi(tools: OpenAiAgentToolDef[]): unknown[] {
+  return tools.map((t) => {
+    const parameters =
+      t.schema && typeof t.schema === "object"
+        ? t.schema
+        : { type: "object", properties: {} };
+    return {
+      type: "function",
+      function: {
+        name: t.name,
+        ...(t.description ? { description: t.description } : {}),
+        parameters,
+      },
+    };
+  });
+}
+
+function serializeMessagesForApi(messages: OpenAiChatMessage[]): unknown[] {
+  return messages.map((m) => {
+    const msg: Record<string, unknown> = {
+      role: m.role,
+      content: m.content ?? "",
+    };
+    if (m.tool_call_id) msg.tool_call_id = m.tool_call_id;
+    if (m.tool_calls && m.tool_calls.length > 0) msg.tool_calls = m.tool_calls;
+    if (m.name) msg.name = m.name;
+    if (m.role === "assistant" && (!m.content || m.content === "") && m.tool_calls?.length) {
+      msg.content = null;
+    }
+    return msg;
+  });
 }
 
 function buildChatCompletionsBody(
   model: string,
   messages: OpenAiChatMessage[],
   options: Record<string, unknown>,
+  agentTools?: OpenAiAgentToolDef[],
 ): Record<string, unknown> {
-  const body: Record<string, unknown> = { model, messages };
+  const body: Record<string, unknown> = {
+    model,
+    messages: serializeMessagesForApi(messages),
+  };
   if (options.temperature != null) body.temperature = options.temperature;
   if (options.maxTokens != null) body.max_tokens = options.maxTokens;
   if (options.frequencyPenalty != null) body.frequency_penalty = options.frequencyPenalty;
   if (options.presencePenalty != null) body.presence_penalty = options.presencePenalty;
   if (options.topP != null) body.top_p = options.topP;
+  if (agentTools && agentTools.length > 0) {
+    body.tools = mapAgentToolsToOpenAi(agentTools);
+  }
   return body;
 }
 
@@ -122,8 +199,12 @@ function buildResponsesBody(
   messages: OpenAiChatMessage[],
   options: Record<string, unknown>,
   builtInTools: Record<string, unknown>,
+  agentTools?: OpenAiAgentToolDef[],
 ): Record<string, unknown> {
-  const body: Record<string, unknown> = { model, input: messages };
+  const body: Record<string, unknown> = {
+    model,
+    input: serializeMessagesForApi(messages),
+  };
   if (options.temperature != null) body.temperature = options.temperature;
   if (options.maxTokens != null) body.max_output_tokens = options.maxTokens;
   if (options.topP != null) body.top_p = options.topP;
@@ -134,43 +215,130 @@ function buildResponsesBody(
   if (options.metadata) body.metadata = options.metadata;
   if (options.topLogprobs != null) body.top_logprobs = options.topLogprobs;
 
-  const tools = mapBuiltInToolsToOpenAi(builtInTools);
+  const tools = [
+    ...mapBuiltInToolsToOpenAi(builtInTools),
+    ...mapAgentToolsToOpenAi(agentTools ?? []),
+  ];
   if (tools.length > 0) body.tools = tools;
   return body;
 }
 
+function parseToolCallArguments(raw: unknown): Record<string, unknown> {
+  if (raw == null) return {};
+  if (typeof raw === "object" && !Array.isArray(raw)) {
+    return raw as Record<string, unknown>;
+  }
+  if (typeof raw === "string") {
+    const trimmed = raw.trim();
+    if (!trimmed) return {};
+    try {
+      const parsed = JSON.parse(trimmed) as unknown;
+      if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+        return parsed as Record<string, unknown>;
+      }
+      return { value: parsed };
+    } catch {
+      return { raw };
+    }
+  }
+  return { value: raw };
+}
+
 function parseChatCompletionsResponse(body: unknown): OpenAiCompletionResult {
   const b = body as {
-    choices?: Array<{ message?: { content?: string } }>;
+    choices?: Array<{
+      message?: {
+        content?: string | null;
+        tool_calls?: Array<{
+          id?: string;
+          type?: string;
+          function?: { name?: string; arguments?: string };
+        }>;
+      };
+    }>;
     model?: string;
     usage?: { prompt_tokens?: number; completion_tokens?: number; total_tokens?: number };
   };
-  const text = b.choices?.[0]?.message?.content ?? "";
+  const message = b.choices?.[0]?.message;
+  const text = message?.content ?? "";
+  const toolCalls: OpenAiToolCall[] = [];
+  for (const tc of message?.tool_calls ?? []) {
+    const name = tc.function?.name;
+    if (!name) continue;
+    toolCalls.push({
+      id: tc.id,
+      name,
+      args: parseToolCallArguments(tc.function?.arguments),
+    });
+  }
   return {
-    text,
+    text: typeof text === "string" ? text : "",
     model: b.model ?? "",
     usage: {
       promptTokens: b.usage?.prompt_tokens ?? 0,
       completionTokens: b.usage?.completion_tokens ?? 0,
       totalTokens: b.usage?.total_tokens ?? 0,
     },
+    ...(toolCalls.length > 0 ? { toolCalls } : {}),
   };
 }
 
 function parseResponsesResponse(body: unknown): OpenAiCompletionResult {
   const b = body as {
     output_text?: string;
+    output?: Array<{
+      type?: string;
+      content?: Array<{ type?: string; text?: string }>;
+      name?: string;
+      arguments?: string | Record<string, unknown>;
+      call_id?: string;
+      id?: string;
+    }>;
     model?: string;
     usage?: { input_tokens?: number; output_tokens?: number; total_tokens?: number };
   };
+
+  let text = b.output_text ?? "";
+  const toolCalls: OpenAiToolCall[] = [];
+
+  if (Array.isArray(b.output)) {
+    const textParts: string[] = [];
+    for (const item of b.output) {
+      if (item.type === "message" && Array.isArray(item.content)) {
+        for (const part of item.content) {
+          if (part.type === "output_text" && typeof part.text === "string") {
+            textParts.push(part.text);
+          } else if (typeof part.text === "string") {
+            textParts.push(part.text);
+          }
+        }
+      }
+      if (
+        item.type === "function_call" ||
+        item.type === "tool_call" ||
+        (item.name && (item.arguments != null || item.call_id))
+      ) {
+        if (typeof item.name === "string" && item.name) {
+          toolCalls.push({
+            id: item.call_id ?? item.id,
+            name: item.name,
+            args: parseToolCallArguments(item.arguments),
+          });
+        }
+      }
+    }
+    if (!text && textParts.length > 0) text = textParts.join("");
+  }
+
   return {
-    text: b.output_text ?? "",
+    text,
     model: b.model ?? "",
     usage: {
       promptTokens: b.usage?.input_tokens ?? 0,
       completionTokens: b.usage?.output_tokens ?? 0,
       totalTokens: b.usage?.total_tokens ?? 0,
     },
+    ...(toolCalls.length > 0 ? { toolCalls } : {}),
   };
 }
 
@@ -204,6 +372,7 @@ async function invokeModel(
     organizationId?: string;
   },
   messages: OpenAiChatMessage[],
+  agentTools?: OpenAiAgentToolDef[],
 ): Promise<OpenAiCompletionResult> {
   const http = httpOverride ?? sdkHttpRequest;
   const timeout = (handle.options.timeout as number) ?? DEFAULT_TIMEOUT;
@@ -213,8 +382,14 @@ async function invokeModel(
   const useResponses = handle.responsesApiEnabled;
   const url = useResponses ? `${handle.baseUrl}/responses` : `${handle.baseUrl}/chat/completions`;
   const body = useResponses
-    ? buildResponsesBody(handle.model, messages, handle.options, handle.builtInTools)
-    : buildChatCompletionsBody(handle.model, messages, handle.options);
+    ? buildResponsesBody(
+        handle.model,
+        messages,
+        handle.options,
+        handle.builtInTools,
+        agentTools,
+      )
+    : buildChatCompletionsBody(handle.model, messages, handle.options, agentTools);
 
   let lastError: Error | null = null;
 
@@ -280,10 +455,15 @@ export const lmChatOpenAiExecutor: NodeExecutor = async (ctx) => {
     options,
     builtInTools,
     baseUrl,
-    invoke(messages: OpenAiChatMessage[]): Promise<OpenAiCompletionResult> {
+    invoke(
+      messages: OpenAiChatMessage[],
+      tools?: OpenAiAgentToolDef[] | unknown[],
+    ): Promise<OpenAiCompletionResult> {
+      const agentTools = normalizeAgentToolDefs(tools);
       return invokeModel(
         { model, responsesApiEnabled, options, builtInTools, baseUrl, apiKey, organizationId },
         messages,
+        agentTools,
       );
     },
   };

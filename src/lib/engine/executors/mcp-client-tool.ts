@@ -123,13 +123,21 @@ async function resolveAuthHeadersAsync(
   }
 
   if (authentication === "multipleHeadersAuth") {
-    const cred = await ctx.getCredential("httpCustomAuth");
+    // Imported n8n workflows often use httpMultipleHeadersAuth; OpenFlow also
+    // accepts httpCustomAuth as an alias.
+    const cred =
+      (await ctx.getCredential("httpMultipleHeadersAuth")) ??
+      (await ctx.getCredential("httpCustomAuth"));
     if (!cred) return {};
     const headers: Record<string, string> = {};
-    const pairs = cred.headers as Array<{ name?: string; value?: string }> | undefined;
-    if (Array.isArray(pairs)) {
-      for (const p of pairs) {
+    const raw = cred.headers;
+    if (Array.isArray(raw)) {
+      for (const p of raw as Array<{ name?: string; value?: string }>) {
         if (p.name) headers[p.name] = String(p.value ?? "");
+      }
+    } else if (raw && typeof raw === "object") {
+      for (const [k, v] of Object.entries(raw as Record<string, unknown>)) {
+        headers[k] = String(v ?? "");
       }
     }
     return headers;

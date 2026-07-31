@@ -3,7 +3,7 @@ import { Handle, Position, type NodeProps } from "@xyflow/react";
 import * as Icons from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { OpenFlowNode } from "@/lib/workflow/graph";
-import { handlesFor } from "@/lib/workflow/graph";
+import { channelHandleIds, handlesFor } from "@/lib/workflow/graph";
 
 export function NodeIcon({ name, className }: { name: string; className?: string }) {
   const Lucide = (Icons as unknown as Record<string, React.ComponentType<{ className?: string }>>)[
@@ -48,6 +48,8 @@ function BaseNodeInner({ data, selected }: NodeProps<OpenFlowNode>) {
   const node = data.node;
   const exec = (data as Record<string, unknown>).executionStatus as string | undefined;
   const { description, inputs, outputs } = handlesFor(node);
+  const inputHandleIds = channelHandleIds(inputs);
+  const outputHandleIds = channelHandleIds(outputs);
   const accent = accentFor(description.group, description.placeholder);
   const styles = accentStyles[accent];
   const isTrigger = description.group.includes("trigger");
@@ -63,8 +65,8 @@ function BaseNodeInner({ data, selected }: NodeProps<OpenFlowNode>) {
         const isAi = channel.startsWith("ai_");
         return (
           <Handle
-            key={`in-${channel}-${i}`}
-            id={`${channel}-${i}`}
+            key={`in-${inputHandleIds[i]}`}
+            id={inputHandleIds[i]}
             type="target"
             position={Position.Left}
             style={{
@@ -152,8 +154,8 @@ function BaseNodeInner({ data, selected }: NodeProps<OpenFlowNode>) {
         const isAi = channel.startsWith("ai_");
         return (
           <Handle
-            key={`out-${channel}-${i}`}
-            id={`${channel}-${i}`}
+            key={`out-${outputHandleIds[i]}`}
+            id={outputHandleIds[i]}
             type="source"
             position={Position.Right}
             style={{

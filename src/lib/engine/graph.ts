@@ -33,18 +33,25 @@ export interface IncomingEdge {
   source: string;
   sourceOutput: number;
   targetInput: number;
+  /** Target input channel (e.g. main, ai_tool). */
+  channel: string;
 }
 
 export function buildIncoming(connections: IConnections): Map<string, IncomingEdge[]> {
   const incoming = new Map<string, IncomingEdge[]>();
   for (const [sourceName, channels] of Object.entries(connections)) {
-    for (const outputs of Object.values(channels)) {
+    for (const [sourceChannel, outputs] of Object.entries(channels)) {
       outputs.forEach((targets, sourceOutput) => {
         if (!targets) return;
         for (const t of targets) {
           if (!t) continue;
           const list = incoming.get(t.node) ?? [];
-          list.push({ source: sourceName, sourceOutput, targetInput: t.index ?? 0 });
+          list.push({
+            source: sourceName,
+            sourceOutput,
+            targetInput: t.index ?? 0,
+            channel: t.type ?? sourceChannel ?? "main",
+          });
           incoming.set(t.node, list);
         }
       });

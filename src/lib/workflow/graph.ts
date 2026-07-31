@@ -150,6 +150,16 @@ export function handlesFor(node: INode) {
   };
 }
 
+/** Per-channel ordinal handle ids matching n8n connection index (not flat array index). */
+export function channelHandleIds(channels: string[]): string[] {
+  const counts = new Map<string, number>();
+  return channels.map((channel) => {
+    const n = counts.get(channel) ?? 0;
+    counts.set(channel, n + 1);
+    return `${channel}-${n}`;
+  });
+}
+
 export interface MigrationRow {
   name: string;
   type: string;

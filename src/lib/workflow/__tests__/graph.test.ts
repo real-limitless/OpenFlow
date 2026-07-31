@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { toFlowNodes, toFlowEdges } from "../graph";
+import { toFlowNodes, toFlowEdges, channelHandleIds, addConnection } from "../graph";
 import type { IWorkflow } from "../types";
 
 const twoNodeWorkflow: IWorkflow = {
@@ -78,5 +78,114 @@ describe("graph mapping", () => {
       },
     };
     expect(toFlowEdges(bad)).toHaveLength(0);
+  });
+
+  it("channelHandleIds uses per-channel ordinals (not flat array index)", () => {
+    expect(
+      channelHandleIds(["main", "ai_languageModel", "ai_tool", "ai_memory", "ai_outputParser"]),
+    ).toEqual([
+      "main-0",
+      "ai_languageModel-0",
+      "ai_tool-0",
+      "ai_memory-0",
+      "ai_outputParser-0",
+    ]);
+    expect(channelHandleIds(["main", "main", "ai_tool"])).toEqual([
+      "main-0",
+      "main-1",
+      "ai_tool-0",
+    ]);
+  });
+
+  it("AI Agent cluster edges use n8n-shaped handle ids matching channelHandleIds", () => {
+    const cluster: IWorkflow = {
+      id: "wf-agent",
+      name: "Agent Cluster",
+      active: false,
+      nodes: [
+        {
+          id: "a",
+          name: "AI Agent",
+          type: "@n8n/n8n-nodes-langchain.agent",
+          typeVersion: 1,
+          position: [400, 0],
+          parameters: {},
+        },
+        {
+          id: "m",
+          name: "OpenAI Chat Model",
+          type: "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+          typeVersion: 1,
+          position: [100, -100],
+          parameters: {},
+        },
+        {
+          id: "t",
+          name: "MCP Client Tool",
+          type: "@n8n/n8n-nodes-langchain.mcpClientTool",
+          typeVersion: 1,
+          position: [100, 100],
+          parameters: {},
+        },
+        {
+          id: "s",
+          name: "Start",
+          type: "n8n-nodes-base.manualTrigger",
+          typeVersion: 1,
+          position: [0, 0],
+          parameters: {},
+        },
+      ],
+      connections: {
+        Start: {
+          main: [[{ node: "AI Agent", type: "main", index: 0 }]],
+        },
+        "OpenAI Chat Model": {
+          ai_languageModel: [[{ node: "AI Agent", type: "ai_languageModel", index: 0 }]],
+        },
+        "MCP Client Tool": {
+          ai_tool: [[{ node: "AI Agent", type: "ai_tool", index: 0 }]],
+        },
+      },
+      settings: { executionOrder: "v1" },
+    };
+
+    const agentHandles = channelHandleIds([
+      "main",
+      "ai_languageModel",
+      "ai_tool",
+      "ai_memory",
+      "ai_outputParser",
+    ]);
+    const edges = toFlowEdges(cluster);
+
+    const modelEdge = edges.find((e) => e.source === "OpenAI Chat Model");
+    expect(modelEdge?.sourceHandle).toBe("ai_languageModel-0");
+    expect(modelEdge?.targetHandle).toBe("ai_languageModel-0");
+    expect(agentHandles).toContain(modelEdge?.targetHandle);
+
+    const toolEdge = edges.find((e) => e.source === "MCP Client Tool");
+    expect(toolEdge?.sourceHandle).toBe("ai_tool-0");
+    expect(toolEdge?.targetHandle).toBe("ai_tool-0");
+    expect(agentHandles).toContain(toolEdge?.targetHandle);
+
+    const mainEdge = edges.find((e) => e.source === "Start");
+    expect(mainEdge?.targetHandle).toBe("main-0");
+  });
+
+  it("addConnection stores AI target channel index 0 from handle id", () => {
+    const next = addConnection(
+      {},
+      "OpenAI Chat Model",
+      "ai_languageModel-0",
+      "AI Agent",
+      "ai_languageModel-0",
+    );
+    const targets = next["OpenAI Chat Model"]?.ai_languageModel?.[0] ?? [];
+    expect(targets[0]).toEqual({
+      node: "AI Agent",
+      type: "ai_languageModel",
+      index: 0,
+    });
   });
 });

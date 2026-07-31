@@ -595,4 +595,124 @@ describe("batch-queue langchainAgent — @n8n/n8n-nodes-langchain.agent", () => 
     const canonical = getExecutor(TYPE);
     expect(canonical).toBeDefined();
   });
+
+  it("expands MCP Client Tool bundle into individual tool handles", async () => {
+    const invoked: Array<{ name: string; args: Record<string, unknown> }> = [];
+    let callCount = 0;
+    const modelHandle = makeModelHandle({
+      invoke: async (_messages, tools) => {
+        callCount++;
+        if (callCount === 1) {
+          expect(tools).toEqual(
+            expect.arrayContaining([
+              expect.objectContaining({ name: "get_quote" }),
+              expect.objectContaining({ name: "get_news" }),
+            ]),
+          );
+          return {
+            text: "",
+            toolCalls: [{ name: "get_quote", args: { symbol: "AAPL" } }],
+            model: "gpt-4.1-mini",
+            usage: { promptTokens: 1, completionTokens: 1, totalTokens: 2 },
+          };
+        }
+        return {
+          text: "AAPL is $200",
+          model: "gpt-4.1-mini",
+          usage: { promptTokens: 2, completionTokens: 2, totalTokens: 4 },
+        };
+      },
+    });
+
+    const mcpBundle = {
+      type: "@n8n/n8n-nodes-langchain.mcpClientTool",
+      endpoint: "https://mcp.example.com",
+      transport: "httpStreamable",
+      tools: [
+        { name: "get_quote", description: "Get stock quote", inputSchema: { type: "object" } },
+        { name: "get_news", description: "Get news", inputSchema: { type: "object" } },
+      ],
+      timeoutMs: 60000,
+      invoke: async (toolName: string, args: Record<string, unknown>) => {
+        invoked.push({ name: toolName, args });
+        return { content: `${toolName}:${JSON.stringify(args)}`, isError: false };
+      },
+    };
+
+    const out = await runAgent(
+      {
+        promptType: "define",
+        text: "Quote AAPL",
+        options: { returnIntermediateSteps: true, maxIterations: 5 },
+      },
+      [{}],
+      {
+        modelHandle,
+        connections: makeClusterConnections("Agent", { toolNames: ["MCP"] }),
+        subNodeOutputs: {
+          Model: [{ json: modelHandle as unknown as Record<string, unknown> }],
+          MCP: [{ json: mcpBundle as unknown as Record<string, unknown> }],
+        },
+      },
+    );
+
+    expect(out[0][0].json.output).toBe("AAPL is $200");
+    expect(invoked).toEqual([{ name: "get_quote", args: { symbol: "AAPL" } }]);
+    expect(out[0][0].json.intermediateSteps).toEqual([
+      {
+        action: { tool: "get_quote", toolInput: { symbol: "AAPL" } },
+        observation: 'get_quote:{"symbol":"AAPL"}',
+      },
+    ]);
+  });
+
+  it("throws when tool connections produce no valid handles", async () => {
+    const modelHandle = makeModelHandle();
+    await expect(
+      runAgent(
+        { promptType: "define", text: "Hi", options: {} },
+        [{}],
+        {
+          modelHandle,
+          connections: makeClusterConnections("Agent", { toolNames: ["Broken"] }),
+          subNodeOutputs: {
+            Model: [{ json: modelHandle as unknown as Record<string, unknown> }],
+            Broken: [{ json: { type: "not-a-tool" } }],
+          },
+        },
+      ),
+    ).rejects.toThrow(/no valid tool handles/i);
+  });
+
+  it("memory appendTurn is called after final answer", async () => {
+    const turns: unknown[] = [];
+    const modelHandle = makeModelHandle({
+      invoke: async () => ({
+        text: "done",
+        model: "gpt-4.1-mini",
+        usage: { promptTokens: 1, completionTokens: 1, totalTokens: 2 },
+      }),
+    });
+    const memoryHandle = {
+      loadMessages: () => [],
+      appendTurn: (user: unknown, assistant: unknown) => {
+        turns.push(user, assistant);
+      },
+    };
+
+    await runAgent({ options: {} }, [{ chatInput: "hello" }], {
+      modelHandle,
+      connections: makeClusterConnections("Agent", { memoryName: "Memory" }),
+      subNodeOutputs: {
+        Model: [{ json: modelHandle as unknown as Record<string, unknown> }],
+        Tool: [{ json: { name: "stub", description: "stub" } }],
+        Memory: [{ json: memoryHandle as unknown as Record<string, unknown> }],
+      },
+    });
+
+    expect(turns).toEqual([
+      { role: "user", content: "hello" },
+      { role: "assistant", content: "done" },
+    ]);
+  });
 });

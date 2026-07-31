@@ -148,6 +148,112 @@ describe("batch-queue lmChatOpenAi — @n8n/n8n-nodes-langchain.lmChatOpenAi", (
     ).rejects.toThrow(/missing apiKey/);
   });
 
+  it("invoke passes agent tools and parses tool_calls from chat completions", async () => {
+    const captured: Array<{ body: unknown }> = [];
+    setOpenAiHttpClient(async (opts) => {
+      captured.push({ body: opts.body });
+      return {
+        status: 200,
+        headers: {},
+        body: {
+          choices: [
+            {
+              message: {
+                content: null,
+                tool_calls: [
+                  {
+                    id: "call_abc",
+                    type: "function",
+                    function: {
+                      name: "get_quote",
+                      arguments: '{"symbol":"AAPL"}',
+                    },
+                  },
+                ],
+              },
+            },
+          ],
+          model: "gpt-4.1-mini",
+          usage: { prompt_tokens: 10, completion_tokens: 5, total_tokens: 15 },
+        },
+      };
+    });
+
+    const out = await runModel({
+      model: { __rl: true, mode: "list", value: "gpt-4.1-mini" },
+      options: { temperature: 0 },
+    });
+    const handle = getHandle(out);
+    const result = await handle.invoke([{ role: "user", content: "Quote AAPL" }], [
+      { name: "get_quote", description: "Get quote", schema: { type: "object", properties: {} } },
+    ]);
+
+    expect(result.toolCalls).toEqual([
+      { id: "call_abc", name: "get_quote", args: { symbol: "AAPL" } },
+    ]);
+    expect(result.text).toBe("");
+    const body = captured[0].body as {
+      tools: Array<{ type: string; function: { name: string } }>;
+    };
+    expect(body.tools).toEqual([
+      expect.objectContaining({
+        type: "function",
+        function: expect.objectContaining({ name: "get_quote" }),
+      }),
+    ]);
+  });
+
+  it("invoke serializes tool role messages with tool_call_id", async () => {
+    const captured: Array<{ body: unknown }> = [];
+    setOpenAiHttpClient(async (opts) => {
+      captured.push({ body: opts.body });
+      return {
+        status: 200,
+        headers: {},
+        body: {
+          choices: [{ message: { content: "Final" } }],
+          model: "gpt-4.1-mini",
+          usage: { prompt_tokens: 1, completion_tokens: 1, total_tokens: 2 },
+        },
+      };
+    });
+
+    const out = await runModel({
+      model: { __rl: true, mode: "list", value: "gpt-4.1-mini" },
+      options: {},
+    });
+    const handle = getHandle(out);
+    await handle.invoke(
+      [
+        { role: "user", content: "hi" },
+        {
+          role: "assistant",
+          content: "",
+          tool_calls: [
+            {
+              id: "call_1",
+              type: "function",
+              function: { name: "t", arguments: "{}" },
+            },
+          ],
+        },
+        { role: "tool", content: "obs", tool_call_id: "call_1" },
+      ],
+      [{ name: "t", schema: { type: "object" } }],
+    );
+
+    const body = captured[0].body as { messages: Array<Record<string, unknown>> };
+    expect(body.messages[1]).toMatchObject({
+      role: "assistant",
+      tool_calls: [expect.objectContaining({ id: "call_1" })],
+    });
+    expect(body.messages[2]).toEqual({
+      role: "tool",
+      content: "obs",
+      tool_call_id: "call_1",
+    });
+  });
+
   it("invoke calls chat completions endpoint with correct body", async () => {
     const captured: Array<{
       url: string;

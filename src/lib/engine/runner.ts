@@ -118,6 +118,9 @@ export async function executeWorkflow(options: RunOptions): Promise<RunResult> {
     const edges = incoming.get(nodeName) ?? [];
     const items: INodeExecutionData[] = [];
     for (const e of edges) {
+      // Only main-channel edges feed workflow item inputs; AI cluster edges are
+      // resolved by name via getNodeInputItems(subNodeName) in root executors.
+      if (e.channel !== "main") continue;
       if (e.targetInput !== inputIndex) continue;
       const outs = nodeOutputs.get(e.source);
       if (outs) items.push(...(outs[e.sourceOutput] ?? []));
