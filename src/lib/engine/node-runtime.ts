@@ -588,162 +588,342 @@ export const BUILTIN_EXECUTOR_MODULES: Array<{
     modulePath: "./executors/n8n-nodes-base.jira",
     exportName: "jiraExecutor",
   },
-    {
-      type: "n8n-nodes-base.twilio",
-      modulePath: "./executors/n8n-nodes-base.twilio",
-      exportName: "twilioExecutor",
-    },
-    {
-      type: "n8n-nodes-base.googleSheets",
-      modulePath: "./executors/n8n-nodes-base.googleSheets",
-      exportName: "googleSheetsExecutor",
-    },
-    {
-      type: "n8n-nodes-base.googleDocs",
-      modulePath: "./executors/n8n-nodes-base.googleDocs",
-      exportName: "googleDocsExecutor",
-    },
-    {
-      type: "n8n-nodes-base.googleCalendar",
-      modulePath: "./executors/google-calendar",
-      exportName: "googleCalendarExecutor",
-    },
-    {
-      type: "n8n-nodes-base.youTube",
-      modulePath: "./executors/youTube",
-      exportName: "youTubeExecutor",
-    },
-    {
-      type: "n8n-nodes-base.postgres",
-      modulePath: "./executors/postgres",
-      exportName: "postgresExecutor",
-    },
-    {
-      type: "n8n-nodes-base.mySql",
-      modulePath: "./executors/mySql",
-      exportName: "mySqlExecutor",
-    },
-    {
-      type: "n8n-nodes-base.s3",
-      modulePath: "./executors/s3",
-      exportName: "s3Executor",
-    },
-    {
-      type: "n8n-nodes-base.redis",
-      modulePath: "./executors/redis",
-      exportName: "redisExecutor",
-    },
-    {
-      type: "n8n-nodes-base.hubspot",
-      modulePath: "./executors/hubspot",
-      exportName: "hubspotExecutor",
-    },
-    {
-      type: "n8n-nodes-base.mongoDb",
-      modulePath: "./executors/mongo-db",
-      exportName: "mongoDbExecutor",
-    },
-    {
-      type: "n8n-nodes-base.supabase",
-      modulePath: "./executors/supabase",
-      exportName: "supabaseExecutor",
-    },
-    {
-      type: "n8n-nodes-base.facebookGraphApi",
-      modulePath: "./executors/facebook-graph-api",
-      exportName: "facebookGraphApiExecutor",
-    },
-    {
-      type: "n8n-nodes-base.wordpress",
-      modulePath: "./executors/wordpress",
-      exportName: "wordpressExecutor",
-    },
-    {
-      type: "n8n-nodes-base.debugHelper",
-      modulePath: "./executors/debug-helper",
-      exportName: "debugHelperExecutor",
-    },
-    {
-      type: "n8n-nodes-base.executeCommand",
-      modulePath: "./executors/execute-command",
-      exportName: "executeCommandExecutor",
-    },
-    {
-      type: "n8n-nodes-base.n8n",
-      modulePath: "./executors/n8n",
-      exportName: "n8nExecutor",
-    },
-    {
-      type: "n8n-nodes-base.evaluation",
-      modulePath: "./executors/evaluation",
-      exportName: "evaluationExecutor",
-    },
-    {
-      type: "n8n-nodes-base.evaluationTrigger",
-      modulePath: "./executors/evaluation-trigger",
-      exportName: "evaluationTriggerExecutor",
-    },
-    {
-      type: "n8n-nodes-base.form",
-      modulePath: "./executors/form",
-      exportName: "formExecutor",
-    },
-    {
-      type: "n8n-nodes-base.totp",
-      modulePath: "./executors/totp",
-      exportName: "totpExecutor",
-    },
-    {
-      type: "n8n-nodes-base.ldap",
-      modulePath: "./executors/ldap",
-      exportName: "ldapExecutor",
-    },
-    {
-      type: "n8n-nodes-base.iCalendar",
-      modulePath: "./executors/iCalendar",
-      exportName: "iCalendarExecutor",
-    },
-    {
-      type: "n8n-nodes-base.quickChart",
-      modulePath: "./executors/quick-chart",
-      exportName: "quickChartExecutor",
-    },
-    {
-      type: "n8n-nodes-mcp.mcpClientTool",
-      modulePath: "./executors/mcp-community-client",
-      exportName: "mcpCommunityClientExecutor",
-    },
-{
-      type: "n8n-nodes-base.homeAssistant",
-      modulePath: "./executors/home-assistant",
-      exportName: "homeAssistantExecutor",
-    },
-    {
-      type: "n8n-nodes-base.mattermost",
-      modulePath: "./executors/n8n-nodes-base.mattermost",
-      exportName: "mattermostExecutor",
-    },
-    {
-      type: "n8n-nodes-base.matrix",
-      modulePath: "./executors/matrix",
-      exportName: "matrixExecutor",
-    },
-    {
-      type: "n8n-nodes-base.rocketchat",
-      modulePath: "./executors/rocketchat",
-      exportName: "rocketchatExecutor",
-    },
-    {
-      type: "n8n-nodes-base.gotify",
-      modulePath: "./executors/gotify",
-      exportName: "gotifyExecutor",
-    },
-    {
-      type: "n8n-nodes-base.pushbullet",
-      modulePath: "./executors/pushbullet",
-      exportName: "pushbulletExecutor",
-    },
-  ];
+  {
+    type: "n8n-nodes-base.twilio",
+    modulePath: "./executors/n8n-nodes-base.twilio",
+    exportName: "twilioExecutor",
+  },
+  {
+    type: "n8n-nodes-base.googleSheets",
+    modulePath: "./executors/n8n-nodes-base.googleSheets",
+    exportName: "googleSheetsExecutor",
+  },
+  {
+    type: "n8n-nodes-base.googleDocs",
+    modulePath: "./executors/n8n-nodes-base.googleDocs",
+    exportName: "googleDocsExecutor",
+  },
+  {
+    type: "n8n-nodes-base.googleCalendar",
+    modulePath: "./executors/google-calendar",
+    exportName: "googleCalendarExecutor",
+  },
+  {
+    type: "n8n-nodes-base.youTube",
+    modulePath: "./executors/youTube",
+    exportName: "youTubeExecutor",
+  },
+  {
+    type: "n8n-nodes-base.postgres",
+    modulePath: "./executors/postgres",
+    exportName: "postgresExecutor",
+  },
+  {
+    type: "n8n-nodes-base.mySql",
+    modulePath: "./executors/mySql",
+    exportName: "mySqlExecutor",
+  },
+  {
+    type: "n8n-nodes-base.s3",
+    modulePath: "./executors/s3",
+    exportName: "s3Executor",
+  },
+  {
+    type: "n8n-nodes-base.redis",
+    modulePath: "./executors/redis",
+    exportName: "redisExecutor",
+  },
+  {
+    type: "n8n-nodes-base.hubspot",
+    modulePath: "./executors/hubspot",
+    exportName: "hubspotExecutor",
+  },
+  {
+    type: "n8n-nodes-base.mongoDb",
+    modulePath: "./executors/mongo-db",
+    exportName: "mongoDbExecutor",
+  },
+  {
+    type: "n8n-nodes-base.supabase",
+    modulePath: "./executors/supabase",
+    exportName: "supabaseExecutor",
+  },
+  {
+    type: "n8n-nodes-base.facebookGraphApi",
+    modulePath: "./executors/facebook-graph-api",
+    exportName: "facebookGraphApiExecutor",
+  },
+  {
+    type: "n8n-nodes-base.wordpress",
+    modulePath: "./executors/wordpress",
+    exportName: "wordpressExecutor",
+  },
+  {
+    type: "n8n-nodes-base.debugHelper",
+    modulePath: "./executors/debug-helper",
+    exportName: "debugHelperExecutor",
+  },
+  {
+    type: "n8n-nodes-base.executeCommand",
+    modulePath: "./executors/execute-command",
+    exportName: "executeCommandExecutor",
+  },
+  {
+    type: "n8n-nodes-base.n8n",
+    modulePath: "./executors/n8n",
+    exportName: "n8nExecutor",
+  },
+  {
+    type: "n8n-nodes-base.evaluation",
+    modulePath: "./executors/evaluation",
+    exportName: "evaluationExecutor",
+  },
+  {
+    type: "n8n-nodes-base.evaluationTrigger",
+    modulePath: "./executors/evaluation-trigger",
+    exportName: "evaluationTriggerExecutor",
+  },
+  {
+    type: "n8n-nodes-base.form",
+    modulePath: "./executors/form",
+    exportName: "formExecutor",
+  },
+  {
+    type: "n8n-nodes-base.totp",
+    modulePath: "./executors/totp",
+    exportName: "totpExecutor",
+  },
+  {
+    type: "n8n-nodes-base.ldap",
+    modulePath: "./executors/ldap",
+    exportName: "ldapExecutor",
+  },
+  {
+    type: "n8n-nodes-base.iCalendar",
+    modulePath: "./executors/iCalendar",
+    exportName: "iCalendarExecutor",
+  },
+  {
+    type: "n8n-nodes-base.quickChart",
+    modulePath: "./executors/quick-chart",
+    exportName: "quickChartExecutor",
+  },
+  {
+    type: "n8n-nodes-mcp.mcpClientTool",
+    modulePath: "./executors/mcp-community-client",
+    exportName: "mcpCommunityClientExecutor",
+  },
+  {
+    type: "n8n-nodes-base.homeAssistant",
+    modulePath: "./executors/home-assistant",
+    exportName: "homeAssistantExecutor",
+  },
+  {
+    type: "n8n-nodes-base.mailgun",
+    modulePath: "./executors/mailgun",
+    exportName: "mailgunExecutor",
+  },
+  {
+    type: "n8n-nodes-base.mattermost",
+    modulePath: "./executors/n8n-nodes-base.mattermost",
+    exportName: "mattermostExecutor",
+  },
+  {
+    type: "n8n-nodes-base.googleSlides",
+    modulePath: "./executors/n8n-nodes-base.googleSlides",
+    exportName: "googleSlidesExecutor",
+  },
+  {
+    type: "n8n-nodes-base.matrix",
+    modulePath: "./executors/matrix",
+    exportName: "matrixExecutor",
+  },
+  {
+    type: "n8n-nodes-base.rocketchat",
+    modulePath: "./executors/rocketchat",
+    exportName: "rocketchatExecutor",
+  },
+  {
+    type: "n8n-nodes-base.gotify",
+    modulePath: "./executors/gotify",
+    exportName: "gotifyExecutor",
+  },
+  {
+    type: "n8n-nodes-base.pushbullet",
+    modulePath: "./executors/pushbullet",
+    exportName: "pushbulletExecutor",
+  },
+  {
+    type: "n8n-nodes-base.pushover",
+    modulePath: "./executors/pushover",
+    exportName: "pushoverExecutor",
+  },
+  {
+    type: "n8n-nodes-base.messageBird",
+    modulePath: "./executors/message-bird",
+    exportName: "messageBirdExecutor",
+  },
+  {
+    type: "n8n-nodes-base.sms77",
+    modulePath: "./executors/n8n-nodes-base.sms77",
+    exportName: "sms77Executor",
+  },
+  {
+    type: "n8n-nodes-base.sendGrid",
+    modulePath: "./executors/n8n-nodes-base.sendGrid",
+    exportName: "sendGridExecutor",
+  },
+  {
+    type: "n8n-nodes-base.sendInBlue",
+    modulePath: "./executors/sendInBlue",
+    exportName: "sendInBlueExecutor",
+  },
+  {
+    type: "n8n-nodes-base.mailjet",
+    modulePath: "./executors/mailjet",
+    exportName: "mailjetExecutor",
+  },
+  {
+    type: "n8n-nodes-base.mailchimp",
+    modulePath: "./executors/mailchimp",
+    exportName: "mailchimpExecutor",
+  },
+  {
+    type: "n8n-nodes-base.postmarkTrigger",
+    modulePath: "./executors/postmark-trigger",
+    exportName: "postmarkTriggerExecutor",
+  },
+  {
+    type: "n8n-nodes-base.emailReadImap",
+    modulePath: "./executors/email-read-imap",
+    exportName: "emailReadImapExecutor",
+  },
+  {
+    type: "n8n-nodes-base.microsoftOneDrive",
+    modulePath: "./executors/microsoft-one-drive",
+    exportName: "microsoftOneDriveExecutor",
+  },
+  {
+    type: "n8n-nodes-base.microsoftExcel",
+    modulePath: "./executors/microsoft-excel",
+    exportName: "microsoftExcelExecutor",
+  },
+  {
+    type: "n8n-nodes-base.microsoftSharePoint",
+    modulePath: "./executors/microsoft-sharepoint",
+    exportName: "microsoftSharePointExecutor",
+  },
+  {
+    type: "n8n-nodes-base.microsoftSql",
+    modulePath: "./executors/microsoftSql",
+    exportName: "microsoftSqlExecutor",
+  },
+  {
+    type: "n8n-nodes-base.microsoftEntra",
+    modulePath: "./executors/microsoft-entra",
+    exportName: "microsoftEntraExecutor",
+  },
+  {
+    type: "n8n-nodes-base.googleAnalytics",
+    modulePath: "./executors/google-analytics",
+    exportName: "googleAnalyticsExecutor",
+  },
+  {
+    type: "n8n-nodes-base.microsoftToDo",
+    modulePath: "./executors/microsoft-to-do",
+    exportName: "microsoftToDoExecutor",
+  },
+  {
+    type: "n8n-nodes-base.googleTasks",
+    modulePath: "./executors/n8n-nodes-base.googleTasks",
+    exportName: "googleTasksExecutor",
+  },
+  {
+    type: "n8n-nodes-base.googleContacts",
+    modulePath: "./executors/google-contacts",
+    exportName: "googleContactsExecutor",
+  },
+  {
+    type: "n8n-nodes-base.googleTranslate",
+    modulePath: "./executors/google-translate",
+    exportName: "googleTranslateExecutor",
+  },
+  {
+    type: "n8n-nodes-base.googleAds",
+    modulePath: "./executors/google-ads",
+    exportName: "googleAdsExecutor",
+  },
+  {
+    type: "n8n-nodes-base.googleBigQuery",
+    modulePath: "./executors/google-bigquery",
+    exportName: "googleBigQueryExecutor",
+  },
+  {
+    type: "n8n-nodes-base.googleBusinessProfile",
+    modulePath: "./executors/google-business-profile",
+    exportName: "googleBusinessProfileExecutor",
+  },
+  {
+    type: "n8n-nodes-base.googleCloudStorage",
+    modulePath: "./executors/google-cloud-storage",
+    exportName: "googleCloudStorageExecutor",
+  },
+  {
+    type: "n8n-nodes-base.gSuiteAdmin",
+    modulePath: "./executors/g-suite-admin",
+    exportName: "gSuiteAdminExecutor",
+  },
+  {
+    type: "n8n-nodes-base.googleChat",
+    modulePath: "./executors/googleChat",
+    exportName: "googleChatExecutor",
+  },
+  {
+    type: "n8n-nodes-base.clickUp",
+    modulePath: "./executors/clickUp",
+    exportName: "clickUpExecutor",
+  },
+  {
+    type: "n8n-nodes-base.trello",
+    modulePath: "./executors/trello",
+    exportName: "trelloExecutor",
+  },
+  {
+    type: "n8n-nodes-base.asana",
+    modulePath: "./executors/asana",
+    exportName: "asanaExecutor",
+  },
+  {
+    type: "n8n-nodes-base.githubTrigger",
+    modulePath: "./executors/github-trigger",
+    exportName: "githubTriggerExecutor",
+  },
+  {
+    type: "n8n-nodes-base.mondayCom",
+    modulePath: "./executors/monday-com",
+    exportName: "mondayComExecutor",
+  },
+  {
+    type: "n8n-nodes-base.todoist",
+    modulePath: "./executors/todoist",
+    exportName: "todoistExecutor",
+  },
+  {
+    type: "n8n-nodes-base.linear",
+    modulePath: "./executors/linear",
+    exportName: "linearExecutor",
+  },
+  {
+    type: "n8n-nodes-base.gitlab",
+    modulePath: "./executors/gitlab",
+    exportName: "gitlabExecutor",
+  },
+  {
+    type: "n8n-nodes-base.gitlabTrigger",
+    modulePath: "./executors/gitlab-trigger",
+    exportName: "gitlabTriggerExecutor",
+  },
+];
 
 /** Types OpenFlow ships an executor for. Derived, so it needs no maintenance. */
 const builtinExecutorTypes = new Set(BUILTIN_EXECUTOR_MODULES.map((e) => e.type));

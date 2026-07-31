@@ -3,3 +3,7 @@ export * from "./flow";
 export * from "./helpers";
 export * from "./triggers";
 export * from "./transform";
+export * from "./communication";
+export * from "./marketing";
+export * from "./ecm";
+export * from "./integration";
