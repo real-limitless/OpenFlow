@@ -86,4 +86,16 @@ describe("schema round-trip", () => {
     expect(result.ok).toBe(false);
     expect(result.error).toContain("Invalid JSON");
   });
+
+  it("accepts tags double-encoded as a JSON string (legacy extra field)", () => {
+    const result = parseWorkflowJson({ ...minimalRaw, tags: "[]" });
+    expect(result.ok).toBe(true);
+    expect(result.workflow!.tags).toEqual([]);
+  });
+
+  it("accepts tags JSON string containing tag names", () => {
+    const result = parseWorkflowJson({ ...minimalRaw, tags: '["alpha",{"name":"beta"}]' });
+    expect(result.ok).toBe(true);
+    expect(result.workflow!.tags).toEqual(["alpha", { name: "beta" }]);
+  });
 });

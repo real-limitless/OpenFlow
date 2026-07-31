@@ -17,6 +17,18 @@ const KNOWN_WORKFLOW_FIELDS = new Set([
   "createdAt", "updatedAt",
 ]);
 
+/** Revive values that were double-encoded as JSON strings inside `extra` (legacy bug). */
+function reviveExtraValue(value: unknown): unknown {
+  if (typeof value !== "string") return value;
+  const s = value.trim();
+  if (!(s.startsWith("{") || s.startsWith("["))) return value;
+  try {
+    return JSON.parse(s);
+  } catch {
+    return value;
+  }
+}
+
 function serializeJsonFields(data: Record<string, unknown>): Record<string, unknown> {
   const out: Record<string, unknown> = {};
   const extras: Record<string, unknown> = {};
@@ -28,8 +40,11 @@ function serializeJsonFields(data: Record<string, unknown>): Record<string, unkn
       } else {
         out[key] = value;
       }
-    } else {
-      extras[key] = typeof value === "string" ? value : JSON.stringify(value);
+    } else if (value !== undefined) {
+      // Keep native JSON values — the whole `extra` blob is stringified once.
+      // (Previously arrays/objects were stringified here AND again below, which
+      // corrupted tags/nodeGroups into strings like "[]" and broke re-save.)
+      extras[key] = reviveExtraValue(value);
     }
   }
 
@@ -50,7 +65,10 @@ function deserializeJsonFields(row: Record<string, unknown>): IWorkflow {
   }
   if (typeof out.extra === "string") {
     try {
-      Object.assign(out, JSON.parse(out.extra as string));
+      const parsed = JSON.parse(out.extra as string) as Record<string, unknown>;
+      for (const [k, v] of Object.entries(parsed)) {
+        out[k] = reviveExtraValue(v);
+      }
     } catch { /* ignore malformed extra */ }
     delete out.extra;
   }

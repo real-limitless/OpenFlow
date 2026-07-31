@@ -43,7 +43,17 @@ export const workflowSchema = z
     connections: connectionsSchema.default({}),
     settings: z.record(z.unknown()).default({}),
     pinData: z.record(z.array(z.record(z.unknown()))).optional(),
-    tags: z.array(z.union([z.string(), z.object({ name: z.string() }).passthrough()])).optional(),
+    // Accept array, or a JSON-stringified array (legacy double-encoded `extra` field).
+    tags: z.preprocess((v) => {
+      if (typeof v !== "string") return v;
+      try {
+        const parsed = JSON.parse(v);
+        if (Array.isArray(parsed)) return parsed;
+      } catch {
+        /* plain string tag name */
+      }
+      return v.length ? [v] : [];
+    }, z.array(z.union([z.string(), z.object({ name: z.string() }).passthrough()])).optional()),
   })
   .passthrough();
 
