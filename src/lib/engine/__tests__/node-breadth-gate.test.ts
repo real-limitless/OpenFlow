@@ -1,7 +1,32 @@
 import { describe, it, expect } from "vitest";
 import { getNodeType } from "../../nodes/registry";
 import { defaultExecutors } from "../executors";
+import { BUILTIN_EXECUTOR_MODULES } from "../node-runtime";
 import { executeWorkflow } from "../runner";
+
+/**
+ * Guards the executor barrel wiring itself.
+ *
+ * executors/index.ts registers every module listed in BUILTIN_EXECUTOR_MODULES
+ * via an eager import.meta.glob. If that ever regresses to a dynamic
+ * `import(variablePath)`, the modules vanish from the production bundle while
+ * every other test keeps passing, because Vitest resolves them at runtime.
+ * This test fails on a stale/misspelled entry, which is the cheap signal.
+ */
+describe("Executor barrel wiring", () => {
+  it("registers an executor for every type in BUILTIN_EXECUTOR_MODULES", () => {
+    const unregistered = BUILTIN_EXECUTOR_MODULES.filter(
+      (entry) => typeof defaultExecutors[entry.type] !== "function",
+    ).map((entry) => `${entry.type} (${entry.modulePath} -> ${entry.exportName})`);
+
+    expect(unregistered, `unregistered executors:\n${unregistered.join("\n")}`).toEqual([]);
+  });
+
+  it("lists no duplicate types", () => {
+    const types = BUILTIN_EXECUTOR_MODULES.map((e) => e.type);
+    expect(types).toHaveLength(new Set(types).size);
+  });
+});
 
 const PHASE8_TYPES = [
   "n8n-nodes-base.splitOut",

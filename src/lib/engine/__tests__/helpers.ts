@@ -45,6 +45,7 @@ export function makeCtx(
     workflow: makeWorkflow([node]),
     getNodeInputItems: () => normalized,
     continueOnFail,
+    getCredential: async (_name: string) => null,
   });
 }
 
@@ -77,12 +78,13 @@ export async function runNodeWithCtx(
 
 export async function runWorkflowFixture(
   workflow: IWorkflow,
-  opts?: { subWorkflows?: Record<string, IWorkflow> },
+  opts?: { subWorkflows?: Record<string, IWorkflow>; pinData?: Record<string, INodeExecutionData[]> },
 ) {
   return executeWorkflow({
     workflow,
     nodeExecutors: getExecutorMap(),
     subWorkflows: opts?.subWorkflows,
+    pinData: opts?.pinData,
   });
 }
 
