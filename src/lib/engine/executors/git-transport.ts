@@ -1,7 +1,7 @@
 import { randomBytes } from "node:crypto";
-import { promises as fs } from "node:fs";
+import { accessSync, constants, promises as fs } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { delimiter, join } from "node:path";
 import { simpleGit, type SimpleGit, type SimpleGitOptions } from "simple-git";
 import type {
   GitClient,
@@ -10,6 +10,40 @@ import type {
   GitReflogEntry,
   TagAction,
 } from "./git";
+
+function resolveGitBinary(): string {
+  const fromEnv = process.env.GIT_BINARY?.trim();
+  if (fromEnv) return fromEnv;
+
+  const pathEnv = process.env.PATH ?? "";
+  for (const dir of pathEnv.split(delimiter)) {
+    if (!dir) continue;
+    for (const name of ["git", "git.exe"]) {
+      const candidate = join(dir, name);
+      try {
+        accessSync(candidate, constants.X_OK);
+        return candidate;
+      } catch {
+        /* try next */
+      }
+    }
+  }
+
+  // Common absolute locations when PATH is minimal (containers, services)
+  for (const candidate of ["/usr/bin/git", "/bin/git", "/usr/local/bin/git"]) {
+    try {
+      accessSync(candidate, constants.X_OK);
+      return candidate;
+    } catch {
+      /* try next */
+    }
+  }
+
+  throw new Error(
+    "Git: system git binary not found (spawn would fail with ENOENT). " +
+      "Install git in the runtime image/host, or set GIT_BINARY to its absolute path.",
+  );
+}
 
 type Creds = Record<string, unknown> | null;
 
@@ -149,14 +183,16 @@ function createGit(
   timeoutMs: number,
   env: NodeJS.ProcessEnv,
   unsafe: { allowSsh: boolean; allowAskPass: boolean },
+  binary: string,
 ): SimpleGit {
   const opts: Partial<SimpleGitOptions> = {
     baseDir: baseDir || process.cwd(),
-    binary: "git",
+    binary,
     maxConcurrentProcesses: 1,
     trimmed: true,
     timeout: { block: timeoutMs },
     unsafe: {
+      allowUnsafeCustomBinary: true,
       ...(unsafe.allowSsh ? { allowUnsafeSshCommand: true } : {}),
       ...(unsafe.allowAskPass ? { allowUnsafeAskPass: true } : {}),
     },
@@ -195,11 +231,12 @@ function splitPaths(pathsToAdd: string): string | string[] {
 /** Production Git client factory using simple-git (system git binary). */
 export const defaultGitClientFactory: GitClientFactory = async (credentials, options) => {
   const timeoutMs = Math.max(1000, Number(options.timeout ?? 10000) || 10000);
+  const binary = resolveGitBinary();
   const { env, cleanup, allowSsh, allowAskPass } = await buildAuthEnv(credentials);
   const unsafe = { allowSsh, allowAskPass };
   let closed = false;
 
-  const gitAt = (baseDir?: string) => createGit(baseDir, timeoutMs, env, unsafe);
+  const gitAt = (baseDir?: string) => createGit(baseDir, timeoutMs, env, unsafe, binary);
 
   const client: GitClient = {
     async clone(repository, path, cloneOptions) {

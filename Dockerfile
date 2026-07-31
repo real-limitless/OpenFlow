@@ -16,7 +16,13 @@ RUN npm run build
 
 FROM node:22-slim AS runner
 RUN apt-get update \
-  && apt-get install -y --no-install-recommends openssl ca-certificates \
+  && apt-get install -y --no-install-recommends \
+    openssl \
+    ca-certificates \
+    git \
+    openssh-client \
+    python3 \
+  && ln -sf /usr/bin/python3 /usr/bin/python \
   && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
 ENV NODE_ENV=production
@@ -33,5 +39,11 @@ COPY --from=deps /app/node_modules/asn1 ./node_modules/asn1
 COPY --from=deps /app/node_modules/bcrypt-pbkdf ./node_modules/bcrypt-pbkdf
 COPY --from=deps /app/node_modules/buildcheck ./node_modules/buildcheck
 COPY --from=deps /app/node_modules/nan ./node_modules/nan
+# Git node transport (simple-git + deps; may be externalized by Nitro)
+COPY --from=deps /app/node_modules/simple-git ./node_modules/simple-git
+COPY --from=deps /app/node_modules/@kwsites ./node_modules/@kwsites
+COPY --from=deps /app/node_modules/@simple-git ./node_modules/@simple-git
+COPY --from=deps /app/node_modules/debug ./node_modules/debug
+COPY --from=deps /app/node_modules/ms ./node_modules/ms
 EXPOSE 3000
 CMD npx prisma migrate deploy && node .output/server/index.mjs
