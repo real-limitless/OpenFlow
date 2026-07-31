@@ -2,6 +2,35 @@ import type { INodeTypeDescription } from "../types";
 
 const DOCS = "https://docs.n8n.io/integrations/builtin/core-nodes/";
 
+export const activationTrigger: INodeTypeDescription = {
+  name: "n8n-nodes-base.activationTrigger",
+  displayName: "Activation Trigger",
+  category: "Triggers",
+  group: ["trigger"],
+  version: 1,
+  description: "Starts the workflow when a workflow lifecycle event occurs (published, started, or updated). Deprecated — use n8n Trigger or Workflow Trigger instead.",
+  defaults: { name: "Activation Trigger" },
+  inputs: [],
+  outputs: ["main"],
+  icon: "Play",
+  sources: [`${DOCS}n8n-nodes-base.activationtrigger/`],
+  properties: [
+    {
+      displayName: "Event Type(s)",
+      name: "events",
+      type: "multiOptions",
+      default: [],
+      noDataExpression: true,
+      description: "The workflow lifecycle event(s) to trigger on.",
+      options: [
+        { name: "Workflow Published", value: "activation" },
+        { name: "Instance Started", value: "start" },
+        { name: "Workflow Updated", value: "update" },
+      ],
+    },
+  ],
+};
+
 export const errorTrigger: INodeTypeDescription = {
   name: "n8n-nodes-base.errorTrigger",
   displayName: "Error Trigger",
@@ -160,6 +189,35 @@ export const workflowTrigger: INodeTypeDescription = {
       placeholder: "1",
       description:
         "Filter to a specific workflow ID. Leave empty to trigger on all workflows.",
+    },
+  ],
+};
+
+export const n8nTrigger: INodeTypeDescription = {
+  name: "n8n-nodes-base.n8nTrigger",
+  displayName: "n8n Trigger",
+  category: "Triggers",
+  group: ["trigger"],
+  version: 1,
+  description: "Starts the workflow when a workflow lifecycle event occurs (published, started, or updated).",
+  defaults: { name: "n8n Trigger" },
+  inputs: [],
+  outputs: ["main"],
+  icon: "Workflow",
+  sources: [`${DOCS}n8n-nodes-base.n8ntrigger/`],
+  properties: [
+    {
+      displayName: "Trigger Events",
+      name: "events",
+      type: "multiOptions",
+      default: [],
+      noDataExpression: true,
+      description: "The workflow lifecycle event(s) to trigger on.",
+      options: [
+        { name: "Published Workflow Updated", value: "workflowUpdated" },
+        { name: "Instance started", value: "instanceStarted" },
+        { name: "Workflow Published", value: "workflowPublished" },
+      ],
     },
   ],
 };
@@ -1022,6 +1080,174 @@ export const mcpTrigger: INodeTypeDescription = {
           default: 60000,
           typeOptions: { minValue: 1000 },
           description: "Max wait for MCP connect / call in milliseconds.",
+        },
+      ],
+    },
+  ],
+};
+
+export const evaluationTrigger: INodeTypeDescription = {
+  name: "n8n-nodes-base.evaluationTrigger",
+  displayName: "Evaluation Trigger",
+  category: "Triggers",
+  group: ["trigger"],
+  version: [4.6, 4.7],
+  defaultVersion: 4.7,
+  description: "Reads a test dataset and emits each row as a separate output item. Part of the evaluation workflow pattern.",
+  defaults: { name: "Evaluation Trigger" },
+  inputs: [],
+  outputs: ["main"],
+  icon: "TestTubes",
+  credentials: [{ name: "googleSheetsOAuth2Api", required: false }],
+  sources: [
+    "https://docs.n8n.io/integrations/builtin/core-nodes/n8n-nodes-base.evaluationtrigger/",
+  ],
+  properties: [
+    {
+      displayName: "Source",
+      name: "source",
+      type: "options",
+      default: "dataTable",
+      required: true,
+      noDataExpression: true,
+      options: [
+        { name: "Data Table", value: "dataTable" },
+        { name: "Google Sheets", value: "googleSheets" },
+      ],
+    },
+    {
+      displayName: "Authentication",
+      name: "authentication",
+      type: "options",
+      default: "oAuth2",
+      displayOptions: { hide: { source: ["dataTable"] } },
+      options: [
+        { name: "OAuth2", value: "oAuth2" },
+        { name: "Service Account", value: "serviceAccount" },
+      ],
+    },
+    {
+      displayName: "Document ID",
+      name: "documentId",
+      type: "resourceLocator",
+      default: { mode: "list", value: "" },
+      displayOptions: { hide: { source: ["dataTable"] } },
+    },
+    {
+      displayName: "Sheet Name",
+      name: "sheetName",
+      type: "resourceLocator",
+      default: { mode: "list", value: "" },
+      displayOptions: { hide: { source: ["dataTable"] } },
+    },
+    {
+      displayName: "Data Table ID",
+      name: "dataTableId",
+      type: "resourceLocator",
+      default: { mode: "list", value: "" },
+      displayOptions: { show: { source: ["dataTable"] } },
+    },
+    {
+      displayName: "Limit Rows",
+      name: "limitRows",
+      type: "boolean",
+      default: false,
+    },
+    {
+      displayName: "Max Rows",
+      name: "maxRows",
+      type: "number",
+      default: 10,
+      displayOptions: { show: { limitRows: [true] } },
+      typeOptions: { minValue: 1 },
+    },
+    {
+      displayName: "Filters",
+      name: "filtersUI",
+      type: "fixedCollection",
+      default: {},
+      placeholder: "Add Filter",
+      typeOptions: { multipleValues: true },
+      displayOptions: { hide: { source: ["dataTable"] } },
+      options: [
+        {
+          name: "values",
+          displayName: "Filter",
+          values: [
+            {
+              displayName: "Lookup Column",
+              name: "lookupColumn",
+              type: "string",
+              default: "",
+            },
+            {
+              displayName: "Lookup Value",
+              name: "lookupValue",
+              type: "string",
+              default: "",
+            },
+          ],
+        },
+      ],
+    },
+    {
+      displayName: "Filter Rows",
+      name: "filterRows",
+      type: "boolean",
+      default: false,
+      displayOptions: { show: { source: ["dataTable"] } },
+    },
+    {
+      displayName: "Match Type",
+      name: "matchType",
+      type: "options",
+      default: "anyCondition",
+      displayOptions: { show: { filterRows: [true], source: ["dataTable"] } },
+      options: [
+        { name: "Any Condition", value: "anyCondition" },
+        { name: "All Conditions", value: "allConditions" },
+      ],
+    },
+    {
+      displayName: "Filters",
+      name: "filters",
+      type: "fixedCollection",
+      default: {},
+      placeholder: "Add Condition",
+      typeOptions: { multipleValues: true },
+      displayOptions: { show: { filterRows: [true], source: ["dataTable"] } },
+      options: [
+        {
+          name: "conditions",
+          displayName: "Condition",
+          values: [
+            {
+              displayName: "Key Name",
+              name: "keyName",
+              type: "string",
+              default: "",
+            },
+            {
+              displayName: "Condition",
+              name: "condition",
+              type: "options",
+              default: "eq",
+              options: [
+                { name: "Equal", value: "eq" },
+                { name: "Not Equal", value: "ne" },
+                { name: "Contains", value: "contains" },
+                { name: "Not Contains", value: "notContains" },
+                { name: "Greater Than", value: "gt" },
+                { name: "Less Than", value: "lt" },
+              ],
+            },
+            {
+              displayName: "Value",
+              name: "keyValue",
+              type: "string",
+              default: "",
+            },
+          ],
         },
       ],
     },

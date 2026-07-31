@@ -9,7 +9,7 @@ import {
 } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useWorkflowStore } from "@/store/workflow-store";
-import { defaultExecutors } from "@/lib/engine";
+import { hasBuiltinExecutor } from "@/lib/engine/node-runtime";
 import { getNodeType } from "@/lib/nodes/registry";
 import { cn } from "@/lib/utils";
 
@@ -30,7 +30,7 @@ interface MigrationRow {
  */
 function rowStatus(type: string): RowStatus {
   const desc = getNodeType(type);
-  if (defaultExecutors[desc.name]) return "supported";
+  if (hasBuiltinExecutor(desc.name)) return "supported";
   if (desc.inputs.length === 0 && desc.outputs.length === 0) return "supported";
   return desc.placeholder ? "placeholder" : "partial";
 }

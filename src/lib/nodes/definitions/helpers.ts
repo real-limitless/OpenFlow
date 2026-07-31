@@ -1,0 +1,225 @@
+import type { INodeTypeDescription } from "../types";
+
+const CORE = "https://docs.n8n.io/integrations/builtin/core-nodes/";
+
+const fieldTypeOptions = [
+  { name: "Checkbox", value: "checkbox" },
+  { name: "Date", value: "date" },
+  { name: "Dropdown", value: "dropdown" },
+  { name: "Email", value: "email" },
+  { name: "File", value: "file" },
+  { name: "Hidden Field", value: "hiddenField" },
+  { name: "HTML", value: "html" },
+  { name: "Number", value: "number" },
+  { name: "Password", value: "password" },
+  { name: "Radio", value: "radio" },
+  { name: "Text", value: "text" },
+  { name: "Textarea", value: "textarea" },
+];
+
+const fieldValues = [
+  {
+    displayName: "Field Label",
+    name: "fieldLabel",
+    type: "string",
+    default: "",
+    required: true,
+  },
+  {
+    displayName: "Field Name",
+    name: "fieldName",
+    type: "string",
+    default: "",
+    required: true,
+  },
+  {
+    displayName: "Field Type",
+    name: "fieldType",
+    type: "options",
+    default: "text",
+    options: fieldTypeOptions,
+  },
+  {
+    displayName: "Placeholder",
+    name: "placeholder",
+    type: "string",
+    default: "",
+    displayOptions: {
+      show: { fieldType: ["email", "number", "password", "text", "textarea"] },
+    },
+  },
+  {
+    displayName: "Default Value",
+    name: "defaultValue",
+    type: "string",
+    default: "",
+    displayOptions: {
+      show: { fieldType: ["checkbox", "date", "dropdown", "email", "number", "radio", "text", "textarea"] },
+    },
+  },
+  {
+    displayName: "Required Field",
+    name: "requiredField",
+    type: "boolean",
+    default: false,
+  },
+  {
+    displayName: "Multiple Files",
+    name: "multipleFiles",
+    type: "boolean",
+    default: false,
+    displayOptions: { show: { fieldType: ["file"] } },
+  },
+  {
+    displayName: "Accept File Types",
+    name: "acceptFileTypes",
+    type: "string",
+    default: "",
+    displayOptions: { show: { fieldType: ["file"] } },
+  },
+  {
+    displayName: "Multi-Select",
+    name: "multiselect",
+    type: "boolean",
+    default: false,
+    displayOptions: { show: { fieldType: ["dropdown"] } },
+  },
+  {
+    displayName: "Format Date",
+    name: "formatDate",
+    type: "string",
+    default: "",
+    displayOptions: { show: { fieldType: ["date"] } },
+  },
+  {
+    displayName: "HTML",
+    name: "html",
+    type: "string",
+    default: "",
+    displayOptions: { show: { fieldType: ["html"] } },
+  },
+  {
+    displayName: "Element Name",
+    name: "elementName",
+    type: "string",
+    default: "",
+    displayOptions: { show: { fieldType: ["html"] } },
+  },
+  {
+    displayName: "Field Value",
+    name: "fieldValue",
+    type: "string",
+    default: "",
+    displayOptions: { show: { fieldType: ["hiddenField"] } },
+  },
+];
+
+export const form: INodeTypeDescription = {
+  name: "n8n-nodes-base.form",
+  displayName: "n8n Form",
+  category: "Helpers",
+  group: ["organization"],
+  version: 1,
+  description: "Displays an intermediate form page or a completion page.",
+  defaults: { name: "Form" },
+  inputs: ["main"],
+  outputs: ["main"],
+  icon: "FileText",
+  sources: [`${CORE}n8n-nodes-base.form/`],
+  properties: [
+    {
+      displayName: "Operation",
+      name: "operation",
+      type: "options",
+      default: "form",
+      noDataExpression: true,
+      options: [
+        { name: "Form Page", value: "form" },
+        { name: "Completion Page", value: "completion" },
+      ],
+    },
+    {
+      displayName: "Form Fields",
+      name: "formFields",
+      type: "fixedCollection",
+      default: {},
+      typeOptions: { multipleValues: true },
+      displayOptions: { show: { operation: ["form"] } },
+      options: [
+        {
+          name: "values",
+          displayName: "Field",
+          values: fieldValues,
+        },
+      ],
+    },
+    {
+      displayName: "Form Title",
+      name: "formTitle",
+      type: "string",
+      default: "",
+      displayOptions: { show: { operation: ["form"] } },
+    },
+    {
+      displayName: "Form Description",
+      name: "formDescription",
+      type: "string",
+      default: "",
+      displayOptions: { show: { operation: ["form"] } },
+    },
+    {
+      displayName: "Completion Title",
+      name: "completionTitle",
+      type: "string",
+      default: "",
+      displayOptions: { show: { operation: ["completion"] } },
+    },
+    {
+      displayName: "Completion Message",
+      name: "completionMessage",
+      type: "string",
+      default: "",
+      displayOptions: { show: { operation: ["completion"] } },
+    },
+    {
+      displayName: "Completion Page Title",
+      name: "completionPageTitle",
+      type: "string",
+      default: "",
+      displayOptions: { show: { operation: ["completion"] } },
+    },
+    {
+      displayName: "Options",
+      name: "options",
+      type: "collection",
+      default: {},
+      options: [
+        {
+          displayName: "Form Title",
+          name: "formTitle",
+          type: "string",
+          default: "",
+        },
+        {
+          displayName: "Form Description",
+          name: "formDescription",
+          type: "string",
+          default: "",
+        },
+        {
+          displayName: "Button Label",
+          name: "buttonLabel",
+          type: "string",
+          default: "",
+        },
+        {
+          displayName: "Completion Page Title",
+          name: "completionPageTitle",
+          type: "string",
+          default: "",
+          displayOptions: { show: { "/operation": ["completion"] } },
+        },
+      ],
+    },
+  ],
+};
