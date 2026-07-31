@@ -34,6 +34,60 @@ export const config = {
       );
     },
   },
+  /** Workflow editor assistant (chat + OpenFlow MCP). */
+  assistant: {
+    get enabled() {
+      return (
+        process.env.OPENFLOW_ASSISTANT_ENABLED !== "false" &&
+        process.env.OPENFLOW_ASSISTANT_ENABLED !== "0"
+      );
+    },
+    /** builtin = OpenAI-compatible tool loop; opencode = OpenCode server */
+    get backend(): "builtin" | "opencode" {
+      return process.env.OPENFLOW_ASSISTANT_BACKEND === "opencode" ? "opencode" : "builtin";
+    },
+    maxSteps: Math.max(1, parseInt(process.env.OPENFLOW_ASSISTANT_MAX_STEPS ?? "24", 10) || 24),
+    llm: {
+      get baseUrl() {
+        return (
+          process.env.OPENFLOW_ASSISTANT_BASE_URL ??
+          process.env.OPENAI_BASE_URL ??
+          "https://api.openai.com/v1"
+        );
+      },
+      get apiKey() {
+        return (
+          process.env.OPENFLOW_ASSISTANT_API_KEY ??
+          process.env.OPENAI_API_KEY ??
+          process.env.OPENCODE_API_KEY ??
+          ""
+        );
+      },
+      get model() {
+        return process.env.OPENFLOW_ASSISTANT_MODEL ?? process.env.OPENAI_MODEL ?? "gpt-4o-mini";
+      },
+    },
+    opencode: {
+      get bin() {
+        return process.env.OPENCODE_BIN ?? "opencode";
+      },
+      get baseUrl() {
+        return process.env.OPENCODE_BASE_URL ?? "";
+      },
+      get hostname() {
+        return process.env.OPENCODE_HOSTNAME ?? "127.0.0.1";
+      },
+      get port() {
+        return Math.max(1, parseInt(process.env.OPENCODE_PORT ?? "4096", 10) || 4096);
+      },
+      get password() {
+        return process.env.OPENCODE_SERVER_PASSWORD ?? "";
+      },
+      get username() {
+        return process.env.OPENCODE_SERVER_USERNAME ?? "opencode";
+      },
+    },
+  },
 };
 
 export function validateConfig(): void {

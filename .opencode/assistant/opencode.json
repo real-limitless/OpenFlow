@@ -1,0 +1,49 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "model": "opencode/gpt-5-nano",
+  "default_agent": "openflow-assistant",
+  "permission": {
+    "edit": "deny",
+    "bash": "deny",
+    "external_directory": "deny",
+    "webfetch": "deny",
+    "websearch": "deny"
+  },
+  "agent": {
+    "openflow-assistant": {
+      "mode": "primary",
+      "description": "OpenFlow workflow canvas assistant — edit nodes only via openflow MCP tools",
+      "prompt": "{file:./prompts/openflow-assistant.txt}",
+      "permission": {
+        "edit": "deny",
+        "bash": "deny",
+        "skill": {
+          "*": "deny",
+          "openflow-workflow": "allow"
+        }
+      }
+    },
+    "openflow-plan": {
+      "mode": "primary",
+      "description": "Read-only OpenFlow planner — inspect graph and catalog, no mutations",
+      "prompt": "{file:./prompts/openflow-plan.txt}",
+      "permission": {
+        "edit": "deny",
+        "bash": "deny"
+      }
+    },
+    "build": {
+      "disable": true
+    }
+  },
+  "mcp": {
+    "openflow": {
+      "type": "remote",
+      "url": "{env:OPENFLOW_MCP_URL}",
+      "enabled": true,
+      "headers": {
+        "X-OpenFlow-Workflow-Id": "{env:OPENFLOW_WORKFLOW_ID}"
+      }
+    }
+  }
+}

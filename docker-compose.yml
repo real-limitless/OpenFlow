@@ -3,11 +3,40 @@ services:
     build: .
     ports:
       - "3000:3000"
+    # Loads OPENFLOW_ASSISTANT_*, OPENAI_*, OPENCODE_*, etc. from project .env
+    env_file:
+      - .env
     environment:
-        DATABASE_URL: postgresql://openflow:openflow@db:5432/openflow
-        AUTH_DISABLED: "true"
-        CREDENTIALS_KEY: ${CREDENTIALS_KEY:-replace-me-with-64-hex-chars}
-        REDIS_URL: redis://redis:6379
+      # Always use in-compose service hostnames (override localhost from .env)
+      DATABASE_URL: postgresql://openflow:openflow@db:5432/openflow
+      REDIS_URL: redis://redis:6379
+
+      AUTH_DISABLED: ${AUTH_DISABLED:-true}
+      CREDENTIALS_KEY: ${CREDENTIALS_KEY:-replace-me-with-64-hex-chars}
+      BINARY_STORAGE_DIR: ${BINARY_STORAGE_DIR:-./data/binary}
+      RUN_WORKER: ${RUN_WORKER:-true}
+      WORKER_CONCURRENCY: ${WORKER_CONCURRENCY:-5}
+      OPENFLOW_HOT_NODES: ${OPENFLOW_HOT_NODES:-true}
+
+      # Workflow editor assistant — values interpolated from host/.env
+      OPENFLOW_ASSISTANT_ENABLED: ${OPENFLOW_ASSISTANT_ENABLED:-true}
+      OPENFLOW_ASSISTANT_BACKEND: ${OPENFLOW_ASSISTANT_BACKEND:-builtin}
+      OPENFLOW_ASSISTANT_MAX_STEPS: ${OPENFLOW_ASSISTANT_MAX_STEPS:-24}
+      OPENFLOW_ASSISTANT_API_KEY: ${OPENFLOW_ASSISTANT_API_KEY:-}
+      OPENFLOW_ASSISTANT_BASE_URL: ${OPENFLOW_ASSISTANT_BASE_URL:-https://openrouter.ai/api/v1}
+      OPENFLOW_ASSISTANT_MODEL: ${OPENFLOW_ASSISTANT_MODEL:-openai/gpt-4o-mini}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      OPENAI_BASE_URL: ${OPENAI_BASE_URL:-}
+      OPENAI_MODEL: ${OPENAI_MODEL:-}
+
+      # Optional OpenCode backend (OPENFLOW_ASSISTANT_BACKEND=opencode)
+      OPENCODE_BIN: ${OPENCODE_BIN:-opencode}
+      OPENCODE_BASE_URL: ${OPENCODE_BASE_URL:-}
+      OPENCODE_HOSTNAME: ${OPENCODE_HOSTNAME:-127.0.0.1}
+      OPENCODE_PORT: ${OPENCODE_PORT:-4096}
+      OPENCODE_SERVER_PASSWORD: ${OPENCODE_SERVER_PASSWORD:-}
+      OPENCODE_SERVER_USERNAME: ${OPENCODE_SERVER_USERNAME:-opencode}
+      OPENCODE_API_KEY: ${OPENCODE_API_KEY:-}
     depends_on:
       db:
         condition: service_healthy

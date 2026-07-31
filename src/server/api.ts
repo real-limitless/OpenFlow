@@ -10,6 +10,8 @@ import schedulesRoute, { initializeSchedules } from "./routes/schedules";
 import webhooksRoute from "./routes/webhooks";
 import workflowsRoute from "./routes/workflows";
 import devRoute from "./routes/dev";
+import assistantRoute from "./routes/assistant";
+import openflowMcpRoute from "./mcp/openflow-server";
 import { startWorker } from "./worker";
 import { seedBuiltinExecutors } from "../lib/engine";
 import { seedBuiltinDescriptions } from "../lib/nodes/registry";
@@ -30,6 +32,8 @@ executionsRoute(app);
 webhooksRoute(app);
 workflowsRoute(app);
 schedulesRoute(app);
+assistantRoute(app);
+openflowMcpRoute(app);
 devRoute(app);
 
 initializeSchedules().catch(console.error);

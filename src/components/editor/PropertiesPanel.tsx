@@ -13,7 +13,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { ExpressionContext } from "@/lib/expressions/evaluate";
 import { CredentialPicker } from "@/components/credentials";
 
-export function PropertiesPanel() {
+export function PropertiesPanel({ embedded = false }: { embedded?: boolean }) {
   const selected = useWorkflowStore((s) => s.selectedNode);
   const workflow = useWorkflowStore((s) => s.workflow);
   const {
@@ -28,6 +28,12 @@ export function PropertiesPanel() {
   } = useWorkflowStore();
   const node = workflow.nodes.find((n) => n.name === selected);
   const [nameDraft, setNameDraft] = useState<string | null>(null);
+  const shellClass = embedded
+    ? "flex h-full min-h-0 w-full flex-col bg-sidebar"
+    : "flex h-full w-[380px] shrink-0 flex-col border-l border-border bg-sidebar";
+  const emptyShellClass = embedded
+    ? "flex h-full min-h-0 w-full flex-col bg-sidebar"
+    : "hidden h-full w-[380px] shrink-0 flex-col border-l border-border bg-sidebar xl:flex";
 
   const context: ExpressionContext = useMemo(() => {
     const pin = workflow.pinData ?? {};
@@ -45,7 +51,7 @@ export function PropertiesPanel() {
 
   if (!node) {
     return (
-      <aside className="hidden h-full w-[380px] shrink-0 flex-col border-l border-border bg-sidebar xl:flex">
+      <aside className={emptyShellClass}>
         <div className="flex h-full items-center justify-center px-8 text-center">
           <p className="text-[13px] leading-relaxed text-muted-foreground">
             Select a node to edit its parameters. Fields are generated from the node’s public
@@ -60,7 +66,7 @@ export function PropertiesPanel() {
   const parameters = node.parameters ?? {};
 
   return (
-    <aside className="flex h-full w-[380px] shrink-0 flex-col border-l border-border bg-sidebar">
+    <aside className={shellClass}>
       <div className="flex items-start gap-2.5 border-b border-border p-3">
         <span className="mt-0.5 grid size-8 shrink-0 place-items-center rounded bg-surface">
           <NodeIcon name={description.icon} className="size-4 text-primary" />
@@ -84,10 +90,20 @@ export function PropertiesPanel() {
       </div>
 
       <div className="flex items-center gap-1 border-b border-border px-2 py-1.5">
-        <Button size="sm" variant="ghost" className="h-7 text-[12px]" onClick={() => duplicateNode(node.name)}>
+        <Button
+          size="sm"
+          variant="ghost"
+          className="h-7 text-[12px]"
+          onClick={() => duplicateNode(node.name)}
+        >
           <Copy className="mr-1 size-3.5" /> Duplicate
         </Button>
-        <Button size="sm" variant="ghost" className="h-7 text-[12px]" onClick={() => toggleDisabled(node.name)}>
+        <Button
+          size="sm"
+          variant="ghost"
+          className="h-7 text-[12px]"
+          onClick={() => toggleDisabled(node.name)}
+        >
           <PowerOff className="mr-1 size-3.5" /> {node.disabled ? "Enable" : "Disable"}
         </Button>
         <Button

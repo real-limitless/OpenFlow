@@ -8,10 +8,10 @@ import {
   renameInConnections,
   uniqueNodeName,
 } from "@/lib/workflow/graph";
+import { defaultParameters } from "@/lib/workflow/mutations";
 import { getNodeType } from "@/lib/nodes/registry";
 import { newId } from "@/lib/workflow/schema";
 import { getRepository } from "@/lib/storage/repository";
-import type { INodeProperties } from "@/lib/nodes/types";
 
 interface HistoryEntry {
   workflow: IWorkflow;
@@ -25,6 +25,8 @@ interface WorkflowState {
   future: HistoryEntry[];
 
   load: (workflow: IWorkflow) => void;
+  /** Apply server/assistant snapshot without wiping selection when possible. */
+  applyRemote: (workflow: IWorkflow, options?: { selectNode?: string | null }) => void;
   reset: () => void;
   commit: (updater: (draft: IWorkflow) => IWorkflow, options?: { history?: boolean }) => void;
   commitCoalesced: (key: string, updater: (draft: IWorkflow) => IWorkflow) => void;
@@ -40,10 +42,7 @@ interface WorkflowState {
   renameNode: (from: string, to: string) => void;
   toggleDisabled: (name: string) => void;
   updateParameters: (name: string, parameters: Record<string, unknown>) => void;
-  updateCredentials: (
-    name: string,
-    credentials: INode["credentials"] | null,
-  ) => void;
+  updateCredentials: (name: string, credentials: INode["credentials"] | null) => void;
   setNodeNotes: (name: string, notes: string) => void;
   setPinData: (name: string, items: Array<{ json: Record<string, unknown> }> | null) => void;
 
@@ -62,14 +61,7 @@ interface WorkflowState {
   markSaved: () => void;
 }
 
-export function defaultParameters(properties: INodeProperties[]): Record<string, unknown> {
-  const out: Record<string, unknown> = {};
-  for (const prop of properties) {
-    if (prop.type === "notice") continue;
-    out[prop.name] = prop.default;
-  }
-  return out;
-}
+export { defaultParameters } from "@/lib/workflow/mutations";
 
 const HISTORY_LIMIT = 60;
 
@@ -93,6 +85,23 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
   future: [],
 
   load: (workflow) => set({ workflow, selectedNode: null, past: [], future: [], dirty: false }),
+  applyRemote: (workflow, options) => {
+    const selected = get().selectedNode;
+    const names = new Set(workflow.nodes.map((n) => n.name));
+    const keep =
+      options?.selectNode !== undefined
+        ? options.selectNode
+        : selected && names.has(selected)
+          ? selected
+          : null;
+    set({
+      workflow,
+      selectedNode: keep,
+      dirty: false,
+      past: [],
+      future: [],
+    });
+  },
   reset: () =>
     set({ workflow: EMPTY_WORKFLOW(newId("wf")), selectedNode: null, past: [], future: [] }),
 

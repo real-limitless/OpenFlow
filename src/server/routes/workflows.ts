@@ -1,81 +1,14 @@
 import type { Hono } from "hono";
 import { prisma } from "../db";
 import type { AppEnv } from "../middleware/auth";
-import {
-  parseWorkflowJson,
-} from "../../lib/workflow/schema";
+import { parseWorkflowJson } from "../../lib/workflow/schema";
 import type { IWorkflow, INodeExecutionData } from "../../lib/workflow/types";
-import { executionQueue } from "../queue";
 import { enqueueOrRun } from "../execute";
-
-const JSON_FIELDS = ["nodes", "connections", "settings", "staticData", "pinData", "meta"] as const;
-
-/** All top-level properties that map to dedicated Prisma columns. */
-const KNOWN_WORKFLOW_FIELDS = new Set([
-  ...JSON_FIELDS,
-  "id", "userId", "name", "active", "versionId",
-  "createdAt", "updatedAt",
-]);
-
-/** Revive values that were double-encoded as JSON strings inside `extra` (legacy bug). */
-function reviveExtraValue(value: unknown): unknown {
-  if (typeof value !== "string") return value;
-  const s = value.trim();
-  if (!(s.startsWith("{") || s.startsWith("["))) return value;
-  try {
-    return JSON.parse(s);
-  } catch {
-    return value;
-  }
-}
-
-function serializeJsonFields(data: Record<string, unknown>): Record<string, unknown> {
-  const out: Record<string, unknown> = {};
-  const extras: Record<string, unknown> = {};
-
-  for (const [key, value] of Object.entries(data)) {
-    if (KNOWN_WORKFLOW_FIELDS.has(key)) {
-      if (JSON_FIELDS.includes(key as typeof JSON_FIELDS[number]) && value !== undefined && value !== null && typeof value !== "string") {
-        out[key] = JSON.stringify(value);
-      } else {
-        out[key] = value;
-      }
-    } else if (value !== undefined) {
-      // Keep native JSON values — the whole `extra` blob is stringified once.
-      // (Previously arrays/objects were stringified here AND again below, which
-      // corrupted tags/nodeGroups into strings like "[]" and broke re-save.)
-      extras[key] = reviveExtraValue(value);
-    }
-  }
-
-  out.extra = Object.keys(extras).length > 0 ? JSON.stringify(extras) : null;
-  return out;
-}
-
-function deserializeJsonFields(row: Record<string, unknown>): IWorkflow {
-  const out: Record<string, unknown> = { ...row };
-  for (const key of JSON_FIELDS) {
-    if (typeof out[key] === "string") {
-      try {
-        out[key] = JSON.parse(out[key] as string);
-      } catch {
-        out[key] = null;
-      }
-    }
-  }
-  if (typeof out.extra === "string") {
-    try {
-      const parsed = JSON.parse(out.extra as string) as Record<string, unknown>;
-      for (const [k, v] of Object.entries(parsed)) {
-        out[k] = reviveExtraValue(v);
-      }
-    } catch { /* ignore malformed extra */ }
-    delete out.extra;
-  }
-  out.createdAt = (out.createdAt as Date)?.toISOString?.() ?? out.createdAt;
-  out.updatedAt = (out.updatedAt as Date)?.toISOString?.() ?? out.updatedAt;
-  return out as IWorkflow;
-}
+import {
+  deserializeJsonFields,
+  KNOWN_WORKFLOW_FIELDS,
+  serializeJsonFields,
+} from "../services/workflow-io";
 
 export default function workflowsRoute(app: Hono<AppEnv>) {
   app.get("/api/v1/workflows", async (c) => {
@@ -90,13 +23,15 @@ export default function workflowsRoute(app: Hono<AppEnv>) {
       orderBy: { updatedAt: "desc" },
     });
 
-    const list = rows.map((r: { id: string; name: string; active: boolean; nodes: string; updatedAt: Date }) => ({
-      id: r.id,
-      name: r.name,
-      active: r.active,
-      nodeCount: (JSON.parse(r.nodes) as unknown[]).length,
-      updatedAt: r.updatedAt.toISOString(),
-    }));
+    const list = rows.map(
+      (r: { id: string; name: string; active: boolean; nodes: string; updatedAt: Date }) => ({
+        id: r.id,
+        name: r.name,
+        active: r.active,
+        nodeCount: (JSON.parse(r.nodes) as unknown[]).length,
+        updatedAt: r.updatedAt.toISOString(),
+      }),
+    );
 
     return c.json(list);
   });
@@ -279,17 +214,17 @@ export default function workflowsRoute(app: Hono<AppEnv>) {
     if (!workflow) return c.json({ error: "Workflow not found" }, 404);
 
     const nodes: any[] = (() => {
-      try { return JSON.parse(workflow.nodes); } catch { return []; }
+      try {
+        return JSON.parse(workflow.nodes);
+      } catch {
+        return [];
+      }
     })();
 
     if (active) {
-      const webhookNodes = nodes.filter(
-        (n: any) => n.type === "n8n-nodes-base.webhook",
-      );
+      const webhookNodes = nodes.filter((n: any) => n.type === "n8n-nodes-base.webhook");
       for (const node of webhookNodes) {
-        const path =
-          node.parameters?.path ??
-          node.name.toLowerCase().replace(/\s+/g, "-");
+        const path = node.parameters?.path ?? node.name.toLowerCase().replace(/\s+/g, "-");
         const method = (node.parameters?.httpMethod as string) ?? "POST";
         await prisma.webhookRoute.upsert({
           where: { path },
@@ -298,12 +233,9 @@ export default function workflowsRoute(app: Hono<AppEnv>) {
         });
       }
 
-      const scheduleNodes = nodes.filter(
-        (n: any) => n.type === "n8n-nodes-base.scheduleTrigger",
-      );
+      const scheduleNodes = nodes.filter((n: any) => n.type === "n8n-nodes-base.scheduleTrigger");
       for (const node of scheduleNodes) {
-        const cronExpr =
-          (node.parameters?.rule?.interval?.[0]?.field as string) ?? "0 * * * *";
+        const cronExpr = (node.parameters?.rule?.interval?.[0]?.field as string) ?? "0 * * * *";
         await prisma.scheduledTrigger.upsert({
           where: { workflowId_nodeId: { workflowId, nodeId: node.id } },
           create: { workflowId, nodeId: node.id, cronExpr, active: true },
@@ -436,15 +368,25 @@ export default function workflowsRoute(app: Hono<AppEnv>) {
     });
 
     return c.json(
-      executions.map((e: { id: string; workflowId: string; status: string; mode: string; startedAt: Date; finishedAt: Date | null; error: string | null }) => ({
-        id: e.id,
-        workflowId: e.workflowId,
-        status: e.status,
-        mode: e.mode,
-        startedAt: e.startedAt.toISOString(),
-        finishedAt: e.finishedAt?.toISOString() ?? null,
-        error: e.error ? JSON.parse(e.error) : null,
-      })),
+      executions.map(
+        (e: {
+          id: string;
+          workflowId: string;
+          status: string;
+          mode: string;
+          startedAt: Date;
+          finishedAt: Date | null;
+          error: string | null;
+        }) => ({
+          id: e.id,
+          workflowId: e.workflowId,
+          status: e.status,
+          mode: e.mode,
+          startedAt: e.startedAt.toISOString(),
+          finishedAt: e.finishedAt?.toISOString() ?? null,
+          error: e.error ? JSON.parse(e.error) : null,
+        }),
+      ),
     );
   });
 }

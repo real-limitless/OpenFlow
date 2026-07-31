@@ -38,7 +38,7 @@ export async function authMiddleware(c: Context<AppEnv>, next: Next) {
     return next();
   }
 
-  const apiKeyHeader = c.req.header("X-API-Key");
+  const apiKeyHeader = c.req.header("X-API-Key") ?? c.req.header("Authorization");
   if (apiKeyHeader) {
     const userId = await getUserIdFromApiKey(apiKeyHeader);
     if (userId) {

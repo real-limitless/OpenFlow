@@ -4,20 +4,17 @@ import { Play } from "lucide-react";
 import { toast } from "sonner";
 import { Toaster } from "@/components/ui/sonner";
 import { Button } from "@/components/ui/button";
-import {
-  ResizableHandle,
-  ResizablePanel,
-  ResizablePanelGroup,
-} from "@/components/ui/resizable";
+import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
 import { getRepository } from "@/lib/storage/repository";
 import { useWorkflowStore } from "@/store/workflow-store";
 import { EditorTopBar } from "@/components/editor/EditorTopBar";
 import { NodePalette } from "@/components/editor/NodePalette";
 import { WorkflowCanvas } from "@/components/editor/WorkflowCanvas";
-import { PropertiesPanel } from "@/components/editor/PropertiesPanel";
+import { EditorRightRail } from "@/components/editor/EditorRightRail";
 import { DataPanel } from "@/components/editor/DataPanel";
 import { ExecutionHistory } from "@/components/editor/ExecutionHistory";
 import type { ExecutionRunData } from "@/lib/engine/types";
+import type { IWorkflow } from "@/lib/workflow/types";
 
 export const Route = createFileRoute("/workflow/$id")({
   head: () => ({
@@ -43,6 +40,8 @@ export const Route = createFileRoute("/workflow/$id")({
 function EditorPage() {
   const { id } = Route.useParams();
   const load = useWorkflowStore((s) => s.load);
+  const applyRemote = useWorkflowStore((s) => s.applyRemote);
+  const selectNode = useWorkflowStore((s) => s.selectNode);
   const workflow = useWorkflowStore((s) => s.workflow);
   const dirty = useWorkflowStore((s) => s.dirty);
   const persist = useWorkflowStore((s) => s.persist);
@@ -147,7 +146,8 @@ function EditorPage() {
     };
   }, [id, load]);
 
-  // Debounced autosave.
+  // Debounced autosave (skip while assistant may be mutating remotely — still ok;
+  // applyRemote clears dirty so we only save user edits).
   useEffect(() => {
     if (status !== "ready" || !dirty) return;
     const t = setTimeout(() => void persist(), 800);
@@ -174,6 +174,32 @@ function EditorPage() {
       eventSourceRef.current?.close();
     };
   }, []);
+
+  // Live graph updates from assistant / remote mutations
+  useEffect(() => {
+    if (status !== "ready") return;
+    const sse = new EventSource(`/api/v1/workflows/${id}/events`);
+    sse.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data) as {
+          type?: string;
+          workflow?: IWorkflow;
+          source?: string;
+          nodeName?: string | null;
+        };
+        if (data.type === "workflow.updated" && data.workflow && data.source !== "editor") {
+          // Prefer remote assistant snapshot; drop local dirty to avoid thrash
+          applyRemote(data.workflow);
+        }
+        if (data.type === "node.selected") {
+          selectNode(data.nodeName ?? null);
+        }
+      } catch {
+        /* ignore */
+      }
+    };
+    return () => sse.close();
+  }, [id, status, applyRemote, selectNode]);
 
   if (status === "missing") {
     throw notFound();
@@ -226,7 +252,7 @@ function EditorPage() {
             </ResizablePanel>
           </ResizablePanelGroup>
         </div>
-        <PropertiesPanel />
+        <EditorRightRail workflowId={id} />
       </div>
       <Toaster position="bottom-right" />
     </div>
