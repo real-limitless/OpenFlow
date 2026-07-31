@@ -13,32 +13,10 @@ export {
   listExecutorTypes,
   reloadBuiltinExecutors,
 } from "./node-runtime";
-export {
-  manualTriggerExecutor,
-  setExecutor,
-  noopExecutor,
-  ifExecutor,
-  httpRequestExecutor,
-  webhookExecutor,
-  switchExecutor,
-  mergeExecutor,
-  waitExecutor,
-  splitOutExecutor,
-  aggregateExecutor,
-  filterExecutor,
-  limitExecutor,
-  removeDuplicatesExecutor,
-  itemListsExecutor,
-  dateTimeExecutor,
-  splitInBatchesExecutor,
-  executeWorkflowExecutor,
-  executeWorkflowTriggerExecutor,
-  stopAndErrorExecutor,
-  scheduleTriggerExecutor,
-  sortExecutor,
-  renameKeysExecutor,
-  errorTriggerExecutor,
-} from "./executors";
+// Individual executors are not re-exported here. Reach them through the
+// runtime registry (getExecutor / defaultExecutors), which is populated from
+// BUILTIN_EXECUTOR_MODULES — a named-export list would have to be hand-edited
+// for every new node.
 
 export type { BinaryRef } from "./binary";
 export {

@@ -11,6 +11,14 @@ const aliases = new Map<string, string>();
 
 let seeded = false;
 
+export function seedBuiltinExecutors(): void {
+  if (seeded) return;
+  seeded = true;
+  // Executors register as a side effect of importing the executors/index.ts
+  // barrel, which eagerly globs every module named in BUILTIN_EXECUTOR_MODULES.
+  // Nothing to do here; kept as a stable entry point for callers and tests.
+}
+
 function dualKeys(type: string): string[] {
   const keys = [type];
   if (type.startsWith("n8n-")) {
@@ -56,6 +64,21 @@ export function getDescription(type: string): INodeTypeDescription | undefined {
 
 export function hasExecutor(type: string): boolean {
   return getExecutor(type) !== undefined;
+}
+
+/**
+ * True when OpenFlow ships an executor for `type`.
+ *
+ * Answers the question from the static BUILTIN_EXECUTOR_MODULES manifest rather
+ * than the live registry, so callers get an answer without importing a single
+ * executor module. UI code must use this instead of `defaultExecutors[type]`:
+ * touching the registry pulls in the executors barrel, which drags every
+ * server-only dependency (database drivers, node:fs, sharp) into the client
+ * bundle. Falls back to the live registry so runtime-registered plugins count.
+ */
+export function hasBuiltinExecutor(type: string): boolean {
+  const resolved = aliases.get(type) ?? type;
+  return builtinExecutorTypes.has(resolved) || executors.has(resolved);
 }
 
 export function listExecutorTypes(): string[] {
@@ -145,6 +168,11 @@ export const BUILTIN_EXECUTOR_MODULES: Array<{
   },
   { type: "n8n-nodes-base.set", modulePath: "./executors/set", exportName: "setExecutor" },
   { type: "n8n-nodes-base.noOp", modulePath: "./executors/noop", exportName: "noopExecutor" },
+  {
+    type: "n8n-nodes-base.moveBinaryData",
+    modulePath: "./executors/move-binary-data",
+    exportName: "moveBinaryDataExecutor",
+  },
   { type: "n8n-nodes-base.if", modulePath: "./executors/if", exportName: "ifExecutor" },
   {
     type: "n8n-nodes-base.httpRequest",
@@ -276,9 +304,34 @@ export const BUILTIN_EXECUTOR_MODULES: Array<{
     exportName: "extractFromFileExecutor",
   },
   {
+    type: "n8n-nodes-base.readPDF",
+    modulePath: "./executors/read-pdf",
+    exportName: "readPDFExecutor",
+  },
+  {
+    type: "n8n-nodes-base.spreadsheetFile",
+    modulePath: "./executors/spreadsheet-file",
+    exportName: "spreadsheetFileExecutor",
+  },
+  {
+    type: "n8n-nodes-base.readBinaryFile",
+    modulePath: "./executors/readBinaryFile",
+    exportName: "readBinaryFileExecutor",
+  },
+  {
     type: "n8n-nodes-base.readWriteFile",
     modulePath: "./executors/readWriteFile",
     exportName: "readWriteFileExecutor",
+  },
+  {
+    type: "n8n-nodes-base.readBinaryFiles",
+    modulePath: "./executors/readBinaryFiles",
+    exportName: "readBinaryFilesExecutor",
+  },
+  {
+    type: "n8n-nodes-base.writeBinaryFile",
+    modulePath: "./executors/write-binary-file",
+    exportName: "writeBinaryFileExecutor",
   },
   {
     type: "n8n-nodes-base.rssFeedRead",
@@ -436,6 +489,16 @@ export const BUILTIN_EXECUTOR_MODULES: Array<{
     exportName: "workflowTriggerExecutor",
   },
   {
+    type: "n8n-nodes-base.activationTrigger",
+    modulePath: "./executors/activation-trigger",
+    exportName: "activationTriggerExecutor",
+  },
+  {
+    type: "n8n-nodes-base.n8nTrigger",
+    modulePath: "./executors/n8n-trigger",
+    exportName: "n8nTriggerExecutor",
+  },
+  {
     type: "n8n-nodes-base.graphql",
     modulePath: "./executors/graphql",
     exportName: "graphqlExecutor",
@@ -446,14 +509,14 @@ export const BUILTIN_EXECUTOR_MODULES: Array<{
     exportName: "openAiExecutor",
   },
   {
-    type: "@n8n/n8n-nodes-langchain.mcpTrigger",
-    modulePath: "./executors/mcp-trigger",
-    exportName: "mcpTriggerExecutor",
-  },
-  {
     type: "@n8n/n8n-nodes-langchain.vectorStoreInMemory",
     modulePath: "./executors/vectorStoreInMemory",
     exportName: "vectorStoreInMemoryExecutor",
+  },
+  {
+    type: "@n8n/n8n-nodes-langchain.code",
+    modulePath: "./executors/langchain-code",
+    exportName: "langchainCodeExecutor",
   },
   {
     type: "@n8n/n8n-nodes-langchain.documentDefaultDataLoader",
@@ -471,6 +534,16 @@ export const BUILTIN_EXECUTOR_MODULES: Array<{
     exportName: "embeddingsOpenAiExecutor",
   },
   {
+    type: "n8n-nodes-base.airtable",
+    modulePath: "./executors/n8n-nodes-base.airtable",
+    exportName: "airtableExecutor",
+  },
+  {
+    type: "n8n-nodes-base.notion",
+    modulePath: "./executors/notion",
+    exportName: "notionExecutor",
+  },
+  {
     type: "n8n-nodes-base.whatsApp",
     modulePath: "./executors/n8n-nodes-base.whatsApp",
     exportName: "whatsAppExecutor",
@@ -479,6 +552,11 @@ export const BUILTIN_EXECUTOR_MODULES: Array<{
     type: "n8n-nodes-base.telegram",
     modulePath: "./executors/telegram",
     exportName: "telegramExecutor",
+  },
+  {
+    type: "n8n-nodes-base.webflow",
+    modulePath: "./executors/webflow",
+    exportName: "webflowExecutor",
   },
   {
     type: "n8n-nodes-base.gmail",
@@ -496,11 +574,119 @@ export const BUILTIN_EXECUTOR_MODULES: Array<{
     exportName: "discordExecutor",
   },
   {
-    type: "n8n-nodes-base.twilio",
-    modulePath: "./executors/n8n-nodes-base.twilio",
-    exportName: "twilioExecutor",
+    type: "n8n-nodes-base.jira",
+    modulePath: "./executors/n8n-nodes-base.jira",
+    exportName: "jiraExecutor",
   },
-];
+    {
+      type: "n8n-nodes-base.twilio",
+      modulePath: "./executors/n8n-nodes-base.twilio",
+      exportName: "twilioExecutor",
+    },
+    {
+      type: "n8n-nodes-base.googleSheets",
+      modulePath: "./executors/n8n-nodes-base.googleSheets",
+      exportName: "googleSheetsExecutor",
+    },
+    {
+      type: "n8n-nodes-base.googleDocs",
+      modulePath: "./executors/n8n-nodes-base.googleDocs",
+      exportName: "googleDocsExecutor",
+    },
+    {
+      type: "n8n-nodes-base.googleCalendar",
+      modulePath: "./executors/google-calendar",
+      exportName: "googleCalendarExecutor",
+    },
+    {
+      type: "n8n-nodes-base.youTube",
+      modulePath: "./executors/youTube",
+      exportName: "youTubeExecutor",
+    },
+    {
+      type: "n8n-nodes-base.postgres",
+      modulePath: "./executors/postgres",
+      exportName: "postgresExecutor",
+    },
+    {
+      type: "n8n-nodes-base.mySql",
+      modulePath: "./executors/mySql",
+      exportName: "mySqlExecutor",
+    },
+    {
+      type: "n8n-nodes-base.s3",
+      modulePath: "./executors/s3",
+      exportName: "s3Executor",
+    },
+    {
+      type: "n8n-nodes-base.redis",
+      modulePath: "./executors/redis",
+      exportName: "redisExecutor",
+    },
+    {
+      type: "n8n-nodes-base.hubspot",
+      modulePath: "./executors/hubspot",
+      exportName: "hubspotExecutor",
+    },
+    {
+      type: "n8n-nodes-base.mongoDb",
+      modulePath: "./executors/mongo-db",
+      exportName: "mongoDbExecutor",
+    },
+    {
+      type: "n8n-nodes-base.supabase",
+      modulePath: "./executors/supabase",
+      exportName: "supabaseExecutor",
+    },
+    {
+      type: "n8n-nodes-base.facebookGraphApi",
+      modulePath: "./executors/facebook-graph-api",
+      exportName: "facebookGraphApiExecutor",
+    },
+    {
+      type: "n8n-nodes-base.wordpress",
+      modulePath: "./executors/wordpress",
+      exportName: "wordpressExecutor",
+    },
+    {
+      type: "n8n-nodes-base.debugHelper",
+      modulePath: "./executors/debug-helper",
+      exportName: "debugHelperExecutor",
+    },
+    {
+      type: "n8n-nodes-base.executeCommand",
+      modulePath: "./executors/execute-command",
+      exportName: "executeCommandExecutor",
+    },
+    {
+      type: "n8n-nodes-base.n8n",
+      modulePath: "./executors/n8n",
+      exportName: "n8nExecutor",
+    },
+    {
+      type: "n8n-nodes-base.evaluation",
+      modulePath: "./executors/evaluation",
+      exportName: "evaluationExecutor",
+    },
+    {
+      type: "n8n-nodes-base.evaluationTrigger",
+      modulePath: "./executors/evaluation-trigger",
+      exportName: "evaluationTriggerExecutor",
+    },
+    {
+      type: "n8n-nodes-base.form",
+      modulePath: "./executors/form",
+      exportName: "formExecutor",
+    },
+    {
+      type: "n8n-nodes-base.totp",
+      modulePath: "./executors/totp",
+      exportName: "totpExecutor",
+    },
+  ];
+
+/** Types OpenFlow ships an executor for. Derived, so it needs no maintenance. */
+const builtinExecutorTypes = new Set(BUILTIN_EXECUTOR_MODULES.map((e) => e.type));
 
 /**
  * Re-import builtin executor modules (cache-busted) and re-register.
