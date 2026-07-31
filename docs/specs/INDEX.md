@@ -40,7 +40,7 @@ Status: `missing` | `specced` | `partial` | `implemented`
 | `n8n-nodes-base.n8n` | n8n | specced | [nodes/n8n-nodes-base.n8n.md](./nodes/n8n-nodes-base.n8n.md) |
 | `n8n-nodes-base.n8nTrigger` | n8n Trigger | specced | [nodes/n8n-nodes-base.n8nTrigger.md](./nodes/n8n-nodes-base.n8nTrigger.md) |
 | `n8n-nodes-base.quickChart` | QuickChart | specced | [nodes/n8n-nodes-base.quickChart.md](./nodes/n8n-nodes-base.quickChart.md) |
-| `n8n-nodes-base.ftp` | FTP | specced | [nodes/n8n-nodes-base.ftp.md](./nodes/n8n-nodes-base.ftp.md) |
+| `n8n-nodes-base.ftp` | FTP | implemented | [nodes/n8n-nodes-base.ftp.md](./nodes/n8n-nodes-base.ftp.md) |
 | `n8n-nodes-base.convertToFile` | Convert to File | specced | [nodes/n8n-nodes-base.convertToFile.md](./nodes/n8n-nodes-base.convertToFile.md) |
 | `n8n-nodes-base.extractFromFile` | Extract from File | specced | [nodes/n8n-nodes-base.extractFromFile.md](./nodes/n8n-nodes-base.extractFromFile.md) |
 | `n8n-nodes-base.emailSend` | Send Email | specced | [nodes/n8n-nodes-base.emailSend.md](./nodes/n8n-nodes-base.emailSend.md) |
@@ -127,6 +127,8 @@ Status: `missing` | `specced` | `partial` | `implemented`
 | `n8n-nodes-base.sms77` | seven | specced | [nodes/n8n-nodes-base.sms77.md](./nodes/n8n-nodes-base.sms77.md) |
 | `n8n-nodes-base.pushbullet` | Pushbullet | specced | [nodes/n8n-nodes-base.pushbullet.md](./nodes/n8n-nodes-base.pushbullet.md) |
 | `n8n-nodes-base.sendInBlue` | Brevo (formerly Sendinblue) | specced | [nodes/n8n-nodes-base.sendInBlue.md](./nodes/n8n-nodes-base.sendInBlue.md) |
+| `n8n-nodes-base.googleBusinessProfile` | Google Business Profile | specced | [nodes/n8n-nodes-base.googleBusinessProfile.md](./nodes/n8n-nodes-base.googleBusinessProfile.md) |
+| `n8n-nodes-mcp.mcpClientTool` | MCP Client (community) | specced | [nodes/n8n-nodes-mcp.mcpClientTool.md](./nodes/n8n-nodes-mcp.mcpClientTool.md) |
 
 Builtins exist in-tree as native OpenFlow nodes. Formal per-node specs are
 filled by the **openflow-node-spec** skill / Prompt 01. App/integration nodes
@@ -234,3 +236,4 @@ are out of scope for this index until core specs are complete.
 | 2026-07-30 | Factory queue cycle 1: Item List Output Parser (`@n8n/n8n-nodes-langchain.outputParserItemList`) — ai_outputParser sub-node, numberOfItems (-1 = unlimited) + separator (default newline), split-by-separator list parse, 5 fixtures | Public docs only (corpus has no langchain descriptors) |
 | 2026-07-30 | Factory queue cycle 1: Auto-fixing Output Parser (`@n8n/n8n-nodes-langchain.outputParserAutofixing`) — ai_outputParser sub-node, wraps inner parser, LLM repair loop on ai_languageModel, options.prompt + {instructions}/{completion}/{error} placeholders (default verified via templates 1957 + 3891), single-retry, 5 fixtures; CORPUS_DIR = n8n-nodes-base@2.15.1 (no langchain descriptor) + docs 404 → public docs + public workflow JSON | Public docs + public workflow JSON |
 | 2026-07-30 | Factory queue cycle 1: Embeddings Cohere (`@n8n/n8n-nodes-langchain.embeddingsCohere`) — ai_embedding sub-node, only `model` documented (3 v2.0 models + dims), cohereApi credential, Cohere Embed v2 API contract, first-item expression rule, typeVersion 1 via template gallery, 5 fixtures | Public docs + public workflow JSON + Cohere service API docs |
+| 2026-07-30 | Factory queue cycle 1: Google Business Profile (`n8n-nodes-base.googleBusinessProfile`) — 2 resources × 9 operations, Post (create/delete/get/getAll/update) + Review (deleteReply/get/getAll/reply), googleBusinessProfileOAuth2Api credential, Google My Business v4 API, accountId/locationId params, CTA + scheduledTime, 5 fixtures | Public docs + Google Business Profile API docs + public descriptor metadata + public workflow JSON |

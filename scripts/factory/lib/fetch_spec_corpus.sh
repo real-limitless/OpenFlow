@@ -28,7 +28,20 @@ case "$REAL_OUT" in
     ;;
 esac
 
-PKG="${FACTORY_NPM_PACKAGE:-n8n-nodes-base}"
+# Derive npm package from wire type unless FACTORY_NPM_PACKAGE is set.
+#   n8n-nodes-base.foo              → n8n-nodes-base
+#   @n8n/n8n-nodes-langchain.foo    → @n8n/n8n-nodes-langchain
+#   n8n-nodes-mcp.mcpClientTool     → n8n-nodes-mcp
+if [[ -n "${FACTORY_NPM_PACKAGE:-}" ]]; then
+  PKG="$FACTORY_NPM_PACKAGE"
+elif [[ "$TYPE" == @*/* ]]; then
+  # scoped: @scope/pkg.name → @scope/pkg
+  PKG="${TYPE%.*}"
+elif [[ "$TYPE" == *.* ]]; then
+  PKG="${TYPE%%.*}"
+else
+  PKG="n8n-nodes-base"
+fi
 VER="${FACTORY_NPM_VERSION:-latest}"
 
 mkdir -p "$OUT/npm" "$OUT/extract" "$OUT/docs"

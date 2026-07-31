@@ -4,7 +4,7 @@ displayName: FTP
 category: Files
 versions: [1]
 priority: high
-status: specced
+status: implemented
 ---
 
 # FTP

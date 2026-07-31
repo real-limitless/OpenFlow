@@ -33,79 +33,81 @@ status: specced
 | accessToken | string | — | yes |
 | homeserverUrl | string | `https://matrix.org` | yes |
 
-The access token is a Matrix user token obtained from a client session. The homeserver URL is the base URL of the Matrix homeserver (e.g. `https://matrix-client.matrix.org`).
+The access token is a Matrix user token obtained from a client session. The homeserver URL is the base URL of the Matrix homeserver.
 
 ## Parameters
 
-The node exposes a **resource** + **operation** paradigm. The user selects a resource (account / event / media / message / room / roomMember) and then an operation valid for that resource.
+The node uses a resource + operation selector. The user chooses a resource (account / event / media / message / room / roomMember) then an operation valid for that resource.
 
 ### Resource: account
 
 | name | type | default | required | notes |
 |------|------|---------|----------|-------|
-| resource | string | `account` | yes | fixed resource selector |
-| operation | string | `me` | yes | only `me` |
+| resource | fixed | `account` | yes | single resource |
+| operation | fixed | `me` | yes | single operation |
 
 ### Resource: event
 
 | name | type | default | required | notes |
 |------|------|---------|----------|-------|
-| resource | string | `event` | yes | fixed resource selector |
-| operation | string | `get` | yes | only `get` |
-| roomId | string | — | yes | Matrix room ID (e.g. `!123abc:matrix.org`) |
-| eventId | string | — | yes | Matrix event ID (e.g. `$1234abcd:matrix.org`) |
+| resource | fixed | `event` | yes | single resource |
+| operation | fixed | `get` | yes | single operation |
+| roomId | string | — | yes | Matrix room ID |
+| eventId | string | — | yes | Matrix event ID |
 
 ### Resource: media
 
 | name | type | default | required | notes |
 |------|------|---------|----------|-------|
-| resource | string | `media` | yes | fixed resource selector |
-| operation | string | `upload` | yes | only `upload` |
-| roomId | string (options, loadOptionsMethod) | — | yes | loaded from server via `getChannels` |
-| binaryPropertyName | string | `data` | yes | input binary field containing the file |
-| mediaType | string (options) | `image` | yes | one of `image`, `audio`, `video`, `file` |
-| additionalFields.fileName | string | — | no | name of the file being uploaded |
+| resource | fixed | `media` | yes | single resource |
+| operation | fixed | `upload` | yes | single operation |
+| roomId | options (loadOptionsMethod) | — | yes | loaded from server via `getChannels`; also accepts expression |
+| binaryPropertyName | string | `data` | yes | name of the input binary field containing the file |
+| mediaType | options | `image` | yes | `image`, `audio`, `video`, or `file` |
+| additionalFields.fileName | string | — | no | overrides the filename sent to Matrix |
+
+The node uploads the binary file to the Matrix media repository, then posts it as a room message with the appropriate `m.*` message type.
 
 ### Resource: message
 
 | name | type | default | required | notes |
 |------|------|---------|----------|-------|
-| resource | string | `message` | yes | fixed resource selector |
-| operation | string | `create` | yes | `create` or `getAll` |
+| resource | fixed | `message` | yes | single resource |
+| operation | options | `create` | yes | `create` or `getAll` |
 
 **message:create**
 
 | name | type | default | required | notes |
 |------|------|---------|----------|-------|
-| roomId | string (options, loadOptionsMethod) | — | yes | loaded via `getChannels` |
-| text | string | — | no | the text body to send |
-| messageType | string (options) | `m.text` | no | `m.text`, `m.emote`, `m.notice` |
-| messageFormat | string (options) | `plain` | no | `plain` or `org.matrix.custom.html` |
+| roomId | options (loadOptionsMethod) | — | yes | loaded via `getChannels`; also accepts expression |
+| text | string | — | no | message body text |
+| messageType | options | `m.text` | no | `m.text`, `m.emote`, or `m.notice` |
+| messageFormat | options | `plain` | no | `plain` or `org.matrix.custom.html` |
 | fallbackText | string | — | no | plain text fallback when messageFormat is HTML |
 
 **message:getAll**
 
 | name | type | default | required | notes |
 |------|------|---------|----------|-------|
-| roomId | string (options, loadOptionsMethod) | — | yes | loaded via `getChannels` |
-| returnAll | boolean | false | yes | return all results or limit |
-| limit | number | 100 | conditional | max 500, required when returnAll=false |
+| roomId | options (loadOptionsMethod) | — | yes | loaded via `getChannels`; also accepts expression |
+| returnAll | boolean | false | yes | return all results or cap at a limit |
+| limit | number | 100 | conditional | max 500; required when returnAll=false |
 | otherOptions.filter | string | — | no | JSON RoomEventFilter string |
 
 ### Resource: room
 
 | name | type | default | required | notes |
 |------|------|---------|----------|-------|
-| resource | string | `room` | yes | fixed resource selector |
-| operation | string | `create` | yes | `create`, `invite`, `join`, `kick`, `leave` |
+| resource | fixed | `room` | yes | single resource |
+| operation | options | `create` | yes | `create`, `invite`, `join`, `kick`, or `leave` |
 
 **room:create**
 
 | name | type | default | required | notes |
 |------|------|---------|----------|-------|
 | roomName | string | — | yes | human-readable room name |
-| preset | string (options) | `public_chat` | yes | `public_chat` or `private_chat` |
-| roomAlias | string | — | no | local part of room alias |
+| preset | options | `public_chat` | yes | `public_chat` or `private_chat` |
+| roomAlias | string | — | no | local part of the room alias |
 
 **room:join**
 
@@ -117,14 +119,14 @@ The node exposes a **resource** + **operation** paradigm. The user selects a res
 
 | name | type | default | required | notes |
 |------|------|---------|----------|-------|
-| roomId | string (options, loadOptionsMethod) | — | yes | loaded via `getChannels` |
+| roomId | options (loadOptionsMethod) | — | yes | loaded via `getChannels`; also accepts expression |
 | userId | string | — | yes | fully qualified Matrix user ID |
 
 **room:kick**
 
 | name | type | default | required | notes |
 |------|------|---------|----------|-------|
-| roomId | string (options, loadOptionsMethod) | — | yes | loaded via `getChannels` |
+| roomId | options (loadOptionsMethod) | — | yes | loaded via `getChannels`; also accepts expression |
 | userId | string | — | yes | fully qualified Matrix user ID |
 | reason | string | — | no | reason for the kick |
 
@@ -132,61 +134,64 @@ The node exposes a **resource** + **operation** paradigm. The user selects a res
 
 | name | type | default | required | notes |
 |------|------|---------|----------|-------|
-| roomId | string (options, loadOptionsMethod) | — | yes | loaded via `getChannels` |
+| roomId | options (loadOptionsMethod) | — | yes | loaded via `getChannels`; also accepts expression |
 
 ### Resource: roomMember
 
 | name | type | default | required | notes |
 |------|------|---------|----------|-------|
-| resource | string | `roomMember` | yes | fixed resource selector |
-| operation | string | `getAll` | yes | only `getAll` |
+| resource | fixed | `roomMember` | yes | single resource |
+| operation | fixed | `getAll` | yes | single operation |
 
 **roomMember:getAll**
 
 | name | type | default | required | notes |
 |------|------|---------|----------|-------|
-| roomId | string (options, loadOptionsMethod) | — | yes | loaded via `getChannels` |
-| filters.membership | string (options) | — | no | `join`, `invite`, `leave`, `ban`, or empty for any |
-| filters.notMembership | string (options) | — | no | exclude membership type (same options) |
+| roomId | options (loadOptionsMethod) | — | yes | loaded via `getChannels`; also accepts expression |
+| filters.membership | options | — | no | `join`, `invite`, `leave`, `ban`, or empty for any |
+| filters.notMembership | options | — | no | exclude members with this membership type |
 
 ## Runtime behavior
 
 ### Input
 
-The node accepts items from any upstream node. Binary data is required only for `media:upload` (the `binaryPropertyName` field must exist on the input item).
+The node accepts items from any upstream node. Binary data is required only for `media:upload` — the field named by `binaryPropertyName` (default `data`) must exist on the input item.
 
 ### Output
 
-Each operation produces output items keyed by the Matrix Client-Server API response body:
+Each operation produces output items with the Matrix Client-Server API response body:
 
-- **account:me** — emits the `/account/whoami` response: `{ user_id, device_id?, is_guest? }`.
-- **event:get** — emits the Matrix event object for the given `roomId`/`eventId`.
-- **media:upload** — emits the `/upload` response: `{ content_uri }`. Also passes through the input items with the `content_uri` merged.
-- **message:create** — emits `{ event_id }`.
-- **message:getAll** — emits an array of message objects (each with `event_id`, `type`, `sender`, `content`, `origin_server_ts`, `room_id`, `user_id`, `unsigned`).
-- **room:create** — emits `{ room_id }`.
-- **room:join** — emits `{ room_id }`.
-- **room:invite** — emits `{}` (success acknowledgment).
-- **room:kick** — emits `{}` (success acknowledgment).
-- **room:leave** — emits `{}` (success acknowledgment).
-- **roomMember:getAll** — emits an array of room member state event objects (each with `content`, `state_key`, `type`, `event_id`, `origin_server_ts`, `sender`, `room_id`, `unsigned`, `user_id`).
+| Operation | Output shape | Item count |
+|-----------|-------------|------------|
+| account:me | `{ user_id, device_id?, is_guest? }` | 1 per input |
+| event:get | Matrix event object | 1 per input |
+| media:upload | `{ event_id }` (message-send response after upload + room post) | 1 per input |
+| message:create | `{ event_id }` | 1 per input |
+| message:getAll | Array of message event objects (each with `event_id`, `type`, `sender`, `content`, `origin_server_ts`, `room_id`, `user_id`, `unsigned`) | 1 per result |
+| room:create | `{ room_id }` | 1 per input |
+| room:join | `{ room_id }` | 1 per input |
+| room:invite | `{}` (success acknowledgment) | 1 per input |
+| room:kick | `{}` (success acknowledgment) | 1 per input |
+| room:leave | `{}` (success acknowledgment) | 1 per input |
+| roomMember:getAll | Array of member state event objects (each with `content.membership`, `state_key`, `type`, `event_id`, `sender`, `room_id`, `user_id`) | 1 per result |
 
-Non-list operations produce a single output item. List operations (`message:getAll`, `roomMember:getAll`) produce one item per result.
+Non-list operations produce one output item per input item. List operations (`message:getAll`, `roomMember:getAll`) produce one item per result element, potentially multiple items per input.
 
 ### Errors
 
-- Authentication failures (invalid token) propagate as thrown errors.
-- Matrix API error responses (non-2xx) propagate as thrown errors with the Matrix error code (`errcode`).
-- Room not found, user not found, or permission errors return the Matrix API error.
-- `continueOnFail` produces the error JSON wrapped in `{ json: { error, ... } }` on a single-branch output.
+- Authentication failures (invalid token or expired session) propagate as thrown errors.
+- Matrix API error responses (non-2xx) propagate as thrown errors with the Matrix `errcode` and `error` message.
+- Room not found, user not found, or permission denied errors return the Matrix API error.
+- Missing binary data on `media:upload` produces a node-level validation error.
+- `continueOnFail` produces errored items as `[{ json: { error: string } }]` on a single-branch output.
 
 ### Expressions
 
-All string parameters accept n8n expression syntax. The `roomId` parameters using `loadOptionsMethod` may alternatively be supplied as a string expression instead of a dropdown selection.
+All string parameters accept n8n expression syntax. Parameters that use `loadOptionsMethod` may alternatively be supplied as a string expression instead of a dropdown selection.
 
 ### Matrix Client-Server API calls
 
-The node translates each operation to the following Matrix CS API endpoints:
+The node translates each operation to Matrix CS API endpoints:
 
 | Operation | HTTP method | Path |
 |-----------|-------------|------|
@@ -219,7 +224,7 @@ The node translates each operation to the following Matrix CS API endpoints:
 }
 ```
 
-**Expect** output[0] to contain a single item with `user_id` as a string matching the Matrix user ID format `@localpart:domain`.
+**Expect** output[0] to contain a single item with `json.user_id` as a string matching the Matrix user ID format `@localpart:domain`.
 
 ### Test: message:create — send text message
 
@@ -234,13 +239,13 @@ The node translates each operation to the following Matrix CS API endpoints:
   "resource": "message",
   "operation": "create",
   "roomId": "!test:matrix.org",
-  "text": "Hello from n8n",
+  "text": "Hello from OpenFlow",
   "messageType": "m.text",
   "messageFormat": "plain"
 }
 ```
 
-**Expect** output[0] to contain a single item with `event_id` as a non-empty string.
+**Expect** output[0] to contain a single item with `json.event_id` as a non-empty string.
 
 ### Test: message:getAll — paginated messages
 
@@ -260,7 +265,7 @@ The node translates each operation to the following Matrix CS API endpoints:
 }
 ```
 
-**Expect** output[0] to contain up to 10 items, each with `event_id`, `type`, `sender`, and `content`.
+**Expect** output[0] to contain up to 10 items, each with `json.event_id`, `json.type`, `json.sender`, and `json.content` as defined fields.
 
 ### Test: room:create — new public room
 
@@ -279,7 +284,35 @@ The node translates each operation to the following Matrix CS API endpoints:
 }
 ```
 
-**Expect** output[0] to contain a single item with `room_id` as a non-empty string.
+**Expect** output[0] to contain a single item with `json.room_id` as a non-empty string.
+
+### Test: media:upload — upload binary file to a room
+
+**Given** input items:
+```json
+[{
+  "json": {},
+  "binary": {
+    "data": {
+      "mimeType": "image/png",
+      "data": "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg=="
+    }
+  }
+}]
+```
+
+**Parameters:**
+```json
+{
+  "resource": "media",
+  "operation": "upload",
+  "roomId": "!test:matrix.org",
+  "binaryPropertyName": "data",
+  "mediaType": "image"
+}
+```
+
+**Expect** output[0] to contain a single item with `json.event_id` as a non-empty string.
 
 ### Test: roomMember:getAll — list members
 
@@ -298,19 +331,20 @@ The node translates each operation to the following Matrix CS API endpoints:
 }
 ```
 
-**Expect** output[0] to contain one or more items, each with `content.membership` equal to `"join"`.
+**Expect** output[0] to contain one or more items, each with `json.content.membership` equal to `"join"`.
 
 ## Gaps / confidence
 
 | Topic | documented / inferred | Notes |
 |-------|----------------------|-------|
-| Resource/operation names | Public docs + descriptor | All 6 resources and 11 operations confirmed from public n8n docs and npm descriptor |
-| Parameter names & types | Public descriptor metadata | Extracted from npm package descriptor JSON; no implementation logic copied |
-| Matrix CS API endpoints | Third-party protocol docs | Derived from Matrix Spec v1.19 Client-Server API |
-| Credential shape | Public docs | matrixApi: accessToken + homeserverUrl confirmed from credential docs |
-| Output shapes | Inferred from Matrix API | Response schemas per operation are drawn from the Matrix spec; tests verify functional contracts not exact shapes |
-| loadOptionsMethod `getChannels` | Inferred from descriptor | Room selection via a dynamically loaded options method; exact API call is implementation detail |
-| Error code mapping | Public Matrix spec | Matrix `errcode` values are standard per the Matrix spec |
+| Resource/operation names | documented | 6 resources and 11 operations confirmed from public n8n docs |
+| Parameter names & types | documented + descriptor | Names and types confirmed from public descriptor metadata |
+| Matrix CS API endpoints | documented | Matrix Client-Server API spec; paths use the v3 prefix |
+| Credential shape | documented | matrixApi: accessToken + homeserverUrl confirmed from credential docs |
+| Output shapes | inferred from Matrix API | Response schemas per operation drawn from the Matrix spec; tests verify functional contracts |
+| loadOptionsMethod `getChannels` | inferred from descriptor | Dynamic room selection via a server-loaded options method |
+| media:upload dual behavior | inferred from descriptor | Uploads binary to Matrix media repo, then posts as a room message |
+| error code mapping | documented | Matrix `errcode` values are standard per the Matrix spec |
 
 ## OpenFlow mapping
 

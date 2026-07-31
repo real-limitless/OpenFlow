@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updated": "2026-07-29",
+  "updated": "2026-07-31",
   "dogfoodP0": [
     "n8n-nodes-base.executeWorkflow",
     "n8n-nodes-base.manualTrigger",
@@ -843,37 +843,43 @@
       "priority": "P1",
       "executor": "implemented",
       "spec": "specced",
-      "dogfood": false
+      "dogfood": false,
+      "factory": "pass"
     },
     "n8n-nodes-base.iCalendar": {
       "priority": "P1",
       "executor": "implemented",
       "spec": "specced",
-      "dogfood": false
+      "dogfood": false,
+      "factory": "pass"
     },
     "n8n-nodes-base.quickChart": {
       "priority": "P1",
       "executor": "implemented",
       "spec": "specced",
-      "dogfood": false
+      "dogfood": false,
+      "factory": "pass"
     },
     "n8n-nodes-base.hackerNews": {
       "priority": "P1",
       "executor": "implemented",
       "spec": "specced",
-      "dogfood": false
+      "dogfood": false,
+      "factory": "pass"
     },
     "n8n-nodes-base.mattermost": {
       "priority": "P1",
       "executor": "implemented",
       "spec": "specced",
-      "dogfood": false
+      "dogfood": false,
+      "factory": "partial"
     },
     "n8n-nodes-base.matrix": {
       "priority": "P1",
       "executor": "implemented",
       "spec": "specced",
-      "dogfood": false
+      "dogfood": false,
+      "factory": "partial"
     },
     "n8n-nodes-base.rocketchat": {
       "priority": "P1",
@@ -1446,6 +1452,15 @@
       "executor": "implemented",
       "spec": "specced",
       "dogfood": false
+    },
+    "n8n-nodes-mcp.mcpClientTool": {
+      "priority": "P1",
+      "executor": "implemented",
+      "spec": "specced",
+      "dogfood": false,
+      "tier": "community",
+      "notes": "Community MCP client tool (distinct from @n8n/n8n-nodes-langchain.mcpClientTool)",
+      "factory": "pass"
     }
   },
   "factory": {
@@ -1590,1338 +1605,1345 @@
       "spec": "specced"
     },
     {
-      "type": "n8n-nodes-base.stickyNote",
+      "type": "n8n-nodes-mcp.mcpClientTool",
       "priority": 19,
-      "tier": "core",
+      "tier": "community",
       "executor": "implemented",
       "spec": "specced"
     },
     {
-      "type": "n8n-nodes-base.httpRequest",
+      "type": "n8n-nodes-base.stickyNote",
       "priority": 20,
       "tier": "core",
       "executor": "implemented",
       "spec": "specced"
     },
     {
-      "type": "n8n-nodes-base.wait",
+      "type": "n8n-nodes-base.httpRequest",
       "priority": 21,
       "tier": "core",
       "executor": "implemented",
       "spec": "specced"
     },
     {
-      "type": "n8n-nodes-base.merge",
+      "type": "n8n-nodes-base.wait",
       "priority": 22,
       "tier": "core",
       "executor": "implemented",
       "spec": "specced"
     },
     {
-      "type": "n8n-nodes-base.switch",
+      "type": "n8n-nodes-base.merge",
       "priority": 23,
       "tier": "core",
       "executor": "implemented",
       "spec": "specced"
     },
     {
-      "type": "n8n-nodes-base.limit",
+      "type": "n8n-nodes-base.switch",
       "priority": 24,
       "tier": "core",
       "executor": "implemented",
       "spec": "specced"
     },
     {
-      "type": "n8n-nodes-base.removeDuplicates",
+      "type": "n8n-nodes-base.limit",
       "priority": 25,
       "tier": "core",
       "executor": "implemented",
       "spec": "specced"
     },
     {
-      "type": "n8n-nodes-base.sort",
+      "type": "n8n-nodes-base.removeDuplicates",
       "priority": 26,
       "tier": "core",
       "executor": "implemented",
       "spec": "specced"
     },
     {
-      "type": "n8n-nodes-base.summarize",
+      "type": "n8n-nodes-base.sort",
       "priority": 27,
       "tier": "core",
       "executor": "implemented",
       "spec": "specced"
     },
     {
-      "type": "n8n-nodes-base.compareDatasets",
+      "type": "n8n-nodes-base.summarize",
       "priority": 28,
       "tier": "core",
       "executor": "implemented",
       "spec": "specced"
     },
     {
-      "type": "n8n-nodes-base.renameKeys",
+      "type": "n8n-nodes-base.compareDatasets",
       "priority": 29,
       "tier": "core",
       "executor": "implemented",
       "spec": "specced"
     },
     {
-      "type": "n8n-nodes-base.dateTime",
+      "type": "n8n-nodes-base.renameKeys",
       "priority": 30,
       "tier": "core",
       "executor": "implemented",
       "spec": "specced"
     },
     {
-      "type": "n8n-nodes-base.crypto",
+      "type": "n8n-nodes-base.dateTime",
       "priority": 31,
       "tier": "core",
       "executor": "implemented",
       "spec": "specced"
     },
     {
-      "type": "n8n-nodes-base.html",
+      "type": "n8n-nodes-base.crypto",
       "priority": 32,
       "tier": "core",
       "executor": "implemented",
       "spec": "specced"
     },
     {
-      "type": "n8n-nodes-base.markdown",
+      "type": "n8n-nodes-base.html",
       "priority": 33,
       "tier": "core",
       "executor": "implemented",
       "spec": "specced"
     },
     {
-      "type": "n8n-nodes-base.xml",
+      "type": "n8n-nodes-base.markdown",
       "priority": 34,
       "tier": "core",
       "executor": "implemented",
       "spec": "specced"
     },
     {
-      "type": "n8n-nodes-base.compression",
+      "type": "n8n-nodes-base.xml",
       "priority": 35,
       "tier": "core",
       "executor": "implemented",
       "spec": "specced"
     },
     {
-      "type": "n8n-nodes-base.jwt",
+      "type": "n8n-nodes-base.compression",
       "priority": 36,
       "tier": "core",
       "executor": "implemented",
       "spec": "specced"
     },
     {
-      "type": "n8n-nodes-base.noOp",
+      "type": "n8n-nodes-base.jwt",
       "priority": 37,
       "tier": "core",
       "executor": "implemented",
       "spec": "specced"
     },
     {
-      "type": "n8n-nodes-base.stopAndError",
+      "type": "n8n-nodes-base.noOp",
       "priority": 38,
       "tier": "core",
       "executor": "implemented",
       "spec": "specced"
     },
     {
-      "type": "n8n-nodes-base.executeWorkflow",
+      "type": "n8n-nodes-base.stopAndError",
       "priority": 39,
       "tier": "core",
       "executor": "implemented",
       "spec": "specced"
     },
     {
-      "type": "n8n-nodes-base.executionData",
+      "type": "n8n-nodes-base.executeWorkflow",
       "priority": 40,
       "tier": "core",
       "executor": "implemented",
       "spec": "specced"
     },
     {
-      "type": "n8n-nodes-base.webhook",
+      "type": "n8n-nodes-base.executionData",
       "priority": 41,
       "tier": "core",
       "executor": "implemented",
       "spec": "specced"
     },
     {
-      "type": "n8n-nodes-base.respondToWebhook",
+      "type": "n8n-nodes-base.webhook",
       "priority": 42,
       "tier": "core",
       "executor": "implemented",
       "spec": "specced"
     },
     {
-      "type": "n8n-nodes-base.errorTrigger",
+      "type": "n8n-nodes-base.respondToWebhook",
       "priority": 43,
       "tier": "core",
       "executor": "implemented",
       "spec": "specced"
     },
     {
-      "type": "n8n-nodes-base.formTrigger",
+      "type": "n8n-nodes-base.errorTrigger",
       "priority": 44,
       "tier": "core",
       "executor": "implemented",
       "spec": "specced"
     },
     {
-      "type": "@n8n/n8n-nodes-langchain.chatTrigger",
+      "type": "n8n-nodes-base.formTrigger",
       "priority": 45,
+      "tier": "core",
+      "executor": "implemented",
+      "spec": "specced"
+    },
+    {
+      "type": "@n8n/n8n-nodes-langchain.chatTrigger",
+      "priority": 46,
       "tier": "langchain",
       "executor": "implemented",
       "spec": "specced"
     },
     {
       "type": "n8n-nodes-base.sseTrigger",
-      "priority": 46,
-      "tier": "core",
-      "executor": "implemented",
-      "spec": "specced"
-    },
-    {
-      "type": "n8n-nodes-base.localFileTrigger",
       "priority": 47,
       "tier": "core",
       "executor": "implemented",
       "spec": "specced"
     },
     {
-      "type": "n8n-nodes-base.workflowTrigger",
+      "type": "n8n-nodes-base.localFileTrigger",
       "priority": 48,
       "tier": "core",
       "executor": "implemented",
       "spec": "specced"
     },
     {
-      "type": "n8n-nodes-base.readWriteFile",
+      "type": "n8n-nodes-base.workflowTrigger",
       "priority": 49,
       "tier": "core",
       "executor": "implemented",
       "spec": "specced"
     },
     {
-      "type": "n8n-nodes-base.ssh",
+      "type": "n8n-nodes-base.readWriteFile",
       "priority": 50,
       "tier": "core",
       "executor": "implemented",
       "spec": "specced"
     },
     {
-      "type": "n8n-nodes-base.graphql",
+      "type": "n8n-nodes-base.ssh",
       "priority": 51,
       "tier": "core",
       "executor": "implemented",
       "spec": "specced"
     },
     {
-      "type": "n8n-nodes-base.rssFeedRead",
+      "type": "n8n-nodes-base.graphql",
       "priority": 52,
       "tier": "core",
       "executor": "implemented",
       "spec": "specced"
     },
     {
-      "type": "n8n-nodes-base.editImage",
+      "type": "n8n-nodes-base.rssFeedRead",
       "priority": 53,
       "tier": "core",
       "executor": "implemented",
       "spec": "specced"
     },
     {
-      "type": "n8n-nodes-base.git",
+      "type": "n8n-nodes-base.editImage",
       "priority": 54,
       "tier": "core",
       "executor": "implemented",
       "spec": "specced"
     },
     {
-      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "type": "n8n-nodes-base.git",
       "priority": 55,
-      "tier": "langchain",
+      "tier": "core",
       "executor": "implemented",
       "spec": "specced"
     },
     {
-      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "type": "@n8n/n8n-nodes-langchain.openAi",
       "priority": 56,
       "tier": "langchain",
       "executor": "implemented",
       "spec": "specced"
     },
     {
-      "type": "@n8n/n8n-nodes-langchain.lmChatAnthropic",
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
       "priority": 57,
       "tier": "langchain",
       "executor": "implemented",
       "spec": "specced"
     },
     {
-      "type": "@n8n/n8n-nodes-langchain.lmChatOpenRouter",
+      "type": "@n8n/n8n-nodes-langchain.lmChatAnthropic",
       "priority": 58,
       "tier": "langchain",
       "executor": "implemented",
       "spec": "specced"
     },
     {
-      "type": "@n8n/n8n-nodes-langchain.lmChatOllama",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenRouter",
       "priority": 59,
       "tier": "langchain",
       "executor": "implemented",
       "spec": "specced"
     },
     {
-      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOllama",
       "priority": 60,
       "tier": "langchain",
       "executor": "implemented",
       "spec": "specced"
     },
     {
-      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
       "priority": 61,
       "tier": "langchain",
       "executor": "implemented",
       "spec": "specced"
     },
     {
-      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
       "priority": 62,
       "tier": "langchain",
       "executor": "implemented",
       "spec": "specced"
     },
     {
-      "type": "@n8n/n8n-nodes-langchain.chainSummarization",
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
       "priority": 63,
       "tier": "langchain",
       "executor": "implemented",
       "spec": "specced"
     },
     {
-      "type": "@n8n/n8n-nodes-langchain.chainRetrievalQa",
+      "type": "@n8n/n8n-nodes-langchain.chainSummarization",
       "priority": 64,
       "tier": "langchain",
       "executor": "implemented",
       "spec": "specced"
     },
     {
-      "type": "@n8n/n8n-nodes-langchain.documentDefaultDataLoader",
+      "type": "@n8n/n8n-nodes-langchain.chainRetrievalQa",
       "priority": 65,
       "tier": "langchain",
       "executor": "implemented",
       "spec": "specced"
     },
     {
-      "type": "@n8n/n8n-nodes-langchain.textSplitterRecursiveCharacterTextSplitter",
+      "type": "@n8n/n8n-nodes-langchain.documentDefaultDataLoader",
       "priority": 66,
       "tier": "langchain",
       "executor": "implemented",
       "spec": "specced"
     },
     {
-      "type": "@n8n/n8n-nodes-langchain.embeddingsOpenAi",
+      "type": "@n8n/n8n-nodes-langchain.textSplitterRecursiveCharacterTextSplitter",
       "priority": 67,
       "tier": "langchain",
       "executor": "implemented",
       "spec": "specced"
     },
     {
-      "type": "@n8n/n8n-nodes-langchain.vectorStoreInMemory",
+      "type": "@n8n/n8n-nodes-langchain.embeddingsOpenAi",
       "priority": 68,
       "tier": "langchain",
       "executor": "implemented",
       "spec": "specced"
     },
     {
-      "type": "@n8n/n8n-nodes-langchain.mcpTrigger",
+      "type": "@n8n/n8n-nodes-langchain.vectorStoreInMemory",
       "priority": 69,
       "tier": "langchain",
       "executor": "implemented",
       "spec": "specced"
     },
     {
-      "type": "n8n-nodes-base.aiTransform",
+      "type": "@n8n/n8n-nodes-langchain.mcpTrigger",
       "priority": 70,
-      "tier": "core",
+      "tier": "langchain",
       "executor": "implemented",
       "spec": "specced"
     },
     {
-      "type": "n8n-nodes-base.telegram",
+      "type": "n8n-nodes-base.aiTransform",
       "priority": 71,
       "tier": "core",
       "executor": "implemented",
       "spec": "specced"
     },
     {
-      "type": "n8n-nodes-base.gmail",
+      "type": "n8n-nodes-base.telegram",
       "priority": 72,
       "tier": "core",
       "executor": "implemented",
       "spec": "specced"
     },
     {
-      "type": "n8n-nodes-base.slack",
+      "type": "n8n-nodes-base.gmail",
       "priority": 73,
       "tier": "core",
       "executor": "implemented",
       "spec": "specced"
     },
     {
-      "type": "n8n-nodes-base.whatsApp",
+      "type": "n8n-nodes-base.slack",
       "priority": 74,
       "tier": "core",
       "executor": "implemented",
       "spec": "specced"
     },
     {
-      "type": "n8n-nodes-base.discord",
+      "type": "n8n-nodes-base.whatsApp",
       "priority": 75,
       "tier": "core",
       "executor": "implemented",
       "spec": "specced"
     },
     {
-      "type": "n8n-nodes-base.twilio",
+      "type": "n8n-nodes-base.discord",
       "priority": 76,
       "tier": "core",
       "executor": "implemented",
       "spec": "specced"
     },
     {
-      "type": "n8n-nodes-base.googleSheets",
+      "type": "n8n-nodes-base.twilio",
       "priority": 77,
       "tier": "core",
       "executor": "implemented",
       "spec": "specced"
     },
     {
-      "type": "n8n-nodes-base.googleDocs",
+      "type": "n8n-nodes-base.googleSheets",
       "priority": 78,
       "tier": "core",
       "executor": "implemented",
       "spec": "specced"
     },
     {
-      "type": "n8n-nodes-base.googleCalendar",
+      "type": "n8n-nodes-base.googleDocs",
       "priority": 79,
       "tier": "core",
       "executor": "implemented",
       "spec": "specced"
     },
     {
-      "type": "n8n-nodes-base.youTube",
+      "type": "n8n-nodes-base.googleCalendar",
       "priority": 80,
       "tier": "core",
       "executor": "implemented",
       "spec": "specced"
     },
     {
-      "type": "n8n-nodes-base.airtable",
+      "type": "n8n-nodes-base.youTube",
       "priority": 81,
       "tier": "core",
       "executor": "implemented",
       "spec": "specced"
     },
     {
-      "type": "n8n-nodes-base.notion",
+      "type": "n8n-nodes-base.airtable",
       "priority": 82,
       "tier": "core",
       "executor": "implemented",
       "spec": "specced"
     },
     {
-      "type": "n8n-nodes-base.postgres",
+      "type": "n8n-nodes-base.notion",
       "priority": 83,
       "tier": "core",
       "executor": "implemented",
       "spec": "specced"
     },
     {
-      "type": "n8n-nodes-base.mySql",
+      "type": "n8n-nodes-base.postgres",
       "priority": 84,
       "tier": "core",
       "executor": "implemented",
       "spec": "specced"
     },
     {
-      "type": "n8n-nodes-base.redis",
+      "type": "n8n-nodes-base.mySql",
       "priority": 85,
       "tier": "core",
       "executor": "implemented",
       "spec": "specced"
     },
     {
-      "type": "n8n-nodes-base.mongoDb",
+      "type": "n8n-nodes-base.redis",
       "priority": 86,
       "tier": "core",
       "executor": "implemented",
       "spec": "specced"
     },
     {
-      "type": "n8n-nodes-base.supabase",
+      "type": "n8n-nodes-base.mongoDb",
       "priority": 87,
       "tier": "core",
       "executor": "implemented",
       "spec": "specced"
     },
     {
-      "type": "n8n-nodes-base.s3",
+      "type": "n8n-nodes-base.supabase",
       "priority": 88,
       "tier": "core",
       "executor": "implemented",
       "spec": "specced"
     },
     {
-      "type": "n8n-nodes-base.jira",
+      "type": "n8n-nodes-base.s3",
       "priority": 89,
       "tier": "core",
       "executor": "implemented",
       "spec": "specced"
     },
     {
-      "type": "n8n-nodes-base.hubspot",
+      "type": "n8n-nodes-base.jira",
       "priority": 90,
       "tier": "core",
       "executor": "implemented",
       "spec": "specced"
     },
     {
-      "type": "n8n-nodes-base.facebookGraphApi",
+      "type": "n8n-nodes-base.hubspot",
       "priority": 91,
       "tier": "core",
       "executor": "implemented",
       "spec": "specced"
     },
     {
-      "type": "n8n-nodes-base.wordpress",
+      "type": "n8n-nodes-base.facebookGraphApi",
       "priority": 92,
       "tier": "core",
       "executor": "implemented",
       "spec": "specced"
     },
     {
-      "type": "n8n-nodes-base.itemLists",
+      "type": "n8n-nodes-base.wordpress",
       "priority": 93,
       "tier": "core",
       "executor": "implemented",
       "spec": "specced"
     },
     {
-      "type": "n8n-nodes-base.moveBinaryData",
+      "type": "n8n-nodes-base.itemLists",
       "priority": 94,
       "tier": "core",
       "executor": "implemented",
       "spec": "specced"
     },
     {
-      "type": "n8n-nodes-base.readBinaryFile",
+      "type": "n8n-nodes-base.moveBinaryData",
       "priority": 95,
       "tier": "core",
       "executor": "implemented",
       "spec": "specced"
     },
     {
-      "type": "n8n-nodes-base.readBinaryFiles",
+      "type": "n8n-nodes-base.readBinaryFile",
       "priority": 96,
       "tier": "core",
       "executor": "implemented",
       "spec": "specced"
     },
     {
-      "type": "n8n-nodes-base.writeBinaryFile",
+      "type": "n8n-nodes-base.readBinaryFiles",
       "priority": 97,
       "tier": "core",
       "executor": "implemented",
       "spec": "specced"
     },
     {
-      "type": "n8n-nodes-base.spreadsheetFile",
+      "type": "n8n-nodes-base.writeBinaryFile",
       "priority": 98,
       "tier": "core",
       "executor": "implemented",
       "spec": "specced"
     },
     {
-      "type": "n8n-nodes-base.readPDF",
+      "type": "n8n-nodes-base.spreadsheetFile",
       "priority": 99,
       "tier": "core",
       "executor": "implemented",
       "spec": "specced"
     },
     {
-      "type": "n8n-nodes-base.debugHelper",
+      "type": "n8n-nodes-base.readPDF",
       "priority": 100,
       "tier": "core",
       "executor": "implemented",
       "spec": "specced"
     },
     {
-      "type": "n8n-nodes-base.executeCommand",
+      "type": "n8n-nodes-base.debugHelper",
       "priority": 101,
       "tier": "core",
       "executor": "implemented",
       "spec": "specced"
     },
     {
-      "type": "n8n-nodes-base.n8n",
+      "type": "n8n-nodes-base.executeCommand",
       "priority": 102,
       "tier": "core",
       "executor": "implemented",
       "spec": "specced"
     },
     {
-      "type": "n8n-nodes-base.evaluation",
+      "type": "n8n-nodes-base.n8n",
       "priority": 103,
       "tier": "core",
       "executor": "implemented",
       "spec": "specced"
     },
     {
-      "type": "n8n-nodes-base.evaluationTrigger",
+      "type": "n8n-nodes-base.evaluation",
       "priority": 104,
       "tier": "core",
       "executor": "implemented",
       "spec": "specced"
     },
     {
-      "type": "n8n-nodes-base.activationTrigger",
+      "type": "n8n-nodes-base.evaluationTrigger",
       "priority": 105,
       "tier": "core",
       "executor": "implemented",
       "spec": "specced"
     },
     {
-      "type": "n8n-nodes-base.n8nTrigger",
+      "type": "n8n-nodes-base.activationTrigger",
       "priority": 106,
       "tier": "core",
       "executor": "implemented",
       "spec": "specced"
     },
     {
-      "type": "n8n-nodes-base.form",
+      "type": "n8n-nodes-base.n8nTrigger",
       "priority": 107,
       "tier": "core",
       "executor": "implemented",
       "spec": "specced"
     },
     {
-      "type": "n8n-nodes-base.totp",
+      "type": "n8n-nodes-base.form",
       "priority": 108,
       "tier": "core",
       "executor": "implemented",
       "spec": "specced"
     },
     {
-      "type": "n8n-nodes-base.ldap",
+      "type": "n8n-nodes-base.totp",
       "priority": 109,
       "tier": "core",
       "executor": "implemented",
       "spec": "specced"
     },
     {
-      "type": "n8n-nodes-base.iCalendar",
+      "type": "n8n-nodes-base.ldap",
       "priority": 110,
       "tier": "core",
       "executor": "implemented",
       "spec": "specced"
     },
     {
-      "type": "n8n-nodes-base.quickChart",
+      "type": "n8n-nodes-base.iCalendar",
       "priority": 111,
       "tier": "core",
       "executor": "implemented",
       "spec": "specced"
     },
     {
-      "type": "n8n-nodes-base.hackerNews",
+      "type": "n8n-nodes-base.quickChart",
       "priority": 112,
       "tier": "core",
       "executor": "implemented",
       "spec": "specced"
     },
     {
-      "type": "n8n-nodes-base.mattermost",
+      "type": "n8n-nodes-base.hackerNews",
       "priority": 113,
       "tier": "core",
       "executor": "implemented",
       "spec": "specced"
     },
     {
-      "type": "n8n-nodes-base.matrix",
+      "type": "n8n-nodes-base.mattermost",
       "priority": 114,
       "tier": "core",
       "executor": "implemented",
       "spec": "specced"
     },
     {
-      "type": "n8n-nodes-base.rocketchat",
+      "type": "n8n-nodes-base.matrix",
       "priority": 115,
       "tier": "core",
       "executor": "implemented",
       "spec": "specced"
     },
     {
-      "type": "n8n-nodes-base.gotify",
+      "type": "n8n-nodes-base.rocketchat",
       "priority": 116,
       "tier": "core",
       "executor": "implemented",
       "spec": "specced"
     },
     {
-      "type": "n8n-nodes-base.pushover",
+      "type": "n8n-nodes-base.gotify",
       "priority": 117,
       "tier": "core",
       "executor": "implemented",
       "spec": "specced"
     },
     {
-      "type": "n8n-nodes-base.pushbullet",
+      "type": "n8n-nodes-base.pushover",
       "priority": 118,
       "tier": "core",
       "executor": "implemented",
       "spec": "specced"
     },
     {
-      "type": "n8n-nodes-base.messageBird",
+      "type": "n8n-nodes-base.pushbullet",
       "priority": 119,
       "tier": "core",
       "executor": "implemented",
       "spec": "specced"
     },
     {
-      "type": "n8n-nodes-base.sms77",
+      "type": "n8n-nodes-base.messageBird",
       "priority": 120,
       "tier": "core",
       "executor": "implemented",
       "spec": "specced"
     },
     {
-      "type": "n8n-nodes-base.sendGrid",
+      "type": "n8n-nodes-base.sms77",
       "priority": 121,
       "tier": "core",
       "executor": "implemented",
       "spec": "specced"
     },
     {
-      "type": "n8n-nodes-base.sendInBlue",
+      "type": "n8n-nodes-base.sendGrid",
       "priority": 122,
       "tier": "core",
       "executor": "implemented",
       "spec": "specced"
     },
     {
-      "type": "n8n-nodes-base.mailgun",
+      "type": "n8n-nodes-base.sendInBlue",
       "priority": 123,
       "tier": "core",
       "executor": "implemented",
       "spec": "specced"
     },
     {
-      "type": "n8n-nodes-base.mailchimp",
+      "type": "n8n-nodes-base.mailgun",
       "priority": 124,
       "tier": "core",
       "executor": "implemented",
       "spec": "specced"
     },
     {
-      "type": "n8n-nodes-base.mailjet",
+      "type": "n8n-nodes-base.mailchimp",
       "priority": 125,
       "tier": "core",
       "executor": "implemented",
       "spec": "specced"
     },
     {
-      "type": "n8n-nodes-base.postmarkTrigger",
+      "type": "n8n-nodes-base.mailjet",
       "priority": 126,
       "tier": "core",
       "executor": "implemented",
       "spec": "specced"
     },
     {
-      "type": "n8n-nodes-base.emailReadImap",
+      "type": "n8n-nodes-base.postmarkTrigger",
       "priority": 127,
       "tier": "core",
       "executor": "implemented",
       "spec": "specced"
     },
     {
-      "type": "n8n-nodes-base.microsoftExcel",
+      "type": "n8n-nodes-base.emailReadImap",
       "priority": 128,
       "tier": "core",
       "executor": "implemented",
       "spec": "specced"
     },
     {
-      "type": "n8n-nodes-base.microsoftOneDrive",
+      "type": "n8n-nodes-base.microsoftExcel",
       "priority": 129,
       "tier": "core",
       "executor": "implemented",
       "spec": "specced"
     },
     {
-      "type": "n8n-nodes-base.microsoftSharePoint",
+      "type": "n8n-nodes-base.microsoftOneDrive",
       "priority": 130,
       "tier": "core",
       "executor": "implemented",
       "spec": "specced"
     },
     {
-      "type": "n8n-nodes-base.microsoftSql",
+      "type": "n8n-nodes-base.microsoftSharePoint",
       "priority": 131,
       "tier": "core",
       "executor": "implemented",
       "spec": "specced"
     },
     {
-      "type": "n8n-nodes-base.microsoftEntra",
+      "type": "n8n-nodes-base.microsoftSql",
       "priority": 132,
       "tier": "core",
       "executor": "implemented",
       "spec": "specced"
     },
     {
-      "type": "n8n-nodes-base.microsoftToDo",
+      "type": "n8n-nodes-base.microsoftEntra",
       "priority": 133,
       "tier": "core",
       "executor": "implemented",
       "spec": "specced"
     },
     {
-      "type": "n8n-nodes-base.googleAnalytics",
+      "type": "n8n-nodes-base.microsoftToDo",
       "priority": 134,
       "tier": "core",
       "executor": "implemented",
       "spec": "specced"
     },
     {
-      "type": "n8n-nodes-base.googleSlides",
+      "type": "n8n-nodes-base.googleAnalytics",
       "priority": 135,
       "tier": "core",
       "executor": "implemented",
       "spec": "specced"
     },
     {
-      "type": "n8n-nodes-base.googleTasks",
+      "type": "n8n-nodes-base.googleSlides",
       "priority": 136,
       "tier": "core",
       "executor": "implemented",
       "spec": "specced"
     },
     {
-      "type": "n8n-nodes-base.googleContacts",
+      "type": "n8n-nodes-base.googleTasks",
       "priority": 137,
       "tier": "core",
       "executor": "implemented",
       "spec": "specced"
     },
     {
-      "type": "n8n-nodes-base.googleTranslate",
+      "type": "n8n-nodes-base.googleContacts",
       "priority": 138,
       "tier": "core",
       "executor": "implemented",
       "spec": "specced"
     },
     {
-      "type": "n8n-nodes-base.googleAds",
+      "type": "n8n-nodes-base.googleTranslate",
       "priority": 139,
       "tier": "core",
       "executor": "implemented",
       "spec": "specced"
     },
     {
-      "type": "n8n-nodes-base.googleBigQuery",
+      "type": "n8n-nodes-base.googleAds",
       "priority": 140,
       "tier": "core",
       "executor": "implemented",
       "spec": "specced"
     },
     {
-      "type": "n8n-nodes-base.googleCloudStorage",
+      "type": "n8n-nodes-base.googleBigQuery",
       "priority": 141,
       "tier": "core",
       "executor": "implemented",
       "spec": "specced"
     },
     {
-      "type": "n8n-nodes-base.googleBusinessProfile",
+      "type": "n8n-nodes-base.googleCloudStorage",
       "priority": 142,
       "tier": "core",
       "executor": "implemented",
       "spec": "specced"
     },
     {
-      "type": "n8n-nodes-base.googleChat",
+      "type": "n8n-nodes-base.googleBusinessProfile",
       "priority": 143,
       "tier": "core",
       "executor": "implemented",
       "spec": "specced"
     },
     {
-      "type": "n8n-nodes-base.gSuiteAdmin",
+      "type": "n8n-nodes-base.googleChat",
       "priority": 144,
       "tier": "core",
       "executor": "implemented",
       "spec": "specced"
     },
     {
-      "type": "n8n-nodes-base.clickUp",
+      "type": "n8n-nodes-base.gSuiteAdmin",
       "priority": 145,
       "tier": "core",
       "executor": "implemented",
       "spec": "specced"
     },
     {
-      "type": "n8n-nodes-base.trello",
+      "type": "n8n-nodes-base.clickUp",
       "priority": 146,
       "tier": "core",
       "executor": "implemented",
       "spec": "specced"
     },
     {
-      "type": "n8n-nodes-base.asana",
+      "type": "n8n-nodes-base.trello",
       "priority": 147,
       "tier": "core",
       "executor": "implemented",
       "spec": "specced"
     },
     {
-      "type": "n8n-nodes-base.mondayCom",
+      "type": "n8n-nodes-base.asana",
       "priority": 148,
       "tier": "core",
       "executor": "implemented",
       "spec": "specced"
     },
     {
-      "type": "n8n-nodes-base.todoist",
+      "type": "n8n-nodes-base.mondayCom",
       "priority": 149,
       "tier": "core",
       "executor": "implemented",
       "spec": "specced"
     },
     {
-      "type": "n8n-nodes-base.linear",
+      "type": "n8n-nodes-base.todoist",
       "priority": 150,
       "tier": "core",
       "executor": "implemented",
       "spec": "specced"
     },
     {
-      "type": "n8n-nodes-base.gitlab",
+      "type": "n8n-nodes-base.linear",
       "priority": 151,
       "tier": "core",
       "executor": "implemented",
       "spec": "specced"
     },
     {
-      "type": "n8n-nodes-base.gitlabTrigger",
+      "type": "n8n-nodes-base.gitlab",
       "priority": 152,
       "tier": "core",
       "executor": "implemented",
       "spec": "specced"
     },
     {
-      "type": "n8n-nodes-base.githubTrigger",
+      "type": "n8n-nodes-base.gitlabTrigger",
       "priority": 153,
       "tier": "core",
       "executor": "implemented",
       "spec": "specced"
     },
     {
-      "type": "n8n-nodes-base.bitbucketTrigger",
+      "type": "n8n-nodes-base.githubTrigger",
       "priority": 154,
       "tier": "core",
       "executor": "implemented",
       "spec": "specced"
     },
     {
-      "type": "n8n-nodes-base.jenkins",
+      "type": "n8n-nodes-base.bitbucketTrigger",
       "priority": 155,
       "tier": "core",
       "executor": "implemented",
       "spec": "specced"
     },
     {
-      "type": "n8n-nodes-base.circleCi",
+      "type": "n8n-nodes-base.jenkins",
       "priority": 156,
       "tier": "core",
       "executor": "implemented",
       "spec": "specced"
     },
     {
-      "type": "n8n-nodes-base.salesforce",
+      "type": "n8n-nodes-base.circleCi",
       "priority": 157,
       "tier": "core",
       "executor": "implemented",
       "spec": "specced"
     },
     {
-      "type": "n8n-nodes-base.pipedrive",
+      "type": "n8n-nodes-base.salesforce",
       "priority": 158,
       "tier": "core",
       "executor": "implemented",
       "spec": "specced"
     },
     {
-      "type": "n8n-nodes-base.zendesk",
+      "type": "n8n-nodes-base.pipedrive",
       "priority": 159,
       "tier": "core",
       "executor": "implemented",
       "spec": "specced"
     },
     {
-      "type": "n8n-nodes-base.zohoCrm",
+      "type": "n8n-nodes-base.zendesk",
       "priority": 160,
       "tier": "core",
       "executor": "implemented",
       "spec": "specced"
     },
     {
-      "type": "n8n-nodes-base.highLevel",
+      "type": "n8n-nodes-base.zohoCrm",
       "priority": 161,
       "tier": "core",
       "executor": "implemented",
       "spec": "specced"
     },
     {
-      "type": "n8n-nodes-base.odoo",
+      "type": "n8n-nodes-base.highLevel",
       "priority": 162,
       "tier": "core",
       "executor": "implemented",
       "spec": "specced"
     },
     {
-      "type": "n8n-nodes-base.hubspotTrigger",
+      "type": "n8n-nodes-base.odoo",
       "priority": 163,
       "tier": "core",
       "executor": "implemented",
       "spec": "specced"
     },
     {
-      "type": "n8n-nodes-base.wooCommerce",
+      "type": "n8n-nodes-base.hubspotTrigger",
       "priority": 164,
       "tier": "core",
       "executor": "implemented",
       "spec": "specced"
     },
     {
-      "type": "n8n-nodes-base.shopify",
+      "type": "n8n-nodes-base.wooCommerce",
       "priority": 165,
       "tier": "core",
       "executor": "implemented",
       "spec": "specced"
     },
     {
-      "type": "n8n-nodes-base.stripe",
+      "type": "n8n-nodes-base.shopify",
       "priority": 166,
       "tier": "core",
       "executor": "implemented",
       "spec": "specced"
     },
     {
-      "type": "n8n-nodes-base.stripeTrigger",
+      "type": "n8n-nodes-base.stripe",
       "priority": 167,
       "tier": "core",
       "executor": "implemented",
       "spec": "specced"
     },
     {
-      "type": "n8n-nodes-base.quickbooks",
+      "type": "n8n-nodes-base.stripeTrigger",
       "priority": 168,
       "tier": "core",
       "executor": "implemented",
       "spec": "specced"
     },
     {
-      "type": "n8n-nodes-base.xero",
+      "type": "n8n-nodes-base.quickbooks",
       "priority": 169,
       "tier": "core",
       "executor": "implemented",
       "spec": "specced"
     },
     {
-      "type": "n8n-nodes-base.payPal",
+      "type": "n8n-nodes-base.xero",
       "priority": 170,
       "tier": "core",
       "executor": "implemented",
       "spec": "specced"
     },
     {
-      "type": "n8n-nodes-base.pagerDuty",
+      "type": "n8n-nodes-base.payPal",
       "priority": 171,
       "tier": "core",
       "executor": "implemented",
       "spec": "specced"
     },
     {
-      "type": "n8n-nodes-base.baserow",
+      "type": "n8n-nodes-base.pagerDuty",
       "priority": 172,
       "tier": "core",
       "executor": "implemented",
       "spec": "specced"
     },
     {
-      "type": "n8n-nodes-base.nocoDb",
+      "type": "n8n-nodes-base.baserow",
       "priority": 173,
       "tier": "core",
       "executor": "implemented",
       "spec": "specced"
     },
     {
-      "type": "n8n-nodes-base.dropbox",
+      "type": "n8n-nodes-base.nocoDb",
       "priority": 174,
       "tier": "core",
       "executor": "implemented",
       "spec": "specced"
     },
     {
-      "type": "n8n-nodes-base.nextCloud",
+      "type": "n8n-nodes-base.dropbox",
       "priority": 175,
       "tier": "core",
       "executor": "implemented",
       "spec": "specced"
     },
     {
-      "type": "n8n-nodes-base.awsS3",
+      "type": "n8n-nodes-base.nextCloud",
       "priority": 176,
       "tier": "core",
       "executor": "implemented",
       "spec": "specced"
     },
     {
-      "type": "n8n-nodes-base.awsLambda",
+      "type": "n8n-nodes-base.awsS3",
       "priority": 177,
       "tier": "core",
       "executor": "implemented",
       "spec": "specced"
     },
     {
-      "type": "n8n-nodes-base.awsSes",
+      "type": "n8n-nodes-base.awsLambda",
       "priority": 178,
       "tier": "core",
       "executor": "implemented",
       "spec": "specced"
     },
     {
-      "type": "n8n-nodes-base.snowflake",
+      "type": "n8n-nodes-base.awsSes",
       "priority": 179,
       "tier": "core",
       "executor": "implemented",
       "spec": "specced"
     },
     {
-      "type": "n8n-nodes-base.elasticsearch",
+      "type": "n8n-nodes-base.snowflake",
       "priority": 180,
       "tier": "core",
       "executor": "implemented",
       "spec": "specced"
     },
     {
-      "type": "n8n-nodes-base.mqtt",
+      "type": "n8n-nodes-base.elasticsearch",
       "priority": 181,
       "tier": "core",
       "executor": "implemented",
       "spec": "specced"
     },
     {
-      "type": "n8n-nodes-base.kafka",
+      "type": "n8n-nodes-base.mqtt",
       "priority": 182,
       "tier": "core",
       "executor": "implemented",
       "spec": "specced"
     },
     {
-      "type": "n8n-nodes-base.rabbitmq",
+      "type": "n8n-nodes-base.kafka",
       "priority": 183,
       "tier": "core",
       "executor": "implemented",
       "spec": "specced"
     },
     {
-      "type": "n8n-nodes-base.amqp",
+      "type": "n8n-nodes-base.rabbitmq",
       "priority": 184,
       "tier": "core",
       "executor": "implemented",
       "spec": "specced"
     },
     {
-      "type": "n8n-nodes-base.redisTrigger",
+      "type": "n8n-nodes-base.amqp",
       "priority": 185,
       "tier": "core",
       "executor": "implemented",
       "spec": "specced"
     },
     {
-      "type": "n8n-nodes-base.postgresTrigger",
+      "type": "n8n-nodes-base.redisTrigger",
       "priority": 186,
       "tier": "core",
       "executor": "implemented",
       "spec": "specced"
     },
     {
-      "type": "@n8n/n8n-nodes-langchain.code",
+      "type": "n8n-nodes-base.postgresTrigger",
       "priority": 187,
-      "tier": "langchain",
+      "tier": "core",
       "executor": "implemented",
       "spec": "specced"
     },
     {
-      "type": "@n8n/n8n-nodes-langchain.modelSelector",
+      "type": "@n8n/n8n-nodes-langchain.code",
       "priority": 188,
       "tier": "langchain",
       "executor": "implemented",
       "spec": "specced"
     },
     {
-      "type": "@n8n/n8n-nodes-langchain.guardrails",
+      "type": "@n8n/n8n-nodes-langchain.modelSelector",
       "priority": 189,
       "tier": "langchain",
       "executor": "implemented",
       "spec": "specced"
     },
     {
-      "type": "n8n-nodes-base.httpRequestTool",
+      "type": "@n8n/n8n-nodes-langchain.guardrails",
       "priority": 190,
-      "tier": "core",
+      "tier": "langchain",
       "executor": "implemented",
       "spec": "specced"
     },
     {
-      "type": "n8n-nodes-base.gmailTool",
+      "type": "n8n-nodes-base.httpRequestTool",
       "priority": 191,
       "tier": "core",
       "executor": "implemented",
       "spec": "specced"
     },
     {
-      "type": "n8n-nodes-base.googleSheetsTool",
+      "type": "n8n-nodes-base.gmailTool",
       "priority": 192,
       "tier": "core",
       "executor": "implemented",
       "spec": "specced"
     },
     {
-      "type": "n8n-nodes-base.googleCalendarTool",
+      "type": "n8n-nodes-base.googleSheetsTool",
       "priority": 193,
       "tier": "core",
       "executor": "implemented",
       "spec": "specced"
     },
     {
-      "type": "n8n-nodes-base.googleTasksTool",
+      "type": "n8n-nodes-base.googleCalendarTool",
       "priority": 194,
       "tier": "core",
       "executor": "implemented",
       "spec": "specced"
     },
     {
-      "type": "n8n-nodes-base.wooCommerceTool",
+      "type": "n8n-nodes-base.googleTasksTool",
       "priority": 195,
       "tier": "core",
       "executor": "implemented",
       "spec": "specced"
     },
     {
-      "type": "n8n-nodes-base.rssFeedReadTool",
+      "type": "n8n-nodes-base.wooCommerceTool",
       "priority": 196,
       "tier": "core",
       "executor": "implemented",
       "spec": "specced"
     },
     {
-      "type": "n8n-nodes-base.cryptoTool",
+      "type": "n8n-nodes-base.rssFeedReadTool",
       "priority": 197,
       "tier": "core",
       "executor": "implemented",
       "spec": "specced"
     },
     {
-      "type": "n8n-nodes-base.dateTimeTool",
+      "type": "n8n-nodes-base.cryptoTool",
       "priority": 198,
       "tier": "core",
       "executor": "implemented",
       "spec": "specced"
     },
     {
-      "type": "@n8n/n8n-nodes-langchain.toolSearXng",
+      "type": "n8n-nodes-base.dateTimeTool",
       "priority": 199,
-      "tier": "langchain",
+      "tier": "core",
       "executor": "implemented",
       "spec": "specced"
     },
     {
-      "type": "@n8n/n8n-nodes-langchain.toolWolframAlpha",
+      "type": "@n8n/n8n-nodes-langchain.toolSearXng",
       "priority": 200,
       "tier": "langchain",
       "executor": "implemented",
       "spec": "specced"
     },
     {
-      "type": "@n8n/n8n-nodes-langchain.outputParserItemList",
+      "type": "@n8n/n8n-nodes-langchain.toolWolframAlpha",
       "priority": 201,
       "tier": "langchain",
       "executor": "implemented",
       "spec": "specced"
     },
     {
-      "type": "@n8n/n8n-nodes-langchain.outputParserAutofixing",
+      "type": "@n8n/n8n-nodes-langchain.outputParserItemList",
       "priority": 202,
       "tier": "langchain",
       "executor": "implemented",
       "spec": "specced"
     },
     {
-      "type": "@n8n/n8n-nodes-langchain.embeddingsCohere",
+      "type": "@n8n/n8n-nodes-langchain.outputParserAutofixing",
       "priority": 203,
       "tier": "langchain",
       "executor": "implemented",
       "spec": "specced"
     },
     {
-      "type": "@n8n/n8n-nodes-langchain.vectorStoreMilvus",
+      "type": "@n8n/n8n-nodes-langchain.embeddingsCohere",
       "priority": 204,
       "tier": "langchain",
       "executor": "implemented",
       "spec": "specced"
     },
     {
-      "type": "@n8n/n8n-nodes-langchain.retrieverVectorStore",
+      "type": "@n8n/n8n-nodes-langchain.vectorStoreMilvus",
       "priority": 205,
       "tier": "langchain",
       "executor": "implemented",
       "spec": "specced"
     },
     {
-      "type": "@n8n/n8n-nodes-langchain.memoryManager",
+      "type": "@n8n/n8n-nodes-langchain.retrieverVectorStore",
       "priority": 206,
       "tier": "langchain",
       "executor": "implemented",
       "spec": "specced"
     },
     {
-      "type": "n8n-nodes-base.perplexity",
+      "type": "@n8n/n8n-nodes-langchain.memoryManager",
       "priority": 207,
-      "tier": "core",
+      "tier": "langchain",
       "executor": "implemented",
       "spec": "specced"
     },
     {
-      "type": "n8n-nodes-base.webflow",
+      "type": "n8n-nodes-base.perplexity",
       "priority": 208,
       "tier": "core",
       "executor": "implemented",
       "spec": "specced"
     },
     {
-      "type": "n8n-nodes-base.homeAssistant",
+      "type": "n8n-nodes-base.webflow",
       "priority": 209,
+      "tier": "core",
+      "executor": "implemented",
+      "spec": "specced"
+    },
+    {
+      "type": "n8n-nodes-base.homeAssistant",
+      "priority": 210,
       "tier": "core",
       "executor": "implemented",
       "spec": "specced"
