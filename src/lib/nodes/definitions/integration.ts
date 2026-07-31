@@ -2763,3 +2763,492 @@ export const todoist: INodeTypeDescription = {
     },
   ],
 };
+
+const SF_DOCS =
+  "https://docs.n8n.io/integrations/builtin/app-nodes/n8n-nodes-base.salesforce/";
+
+const SF_CRUD_OPERATIONS = [
+  { name: "Create", value: "create" },
+  { name: "Delete", value: "delete" },
+  { name: "Get", value: "get" },
+  { name: "Get Many", value: "getAll" },
+  { name: "Update", value: "update" },
+];
+
+const SF_CRUD_UPSERT_OPERATIONS = [
+  { name: "Create", value: "create" },
+  { name: "Delete", value: "delete" },
+  { name: "Get", value: "get" },
+  { name: "Get Many", value: "getAll" },
+  { name: "Update", value: "update" },
+  { name: "Upsert", value: "upsert" },
+];
+
+export const salesforce: INodeTypeDescription = {
+  name: "n8n-nodes-base.salesforce",
+  displayName: "Salesforce",
+  category: "Sales",
+  group: ["integration"],
+  version: 1,
+  description: "Access and manage Salesforce records, objects, flows, and search",
+  defaults: { name: "Salesforce" },
+  inputs: ["main"],
+  outputs: ["main"],
+  icon: "Cloud",
+  credentials: [
+    { name: "salesforceOAuth2Api" },
+    { name: "salesforceJwtApi" },
+  ],
+  sources: [SF_DOCS],
+  properties: [
+    {
+      displayName: "Resource",
+      name: "resource",
+      type: "options",
+      default: "account",
+      required: true,
+      noDataExpression: true,
+      options: [
+        { name: "Account", value: "account" },
+        { name: "Attachment", value: "attachment" },
+        { name: "Case", value: "case" },
+        { name: "Contact", value: "contact" },
+        { name: "Custom Object", value: "customObject" },
+        { name: "Document", value: "document" },
+        { name: "Flow", value: "flow" },
+        { name: "Lead", value: "lead" },
+        { name: "Opportunity", value: "opportunity" },
+        { name: "Search", value: "search" },
+        { name: "Task", value: "task" },
+        { name: "User", value: "user" },
+      ],
+    },
+    // Account
+    {
+      displayName: "Operation",
+      name: "operation",
+      type: "options",
+      default: "create",
+      required: true,
+      noDataExpression: true,
+      displayOptions: { show: { resource: ["account"] } },
+      options: [
+        ...SF_CRUD_UPSERT_OPERATIONS,
+        { name: "Add Note", value: "addNote" },
+        { name: "Get Metadata", value: "getMetadata" },
+      ],
+    },
+    // Attachment
+    {
+      displayName: "Operation",
+      name: "operation",
+      type: "options",
+      default: "create",
+      required: true,
+      noDataExpression: true,
+      displayOptions: { show: { resource: ["attachment"] } },
+      options: [
+        ...SF_CRUD_OPERATIONS,
+        { name: "Get Metadata", value: "getMetadata" },
+      ],
+    },
+    // Case
+    {
+      displayName: "Operation",
+      name: "operation",
+      type: "options",
+      default: "create",
+      required: true,
+      noDataExpression: true,
+      displayOptions: { show: { resource: ["case"] } },
+      options: [
+        ...SF_CRUD_OPERATIONS,
+        { name: "Add Comment", value: "addComment" },
+        { name: "Get Metadata", value: "getMetadata" },
+      ],
+    },
+    // Contact
+    {
+      displayName: "Operation",
+      name: "operation",
+      type: "options",
+      default: "create",
+      required: true,
+      noDataExpression: true,
+      displayOptions: { show: { resource: ["contact"] } },
+      options: [
+        ...SF_CRUD_UPSERT_OPERATIONS,
+        { name: "Add Note", value: "addNote" },
+        { name: "Add to Campaign", value: "addToCampaign" },
+        { name: "Get Metadata", value: "getMetadata" },
+      ],
+    },
+    // Custom Object
+    {
+      displayName: "Operation",
+      name: "operation",
+      type: "options",
+      default: "create",
+      required: true,
+      noDataExpression: true,
+      displayOptions: { show: { resource: ["customObject"] } },
+      options: SF_CRUD_UPSERT_OPERATIONS,
+    },
+    // Document
+    {
+      displayName: "Operation",
+      name: "operation",
+      type: "options",
+      default: "upload",
+      required: true,
+      noDataExpression: true,
+      displayOptions: { show: { resource: ["document"] } },
+      options: [{ name: "Upload", value: "upload" }],
+    },
+    // Flow
+    {
+      displayName: "Operation",
+      name: "operation",
+      type: "options",
+      default: "getAll",
+      required: true,
+      noDataExpression: true,
+      displayOptions: { show: { resource: ["flow"] } },
+      options: [
+        { name: "Get Many", value: "getAll" },
+        { name: "Invoke", value: "invoke" },
+      ],
+    },
+    // Lead
+    {
+      displayName: "Operation",
+      name: "operation",
+      type: "options",
+      default: "create",
+      required: true,
+      noDataExpression: true,
+      displayOptions: { show: { resource: ["lead"] } },
+      options: [
+        ...SF_CRUD_UPSERT_OPERATIONS,
+        { name: "Add Note", value: "addNote" },
+        { name: "Add to Campaign", value: "addToCampaign" },
+        { name: "Get Metadata", value: "getMetadata" },
+      ],
+    },
+    // Opportunity
+    {
+      displayName: "Operation",
+      name: "operation",
+      type: "options",
+      default: "create",
+      required: true,
+      noDataExpression: true,
+      displayOptions: { show: { resource: ["opportunity"] } },
+      options: [
+        ...SF_CRUD_UPSERT_OPERATIONS,
+        { name: "Add Note", value: "addNote" },
+        { name: "Get Metadata", value: "getMetadata" },
+      ],
+    },
+    // Search
+    {
+      displayName: "Operation",
+      name: "operation",
+      type: "options",
+      default: "query",
+      required: true,
+      noDataExpression: true,
+      displayOptions: { show: { resource: ["search"] } },
+      options: [{ name: "Query", value: "query" }],
+    },
+    // Task
+    {
+      displayName: "Operation",
+      name: "operation",
+      type: "options",
+      default: "create",
+      required: true,
+      noDataExpression: true,
+      displayOptions: { show: { resource: ["task"] } },
+      options: SF_CRUD_OPERATIONS,
+    },
+    // User
+    {
+      displayName: "Operation",
+      name: "operation",
+      type: "options",
+      default: "get",
+      required: true,
+      noDataExpression: true,
+      displayOptions: { show: { resource: ["user"] } },
+      options: [
+        { name: "Get", value: "get" },
+        { name: "Get Many", value: "getAll" },
+      ],
+    },
+    // Record ID (used by read/update/delete/upsert/comment/note/metadata)
+    {
+      displayName: "Record ID",
+      name: "recordId",
+      type: "string",
+      default: "",
+      description: "Salesforce record ID",
+      displayOptions: {
+        show: {
+          resource: [
+            "account", "attachment", "case", "contact",
+            "customObject", "lead", "opportunity", "task", "user",
+          ],
+          operation: ["get", "delete", "update", "upsert", "addNote", "addComment", "getMetadata"],
+        },
+      },
+    },
+    // Custom Object API name
+    {
+      displayName: "Custom Object API Name",
+      name: "customObjectApiName",
+      type: "string",
+      default: "",
+      required: true,
+      displayOptions: {
+        show: { resource: ["customObject"] },
+      },
+    },
+    // Fields (for create, update, upsert)
+    {
+      displayName: "Fields",
+      name: "fields",
+      type: "fixedCollection",
+      default: {},
+      typeOptions: { multipleValues: true },
+      displayOptions: {
+        show: {
+          resource: [
+            "account", "attachment", "case", "contact",
+            "customObject", "lead", "opportunity", "task",
+          ],
+          operation: ["create", "update", "upsert"],
+        },
+      },
+      options: [
+        {
+          name: "field",
+          displayName: "Field",
+          values: [
+            { displayName: "Field Name", name: "fieldName", type: "string", default: "" },
+            { displayName: "Field Value", name: "fieldValue", type: "string", default: "" },
+          ],
+        },
+      ],
+    },
+    // SOQL Query (for search)
+    {
+      displayName: "Query",
+      name: "query",
+      type: "string",
+      default: "",
+      required: true,
+      typeOptions: { editor: "code", rows: 4 },
+      displayOptions: {
+        show: { resource: ["search"], operation: ["query"] },
+      },
+      placeholder: "SELECT Id, Name FROM Account WHERE Name = '...'",
+    },
+    // Flow API Name
+    {
+      displayName: "Flow API Name",
+      name: "flowApiName",
+      type: "string",
+      default: "",
+      required: true,
+      displayOptions: {
+        show: { resource: ["flow"], operation: ["invoke"] },
+      },
+    },
+    // Flow inputs
+    {
+      displayName: "Flow Inputs",
+      name: "flowInputs",
+      type: "fixedCollection",
+      default: {},
+      typeOptions: { multipleValues: true },
+      displayOptions: {
+        show: { resource: ["flow"], operation: ["invoke"] },
+      },
+      options: [
+        {
+          name: "input",
+          displayName: "Input",
+          values: [
+            { displayName: "Name", name: "name", type: "string", default: "" },
+            { displayName: "Value", name: "value", type: "string", default: "" },
+          ],
+        },
+      ],
+    },
+    // Return All / Limit for getAll
+    {
+      displayName: "Return All",
+      name: "returnAll",
+      type: "boolean",
+      default: false,
+      displayOptions: {
+        show: {
+          resource: [
+            "account", "attachment", "case", "contact",
+            "customObject", "flow", "lead", "opportunity", "task", "user",
+          ],
+          operation: ["getAll", "query"],
+        },
+      },
+    },
+    {
+      displayName: "Limit",
+      name: "limit",
+      type: "number",
+      default: 50,
+      displayOptions: {
+        show: {
+          resource: [
+            "account", "attachment", "case", "contact",
+            "customObject", "flow", "lead", "opportunity", "task", "user",
+          ],
+          operation: ["getAll", "query"],
+          returnAll: [false],
+        },
+      },
+    },
+    // Options (collection)
+    {
+      displayName: "Options",
+      name: "options",
+      type: "collection",
+      default: {},
+      displayOptions: {
+        show: {
+          resource: [
+            "account", "attachment", "case", "contact",
+            "customObject", "lead", "opportunity", "task",
+          ],
+          operation: ["getAll"],
+        },
+      },
+      options: [
+        { displayName: "Fields (comma-separated)", name: "fields", type: "string", default: "" },
+        { displayName: "Conditions/Filter", name: "condition", type: "string", default: "" },
+      ],
+    },
+  ],
+};
+
+export const pipedrive: INodeTypeDescription = {
+  name: "n8n-nodes-base.pipedrive",
+  displayName: "Pipedrive",
+  category: "Development",
+  group: ["integration"],
+  version: 1,
+  description: "Access Pipedrive CRM — deals, activities, organizations, persons, products, leads, notes, files",
+  defaults: { name: "Pipedrive" },
+  inputs: ["main"],
+  outputs: ["main"],
+  icon: "Building2",
+  credentials: [
+    { name: "pipedriveApi", required: false },
+    { name: "pipedriveOAuth2Api", required: false },
+  ],
+  properties: [
+    {
+      displayName: "Resource",
+      name: "resource",
+      type: "options",
+      default: "Deal",
+      required: true,
+      noDataExpression: true,
+      options: [
+        { name: "Activity", value: "Activity" },
+        { name: "Deal", value: "Deal" },
+        { name: "Deal Activity", value: "Deal Activity" },
+        { name: "Deal Product", value: "Deal Product" },
+        { name: "File", value: "File" },
+        { name: "Lead", value: "Lead" },
+        { name: "Note", value: "Note" },
+        { name: "Organization", value: "Organization" },
+        { name: "Person", value: "Person" },
+        { name: "Product", value: "Product" },
+      ],
+    },
+    {
+      displayName: "Operation",
+      name: "operation",
+      type: "options",
+      default: "create",
+      required: true,
+      noDataExpression: true,
+      displayOptions: { show: { resource: ["Deal", "Activity", "Organization", "Person", "Product", "Lead", "Note", "File"] } },
+      options: [
+        { name: "Create", value: "create" },
+        { name: "Delete", value: "delete" },
+        { name: "Get", value: "get" },
+        { name: "Get Many", value: "getAll" },
+        { name: "Update", value: "update" },
+      ],
+    },
+    {
+      displayName: "Resource Identifier",
+      name: "resourceIdentifier",
+      type: "string",
+      default: "",
+      displayOptions: {
+        show: {
+          resource: ["Deal", "Activity", "Organization", "Person", "Product", "Lead", "Note", "File"],
+          operation: ["get", "update", "delete"],
+        },
+      },
+    },
+    {
+      displayName: "Product Identifier",
+      name: "productIdentifier",
+      type: "string",
+      default: "",
+      displayOptions: {
+        show: { resource: ["Deal Product"], operation: ["update", "delete"] },
+      },
+    },
+    {
+      displayName: "Request Fields",
+      name: "requestFields",
+      type: "json",
+      default: "{}",
+      displayOptions: {
+        show: {
+          resource: ["Deal", "Activity", "Organization", "Person", "Product", "Lead", "Note", "File"],
+          operation: ["create", "update"],
+        },
+      },
+    },
+    {
+      displayName: "Query",
+      name: "query",
+      type: "json",
+      default: "{}",
+      displayOptions: {
+        show: {
+          resource: ["Deal", "Activity", "Organization", "Person", "Product", "Lead", "Note", "File"],
+          operation: ["getAll"],
+        },
+      },
+    },
+    {
+      displayName: "Search Term",
+      name: "searchTerm",
+      type: "string",
+      default: "",
+      displayOptions: {
+        show: {
+          resource: ["Deal", "Organization", "Person"],
+          operation: ["search"],
+        },
+      },
+    },
+  ],
+};

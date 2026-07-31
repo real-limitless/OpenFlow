@@ -923,6 +923,36 @@ export const BUILTIN_EXECUTOR_MODULES: Array<{
     modulePath: "./executors/gitlab-trigger",
     exportName: "gitlabTriggerExecutor",
   },
+  {
+    type: "n8n-nodes-base.bitbucketTrigger",
+    modulePath: "./executors/bitbucket-trigger",
+    exportName: "bitbucketTriggerExecutor",
+  },
+  {
+    type: "n8n-nodes-base.jenkins",
+    modulePath: "./executors/jenkins",
+    exportName: "jenkinsExecutor",
+  },
+  {
+    type: "n8n-nodes-base.circleCi",
+    modulePath: "./executors/circle-ci",
+    exportName: "circleCiExecutor",
+  },
+  {
+    type: "n8n-nodes-base.salesforce",
+    modulePath: "./executors/salesforce",
+    exportName: "salesforceExecutor",
+  },
+  {
+    type: "n8n-nodes-base.pipedrive",
+    modulePath: "./executors/pipedrive",
+    exportName: "pipedriveExecutor",
+  },
+  {
+    type: "n8n-nodes-base.zendesk",
+    modulePath: "./executors/zendesk",
+    exportName: "zendeskExecutor",
+  },
 ];
 
 /** Types OpenFlow ships an executor for. Derived, so it needs no maintenance. */

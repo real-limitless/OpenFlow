@@ -707,3 +707,164 @@ export const googleChat: INodeTypeDescription = {
     },
   ],
 };
+
+const ZENDESK_DOCS =
+  "https://docs.n8n.io/integrations/builtin/app-nodes/n8n-nodes-base.zendesk/";
+
+export const zendesk: INodeTypeDescription = {
+  name: "n8n-nodes-base.zendesk",
+  displayName: "Zendesk",
+  category: "Communication",
+  group: ["communication"],
+  version: 1,
+  description: "Access Zendesk ticket, user, and organization data",
+  defaults: { name: "Zendesk" },
+  inputs: ["main"],
+  outputs: ["main"],
+  credentials: [
+    { name: "zendeskApi", required: false },
+    { name: "zendeskOAuth2Api", required: false },
+  ],
+  icon: "Headphones",
+  sources: [ZENDESK_DOCS],
+  properties: [
+    {
+      displayName: "Authentication",
+      name: "authentication",
+      type: "options",
+      default: "apiToken",
+      required: true,
+      options: [
+        { name: "API Token", value: "apiToken" },
+        { name: "OAuth2", value: "oAuth2" },
+      ],
+    },
+    {
+      displayName: "Resource",
+      name: "resource",
+      type: "options",
+      default: "ticket",
+      required: true,
+      noDataExpression: true,
+      options: [
+        { name: "Organization", value: "organization" },
+        { name: "Ticket", value: "ticket" },
+        { name: "Ticket Field", value: "ticketField" },
+        { name: "User", value: "user" },
+      ],
+    },
+    {
+      displayName: "Operation",
+      name: "operation",
+      type: "options",
+      default: "getAll",
+      required: true,
+      displayOptions: {
+        show: { resource: ["ticket"] },
+      },
+      options: [
+        { name: "Create", value: "create" },
+        { name: "Delete", value: "delete" },
+        { name: "Get", value: "get" },
+        { name: "Get Many", value: "getAll" },
+        { name: "Recover a Suspended Ticket", value: "recover" },
+        { name: "Update", value: "update" },
+      ],
+    },
+    {
+      displayName: "Operation",
+      name: "operation",
+      type: "options",
+      default: "getAll",
+      required: true,
+      displayOptions: {
+        show: { resource: ["ticketField"] },
+      },
+      options: [
+        { name: "Get", value: "get" },
+        { name: "Get Many", value: "getAll" },
+      ],
+    },
+    {
+      displayName: "Operation",
+      name: "operation",
+      type: "options",
+      default: "getAll",
+      required: true,
+      displayOptions: {
+        show: { resource: ["user"] },
+      },
+      options: [
+        { name: "Create", value: "create" },
+        { name: "Delete", value: "delete" },
+        { name: "Get", value: "get" },
+        { name: "Get Many", value: "getAll" },
+        { name: "Get Organizations", value: "getOrganizations" },
+        { name: "Get User Data", value: "getUserData" },
+        { name: "Search", value: "search" },
+        { name: "Update", value: "update" },
+      ],
+    },
+    {
+      displayName: "Operation",
+      name: "operation",
+      type: "options",
+      default: "getAll",
+      required: true,
+      displayOptions: {
+        show: { resource: ["organization"] },
+      },
+      options: [
+        { name: "Count", value: "count" },
+        { name: "Create", value: "create" },
+        { name: "Delete", value: "delete" },
+        { name: "Get", value: "get" },
+        { name: "Get Many", value: "getAll" },
+        { name: "Get Organization Data", value: "getOrganizationData" },
+        { name: "Update", value: "update" },
+      ],
+    },
+    {
+      displayName: "ID",
+      name: "id",
+      type: "string",
+      default: "",
+      required: true,
+      displayOptions: {
+        show: {
+          resource: ["ticket", "ticketField", "user", "organization"],
+          operation: ["get", "delete", "update", "recover", "getUserData", "getOrganizationData"],
+        },
+      },
+      description: "Resource identifier from Zendesk",
+    },
+    {
+      displayName: "Request Fields",
+      name: "requestFields",
+      type: "json",
+      default: "",
+      displayOptions: {
+        show: {
+          resource: ["ticket", "user", "organization"],
+          operation: ["create", "update"],
+        },
+      },
+      placeholder: '{"ticket": {"subject": "...", "description": "..."}}',
+      description: "JSON body with resource-specific fields for create/update operations",
+    },
+    {
+      displayName: "Query Parameters",
+      name: "queryParameters",
+      type: "json",
+      default: "",
+      displayOptions: {
+        show: {
+          resource: ["ticket", "ticketField", "user", "organization"],
+          operation: ["getAll", "search", "count"],
+        },
+      },
+      placeholder: '{"limit": 100, "include": "users"}',
+      description: "Optional query parameters for listing, search, and count operations",
+    },
+  ],
+};

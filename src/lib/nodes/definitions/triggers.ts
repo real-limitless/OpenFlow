@@ -1688,3 +1688,68 @@ export const gitlabTrigger: INodeTypeDescription = {
     },
   ],
 };
+
+const BITBUCKET_DOCS =
+  "https://docs.n8n.io/integrations/builtin/trigger-nodes/n8n-nodes-base.bitbuckettrigger/";
+
+export const bitbucketTrigger: INodeTypeDescription = {
+  name: "n8n-nodes-base.bitbucketTrigger",
+  displayName: "Bitbucket Trigger",
+  category: "Triggers",
+  group: ["trigger"],
+  version: 1,
+  description: "Starts the workflow when a Bitbucket webhook event fires (push, fork, etc.).",
+  defaults: { name: "Bitbucket Trigger" },
+  inputs: [],
+  outputs: ["main"],
+  icon: "Github",
+  credentials: [{ name: "bitbucketApi", required: true }],
+  sources: [BITBUCKET_DOCS],
+  properties: [
+    {
+      displayName: "Subject Scope",
+      name: "subjectScope",
+      type: "options",
+      default: "repository",
+      required: true,
+      noDataExpression: true,
+      description: "The Bitbucket resource whose events are observed.",
+      options: [
+        { name: "Repository", value: "repository" },
+        { name: "Workspace", value: "workspace" },
+      ],
+    },
+    {
+      displayName: "Subject Identifier",
+      name: "subjectIdentifier",
+      type: "string",
+      default: "",
+      placeholder: "workspace/repo-slug",
+      required: true,
+      description: "Workspace/repository identifier used when registering the subscription.",
+    },
+    {
+      displayName: "Event Selection",
+      name: "eventSelection",
+      type: "multiOptions",
+      default: [],
+      required: true,
+      noDataExpression: true,
+      description: "The Bitbucket event types to subscribe to.",
+      options: [
+        { name: "Push", value: "repo:push" },
+        { name: "Fork", value: "repo:fork" },
+        { name: "Pull Request Created", value: "pullrequest:created" },
+        { name: "Pull Request Updated", value: "pullrequest:updated" },
+        { name: "Pull Request Approved", value: "pullrequest:approved" },
+        { name: "Pull Request Unapproved", value: "pullrequest:unapproved" },
+        { name: "Pull Request Merged", value: "pullrequest:fulfilled" },
+        { name: "Pull Request Declined", value: "pullrequest:rejected" },
+        { name: "Issue Created", value: "issue:created" },
+        { name: "Issue Updated", value: "issue:updated" },
+        { name: "Issue Comment Created", value: "issue:comment_created" },
+        { name: "Workspace Event", value: "workspace:event" },
+      ],
+    },
+  ],
+};

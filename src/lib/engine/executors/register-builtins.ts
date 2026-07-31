@@ -158,8 +158,13 @@ import { mondayComExecutor as exec_151 } from "./monday-com";
 import { todoistExecutor as exec_152 } from "./todoist";
 import { linearExecutor as exec_153 } from "./linear";
 import { gitlabExecutor as exec_154 } from "./gitlab";
-
 import { gitlabTriggerExecutor as exec_155 } from "./gitlab-trigger";
+import { bitbucketTriggerExecutor as exec_156 } from "./bitbucket-trigger";
+import { jenkinsExecutor as exec_157 } from "./jenkins";
+import { circleCiExecutor as exec_158 } from "./circle-ci";
+import { salesforceExecutor as exec_159 } from "./salesforce";
+import { pipedriveExecutor as exec_160 } from "./pipedrive";
+import { zendeskExecutor as exec_161 } from "./zendesk";
 
 /** Register every builtin executor via static imports (Nitro-safe). Idempotent. */
 export function seedBuiltinExecutors(): void {
@@ -319,6 +324,12 @@ export function seedBuiltinExecutors(): void {
   registerExecutor("n8n-nodes-base.linear", exec_153 as NodeExecutor);
   registerExecutor("n8n-nodes-base.gitlab", exec_154 as NodeExecutor);
   registerExecutor("n8n-nodes-base.gitlabTrigger", exec_155 as NodeExecutor);
+  registerExecutor("n8n-nodes-base.bitbucketTrigger", exec_156 as NodeExecutor);
+  registerExecutor("n8n-nodes-base.jenkins", exec_157 as NodeExecutor);
+  registerExecutor("n8n-nodes-base.circleCi", exec_158 as NodeExecutor);
+  registerExecutor("n8n-nodes-base.salesforce", exec_159 as NodeExecutor);
+  registerExecutor("n8n-nodes-base.pipedrive", exec_160 as NodeExecutor);
+  registerExecutor("n8n-nodes-base.zendesk", exec_161 as NodeExecutor);
   markExecutorsSeeded();
 }
 
