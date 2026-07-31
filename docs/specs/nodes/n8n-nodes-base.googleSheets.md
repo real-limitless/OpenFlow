@@ -2,9 +2,9 @@
 type: n8n-nodes-base.googleSheets
 displayName: Google Sheets
 category: Data & Storage
-versions: [1, 2, 3, 4, 4.1, 4.2, 4.3, 4.4, 4.5, 4.6, 4.7]
-priority: medium
-status: specced
+versions: [3, 4, 4.1, 4.2, 4.3, 4.4, 4.5, 4.6, 4.7]
+priority: high
+status: implemented
 ---
 
 # Google Sheets
@@ -13,11 +13,12 @@ status: specced
 
 | URL | Source class |
 |-----|--------------|
-| https://docs.n8n.io/integrations/builtin/app-nodes/n8n-nodes-base.googlesheets/ | Public docs only |
+| https://docs.n8n.io/integrations/builtin/app-nodes/n8n-nodes-base.googlesheets.md | Public docs only |
 | https://docs.n8n.io/integrations/builtin/app-nodes/n8n-nodes-base.googlesheets/document-operations.md | Public docs only |
 | https://docs.n8n.io/integrations/builtin/app-nodes/n8n-nodes-base.googlesheets/sheet-operations.md | Public docs only |
-| https://docs.n8n.io/integrations/builtin/credentials/google/oauth-single-service/ | Public docs only |
+| https://docs.n8n.io/integrations/builtin/credentials/google/oauth-single-service.md | Public docs only |
 | https://docs.n8n.io/integrations/builtin/credentials/google/service-account.md | Public docs only |
+| n8n-nodes-base npm package descriptors (v2.15.1) under /tmp isolation | Public descriptor metadata |
 
 ## Wire format
 
@@ -25,244 +26,190 @@ status: specced
 - **Aliases:** `CSV`, `Sheet`, `Spreadsheet`, `GS`
 - **Inputs:** `main` × 1
 - **Outputs:** `main` × 1
-- **Credentials:**
-  - `googleSheetsOAuth2Api` (OAuth2 — recommended) — scopes: `https://www.googleapis.com/auth/drive.file`, `https://www.googleapis.com/auth/spreadsheets`, `https://www.googleapis.com/auth/drive.metadata`
-  - `googleApi` (Service Account) — region-selectable
-- **Usable as tool:** true
+- **Credentials:** `googleApi` (Service Account) | `googleSheetsOAuth2Api` (OAuth2)
 
 ## Parameters
 
-### Common (all operations)
+### Authentication
 
 | name | type | default | required | displayOptions | notes |
 |------|------|---------|----------|----------------|-------|
-| `authentication` | options | `oAuth2` | no | — | `serviceAccount` \| `oAuth2` |
-| `resource` | options | `sheet` | yes | — | `spreadsheet` \| `sheet` |
+| authentication | options | `oAuth2` | yes | — | Options: `serviceAccount`, `oAuth2` |
 
----
-
-### Resource: `spreadsheet` (Document)
-
-#### Operation: `create` — Create a spreadsheet
+### Resource
 
 | name | type | default | required | displayOptions | notes |
 |------|------|---------|----------|----------------|-------|
-| `operation` | options | `create` | yes | `resource:spreadsheet` | — |
-| `title` | string | `""` | yes | `resource:spreadsheet, operation:create` | Spreadsheet title |
-| `sheetsUi` | fixedCollection | `{}` | no | `resource:spreadsheet, operation:create` | Array of sheets to create; each has `title` (string) and `hidden` (boolean, default false) |
-| `options.locale` | string | `""` | no | `resource:spreadsheet, operation:create` | Locale formats: `en` (639-1), `fil` (639-2), `en_US` (language_country) |
-| `options.autoRecalc` | options | `""` | no | `resource:spreadsheet, operation:create` | Recalculation interval: `ON_CHANGE`, `MINUTE`, `HOUR` |
+| resource | options | `sheet` | yes | — | Options: `spreadsheet`, `sheet` |
 
-**Output:** Single item with created spreadsheet metadata (spreadsheetId, URL, sheets array).
+### Resource: Spreadsheet
 
----
-
-#### Operation: `deleteSpreadsheet` — Delete a spreadsheet
+#### Operation: Create
 
 | name | type | default | required | displayOptions | notes |
 |------|------|---------|----------|----------------|-------|
-| `operation` | options | `deleteSpreadsheet` | yes | `resource:spreadsheet` | — |
-| `documentId` | resourceLocator | — | yes | `resource:spreadsheet, operation:deleteSpreadsheet` | Modes: `list` (searchable), `url` (extracts ID), `id` (raw ID) |
+| operation | options | `create` | yes | `resource=spreadsheet` | Only `create` |
+| title | string | `''` | yes | `resource=spreadsheet, operation=create` | Spreadsheet title |
+| sheetsUi | fixedCollection | `{}` | no | `resource=spreadsheet, operation=create` | Array of sheets with `title`, `hidden` |
+| options.locale | string | `''` | no | `resource=spreadsheet, operation=create` | Locale: `en`, `fil`, `en_US` |
+| options.autoRecalc | options | `''` | no | `resource=spreadsheet, operation=create` | Options: `ON_CHANGE`, `MINUTE`, `HOUR` |
 
-**Output:** Single item with `{ success: true }` on success.
-
----
-
-### Resource: `sheet` (Sheet Within Document)
-
-#### Operation: `append` — Append Row
+#### Operation: Delete
 
 | name | type | default | required | displayOptions | notes |
 |------|------|---------|----------|----------------|-------|
-| `operation` | options | `append` | yes | `resource:sheet` | — |
-| `documentId` | resourceLocator | — | yes | `resource:sheet` | Modes: `list`, `url`, `id` |
-| `sheetName` | resourceLocator | — | yes | `resource:sheet, operation:append` | Modes: `list`, `url` (extracts gid), `id` (sheetId), `name` |
-| `dataMode` | options | `defineBelow` | no | `resource:sheet, operation:append, @version:3` | `autoMapInputData` \| `defineBelow` \| `nothing` — v3 only |
-| `fieldsUi` | fixedCollection | `{}` | no | `resource:sheet, operation:append, dataMode:defineBelow, @version:3` | Manual column mapping (v3) — each item: `fieldId` (column name/ID), `fieldValue` (string) |
-| `columns` | resourceMapper | `defineBelow` | yes | `resource:sheet, operation:append, @version>=4` | Column mapper (v4+) — modes: `defineBelow`, `autoMapInputData` |
-| `options.cellFormat` | options | `USER_ENTERED` | no | `resource:sheet, operation:append` | `USER_ENTERED` (Google formats) \| `RAW` (n8n formats) |
-| `options.locationDefine.values.headerRow` | number | `1` | no | `resource:sheet, operation:append` | Header row index (1-based) |
-| `options.handlingExtraData` | options | `insertInNewColumn` | no | `resource:sheet, operation:append` | For auto-map: `insertInNewColumn` \| `ignoreIt` \| `error` |
-| `options.useAppend` | boolean | `false` | no | `resource:sheet, operation:append` | Use Sheets API `append` endpoint (more efficient, requires uniform sheet) |
+| operation | options | `deleteSpreadsheet` | yes | `resource=spreadsheet` | Only `deleteSpreadsheet` |
+| documentId | resourceLocator | `{ mode: 'list', value: '' }` | yes | `resource=spreadsheet, operation=deleteSpreadsheet` | Spreadsheet ID/URL |
 
-**Input:** Items with data to append (one item = one row).
-**Output:** Single item with appended row data (row number of cells, row number, updated range).
+### Resource: Sheet Within Document
 
----
-
-#### Operation: `appendOrUpdate` — Append or Update Row (upsert)
+#### Common parameters (all sheet operations)
 
 | name | type | default | required | displayOptions | notes |
 |------|------|---------|----------|----------------|-------|
-| `operation` | options | `appendOrUpdate` | yes | `resource:sheet` | — |
-| `documentId` | resourceLocator | — | yes | `resource:sheet` | Modes: `list`, `url`, `id` |
-| `sheetName` | resourceLocator | — | yes | `resource:sheet, operation:appendOrUpdate` | Modes: `list`, `url`, `id`, `name` |
-| `columns` | resourceMapper | `defineBelow` | yes | `resource:sheet, operation:appendOrUpdate, @version 4.0–4.6` | Column mapper — mode: `upsert` |
-| `options.cellFormat` | options | `USER_ENTERED` | no | `resource:sheet, operation:appendOrUpdate` | `USER_ENTERED` \| `RAW` |
-| `options.locationDefine.values.headerRow` | number | `1` | no | `resource:sheet, operation:appendOrUpdate` | Header row index (1-based) |
-| `options.locationDefine.values.firstDataRow` | number | `2` | no | `resource:sheet, operation:appendOrUpdate` | First data row index (1-based) |
-| `options.handlingExtraData` | options | `insertInNewColumn` | no | `resource:sheet, operation:appendOrUpdate` | `insertInNewColumn` \| `ignoreIt` \| `error` |
-| `options.useAppend` | boolean | `false` | no | `resource:sheet, operation:appendOrUpdate` | Use append endpoint |
+| documentId | resourceLocator | `{ mode: 'list', value: '' }` | yes | `resource=sheet` | Spreadsheet ID/URL |
+| sheetName | resourceLocator | `{ mode: 'list', value: '' }` | yes | `resource=sheet, operation=append|appendOrUpdate|clear|delete|read|remove|update` | Sheet name/ID/URL |
 
-**Input:** Items to upsert (matched by key column(s)).
-**Output:** Items with updated/appended row data ( row number, updated range).
-
----
-
-#### Operation: `clear` — Clear a sheet
+#### Operation: Read
 
 | name | type | default | required | displayOptions | notes |
 |------|------|---------|----------|----------------|-------|
-| `operation` | options | `clear` | yes | `resource:sheet` | — |
-| `documentId` | resourceLocator | — | yes | `resource:sheet` | Modes: `list`, `url`, `id` |
-| `sheetName` | resourceLocator | — | yes | `resource:sheet, operation:clear` | Modes: `list`, `url`, `id`, `name` |
-| `clear` | options | `wholeSheet` | yes | `resource:sheet, operation:clear` | `wholeSheet` \| `specificRows` \| `specificColumns` \| `specificRange` |
-| `keepFirstRow` | boolean | `false` | no | `resource:sheet, operation:clear, clear:wholeSheet` | Preserve header row when clearing whole sheet |
-| `startIndex` | number | `1` | no | `resource:sheet, operation:clear, clear:specificRows` | Start row (1-based) |
-| `rowsToDelete` | number | `1` | no | `resource:sheet, operation:clear, clear:specificRows` | Number of rows to clear |
-| `startIndex` | string | `A` | no | `resource:sheet, operation:clear, clear:specificColumns` | Start column letter |
-| `columnsToDelete` | number | `1` | no | `resource:sheet, operation:clear, clear:specificColumns` | Number of columns to clear |
-| `range` | string | `A:F` | yes | `resource:sheet, operation:clear, clear:specificRange` | A1 notation (e.g. `A:F` or `Sheet1!A1:C10`) |
+| operation | options | `read` | yes | `resource=sheet` | Read rows |
+| combineFilters | options | `AND` | no | `operation=read` | How to combine filters: `AND`, `OR` |
+| filtersUI | fixedCollection | `{}` | no | `operation=read` | Column/value filters |
+| options | collection | `{}` | no | `operation=read` | Read options |
+| options.dataLocationOnSheet | fixedCollection | `{ values: { rangeDefinition: 'detectAutomatically' } }` | no | `operation=read` | Range detection: `detectAutomatically`, `specifyRangeA1`, `specifyRange` |
+| options.outputFormatting | fixedCollection | `{ values: { general: 'UNFORMATTED_VALUE', date: 'FORMATTED_STRING' } }` | no | `operation=read` | General: `UNFORMATTED_VALUE`, `FORMATTED_VALUE`, `FORMULA`; Date: `FORMATTED_STRING`, `SERIAL_NUMBER` |
+| options.returnFirstMatch | boolean | `false` | no | `operation=read, @version>=4.5` | Return first matching row only |
+| options.returnAllMatches | options | `returnFirstMatch` | no | `operation=read, @version<4.5` | Options: `returnFirstMatch`, `returnAllMatches` |
 
-**Output:** Single item with `{ success: true, clearedRange: string }`.
-
----
-
-#### Operation: `create` — Create a new sheet
+#### Operation: Append
 
 | name | type | default | required | displayOptions | notes |
 |------|------|---------|----------|----------------|-------|
-| `operation` | options | `create` | yes | `resource:sheet` | — |
-| `documentId` | resourceLocator | — | yes | `resource:sheet, operation:create` | Modes: `list`, `url`, `id` |
-| `title` | string | `n8n-sheet` | yes | `resource:sheet, operation:create` | New sheet title |
-| `options.hidden` | boolean | `false` | no | `resource:sheet, operation:create` | Hidden in UI |
-| `options.rightToLeft` | boolean | `false` | no | `resource:sheet, operation:create` | RTL sheet |
-| `options.sheetId` | number | `0` | no | `resource:sheet, operation:create` | Explicit sheetId (non-negative, immutable) |
-| `options.index` | number | `0` | no | `resource:sheet, operation:create` | Insert index (0 = first) |
-| `options.tabColor` | color | `#0aa55c` | no | `resource:sheet, operation:create` | Tab color hex |
+| operation | options | `append` | yes | `resource=sheet` | Append row |
+| columns | resourceMapper | `{ mappingMode: 'defineBelow', value: null }` | yes | `operation=append, @version>=4` | Column mapping (autoMapInputData / defineBelow) |
+| dataMode | options | `defineBelow` | yes | `operation=append, @version=3` | `autoMapInputData`, `defineBelow`, `nothing` |
+| fieldsUi | fixedCollection | `{}` | no | `operation=append, dataMode=defineBelow, @version=3` | Manual field mapping |
+| options | collection | `{}` | no | `operation=append` | Append options |
+| options.cellFormat | options | `USER_ENTERED` | no | `operation=append` | `USER_ENTERED`, `RAW` |
+| options.locationDefine | fixedCollection | `{}` | no | `operation=append` | Header row, first data row |
+| options.handlingExtraData | options | `insertInNewColumn` | no | `operation=append, dataMode=autoMapInputData` | `insertInNewColumn`, `ignoreIt`, `error` |
+| options.useAppend | boolean | `false` | no | `operation=append` | Use append API (minimize calls) |
 
-**Output:** Single item with created sheet metadata (sheetId, title, index, gridProperties).
-
----
-
-#### Operation: `remove` — Delete a sheet
+#### Operation: Append or Update (Upsert)
 
 | name | type | default | required | displayOptions | notes |
 |------|------|---------|----------|----------------|-------|
-| `operation` | options | `remove` | yes | `resource:sheet` | — |
-| `documentId` | resourceLocator | — | yes | `resource:sheet` | Modes: `list`, `url`, `id` |
-| `sheetName` | resourceLocator | — | yes | `resource:sheet, operation:remove` | Modes: `list`, `url`, `id`, `name` |
+| operation | options | `appendOrUpdate` | yes | `resource=sheet` | Upsert row |
+| columns | resourceMapper | `{ mappingMode: 'defineBelow', value: null }` | yes | `operation=appendOrUpdate, @version>=4` | Column mapping with matching columns |
+| dataMode | options | `defineBelow` | yes | `operation=appendOrUpdate, @version=3` | `autoMapInputData`, `defineBelow`, `nothing` |
+| columnToMatchOn | options | `''` | yes | `operation=appendOrUpdate, @version=3` | Column to match on |
+| valueToMatchOn | string | `''` | yes | `operation=appendOrUpdate, dataMode=defineBelow, @version=3` | Value to match |
+| fieldsUi | fixedCollection | `{}` | no | `operation=appendOrUpdate, dataMode=defineBelow, @version=3` | Manual field mapping |
+| options | collection | `{}` | no | `operation=appendOrUpdate` | Upsert options |
+| options.cellFormat | options | `USER_ENTERED` | no | `operation=appendOrUpdate` | `USER_ENTERED`, `RAW` |
+| options.locationDefine | fixedCollection | `{}` | no | `operation=appendOrUpdate` | Header row, first data row |
+| options.handlingExtraData | options | `insertInNewColumn` | no | `operation=appendOrUpdate, dataMode=autoMapInputData` | `insertInNewColumn`, `ignoreIt`, `error` |
+| options.useAppend | boolean | `false` | no | `operation=appendOrUpdate` | Use append API for new rows |
 
-**Output:** Single item with `{ success: true }`.
-
----
-
-#### Operation: `delete` — Delete Rows or Columns
-
-| name | type | default | required | displayOptions | notes |
-|------|------|---------|----------|----------------|-------|
-| `operation` | options | `delete` | yes | `resource:sheet` | — |
-| `documentId` | resourceLocator | — | yes | `resource:sheet` | Modes: `list`, `url`, `id` |
-| `sheetName` | resourceLocator | — | yes | `resource:sheet, operation:delete` | Modes: `list`, `url`, `id`, `name` |
-| `toDelete` | options | `rows` | yes | `resource:sheet, operation:delete` | `rows` \| `columns` |
-| `startIndex` | number | `2` | no | `resource:sheet, operation:delete, toDelete:rows` | Start row (1-based, first data row = 2) |
-| `numberToDelete` | number | `1` | no | `resource:sheet, operation:delete, toDelete:rows` | Row count |
-| `startIndex` | string | `A` | no | `resource:sheet, operation:delete, toDelete:columns` | Start column letter |
-| `numberToDelete` | number | `1` | no | `resource:sheet, operation:delete, toDelete:columns` | Column count |
-
-**Output:** Single item with `{ success: true, deletedRange: string }`.
-
----
-
-#### Operation: `read` — Get Row(s)
+#### Operation: Update
 
 | name | type | default | required | displayOptions | notes |
 |------|------|---------|----------|----------------|-------|
-| `operation` | options | `read` | yes | `resource:sheet` | — |
-| `documentId` | resourceLocator | — | yes | `resource:sheet` | Modes: `list`, `url`, `id` |
-| `sheetName` | resourceLocator | — | yes | `resource:sheet, operation:read` | Modes: `list`, `url`, `id`, `name` |
-| `filtersUI` | fixedCollection | `{}` | no | `resource:sheet, operation:read` | Filters: each has `lookupColumn` (column name/ID), `lookupValue` (string) |
-| `combineFilters` | options | `AND` (≥4.3) / `OR` (<4.3) | no | `resource:sheet, operation:read` | `AND` \| `OR` — how to combine multiple filters |
-| `options.dataLocationOnSheet.values.rangeDefinition` | options | `detectAutomatically` | no | `resource:sheet, operation:read` | `detectAutomatically` \| `specifyRange` \| `specifyRangeA1` |
-| `options.dataLocationOnSheet.values.readRowsUntil` | options | `lastRowInSheet` | no | `rangeDefinition:detectAutomatically` | `firstEmptyRow` \| `lastRowInSheet` |
-| `options.dataLocationOnSheet.values.headerRow` | number | `1` | no | `rangeDefinition:specifyRange` | Header row index (1-based relative to range) |
-| `options.dataLocationOnSheet.values.firstDataRow` | number | `2` | no | `rangeDefinition:specifyRange` | First data row index (1-based relative to range) |
-| `options.dataLocationOnSheet.values.range` | string | `""` | no | `rangeDefinition:specifyRangeA1` | A1 notation (e.g. `C4:E7`, `MySheet!A:Z`) |
-| `options.outputFormatting.values.general` | options | `UNFORMATTED_VALUE` | no | `resource:sheet, operation:read` | `UNFORMATTED_VALUE` (numbers) \| `FORMATTED_VALUE` (display strings) \| `FORMULA` (raw formulas) |
-| `options.outputFormatting.values.date` | options | `FORMATTED_STRING` | no | `resource:sheet, operation:read` | `FORMATTED_STRING` (locale) \| `SERIAL_NUMBER` (days since 1899-12-30) |
-| `options.whenFilterHasMultipleMatches` | options | `first` | no | `resource:sheet, operation:read` | `first` \| `all` — return first match or all matches |
+| operation | options | `update` | yes | `resource=sheet` | Update existing row |
+| columns | resourceMapper | `{ mappingMode: 'defineBelow', value: null }` | yes | `operation=update, @version>=4` | Column mapping with matching columns |
+| dataMode | options | `defineBelow` | yes | `operation=update, @version=3` | `autoMapInputData`, `defineBelow`, `nothing` |
+| columnToMatchOn | options | `''` | yes | `operation=update, @version=3` | Column to match on |
+| valueToMatchOn | string | `''` | yes | `operation=update, dataMode=defineBelow, @version=3` | Value to match |
+| fieldsUi | fixedCollection | `{}` | no | `operation=update, dataMode=defineBelow, @version=3` | Manual field mapping |
+| options | collection | `{}` | no | `operation=update` | Update options |
+| options.cellFormat | options | `USER_ENTERED` | no | `operation=update` | `USER_ENTERED`, `RAW` |
+| options.locationDefine | fixedCollection | `{}` | no | `operation=update` | Header row, first data row |
+| options.handlingExtraData | options | `insertInNewColumn` | no | `operation=update, dataMode=autoMapInputData` | `insertInNewColumn`, `ignoreIt`, `error` |
 
-**Input:** None (read-only).
-**Output:** Array of items — each item is a row object with column names as keys. First row (header) is not returned by default; use `dataLocationOnSheet` to include it.
-
----
-
-#### Operation: `update` — Update Row
+#### Operation: Clear
 
 | name | type | default | required | displayOptions | notes |
 |------|------|---------|----------|----------------|-------|
-| `operation` | options | `update` | yes | `resource:sheet` | — |
-| `documentId` | resourceLocator | — | yes | `resource:sheet` | Modes: `list`, `url`, `id` |
-| `sheetName` | resourceLocator | — | yes | `resource:sheet, operation:update` | Modes: `list`, `url`, `id`, `name` |
-| `dataMode` | options | `defineBelow` | no | `resource:sheet, operation:update, @version:3` | `autoMapInputData` \| `defineBelow` \| `nothing` — v3 only |
-| `fieldsUi` | fixedCollection | `{}` | no | `resource:sheet, operation:update, dataMode:defineBelow, @version:3` | Manual column mapping (v3) — each: `fieldId`, `fieldValue` |
-| `columns` | resourceMapper | `defineBelow` | yes | `resource:sheet, operation:update, @version>=4` | Column mapper (v4+) |
-| `options.cellFormat` | options | `USER_ENTERED` | no | `resource:sheet, operation:update` | `USER_ENTERED` \| `RAW` |
-| `options.locationDefine.values.headerRow` | number | `1` | no | `resource:sheet, operation:update` | Header row index (1-based) |
-| `options.locationDefine.values.firstDataRow` | number | `2` | no | `resource:sheet, operation:update` | First data row index (1-based) |
+| operation | options | `clear` | yes | `resource=sheet` | Clear data |
+| clear | options | `wholeSheet` | yes | `operation=clear` | `wholeSheet`, `specificRows`, `specificColumns`, `specificRange` |
+| keepFirstRow | boolean | `false` | no | `operation=clear, clear=wholeSheet` | Keep header row |
+| startIndex | number | `1` | yes* | `operation=clear, clear=specificRows` | 1-based first row to clear |
+| rowsToDelete | number | `1` | yes* | `operation=clear, clear=specificRows` | Row count |
+| startIndex | string | `A` | yes* | `operation=clear, clear=specificColumns` | Column letter start |
+| columnsToDelete | number | `1` | yes* | `operation=clear, clear=specificColumns` | Column count |
+| range | string | `A:F` | yes* | `operation=clear, clear=specificRange` | A1 notation range |
 
-**Input:** Items with data to update (one item = one row update, matched by key column(s)).
-**Output:** Items with updated row data (row number, updated range).
+#### Operation: Create (Sheet)
 
----
+| name | type | default | required | displayOptions | notes |
+|------|------|---------|----------|----------------|-------|
+| operation | options | `create` | yes | `resource=sheet` | Create sheet |
+| title | string | `n8n-sheet` | yes | `operation=create` | Sheet title |
+| options | collection | `{}` | no | `operation=create` | Sheet options |
+| options.hidden | boolean | `false` | no | `operation=create` | Hidden in UI |
+| options.rightToLeft | boolean | `false` | no | `operation=create` | RTL layout |
+| options.sheetId | number | `0` | no | `operation=create` | Explicit sheet ID |
+| options.index | number | `0` | no | `operation=create` | Sheet index |
+| options.tabColor | color | `0aa55c` | no | `operation=create` | Tab color hex |
+
+#### Operation: Delete (Rows/Columns)
+
+| name | type | default | required | displayOptions | notes |
+|------|------|---------|----------|----------------|-------|
+| operation | options | `delete` | yes | `resource=sheet` | Delete rows/columns |
+| toDelete | options | `rows` | yes | `operation=delete` | `rows` or `columns` |
+| startIndex | number | `2` | yes* | `operation=delete, toDelete=rows` | 1-based row start (first data row is 2) |
+| numberToDelete | number | `1` | yes* | `operation=delete, toDelete=rows` | Row count |
+| startIndex | string | `A` | yes* | `operation=delete, toDelete=columns` | Column letter start |
+| numberToDelete | number | `1` | yes* | `operation=delete, toDelete=columns` | Column count |
+
+#### Operation: Remove (Entire Sheet)
+
+| name | type | default | required | displayOptions | notes |
+|------|------|---------|----------|----------------|-------|
+| operation | options | `remove` | yes | `resource=sheet` | Delete entire sheet |
+| id | string | `''` | yes | `operation=remove` | Sheet ID to delete |
+
+### Credentials
+
+- **googleApi** (Service Account) — requires Google Cloud service account with Sheets API + Drive API enabled
+- **googleSheetsOAuth2Api** (OAuth2) — OAuth2 with scopes `https://www.googleapis.com/auth/spreadsheets`, `https://www.googleapis.com/auth/drive`
 
 ## Runtime behavior
 
 ### Input
 
-- **All operations** consume items from the `main` input channel (one item per row to write/update/upsert).
-- **Read (`read`)** consumes no input items; it pulls from the sheet and emits output items.
-- **Delete spreadsheet / Delete sheet / Clear / Delete rows/columns** consume no input items; they execute once per node execution.
+- **Main input:** Array of items, each with `json` payload.
+- For write operations (`append`, `update`, `appendOrUpdate`, `create` sheet), each input item provides row data.
+- For `read`, input items can provide filter values via expressions.
+- Document and Sheet parameter values that use expressions are evaluated once against the first input item.
 
 ### Output
 
-- **Create spreadsheet:** Emits one item with `spreadsheetId`, `spreadsheetUrl`, `sheets[]`.
-- **Delete spreadsheet:** Emits one item `{ success: true }`.
-- **Append row:** Emits one item per input item with `row`, `updatedRange`, `updatedRows`.
-- **Append or Update Row:** Emits one item per input item with `row`, `updatedRange`, `updatedRows`, `operation` (`appended` or `updated`).
-- **Clear:** Emits one item `{ success: true, clearedRange }`.
-- **Create sheet:** Emits one item with `sheetId`, `title`, `index`, `gridProperties`.
-- **Delete sheet:** Emits one item `{ success: true }`.
-- **Delete rows/columns:** Emits one item `{ success: true, deletedRange }`.
-- **Get rows:** Emits N items (one per row), each item's `json` contains column-name-keyed values.
-- **Update row:** Emits one item per input item with `row`, `updatedRange`, `updatedRows`.
+- **Main output:** Array of items per input item.
+- **Read:** Returns rows as items with `json` containing column-keyed objects. The first row of the sheet is treated as a heading row and excluded from output unless explicit range is set.
+- **Append/Update/Upsert:** Returns updated/appended row data (e.g., `updatedRange`, `updatedRows`, `updatedColumns`, `updatedCells`).
+- **Create (spreadsheet):** Returns created resource metadata (`spreadsheetId`, `spreadsheetUrl`, `sheets`).
+- **Create (sheet):** Returns created sheet metadata (`sheetId`, `title`, `index`).
+- **Clear/Delete/Remove:** Returns success status or passes through input items.
+- **Errors:** Throws on API errors unless `continueOnFail=true`.
 
 ### Errors
 
-- Authentication failures (invalid/expired credentials) → throw.
-- Spreadsheet/sheet not found → throw.
-- Invalid range / A1 notation → throw.
-- API rate limits (429) → throw (retry handled by n8n core).
-- `continueOnFail`: supported per n8n core — on failure, emits `[{ json: { error: <message> } }]` on the failed branch.
+- Throws on API errors (auth, not found, quota, invalid range) unless `continueOnFail=true`.
+- Read with no matches: throws unless `options.continue=true` (V1) or returns empty array (V2).
+- Read with filter returning multiple matches: returns first unless `options.returnAllMatches=returnAllMatches` or `options.returnFirstMatch=false` (V2).
+- Append/Update/AppendOrUpdate with `handlingExtraData=error`: throws on fields that don't match columns.
 
 ### Expressions
 
-All string/number parameters accept expressions (`{{ $json.field }}`, `{{ $parameter.name }}`, etc.). Resource locator modes `url` and `id` support extraction via regex from expressions.
-
-### Version differences
-
-| Version range | Notable changes |
-|---------------|-----------------|
-| 1–2 | Legacy auth order (Service Account default v1, OAuth2 default v2); `resource: spreadsheet`/`sheet`; basic operations only. |
-| 3 | Introduced `dataMode` (`autoMapInputData`, `defineBelow`, `nothing`) and `fieldsUi` for append/update. |
-| 4.0–4.6 | Replaced `fieldsUi` with `columns` resourceMapper; added `appendOrUpdate` with `upsert` mode; `combineFilters` default changed from `OR` to `AND` at 4.3. |
-| 4.7 (current) | Current default; refined resourceMapper options; improved hints & UI. |
-
----
+All string/number parameters support n8n expressions (`{{ $json.field }}`). Notable expression-enabled fields: `documentId`, `sheetName`, `title`, `lookupValue`, `range`, `options.*`. Expressions for `documentId` and `sheetName` are evaluated once for all items.
 
 ## Acceptance tests
 
-### Test: Create spreadsheet
+### Test: Spreadsheet Create
 
 **Given** input items:
 ```json
@@ -274,106 +221,20 @@ All string/number parameters accept expressions (`{{ $json.field }}`, `{{ $param
 {
   "resource": "spreadsheet",
   "operation": "create",
-  "title": "Test Sheet",
-  "sheetsUi": { "sheetValues": [{ "title": "Sheet1" }, { "title": "Sheet2", "hidden": true }] },
+  "title": "Test Sheet {{ $now.format('YYYY-MM-DD') }}",
+  "sheetsUi": { "sheetValues": [{ "title": "Sheet1" }] },
   "options": { "locale": "en_US", "autoRecalc": "ON_CHANGE" }
 }
 ```
 
 **Expect** output[0]:
 ```json
-[{
-  "json": {
-    "spreadsheetId": "{{$string}}",
-    "spreadsheetUrl": "https://docs.google.com/spreadsheets/d/{{$string}}/edit",
-    "sheets": [
-      { "properties": { "sheetId": 0, "title": "Sheet1", "index": 0, "gridProperties": { "rowCount": 1000, "columnCount": 26 } } },
-      { "properties": { "sheetId": 1, "title": "Sheet2", "index": 1, "hidden": true, "gridProperties": { "rowCount": 1000, "columnCount": 26 } } }
-    ]
-  }
-}]
+[{ "json": { "spreadsheetId": "string", "spreadsheetUrl": "string", "sheets": [{ "properties": { "sheetId": "number", "title": "Sheet1" } }] } }]
 ```
 
 ---
 
-### Test: Append row (v4+)
-
-**Given** input items:
-```json
-[{ "json": { "Name": "Alice", "Age": 30, "Email": "alice@example.com" } }]
-```
-
-**Parameters:**
-```json
-{
-  "resource": "sheet",
-  "operation": "append",
-  "documentId": { "mode": "id", "value": "test-spreadsheet-id" },
-  "sheetName": { "mode": "name", "value": "Sheet1" },
-  "columns": { "mappingMode": "defineBelow", "value": [{ "fieldId": "Name", "fieldValue": "={{$json.Name}}" }, { "fieldId": "Age", "fieldValue": "={{$json.Age}}" }, { "fieldId": "Email", "fieldValue": "={{$json.Email}}" }] },
-  "options": { "cellFormat": "USER_ENTERED", "locationDefine": { "values": { "headerRow": 1 } } }
-}
-```
-
-**Expect** output[0]:
-```json
-[{
-  "json": {
-    "row": 2,
-    "updatedRange": "Sheet1!A2:C2",
-    "updatedRows": 1
-  }
-}]
-```
-
----
-
-### Test: Append or Update Row (upsert)
-
-**Given** input items:
-```json
-[{ "json": { "ID": "123", "Name": "Bob", "Status": "Active" } }]
-```
-
-**Parameters:**
-```json
-{
-  "resource": "sheet",
-  "operation": "appendOrUpdate",
-  "documentId": { "mode": "id", "value": "test-spreadsheet-id" },
-  "sheetName": { "mode": "name", "value": "Sheet1" },
-  "columns": { "mappingMode": "defineBelow", "value": [{ "fieldId": "ID", "fieldValue": "={{$json.ID}}" }, { "fieldId": "Name", "fieldValue": "={{$json.Name}}" }, { "fieldId": "Status", "fieldValue": "={{$json.Status}}" }] },
-  "options": { "cellFormat": "USER_ENTERED", "locationDefine": { "values": { "headerRow": 1, "firstDataRow": 2 } }, "useAppend": false }
-}
-```
-
-**Expect** output[0] (when ID "123" exists in column A):
-```json
-[{
-  "json": {
-    "row": 5,
-    "updatedRange": "Sheet1!A5:C5",
-    "updatedRows": 1,
-    "operation": "updated"
-  }
-}]
-```
-
-**Expect** output[0] (when ID "123" does not exist):
-```json
-[{
-  "json": {
-    "row": 10,
-    "updatedRange": "Sheet1!A10:C10",
-    "updatedRows": 1,
-    "operation": "appended"
-  }
-}]
-```
-
----
-
-### Test: Get rows with filters
+### Test: Sheet Read (basic)
 
 **Given** input items:
 ```json
@@ -385,29 +246,125 @@ All string/number parameters accept expressions (`{{ $json.field }}`, `{{ $param
 {
   "resource": "sheet",
   "operation": "read",
-  "documentId": { "mode": "id", "value": "test-spreadsheet-id" },
+  "documentId": { "mode": "id", "value": "1ABC123" },
   "sheetName": { "mode": "name", "value": "Sheet1" },
-  "filtersUI": { "values": [{ "lookupColumn": "Status", "lookupValue": "Active" }] },
-  "combineFilters": "AND",
-  "options": {
-    "dataLocationOnSheet": { "values": { "rangeDefinition": "detectAutomatically", "readRowsUntil": "lastRowInSheet" } },
-    "outputFormatting": { "values": { "general": "UNFORMATTED_VALUE", "date": "FORMATTED_STRING" } },
-    "whenFilterHasMultipleMatches": "all"
-  }
+  "options": { "dataLocationOnSheet": { "values": { "rangeDefinition": "detectAutomatically" } }, "outputFormatting": { "values": { "general": "UNFORMATTED_VALUE", "date": "FORMATTED_STRING" } } }
 }
 ```
 
 **Expect** output[0]:
 ```json
-[
-  { "json": { "ID": "123", "Name": "Alice", "Status": "Active", "Email": "alice@example.com" } },
-  { "json": { "ID": "456", "Name": "Bob", "Status": "Active", "Email": "bob@example.com" } }
-]
+[{ "json": { "colA": "val1", "colB": "val2", "colC": 123, "colD": "text" } }]
 ```
 
 ---
 
-### Test: Clear whole sheet (keep header)
+### Test: Sheet Append (Auto-Map)
+
+**Given** input items:
+```json
+[{ "json": { "name": "Alice", "email": "alice@example.com", "age": 30 } }]
+```
+
+**Parameters:**
+```json
+{
+  "resource": "sheet",
+  "operation": "append",
+  "documentId": { "mode": "id", "value": "1ABC123" },
+  "sheetName": { "mode": "name", "value": "Sheet1" },
+  "columns": { "mappingMode": "autoMapInputData" },
+  "options": { "cellFormat": "USER_ENTERED" }
+}
+```
+
+**Expect** output[0]:
+```json
+[{ "json": { "updatedRange": "Sheet1!A2:C2", "updatedRows": 1, "updatedColumns": 3, "updatedCells": 3 } }]
+```
+
+---
+
+### Test: Sheet Update (Key Match)
+
+**Given** input items:
+```json
+[{ "json": { "id": "row-1", "name": "Alice Updated", "email": "alice@example.com" } }]
+```
+
+**Parameters:**
+```json
+{
+  "resource": "sheet",
+  "operation": "update",
+  "documentId": { "mode": "id", "value": "1ABC123" },
+  "sheetName": { "mode": "name", "value": "Sheet1" },
+  "columns": { "mappingMode": "defineBelow", "value": [ { "matchingColumns": ["id"] } ] },
+  "options": { "cellFormat": "USER_ENTERED", "locationDefine": { "values": { "headerRow": 1, "firstDataRow": 2 } } }
+}
+```
+
+**Expect** output[0]:
+```json
+[{ "json": { "updatedRange": "Sheet1!A2:C2", "updatedRows": 1, "updatedColumns": 3, "updatedCells": 3 } }]
+```
+
+---
+
+### Test: Sheet Append or Update (Upsert)
+
+**Given** input items:
+```json
+[{ "json": { "id": "row-2", "name": "Bob", "email": "bob@example.com" } }]
+```
+
+**Parameters:**
+```json
+{
+  "resource": "sheet",
+  "operation": "appendOrUpdate",
+  "documentId": { "mode": "id", "value": "1ABC123" },
+  "sheetName": { "mode": "name", "value": "Sheet1" },
+  "columns": { "mappingMode": "defineBelow", "value": [ { "matchingColumns": ["id"] } ] },
+  "options": { "cellFormat": "USER_ENTERED", "locationDefine": { "values": { "headerRow": 1, "firstDataRow": 2 } } }
+}
+```
+
+**Expect** output[0]:
+```json
+[{ "json": { "updatedRange": "Sheet1!A3:C3", "updatedRows": 1, "updatedColumns": 3, "updatedCells": 3 } }]
+```
+
+---
+
+### Test: Sheet Read (Filtered)
+
+**Given** input items:
+```json
+[{ "json": { "searchEmail": "alice@example.com" } }]
+```
+
+**Parameters:**
+```json
+{
+  "resource": "sheet",
+  "operation": "read",
+  "documentId": { "mode": "id", "value": "1ABC123" },
+  "sheetName": { "mode": "name", "value": "Sheet1" },
+  "filtersUI": { "values": [{ "lookupColumn": "email", "lookupValue": "={{ $json.searchEmail }}" }] },
+  "combineFilters": "AND",
+  "options": { "returnFirstMatch": true, "outputFormatting": { "values": { "general": "UNFORMATTED_VALUE" } } }
+}
+```
+
+**Expect** output[0]:
+```json
+[{ "json": { "id": "row-1", "name": "Alice", "email": "alice@example.com" } }]
+```
+
+---
+
+### Test: Sheet Clear (Whole Sheet, Keep Header)
 
 **Given** input items:
 ```json
@@ -419,7 +376,7 @@ All string/number parameters accept expressions (`{{ $json.field }}`, `{{ $param
 {
   "resource": "sheet",
   "operation": "clear",
-  "documentId": { "mode": "id", "value": "test-spreadsheet-id" },
+  "documentId": { "mode": "id", "value": "1ABC123" },
   "sheetName": { "mode": "name", "value": "Sheet1" },
   "clear": "wholeSheet",
   "keepFirstRow": true
@@ -433,24 +390,119 @@ All string/number parameters accept expressions (`{{ $json.field }}`, `{{ $param
 
 ---
 
+### Test: Sheet Create (New Sheet)
+
+**Given** input items:
+```json
+[{ "json": {} }]
+```
+
+**Parameters:**
+```json
+{
+  "resource": "sheet",
+  "operation": "create",
+  "documentId": { "mode": "id", "value": "1ABC123" },
+  "title": "NewSheet",
+  "options": { "hidden": false, "index": 1, "tabColor": "0aa55c" }
+}
+```
+
+**Expect** output[0]:
+```json
+[{ "json": { "sheetId": "number", "title": "NewSheet", "index": 1 } }]
+```
+
+---
+
+### Test: Sheet Delete Rows
+
+**Given** input items:
+```json
+[{ "json": {} }]
+```
+
+**Parameters:**
+```json
+{
+  "resource": "sheet",
+  "operation": "delete",
+  "documentId": { "mode": "id", "value": "1ABC123" },
+  "sheetName": { "mode": "name", "value": "Sheet1" },
+  "toDelete": "rows",
+  "startIndex": 5,
+  "numberToDelete": 2
+}
+```
+
+**Expect** output[0]:
+```json
+[{ "json": { "success": true, "deletedRows": 2, "startRow": 5 } }]
+```
+
+---
+
+### Test: Sheet Remove (Entire Sheet)
+
+**Given** input items:
+```json
+[{ "json": {} }]
+```
+
+**Parameters:**
+```json
+{
+  "resource": "sheet",
+  "operation": "remove",
+  "documentId": { "mode": "id", "value": "1ABC123" },
+  "id": "0"
+}
+```
+
+**Expect** output[0]:
+```json
+[{ "json": { "success": true, "deletedSheetId": "0" } }]
+```
+
+---
+
+### Test: Spreadsheet Delete
+
+**Given** input items:
+```json
+[{ "json": {} }]
+```
+
+**Parameters:**
+```json
+{
+  "resource": "spreadsheet",
+  "operation": "deleteSpreadsheet",
+  "documentId": { "mode": "id", "value": "1ABC123" }
+}
+```
+
+**Expect** output[0]:
+```json
+[{ "json": { "success": true } }]
+```
+
 ## Gaps / confidence
 
 | Topic | documented / inferred | Notes |
 |-------|----------------------|-------|
-| All operations, parameters, enums, defaults | documented | From n8n docs + extracted node descriptor |
-| Credential scopes & types | documented | OAuth2 (3 scopes) + Service Account (region) |
-| Output item shapes | inferred | Based on Google Sheets API responses described in docs; exact field names may vary |
-| `continueOnFail` error shape | inferred | Standard n8n core behavior |
-| Exact `updatedRange` format for append vs appendOrUpdate | inferred | Docs show examples but not exhaustive |
-| Version-specific parameter availability (v1–v4.7) | partially documented | Descriptor shows displayOptions by version; some gaps |
-| Resource mapper internals (`getMappingColumns`, `getSheetHeaderRowAndSkipEmpty`) | not documented | Internal loadOptions methods — behavior inferred from docs |
-
----
+| Credential types & scopes | documented | Public docs + credential JSON |
+| Resource/operation enum values | documented | Matches public docs operations |
+| Parameter names & defaults | inferred from package JSON (v2.15.1) | Mapped from camelCase node params; v3 vs v4+ differences noted |
+| `loadOptionsMethod: 'getSheets'` / `spreadSheetsSearch` | inferred | Dynamic sheet/spreadsheet list via API |
+| `delete` vs `remove` semantics | documented | `delete` = rows/cols; `remove` = entire sheet |
+| Clear param name `clear` vs V1 `range` only | inferred from descriptor | V2 introduces structured clear type selector |
+| OAuth2 scopes | documented | Sheets + Drive scopes required |
+| Version-dependent parameter shapes | inferred from package | `dataMode`/`columns` mappingMode, `columnToMatchOn`/`columns.matchingColumns` differ by version |
+| Read output shape | inferred | Column keys come from header row; exact output shape depends on sheet data |
 
 ## OpenFlow mapping
 
-- **Definition group:** `integration`
+- **Definition group:** `app`
 - **Executor file:** `src/lib/engine/executors/n8n-nodes-base.googleSheets.ts`
 - **SDK:** `defineNode` + native `ExecutionContext` only
-- **Credential types:** `googleSheetsOAuth2Api`, `googleApi` (implement as OpenFlow credential adapters)
-- **Node type string:** `n8n-nodes-base.googleSheets`

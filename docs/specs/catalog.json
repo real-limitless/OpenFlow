@@ -88,538 +88,539 @@
       "executor": "implemented",
       "spec": "specced",
       "dogfood": true,
-      "factory": "pass"
+      "factory": "partial"
     },
     "n8n-nodes-base.manualTrigger": {
       "priority": "P0",
       "executor": "implemented",
       "spec": "specced",
       "dogfood": true,
-      "factory": "pass"
+      "factory": "partial"
     },
     "n8n-nodes-base.webhook": {
       "priority": "P0",
       "executor": "implemented",
       "spec": "specced",
       "dogfood": true,
-      "factory": "pass"
+      "factory": "partial"
     },
     "n8n-nodes-base.respondToWebhook": {
       "priority": "P0",
       "executor": "implemented",
       "spec": "specced",
       "dogfood": true,
-      "factory": "pass"
+      "factory": "partial"
     },
     "n8n-nodes-base.httpRequest": {
       "priority": "P0",
       "executor": "implemented",
       "spec": "specced",
       "dogfood": true,
-      "factory": "pass"
+      "factory": "partial"
     },
     "n8n-nodes-base.set": {
       "priority": "P0",
       "executor": "implemented",
       "spec": "specced",
       "dogfood": true,
-      "factory": "pass"
+      "factory": "partial"
     },
     "n8n-nodes-base.if": {
       "priority": "P0",
       "executor": "implemented",
       "spec": "specced",
       "dogfood": true,
-      "factory": "pass"
+      "factory": "partial"
     },
     "n8n-nodes-base.switch": {
       "priority": "P0",
       "executor": "implemented",
       "spec": "specced",
       "dogfood": true,
-      "factory": "pass"
+      "factory": "partial"
     },
     "n8n-nodes-base.merge": {
       "priority": "P0",
       "executor": "implemented",
       "spec": "specced",
       "dogfood": true,
-      "factory": "pass"
+      "factory": "partial"
     },
     "n8n-nodes-base.wait": {
       "priority": "P0",
       "executor": "implemented",
       "spec": "specced",
       "dogfood": true,
-      "factory": "pass"
+      "factory": "partial"
     },
     "n8n-nodes-base.noOp": {
       "priority": "P0",
       "executor": "implemented",
       "spec": "specced",
       "dogfood": true,
-      "factory": "pass"
+      "factory": "partial"
     },
     "n8n-nodes-base.code": {
       "priority": "P0",
       "executor": "implemented",
       "spec": "specced",
       "dogfood": true,
-      "factory": "pass"
+      "factory": "partial"
     },
     "n8n-nodes-base.scheduleTrigger": {
       "priority": "P0",
       "executor": "implemented",
       "spec": "specced",
       "dogfood": true,
-      "factory": "pass"
+      "factory": "partial"
     },
     "n8n-nodes-base.splitInBatches": {
       "priority": "P0",
       "executor": "implemented",
       "spec": "specced",
       "dogfood": true,
-      "factory": "pass"
+      "factory": "partial"
     },
     "n8n-nodes-base.filter": {
       "priority": "P0",
       "executor": "implemented",
       "spec": "specced",
       "dogfood": true,
-      "factory": "pass"
+      "factory": "partial"
     },
     "n8n-nodes-base.limit": {
       "priority": "P0",
       "executor": "implemented",
       "spec": "specced",
       "dogfood": true,
-      "factory": "pass"
+      "factory": "partial"
     },
     "n8n-nodes-base.stopAndError": {
       "priority": "P0",
       "executor": "implemented",
       "spec": "specced",
       "dogfood": true,
-      "factory": "pass"
+      "factory": "partial"
     },
     "n8n-nodes-base.executeWorkflowTrigger": {
       "priority": "P0",
       "executor": "implemented",
       "spec": "specced",
       "dogfood": true,
-      "factory": "pass"
+      "factory": "partial"
     },
     "n8n-nodes-base.stickyNote": {
       "priority": "P0",
       "executor": "implemented",
       "spec": "specced",
       "dogfood": false,
-      "factory": "pass"
+      "factory": "partial"
     },
     "n8n-nodes-base.splitOut": {
       "priority": "P0",
       "executor": "implemented",
       "spec": "specced",
       "dogfood": true,
-      "factory": "pass"
+      "factory": "partial"
     },
     "n8n-nodes-base.aggregate": {
       "priority": "P0",
       "executor": "implemented",
       "spec": "specced",
       "dogfood": true,
-      "factory": "pass"
+      "factory": "partial"
     },
     "n8n-nodes-base.removeDuplicates": {
       "priority": "P0",
       "executor": "implemented",
       "spec": "specced",
       "dogfood": true,
-      "factory": "pass"
+      "factory": "partial"
     },
     "n8n-nodes-base.itemLists": {
       "priority": "P1",
       "executor": "implemented",
       "spec": "specced",
-      "dogfood": true
+      "dogfood": true,
+      "factory": "partial"
     },
     "n8n-nodes-base.dateTime": {
       "priority": "P0",
       "executor": "implemented",
       "spec": "specced",
       "dogfood": true,
-      "factory": "pass"
+      "factory": "partial"
     },
     "n8n-nodes-base.sort": {
       "priority": "P1",
       "executor": "implemented",
       "spec": "specced",
       "dogfood": true,
-      "factory": "pass"
+      "factory": "partial"
     },
     "n8n-nodes-base.renameKeys": {
       "priority": "P1",
       "executor": "implemented",
       "spec": "specced",
       "dogfood": true,
-      "factory": "pass"
+      "factory": "partial"
     },
     "n8n-nodes-base.errorTrigger": {
       "priority": "P0",
       "executor": "implemented",
       "spec": "specced",
       "dogfood": true,
-      "factory": "pass"
+      "factory": "partial"
     },
     "n8n-nodes-base.summarize": {
       "priority": "P1",
       "executor": "implemented",
       "spec": "specced",
       "dogfood": false,
-      "factory": "pass"
+      "factory": "partial"
     },
     "n8n-nodes-base.compareDatasets": {
       "priority": "P1",
       "executor": "implemented",
       "spec": "specced",
       "dogfood": false,
-      "factory": "pass"
+      "factory": "partial"
     },
     "n8n-nodes-base.html": {
       "priority": "P1",
       "executor": "implemented",
       "spec": "specced",
       "dogfood": false,
-      "factory": "pass"
+      "factory": "partial"
     },
     "n8n-nodes-base.markdown": {
       "priority": "P1",
       "executor": "implemented",
       "spec": "specced",
       "dogfood": false,
-      "factory": "pass"
+      "factory": "partial"
     },
     "n8n-nodes-base.crypto": {
       "priority": "P1",
       "executor": "implemented",
       "spec": "specced",
       "dogfood": false,
-      "factory": "pass"
+      "factory": "partial"
     },
     "n8n-nodes-base.graphql": {
       "priority": "P1",
       "executor": "implemented",
       "spec": "specced",
       "dogfood": false,
-      "factory": "pass"
+      "factory": "partial"
     },
     "n8n-nodes-base.rssFeedRead": {
       "priority": "P1",
       "executor": "implemented",
       "spec": "specced",
       "dogfood": false,
-      "factory": "pass"
+      "factory": "partial"
     },
     "n8n-nodes-base.compression": {
       "priority": "P1",
       "executor": "implemented",
       "spec": "specced",
       "dogfood": false,
-      "factory": "pass"
+      "factory": "partial"
     },
     "n8n-nodes-base.xml": {
       "priority": "P1",
       "executor": "implemented",
       "spec": "specced",
       "dogfood": false,
-      "factory": "pass"
+      "factory": "partial"
     },
     "n8n-nodes-base.jwt": {
       "priority": "P1",
       "executor": "implemented",
       "spec": "specced",
       "dogfood": false,
-      "factory": "pass"
+      "factory": "partial"
     },
     "n8n-nodes-base.ftp": {
       "priority": "P1",
       "executor": "implemented",
       "spec": "specced",
       "dogfood": false,
-      "factory": "pass"
+      "factory": "partial"
     },
     "n8n-nodes-base.extractFromFile": {
       "priority": "P1",
       "executor": "implemented",
       "spec": "specced",
       "dogfood": false,
-      "factory": "pass"
+      "factory": "partial"
     },
     "n8n-nodes-base.convertToFile": {
       "priority": "P1",
       "executor": "implemented",
       "spec": "specced",
       "dogfood": false,
-      "factory": "pass"
+      "factory": "partial"
     },
     "n8n-nodes-base.dataTable": {
       "priority": "P1",
       "executor": "implemented",
       "spec": "specced",
       "dogfood": false,
-      "factory": "pass"
+      "factory": "partial"
     },
     "n8n-nodes-base.emailSend": {
       "priority": "P1",
       "executor": "implemented",
       "spec": "specced",
       "dogfood": false,
-      "factory": "pass"
+      "factory": "partial"
     },
     "@n8n/n8n-nodes-langchain.lmChatOpenAi": {
       "priority": "P1",
       "executor": "implemented",
       "spec": "specced",
       "dogfood": false,
-      "factory": "pass"
+      "factory": "partial"
     },
     "@n8n/n8n-nodes-langchain.agent": {
       "priority": "P1",
       "executor": "implemented",
       "spec": "specced",
       "dogfood": false,
-      "factory": "pass"
+      "factory": "partial"
     },
     "@n8n/n8n-nodes-langchain.mcpClientTool": {
       "priority": "P1",
       "executor": "implemented",
       "spec": "specced",
       "dogfood": false,
-      "factory": "pass"
+      "factory": "partial"
     },
     "n8n-nodes-base.executionData": {
       "priority": "P1",
       "executor": "implemented",
       "spec": "specced",
       "dogfood": false,
-      "factory": "pass"
+      "factory": "partial"
     },
     "n8n-nodes-base.formTrigger": {
       "priority": "P1",
       "executor": "implemented",
       "spec": "specced",
       "dogfood": false,
-      "factory": "pass"
+      "factory": "partial"
     },
     "@n8n/n8n-nodes-langchain.chatTrigger": {
       "priority": "P1",
       "executor": "implemented",
       "spec": "specced",
       "dogfood": false,
-      "factory": "pass"
+      "factory": "partial"
     },
     "n8n-nodes-base.sseTrigger": {
       "priority": "P1",
       "executor": "implemented",
       "spec": "specced",
       "dogfood": false,
-      "factory": "pass"
+      "factory": "partial"
     },
     "n8n-nodes-base.localFileTrigger": {
       "priority": "P1",
       "executor": "implemented",
       "spec": "specced",
       "dogfood": false,
-      "factory": "pass"
+      "factory": "partial"
     },
     "n8n-nodes-base.workflowTrigger": {
       "priority": "P1",
       "executor": "implemented",
       "spec": "specced",
       "dogfood": false,
-      "factory": "pass"
+      "factory": "partial"
     },
     "n8n-nodes-base.readWriteFile": {
       "priority": "P1",
       "executor": "implemented",
       "spec": "specced",
       "dogfood": false,
-      "factory": "pass"
+      "factory": "partial"
     },
     "n8n-nodes-base.ssh": {
       "priority": "P1",
       "executor": "implemented",
       "spec": "specced",
       "dogfood": false,
-      "factory": "pass"
+      "factory": "partial"
     },
     "n8n-nodes-base.editImage": {
       "priority": "P1",
       "executor": "implemented",
       "spec": "specced",
       "dogfood": false,
-      "factory": "pass"
+      "factory": "partial"
     },
     "n8n-nodes-base.git": {
       "priority": "P1",
       "executor": "implemented",
       "spec": "specced",
       "dogfood": false,
-      "factory": "pass"
+      "factory": "partial"
     },
     "@n8n/n8n-nodes-langchain.openAi": {
       "priority": "P1",
       "executor": "implemented",
       "spec": "specced",
       "dogfood": false,
-      "factory": "pass"
+      "factory": "partial"
     },
     "@n8n/n8n-nodes-langchain.lmChatGoogleGemini": {
       "priority": "P1",
       "executor": "implemented",
       "spec": "specced",
       "dogfood": false,
-      "factory": "pass"
+      "factory": "partial"
     },
     "@n8n/n8n-nodes-langchain.lmChatAnthropic": {
       "priority": "P1",
       "executor": "implemented",
       "spec": "specced",
       "dogfood": false,
-      "factory": "pass"
+      "factory": "partial"
     },
     "@n8n/n8n-nodes-langchain.lmChatOpenRouter": {
       "priority": "P1",
       "executor": "implemented",
       "spec": "specced",
       "dogfood": false,
-      "factory": "pass"
+      "factory": "partial"
     },
     "@n8n/n8n-nodes-langchain.lmChatOllama": {
       "priority": "P1",
       "executor": "implemented",
       "spec": "specced",
       "dogfood": false,
-      "factory": "pass"
+      "factory": "partial"
     },
     "@n8n/n8n-nodes-langchain.memoryBufferWindow": {
       "priority": "P1",
       "executor": "implemented",
       "spec": "specced",
       "dogfood": false,
-      "factory": "pass"
+      "factory": "partial"
     },
     "@n8n/n8n-nodes-langchain.outputParserStructured": {
       "priority": "P1",
       "executor": "implemented",
       "spec": "specced",
       "dogfood": false,
-      "factory": "pass"
+      "factory": "partial"
     },
     "@n8n/n8n-nodes-langchain.chainLlm": {
       "priority": "P1",
       "executor": "implemented",
       "spec": "specced",
       "dogfood": false,
-      "factory": "pass"
+      "factory": "partial"
     },
     "@n8n/n8n-nodes-langchain.chainSummarization": {
       "priority": "P1",
       "executor": "implemented",
       "spec": "specced",
       "dogfood": false,
-      "factory": "pass"
+      "factory": "partial"
     },
     "@n8n/n8n-nodes-langchain.chainRetrievalQa": {
       "priority": "P1",
       "executor": "implemented",
       "spec": "specced",
       "dogfood": false,
-      "factory": "pass"
+      "factory": "partial"
     },
     "@n8n/n8n-nodes-langchain.documentDefaultDataLoader": {
       "priority": "P1",
       "executor": "implemented",
       "spec": "specced",
       "dogfood": false,
-      "factory": "pass"
+      "factory": "partial"
     },
     "@n8n/n8n-nodes-langchain.textSplitterRecursiveCharacterTextSplitter": {
       "priority": "P1",
       "executor": "implemented",
       "spec": "specced",
       "dogfood": false,
-      "factory": "pass"
+      "factory": "partial"
     },
     "@n8n/n8n-nodes-langchain.embeddingsOpenAi": {
       "priority": "P1",
       "executor": "implemented",
       "spec": "specced",
       "dogfood": false,
-      "factory": "pass"
+      "factory": "partial"
     },
     "@n8n/n8n-nodes-langchain.vectorStoreInMemory": {
       "priority": "P1",
       "executor": "implemented",
       "spec": "specced",
       "dogfood": false,
-      "factory": "pass"
+      "factory": "partial"
     },
     "@n8n/n8n-nodes-langchain.mcpTrigger": {
       "priority": "P1",
       "executor": "implemented",
       "spec": "specced",
       "dogfood": false,
-      "factory": "pass"
+      "factory": "partial"
     },
     "n8n-nodes-base.aiTransform": {
       "priority": "P1",
       "executor": "implemented",
       "spec": "specced",
       "dogfood": false,
-      "factory": "pass"
+      "factory": "partial"
     },
     "n8n-nodes-base.telegram": {
       "priority": "P1",
       "executor": "implemented",
       "spec": "specced",
       "dogfood": false,
-      "factory": "pass"
+      "factory": "partial"
     },
     "n8n-nodes-base.gmail": {
       "priority": "P1",
       "executor": "implemented",
       "spec": "specced",
       "dogfood": false,
-      "factory": "pass"
+      "factory": "partial"
     },
     "n8n-nodes-base.slack": {
       "priority": "P1",
       "executor": "implemented",
       "spec": "specced",
       "dogfood": false,
-      "factory": "pass"
+      "factory": "partial"
     },
     "n8n-nodes-base.whatsApp": {
       "priority": "P1",
       "executor": "implemented",
       "spec": "specced",
       "dogfood": false,
-      "factory": "pass"
+      "factory": "partial"
     },
     "n8n-nodes-base.discord": {
       "priority": "P1",
       "executor": "implemented",
       "spec": "specced",
       "dogfood": false,
-      "factory": "pass"
+      "factory": "partial"
     },
     "n8n-nodes-base.twilio": {
       "priority": "P1",
       "executor": "implemented",
       "spec": "specced",
       "dogfood": false,
-      "factory": "pass"
+      "factory": "partial"
     },
     "n8n-nodes-base.googleSheets": {
       "priority": "P1",
@@ -630,777 +631,807 @@
     },
     "n8n-nodes-base.googleDocs": {
       "priority": "P1",
-      "executor": "missing",
-      "spec": "missing",
-      "dogfood": false
+      "executor": "implemented",
+      "spec": "specced",
+      "dogfood": false,
+      "factory": "partial"
     },
     "n8n-nodes-base.googleCalendar": {
-      "priority": "P1",
-      "executor": "missing",
-      "spec": "missing",
-      "dogfood": false
-    },
-    "n8n-nodes-base.youTube": {
-      "priority": "P1",
-      "executor": "missing",
-      "spec": "missing",
-      "dogfood": false
-    },
-    "n8n-nodes-base.airtable": {
-      "priority": "P1",
-      "executor": "missing",
-      "spec": "missing",
-      "dogfood": false
-    },
-    "n8n-nodes-base.notion": {
-      "priority": "P1",
-      "executor": "missing",
-      "spec": "missing",
-      "dogfood": false
-    },
-    "n8n-nodes-base.postgres": {
-      "priority": "P1",
-      "executor": "missing",
-      "spec": "missing",
-      "dogfood": false
-    },
-    "n8n-nodes-base.mySql": {
-      "priority": "P1",
-      "executor": "missing",
-      "spec": "missing",
-      "dogfood": false
-    },
-    "n8n-nodes-base.redis": {
-      "priority": "P1",
-      "executor": "missing",
-      "spec": "missing",
-      "dogfood": false
-    },
-    "n8n-nodes-base.mongoDb": {
-      "priority": "P1",
-      "executor": "missing",
-      "spec": "missing",
-      "dogfood": false
-    },
-    "n8n-nodes-base.supabase": {
-      "priority": "P1",
-      "executor": "missing",
-      "spec": "missing",
-      "dogfood": false
-    },
-    "n8n-nodes-base.s3": {
-      "priority": "P1",
-      "executor": "missing",
-      "spec": "missing",
-      "dogfood": false
-    },
-    "n8n-nodes-base.jira": {
-      "priority": "P1",
-      "executor": "missing",
-      "spec": "missing",
-      "dogfood": false
-    },
-    "n8n-nodes-base.hubspot": {
-      "priority": "P1",
-      "executor": "missing",
-      "spec": "missing",
-      "dogfood": false
-    },
-    "n8n-nodes-base.facebookGraphApi": {
-      "priority": "P1",
-      "executor": "missing",
-      "spec": "missing",
-      "dogfood": false
-    },
-    "n8n-nodes-base.wordpress": {
-      "priority": "P1",
-      "executor": "missing",
-      "spec": "missing",
-      "dogfood": false
-    },
-    "n8n-nodes-base.moveBinaryData": {
-      "priority": "P1",
-      "executor": "missing",
-      "spec": "missing",
-      "dogfood": false
-    },
-    "n8n-nodes-base.readBinaryFile": {
-      "priority": "P1",
-      "executor": "missing",
-      "spec": "missing",
-      "dogfood": false
-    },
-    "n8n-nodes-base.readBinaryFiles": {
-      "priority": "P1",
-      "executor": "missing",
-      "spec": "missing",
-      "dogfood": false
-    },
-    "n8n-nodes-base.writeBinaryFile": {
-      "priority": "P1",
-      "executor": "missing",
-      "spec": "missing",
-      "dogfood": false
-    },
-    "n8n-nodes-base.spreadsheetFile": {
-      "priority": "P1",
-      "executor": "missing",
-      "spec": "missing",
-      "dogfood": false
-    },
-    "n8n-nodes-base.readPDF": {
-      "priority": "P1",
-      "executor": "missing",
-      "spec": "missing",
-      "dogfood": false
-    },
-    "n8n-nodes-base.debugHelper": {
-      "priority": "P1",
-      "executor": "missing",
-      "spec": "missing",
-      "dogfood": false
-    },
-    "n8n-nodes-base.executeCommand": {
       "priority": "P1",
       "executor": "implemented",
       "spec": "specced",
       "dogfood": false,
       "factory": "partial"
     },
+    "n8n-nodes-base.youTube": {
+      "priority": "P1",
+      "executor": "implemented",
+      "spec": "specced",
+      "dogfood": false,
+      "factory": "partial"
+    },
+    "n8n-nodes-base.airtable": {
+      "priority": "P1",
+      "executor": "implemented",
+      "spec": "specced",
+      "dogfood": false,
+      "factory": "partial"
+    },
+    "n8n-nodes-base.notion": {
+      "priority": "P1",
+      "executor": "implemented",
+      "spec": "specced",
+      "dogfood": false,
+      "factory": "partial"
+    },
+    "n8n-nodes-base.postgres": {
+      "priority": "P1",
+      "executor": "implemented",
+      "spec": "specced",
+      "dogfood": false,
+      "factory": "partial"
+    },
+    "n8n-nodes-base.mySql": {
+      "priority": "P1",
+      "executor": "implemented",
+      "spec": "specced",
+      "dogfood": false,
+      "factory": "partial"
+    },
+    "n8n-nodes-base.redis": {
+      "priority": "P1",
+      "executor": "implemented",
+      "spec": "specced",
+      "dogfood": false,
+      "factory": "partial"
+    },
+    "n8n-nodes-base.mongoDb": {
+      "priority": "P1",
+      "executor": "implemented",
+      "spec": "specced",
+      "dogfood": false,
+      "factory": "partial"
+    },
+    "n8n-nodes-base.supabase": {
+      "priority": "P1",
+      "executor": "implemented",
+      "spec": "specced",
+      "dogfood": false,
+      "factory": "partial"
+    },
+    "n8n-nodes-base.s3": {
+      "priority": "P1",
+      "executor": "implemented",
+      "spec": "specced",
+      "dogfood": false,
+      "factory": "partial"
+    },
+    "n8n-nodes-base.jira": {
+      "priority": "P1",
+      "executor": "implemented",
+      "spec": "specced",
+      "dogfood": false,
+      "factory": "partial"
+    },
+    "n8n-nodes-base.hubspot": {
+      "priority": "P1",
+      "executor": "implemented",
+      "spec": "specced",
+      "dogfood": false,
+      "factory": "partial"
+    },
+    "n8n-nodes-base.facebookGraphApi": {
+      "priority": "P1",
+      "executor": "implemented",
+      "spec": "specced",
+      "dogfood": false,
+      "factory": "partial"
+    },
+    "n8n-nodes-base.wordpress": {
+      "priority": "P1",
+      "executor": "implemented",
+      "spec": "specced",
+      "dogfood": false,
+      "factory": "partial"
+    },
+    "n8n-nodes-base.moveBinaryData": {
+      "priority": "P1",
+      "executor": "implemented",
+      "spec": "specced",
+      "dogfood": false,
+      "factory": "partial"
+    },
+    "n8n-nodes-base.readBinaryFile": {
+      "priority": "P1",
+      "executor": "implemented",
+      "spec": "specced",
+      "dogfood": false,
+      "factory": "partial"
+    },
+    "n8n-nodes-base.readBinaryFiles": {
+      "priority": "P1",
+      "executor": "implemented",
+      "spec": "specced",
+      "dogfood": false,
+      "factory": "partial"
+    },
+    "n8n-nodes-base.writeBinaryFile": {
+      "priority": "P1",
+      "executor": "implemented",
+      "spec": "specced",
+      "dogfood": false,
+      "factory": "partial"
+    },
+    "n8n-nodes-base.spreadsheetFile": {
+      "priority": "P1",
+      "executor": "implemented",
+      "spec": "specced",
+      "dogfood": false,
+      "factory": "partial"
+    },
+    "n8n-nodes-base.readPDF": {
+      "priority": "P1",
+      "executor": "implemented",
+      "spec": "specced",
+      "dogfood": false,
+      "factory": "partial"
+    },
+    "n8n-nodes-base.debugHelper": {
+      "priority": "P1",
+      "executor": "implemented",
+      "spec": "specced",
+      "dogfood": false,
+      "factory": "partial"
+    },
+    "n8n-nodes-base.executeCommand": {
+      "priority": "P1",
+      "executor": "implemented",
+      "spec": "specced",
+      "dogfood": false,
+      "factory": "pass"
+    },
     "n8n-nodes-base.n8n": {
       "priority": "P1",
-      "executor": "missing",
-      "spec": "missing",
-      "dogfood": false
+      "executor": "implemented",
+      "spec": "specced",
+      "dogfood": false,
+      "factory": "partial"
     },
     "n8n-nodes-base.evaluation": {
       "priority": "P1",
-      "executor": "missing",
-      "spec": "missing",
-      "dogfood": false
+      "executor": "implemented",
+      "spec": "specced",
+      "dogfood": false,
+      "factory": "partial"
     },
     "n8n-nodes-base.evaluationTrigger": {
       "priority": "P1",
-      "executor": "missing",
-      "spec": "missing",
-      "dogfood": false
+      "executor": "implemented",
+      "spec": "specced",
+      "dogfood": false,
+      "factory": "pass"
     },
     "n8n-nodes-base.activationTrigger": {
       "priority": "P1",
-      "executor": "missing",
-      "spec": "missing",
-      "dogfood": false
+      "executor": "implemented",
+      "spec": "specced",
+      "dogfood": false,
+      "factory": "pass"
     },
     "n8n-nodes-base.n8nTrigger": {
       "priority": "P1",
-      "executor": "missing",
-      "spec": "missing",
-      "dogfood": false
+      "executor": "implemented",
+      "spec": "specced",
+      "dogfood": false,
+      "factory": "pass"
     },
     "n8n-nodes-base.form": {
       "priority": "P1",
-      "executor": "missing",
-      "spec": "missing",
-      "dogfood": false
+      "executor": "implemented",
+      "spec": "specced",
+      "dogfood": false,
+      "factory": "pass"
     },
     "n8n-nodes-base.totp": {
       "priority": "P1",
-      "executor": "missing",
-      "spec": "missing",
-      "dogfood": false
+      "executor": "implemented",
+      "spec": "specced",
+      "dogfood": false,
+      "factory": "pass"
     },
     "n8n-nodes-base.ldap": {
       "priority": "P1",
-      "executor": "missing",
-      "spec": "missing",
+      "executor": "implemented",
+      "spec": "specced",
       "dogfood": false
     },
     "n8n-nodes-base.iCalendar": {
       "priority": "P1",
-      "executor": "missing",
-      "spec": "missing",
+      "executor": "implemented",
+      "spec": "specced",
       "dogfood": false
     },
     "n8n-nodes-base.quickChart": {
       "priority": "P1",
-      "executor": "missing",
-      "spec": "missing",
+      "executor": "implemented",
+      "spec": "specced",
       "dogfood": false
     },
     "n8n-nodes-base.hackerNews": {
       "priority": "P1",
-      "executor": "missing",
-      "spec": "missing",
+      "executor": "implemented",
+      "spec": "specced",
       "dogfood": false
     },
     "n8n-nodes-base.mattermost": {
       "priority": "P1",
-      "executor": "missing",
-      "spec": "missing",
+      "executor": "implemented",
+      "spec": "specced",
       "dogfood": false
     },
     "n8n-nodes-base.matrix": {
       "priority": "P1",
-      "executor": "missing",
-      "spec": "missing",
+      "executor": "implemented",
+      "spec": "specced",
       "dogfood": false
     },
     "n8n-nodes-base.rocketchat": {
       "priority": "P1",
-      "executor": "missing",
-      "spec": "missing",
+      "executor": "implemented",
+      "spec": "specced",
       "dogfood": false
     },
     "n8n-nodes-base.gotify": {
       "priority": "P1",
-      "executor": "missing",
-      "spec": "missing",
+      "executor": "implemented",
+      "spec": "specced",
       "dogfood": false
     },
     "n8n-nodes-base.pushover": {
       "priority": "P1",
-      "executor": "missing",
-      "spec": "missing",
+      "executor": "implemented",
+      "spec": "specced",
       "dogfood": false
     },
     "n8n-nodes-base.pushbullet": {
       "priority": "P1",
-      "executor": "missing",
-      "spec": "missing",
+      "executor": "implemented",
+      "spec": "specced",
       "dogfood": false
     },
     "n8n-nodes-base.messageBird": {
       "priority": "P1",
-      "executor": "missing",
-      "spec": "missing",
+      "executor": "implemented",
+      "spec": "specced",
       "dogfood": false
     },
     "n8n-nodes-base.sms77": {
       "priority": "P1",
-      "executor": "missing",
-      "spec": "missing",
+      "executor": "implemented",
+      "spec": "specced",
       "dogfood": false
     },
     "n8n-nodes-base.sendGrid": {
       "priority": "P1",
-      "executor": "missing",
-      "spec": "missing",
+      "executor": "implemented",
+      "spec": "specced",
       "dogfood": false
     },
     "n8n-nodes-base.sendInBlue": {
       "priority": "P1",
-      "executor": "missing",
-      "spec": "missing",
+      "executor": "implemented",
+      "spec": "specced",
       "dogfood": false
     },
     "n8n-nodes-base.mailgun": {
       "priority": "P1",
-      "executor": "missing",
-      "spec": "missing",
+      "executor": "implemented",
+      "spec": "specced",
       "dogfood": false
     },
     "n8n-nodes-base.mailchimp": {
       "priority": "P1",
-      "executor": "missing",
-      "spec": "missing",
+      "executor": "implemented",
+      "spec": "specced",
       "dogfood": false
     },
     "n8n-nodes-base.mailjet": {
       "priority": "P1",
-      "executor": "missing",
-      "spec": "missing",
+      "executor": "implemented",
+      "spec": "specced",
       "dogfood": false
     },
     "n8n-nodes-base.postmarkTrigger": {
       "priority": "P1",
-      "executor": "missing",
-      "spec": "missing",
+      "executor": "implemented",
+      "spec": "specced",
       "dogfood": false
     },
     "n8n-nodes-base.emailReadImap": {
       "priority": "P1",
-      "executor": "missing",
-      "spec": "missing",
+      "executor": "implemented",
+      "spec": "specced",
       "dogfood": false
     },
     "n8n-nodes-base.microsoftExcel": {
       "priority": "P1",
-      "executor": "missing",
-      "spec": "missing",
+      "executor": "implemented",
+      "spec": "specced",
       "dogfood": false
     },
     "n8n-nodes-base.microsoftOneDrive": {
       "priority": "P1",
-      "executor": "missing",
-      "spec": "missing",
+      "executor": "implemented",
+      "spec": "specced",
       "dogfood": false
     },
     "n8n-nodes-base.microsoftSharePoint": {
       "priority": "P1",
-      "executor": "missing",
-      "spec": "missing",
+      "executor": "implemented",
+      "spec": "specced",
       "dogfood": false
     },
     "n8n-nodes-base.microsoftSql": {
       "priority": "P1",
-      "executor": "missing",
-      "spec": "missing",
+      "executor": "implemented",
+      "spec": "specced",
       "dogfood": false
     },
     "n8n-nodes-base.microsoftEntra": {
       "priority": "P1",
-      "executor": "missing",
-      "spec": "missing",
+      "executor": "implemented",
+      "spec": "specced",
       "dogfood": false
     },
     "n8n-nodes-base.microsoftToDo": {
       "priority": "P1",
-      "executor": "missing",
-      "spec": "missing",
+      "executor": "implemented",
+      "spec": "specced",
       "dogfood": false
     },
     "n8n-nodes-base.googleAnalytics": {
       "priority": "P1",
-      "executor": "missing",
-      "spec": "missing",
+      "executor": "implemented",
+      "spec": "specced",
       "dogfood": false
     },
     "n8n-nodes-base.googleSlides": {
       "priority": "P1",
-      "executor": "missing",
-      "spec": "missing",
+      "executor": "implemented",
+      "spec": "specced",
       "dogfood": false
     },
     "n8n-nodes-base.googleTasks": {
       "priority": "P1",
-      "executor": "missing",
-      "spec": "missing",
+      "executor": "implemented",
+      "spec": "specced",
       "dogfood": false
     },
     "n8n-nodes-base.googleContacts": {
       "priority": "P1",
-      "executor": "missing",
-      "spec": "missing",
+      "executor": "implemented",
+      "spec": "specced",
       "dogfood": false
     },
     "n8n-nodes-base.googleTranslate": {
       "priority": "P1",
-      "executor": "missing",
-      "spec": "missing",
+      "executor": "implemented",
+      "spec": "specced",
       "dogfood": false
     },
     "n8n-nodes-base.googleAds": {
       "priority": "P1",
-      "executor": "missing",
-      "spec": "missing",
+      "executor": "implemented",
+      "spec": "specced",
       "dogfood": false
     },
     "n8n-nodes-base.googleBigQuery": {
       "priority": "P1",
-      "executor": "missing",
-      "spec": "missing",
+      "executor": "implemented",
+      "spec": "specced",
       "dogfood": false
     },
     "n8n-nodes-base.googleCloudStorage": {
       "priority": "P1",
-      "executor": "missing",
-      "spec": "missing",
+      "executor": "implemented",
+      "spec": "specced",
       "dogfood": false
     },
     "n8n-nodes-base.googleBusinessProfile": {
       "priority": "P1",
-      "executor": "missing",
-      "spec": "missing",
+      "executor": "implemented",
+      "spec": "specced",
       "dogfood": false
     },
     "n8n-nodes-base.googleChat": {
       "priority": "P1",
-      "executor": "missing",
-      "spec": "missing",
+      "executor": "implemented",
+      "spec": "specced",
       "dogfood": false
     },
     "n8n-nodes-base.gSuiteAdmin": {
       "priority": "P1",
-      "executor": "missing",
-      "spec": "missing",
+      "executor": "implemented",
+      "spec": "specced",
       "dogfood": false
     },
     "n8n-nodes-base.clickUp": {
       "priority": "P1",
-      "executor": "missing",
-      "spec": "missing",
+      "executor": "implemented",
+      "spec": "specced",
       "dogfood": false
     },
     "n8n-nodes-base.trello": {
       "priority": "P1",
-      "executor": "missing",
-      "spec": "missing",
+      "executor": "implemented",
+      "spec": "specced",
       "dogfood": false
     },
     "n8n-nodes-base.asana": {
       "priority": "P1",
-      "executor": "missing",
-      "spec": "missing",
+      "executor": "implemented",
+      "spec": "specced",
       "dogfood": false
     },
     "n8n-nodes-base.mondayCom": {
       "priority": "P1",
-      "executor": "missing",
-      "spec": "missing",
+      "executor": "implemented",
+      "spec": "specced",
       "dogfood": false
     },
     "n8n-nodes-base.todoist": {
       "priority": "P1",
-      "executor": "missing",
-      "spec": "missing",
+      "executor": "implemented",
+      "spec": "specced",
       "dogfood": false
     },
     "n8n-nodes-base.linear": {
       "priority": "P1",
-      "executor": "missing",
-      "spec": "missing",
+      "executor": "implemented",
+      "spec": "specced",
       "dogfood": false
     },
     "n8n-nodes-base.gitlab": {
       "priority": "P1",
-      "executor": "missing",
-      "spec": "missing",
+      "executor": "implemented",
+      "spec": "specced",
       "dogfood": false
     },
     "n8n-nodes-base.gitlabTrigger": {
       "priority": "P1",
-      "executor": "missing",
-      "spec": "missing",
+      "executor": "implemented",
+      "spec": "specced",
       "dogfood": false
     },
     "n8n-nodes-base.githubTrigger": {
       "priority": "P1",
-      "executor": "missing",
-      "spec": "missing",
+      "executor": "implemented",
+      "spec": "specced",
       "dogfood": false
     },
     "n8n-nodes-base.bitbucketTrigger": {
       "priority": "P1",
-      "executor": "missing",
-      "spec": "missing",
+      "executor": "implemented",
+      "spec": "specced",
       "dogfood": false
     },
     "n8n-nodes-base.jenkins": {
       "priority": "P1",
-      "executor": "missing",
-      "spec": "missing",
+      "executor": "implemented",
+      "spec": "specced",
       "dogfood": false
     },
     "n8n-nodes-base.circleCi": {
       "priority": "P1",
-      "executor": "missing",
-      "spec": "missing",
+      "executor": "implemented",
+      "spec": "specced",
       "dogfood": false
     },
     "n8n-nodes-base.salesforce": {
       "priority": "P1",
-      "executor": "missing",
-      "spec": "missing",
+      "executor": "implemented",
+      "spec": "specced",
       "dogfood": false
     },
     "n8n-nodes-base.pipedrive": {
       "priority": "P1",
-      "executor": "missing",
-      "spec": "missing",
+      "executor": "implemented",
+      "spec": "specced",
       "dogfood": false
     },
     "n8n-nodes-base.zendesk": {
       "priority": "P1",
-      "executor": "missing",
-      "spec": "missing",
+      "executor": "implemented",
+      "spec": "specced",
       "dogfood": false
     },
     "n8n-nodes-base.zohoCrm": {
       "priority": "P1",
-      "executor": "missing",
-      "spec": "missing",
+      "executor": "implemented",
+      "spec": "specced",
       "dogfood": false
     },
     "n8n-nodes-base.highLevel": {
       "priority": "P1",
-      "executor": "missing",
-      "spec": "missing",
+      "executor": "implemented",
+      "spec": "specced",
       "dogfood": false
     },
     "n8n-nodes-base.odoo": {
       "priority": "P1",
-      "executor": "missing",
-      "spec": "missing",
+      "executor": "implemented",
+      "spec": "specced",
       "dogfood": false
     },
     "n8n-nodes-base.hubspotTrigger": {
       "priority": "P1",
-      "executor": "missing",
-      "spec": "missing",
+      "executor": "implemented",
+      "spec": "specced",
       "dogfood": false
     },
     "n8n-nodes-base.wooCommerce": {
       "priority": "P1",
-      "executor": "missing",
-      "spec": "missing",
+      "executor": "implemented",
+      "spec": "specced",
       "dogfood": false
     },
     "n8n-nodes-base.shopify": {
       "priority": "P1",
-      "executor": "missing",
-      "spec": "missing",
+      "executor": "implemented",
+      "spec": "specced",
       "dogfood": false
     },
     "n8n-nodes-base.stripe": {
       "priority": "P1",
-      "executor": "missing",
-      "spec": "missing",
+      "executor": "implemented",
+      "spec": "specced",
       "dogfood": false
     },
     "n8n-nodes-base.stripeTrigger": {
       "priority": "P1",
-      "executor": "missing",
-      "spec": "missing",
+      "executor": "implemented",
+      "spec": "specced",
       "dogfood": false
     },
     "n8n-nodes-base.quickbooks": {
       "priority": "P1",
-      "executor": "missing",
-      "spec": "missing",
+      "executor": "implemented",
+      "spec": "specced",
       "dogfood": false
     },
     "n8n-nodes-base.xero": {
       "priority": "P1",
-      "executor": "missing",
-      "spec": "missing",
+      "executor": "implemented",
+      "spec": "specced",
       "dogfood": false
     },
     "n8n-nodes-base.payPal": {
       "priority": "P1",
-      "executor": "missing",
-      "spec": "missing",
+      "executor": "implemented",
+      "spec": "specced",
       "dogfood": false
     },
     "n8n-nodes-base.pagerDuty": {
       "priority": "P1",
-      "executor": "missing",
-      "spec": "missing",
+      "executor": "implemented",
+      "spec": "specced",
       "dogfood": false
     },
     "n8n-nodes-base.baserow": {
       "priority": "P1",
-      "executor": "missing",
-      "spec": "missing",
+      "executor": "implemented",
+      "spec": "specced",
       "dogfood": false
     },
     "n8n-nodes-base.nocoDb": {
       "priority": "P1",
-      "executor": "missing",
-      "spec": "missing",
+      "executor": "implemented",
+      "spec": "specced",
       "dogfood": false
     },
     "n8n-nodes-base.dropbox": {
       "priority": "P1",
-      "executor": "missing",
-      "spec": "missing",
+      "executor": "implemented",
+      "spec": "specced",
       "dogfood": false
     },
     "n8n-nodes-base.nextCloud": {
       "priority": "P1",
-      "executor": "missing",
-      "spec": "missing",
+      "executor": "implemented",
+      "spec": "specced",
       "dogfood": false
     },
     "n8n-nodes-base.awsS3": {
       "priority": "P1",
-      "executor": "missing",
-      "spec": "missing",
+      "executor": "implemented",
+      "spec": "specced",
       "dogfood": false
     },
     "n8n-nodes-base.awsLambda": {
       "priority": "P1",
-      "executor": "missing",
-      "spec": "missing",
+      "executor": "implemented",
+      "spec": "specced",
       "dogfood": false
     },
     "n8n-nodes-base.awsSes": {
       "priority": "P1",
-      "executor": "missing",
-      "spec": "missing",
+      "executor": "implemented",
+      "spec": "specced",
       "dogfood": false
     },
     "n8n-nodes-base.snowflake": {
       "priority": "P1",
-      "executor": "missing",
-      "spec": "missing",
+      "executor": "implemented",
+      "spec": "specced",
       "dogfood": false
     },
     "n8n-nodes-base.elasticsearch": {
       "priority": "P1",
-      "executor": "missing",
-      "spec": "missing",
+      "executor": "implemented",
+      "spec": "specced",
       "dogfood": false
     },
     "n8n-nodes-base.mqtt": {
       "priority": "P1",
-      "executor": "missing",
-      "spec": "missing",
+      "executor": "implemented",
+      "spec": "specced",
       "dogfood": false
     },
     "n8n-nodes-base.kafka": {
       "priority": "P1",
-      "executor": "missing",
-      "spec": "missing",
+      "executor": "implemented",
+      "spec": "specced",
       "dogfood": false
     },
     "n8n-nodes-base.rabbitmq": {
       "priority": "P1",
-      "executor": "missing",
-      "spec": "missing",
+      "executor": "implemented",
+      "spec": "specced",
       "dogfood": false
     },
     "n8n-nodes-base.amqp": {
       "priority": "P1",
-      "executor": "missing",
-      "spec": "missing",
+      "executor": "implemented",
+      "spec": "specced",
       "dogfood": false
     },
     "n8n-nodes-base.redisTrigger": {
       "priority": "P1",
-      "executor": "missing",
-      "spec": "missing",
+      "executor": "implemented",
+      "spec": "specced",
       "dogfood": false
     },
     "n8n-nodes-base.postgresTrigger": {
       "priority": "P1",
-      "executor": "missing",
-      "spec": "missing",
+      "executor": "implemented",
+      "spec": "specced",
       "dogfood": false
     },
     "@n8n/n8n-nodes-langchain.code": {
       "priority": "P1",
-      "executor": "missing",
-      "spec": "missing",
-      "dogfood": false
+      "executor": "implemented",
+      "spec": "specced",
+      "dogfood": false,
+      "factory": "partial"
     },
     "@n8n/n8n-nodes-langchain.modelSelector": {
       "priority": "P1",
-      "executor": "missing",
-      "spec": "missing",
+      "executor": "implemented",
+      "spec": "specced",
       "dogfood": false
     },
     "@n8n/n8n-nodes-langchain.guardrails": {
       "priority": "P1",
-      "executor": "missing",
-      "spec": "missing",
+      "executor": "implemented",
+      "spec": "specced",
       "dogfood": false
     },
     "n8n-nodes-base.httpRequestTool": {
       "priority": "P1",
-      "executor": "missing",
-      "spec": "missing",
+      "executor": "implemented",
+      "spec": "specced",
       "dogfood": false
     },
     "n8n-nodes-base.gmailTool": {
       "priority": "P1",
-      "executor": "missing",
-      "spec": "missing",
+      "executor": "implemented",
+      "spec": "specced",
       "dogfood": false
     },
     "n8n-nodes-base.googleSheetsTool": {
       "priority": "P1",
-      "executor": "missing",
-      "spec": "missing",
+      "executor": "implemented",
+      "spec": "specced",
       "dogfood": false
     },
     "n8n-nodes-base.googleCalendarTool": {
       "priority": "P1",
-      "executor": "missing",
-      "spec": "missing",
+      "executor": "implemented",
+      "spec": "specced",
       "dogfood": false
     },
     "n8n-nodes-base.googleTasksTool": {
       "priority": "P1",
-      "executor": "missing",
-      "spec": "missing",
+      "executor": "implemented",
+      "spec": "specced",
       "dogfood": false
     },
     "n8n-nodes-base.wooCommerceTool": {
       "priority": "P1",
-      "executor": "missing",
-      "spec": "missing",
+      "executor": "implemented",
+      "spec": "specced",
       "dogfood": false
     },
     "n8n-nodes-base.rssFeedReadTool": {
       "priority": "P1",
-      "executor": "missing",
-      "spec": "missing",
+      "executor": "implemented",
+      "spec": "specced",
       "dogfood": false
     },
     "n8n-nodes-base.cryptoTool": {
       "priority": "P1",
-      "executor": "missing",
-      "spec": "missing",
+      "executor": "implemented",
+      "spec": "specced",
       "dogfood": false
     },
     "n8n-nodes-base.dateTimeTool": {
       "priority": "P1",
-      "executor": "missing",
-      "spec": "missing",
+      "executor": "implemented",
+      "spec": "specced",
       "dogfood": false
     },
     "@n8n/n8n-nodes-langchain.toolSearXng": {
       "priority": "P1",
-      "executor": "missing",
-      "spec": "missing",
+      "executor": "implemented",
+      "spec": "specced",
       "dogfood": false
     },
     "@n8n/n8n-nodes-langchain.toolWolframAlpha": {
       "priority": "P1",
-      "executor": "missing",
-      "spec": "missing",
+      "executor": "implemented",
+      "spec": "specced",
       "dogfood": false
     },
     "@n8n/n8n-nodes-langchain.outputParserItemList": {
       "priority": "P1",
-      "executor": "missing",
-      "spec": "missing",
+      "executor": "implemented",
+      "spec": "specced",
       "dogfood": false
     },
     "@n8n/n8n-nodes-langchain.outputParserAutofixing": {
       "priority": "P1",
-      "executor": "missing",
-      "spec": "missing",
+      "executor": "implemented",
+      "spec": "specced",
       "dogfood": false
     },
     "@n8n/n8n-nodes-langchain.embeddingsCohere": {
       "priority": "P1",
-      "executor": "missing",
-      "spec": "missing",
+      "executor": "implemented",
+      "spec": "specced",
       "dogfood": false
     },
     "@n8n/n8n-nodes-langchain.vectorStoreMilvus": {
       "priority": "P1",
-      "executor": "missing",
-      "spec": "missing",
+      "executor": "implemented",
+      "spec": "specced",
       "dogfood": false
     },
     "@n8n/n8n-nodes-langchain.retrieverVectorStore": {
       "priority": "P1",
-      "executor": "missing",
-      "spec": "missing",
+      "executor": "implemented",
+      "spec": "specced",
       "dogfood": false
     },
     "@n8n/n8n-nodes-langchain.memoryManager": {
       "priority": "P1",
-      "executor": "missing",
-      "spec": "missing",
+      "executor": "implemented",
+      "spec": "specced",
       "dogfood": false
     },
     "n8n-nodes-base.perplexity": {
       "priority": "P1",
-      "executor": "missing",
-      "spec": "missing",
+      "executor": "implemented",
+      "spec": "specced",
       "dogfood": false
     },
     "n8n-nodes-base.webflow": {
@@ -1408,12 +1439,12 @@
       "executor": "implemented",
       "spec": "specced",
       "dogfood": false,
-      "factory": "pass"
+      "factory": "partial"
     },
     "n8n-nodes-base.homeAssistant": {
       "priority": "P1",
-      "executor": "missing",
-      "spec": "missing",
+      "executor": "implemented",
+      "spec": "specced",
       "dogfood": false
     }
   },
@@ -1513,15 +1544,15 @@
       "type": "n8n-nodes-base.extractFromFile",
       "priority": 12,
       "tier": "core",
-      "executor": "missing",
-      "spec": "missing"
+      "executor": "implemented",
+      "spec": "specced"
     },
     {
       "type": "n8n-nodes-base.convertToFile",
       "priority": 13,
       "tier": "core",
-      "executor": "missing",
-      "spec": "missing"
+      "executor": "implemented",
+      "spec": "specced"
     },
     {
       "type": "n8n-nodes-base.dataTable",
@@ -1744,8 +1775,8 @@
       "type": "@n8n/n8n-nodes-langchain.chatTrigger",
       "priority": 45,
       "tier": "langchain",
-      "executor": "missing",
-      "spec": "missing"
+      "executor": "implemented",
+      "spec": "specced"
     },
     {
       "type": "n8n-nodes-base.sseTrigger",
@@ -1772,8 +1803,8 @@
       "type": "n8n-nodes-base.readWriteFile",
       "priority": 49,
       "tier": "core",
-      "executor": "missing",
-      "spec": "missing"
+      "executor": "implemented",
+      "spec": "specced"
     },
     {
       "type": "n8n-nodes-base.ssh",
@@ -1786,15 +1817,15 @@
       "type": "n8n-nodes-base.graphql",
       "priority": 51,
       "tier": "core",
-      "executor": "missing",
-      "spec": "missing"
+      "executor": "implemented",
+      "spec": "specced"
     },
     {
       "type": "n8n-nodes-base.rssFeedRead",
       "priority": 52,
       "tier": "core",
-      "executor": "missing",
-      "spec": "missing"
+      "executor": "implemented",
+      "spec": "specced"
     },
     {
       "type": "n8n-nodes-base.editImage",
@@ -1821,85 +1852,85 @@
       "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
       "priority": 56,
       "tier": "langchain",
-      "executor": "missing",
-      "spec": "missing"
+      "executor": "implemented",
+      "spec": "specced"
     },
     {
       "type": "@n8n/n8n-nodes-langchain.lmChatAnthropic",
       "priority": 57,
       "tier": "langchain",
-      "executor": "missing",
-      "spec": "missing"
+      "executor": "implemented",
+      "spec": "specced"
     },
     {
       "type": "@n8n/n8n-nodes-langchain.lmChatOpenRouter",
       "priority": 58,
       "tier": "langchain",
-      "executor": "missing",
-      "spec": "missing"
+      "executor": "implemented",
+      "spec": "specced"
     },
     {
       "type": "@n8n/n8n-nodes-langchain.lmChatOllama",
       "priority": 59,
       "tier": "langchain",
-      "executor": "missing",
-      "spec": "missing"
+      "executor": "implemented",
+      "spec": "specced"
     },
     {
       "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
       "priority": 60,
       "tier": "langchain",
-      "executor": "missing",
-      "spec": "missing"
+      "executor": "implemented",
+      "spec": "specced"
     },
     {
       "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
       "priority": 61,
       "tier": "langchain",
-      "executor": "missing",
-      "spec": "missing"
+      "executor": "implemented",
+      "spec": "specced"
     },
     {
       "type": "@n8n/n8n-nodes-langchain.chainLlm",
       "priority": 62,
       "tier": "langchain",
-      "executor": "missing",
-      "spec": "missing"
+      "executor": "implemented",
+      "spec": "specced"
     },
     {
       "type": "@n8n/n8n-nodes-langchain.chainSummarization",
       "priority": 63,
       "tier": "langchain",
-      "executor": "missing",
-      "spec": "missing"
+      "executor": "implemented",
+      "spec": "specced"
     },
     {
       "type": "@n8n/n8n-nodes-langchain.chainRetrievalQa",
       "priority": 64,
       "tier": "langchain",
-      "executor": "missing",
-      "spec": "missing"
+      "executor": "implemented",
+      "spec": "specced"
     },
     {
       "type": "@n8n/n8n-nodes-langchain.documentDefaultDataLoader",
       "priority": 65,
       "tier": "langchain",
-      "executor": "missing",
-      "spec": "missing"
+      "executor": "implemented",
+      "spec": "specced"
     },
     {
       "type": "@n8n/n8n-nodes-langchain.textSplitterRecursiveCharacterTextSplitter",
       "priority": 66,
       "tier": "langchain",
-      "executor": "missing",
-      "spec": "missing"
+      "executor": "implemented",
+      "spec": "specced"
     },
     {
       "type": "@n8n/n8n-nodes-langchain.embeddingsOpenAi",
       "priority": 67,
       "tier": "langchain",
-      "executor": "missing",
-      "spec": "missing"
+      "executor": "implemented",
+      "spec": "specced"
     },
     {
       "type": "@n8n/n8n-nodes-langchain.vectorStoreInMemory",
@@ -1912,15 +1943,15 @@
       "type": "@n8n/n8n-nodes-langchain.mcpTrigger",
       "priority": 69,
       "tier": "langchain",
-      "executor": "missing",
-      "spec": "missing"
+      "executor": "implemented",
+      "spec": "specced"
     },
     {
       "type": "n8n-nodes-base.aiTransform",
       "priority": 70,
       "tier": "core",
-      "executor": "missing",
-      "spec": "missing"
+      "executor": "implemented",
+      "spec": "specced"
     },
     {
       "type": "n8n-nodes-base.telegram",
@@ -1933,148 +1964,148 @@
       "type": "n8n-nodes-base.gmail",
       "priority": 72,
       "tier": "core",
-      "executor": "missing",
-      "spec": "missing"
+      "executor": "implemented",
+      "spec": "specced"
     },
     {
       "type": "n8n-nodes-base.slack",
       "priority": 73,
       "tier": "core",
-      "executor": "missing",
-      "spec": "missing"
+      "executor": "implemented",
+      "spec": "specced"
     },
     {
       "type": "n8n-nodes-base.whatsApp",
       "priority": 74,
       "tier": "core",
-      "executor": "missing",
-      "spec": "missing"
+      "executor": "implemented",
+      "spec": "specced"
     },
     {
       "type": "n8n-nodes-base.discord",
       "priority": 75,
       "tier": "core",
-      "executor": "missing",
-      "spec": "missing"
+      "executor": "implemented",
+      "spec": "specced"
     },
     {
       "type": "n8n-nodes-base.twilio",
       "priority": 76,
       "tier": "core",
-      "executor": "missing",
-      "spec": "missing"
+      "executor": "implemented",
+      "spec": "specced"
     },
     {
       "type": "n8n-nodes-base.googleSheets",
       "priority": 77,
       "tier": "core",
-      "executor": "missing",
-      "spec": "missing"
+      "executor": "implemented",
+      "spec": "specced"
     },
     {
       "type": "n8n-nodes-base.googleDocs",
       "priority": 78,
       "tier": "core",
-      "executor": "missing",
-      "spec": "missing"
+      "executor": "implemented",
+      "spec": "specced"
     },
     {
       "type": "n8n-nodes-base.googleCalendar",
       "priority": 79,
       "tier": "core",
-      "executor": "missing",
-      "spec": "missing"
+      "executor": "implemented",
+      "spec": "specced"
     },
     {
       "type": "n8n-nodes-base.youTube",
       "priority": 80,
       "tier": "core",
-      "executor": "missing",
-      "spec": "missing"
+      "executor": "implemented",
+      "spec": "specced"
     },
     {
       "type": "n8n-nodes-base.airtable",
       "priority": 81,
       "tier": "core",
-      "executor": "missing",
-      "spec": "missing"
+      "executor": "implemented",
+      "spec": "specced"
     },
     {
       "type": "n8n-nodes-base.notion",
       "priority": 82,
       "tier": "core",
-      "executor": "missing",
-      "spec": "missing"
+      "executor": "implemented",
+      "spec": "specced"
     },
     {
       "type": "n8n-nodes-base.postgres",
       "priority": 83,
       "tier": "core",
-      "executor": "missing",
-      "spec": "missing"
+      "executor": "implemented",
+      "spec": "specced"
     },
     {
       "type": "n8n-nodes-base.mySql",
       "priority": 84,
       "tier": "core",
-      "executor": "missing",
-      "spec": "missing"
+      "executor": "implemented",
+      "spec": "specced"
     },
     {
       "type": "n8n-nodes-base.redis",
       "priority": 85,
       "tier": "core",
-      "executor": "missing",
-      "spec": "missing"
+      "executor": "implemented",
+      "spec": "specced"
     },
     {
       "type": "n8n-nodes-base.mongoDb",
       "priority": 86,
       "tier": "core",
-      "executor": "missing",
-      "spec": "missing"
+      "executor": "implemented",
+      "spec": "specced"
     },
     {
       "type": "n8n-nodes-base.supabase",
       "priority": 87,
       "tier": "core",
-      "executor": "missing",
-      "spec": "missing"
+      "executor": "implemented",
+      "spec": "specced"
     },
     {
       "type": "n8n-nodes-base.s3",
       "priority": 88,
       "tier": "core",
-      "executor": "missing",
-      "spec": "missing"
+      "executor": "implemented",
+      "spec": "specced"
     },
     {
       "type": "n8n-nodes-base.jira",
       "priority": 89,
       "tier": "core",
-      "executor": "missing",
-      "spec": "missing"
+      "executor": "implemented",
+      "spec": "specced"
     },
     {
       "type": "n8n-nodes-base.hubspot",
       "priority": 90,
       "tier": "core",
-      "executor": "missing",
-      "spec": "missing"
+      "executor": "implemented",
+      "spec": "specced"
     },
     {
       "type": "n8n-nodes-base.facebookGraphApi",
       "priority": 91,
       "tier": "core",
-      "executor": "missing",
-      "spec": "missing"
+      "executor": "implemented",
+      "spec": "specced"
     },
     {
       "type": "n8n-nodes-base.wordpress",
       "priority": 92,
       "tier": "core",
-      "executor": "missing",
-      "spec": "missing"
+      "executor": "implemented",
+      "spec": "specced"
     },
     {
       "type": "n8n-nodes-base.itemLists",
@@ -2087,799 +2118,799 @@
       "type": "n8n-nodes-base.moveBinaryData",
       "priority": 94,
       "tier": "core",
-      "executor": "missing",
-      "spec": "missing"
+      "executor": "implemented",
+      "spec": "specced"
     },
     {
       "type": "n8n-nodes-base.readBinaryFile",
       "priority": 95,
       "tier": "core",
-      "executor": "missing",
-      "spec": "missing"
+      "executor": "implemented",
+      "spec": "specced"
     },
     {
       "type": "n8n-nodes-base.readBinaryFiles",
       "priority": 96,
       "tier": "core",
-      "executor": "missing",
-      "spec": "missing"
+      "executor": "implemented",
+      "spec": "specced"
     },
     {
       "type": "n8n-nodes-base.writeBinaryFile",
       "priority": 97,
       "tier": "core",
-      "executor": "missing",
-      "spec": "missing"
+      "executor": "implemented",
+      "spec": "specced"
     },
     {
       "type": "n8n-nodes-base.spreadsheetFile",
       "priority": 98,
       "tier": "core",
-      "executor": "missing",
-      "spec": "missing"
+      "executor": "implemented",
+      "spec": "specced"
     },
     {
       "type": "n8n-nodes-base.readPDF",
       "priority": 99,
       "tier": "core",
-      "executor": "missing",
-      "spec": "missing"
+      "executor": "implemented",
+      "spec": "specced"
     },
     {
       "type": "n8n-nodes-base.debugHelper",
       "priority": 100,
       "tier": "core",
-      "executor": "missing",
-      "spec": "missing"
+      "executor": "implemented",
+      "spec": "specced"
     },
     {
       "type": "n8n-nodes-base.executeCommand",
       "priority": 101,
       "tier": "core",
-      "executor": "missing",
-      "spec": "missing"
+      "executor": "implemented",
+      "spec": "specced"
     },
     {
       "type": "n8n-nodes-base.n8n",
       "priority": 102,
       "tier": "core",
-      "executor": "missing",
-      "spec": "missing"
+      "executor": "implemented",
+      "spec": "specced"
     },
     {
       "type": "n8n-nodes-base.evaluation",
       "priority": 103,
       "tier": "core",
-      "executor": "missing",
-      "spec": "missing"
+      "executor": "implemented",
+      "spec": "specced"
     },
     {
       "type": "n8n-nodes-base.evaluationTrigger",
       "priority": 104,
       "tier": "core",
-      "executor": "missing",
-      "spec": "missing"
+      "executor": "implemented",
+      "spec": "specced"
     },
     {
       "type": "n8n-nodes-base.activationTrigger",
       "priority": 105,
       "tier": "core",
-      "executor": "missing",
-      "spec": "missing"
+      "executor": "implemented",
+      "spec": "specced"
     },
     {
       "type": "n8n-nodes-base.n8nTrigger",
       "priority": 106,
       "tier": "core",
-      "executor": "missing",
-      "spec": "missing"
+      "executor": "implemented",
+      "spec": "specced"
     },
     {
       "type": "n8n-nodes-base.form",
       "priority": 107,
       "tier": "core",
-      "executor": "missing",
-      "spec": "missing"
+      "executor": "implemented",
+      "spec": "specced"
     },
     {
       "type": "n8n-nodes-base.totp",
       "priority": 108,
       "tier": "core",
-      "executor": "missing",
-      "spec": "missing"
+      "executor": "implemented",
+      "spec": "specced"
     },
     {
       "type": "n8n-nodes-base.ldap",
       "priority": 109,
       "tier": "core",
-      "executor": "missing",
-      "spec": "missing"
+      "executor": "implemented",
+      "spec": "specced"
     },
     {
       "type": "n8n-nodes-base.iCalendar",
       "priority": 110,
       "tier": "core",
-      "executor": "missing",
-      "spec": "missing"
+      "executor": "implemented",
+      "spec": "specced"
     },
     {
       "type": "n8n-nodes-base.quickChart",
       "priority": 111,
       "tier": "core",
-      "executor": "missing",
-      "spec": "missing"
+      "executor": "implemented",
+      "spec": "specced"
     },
     {
       "type": "n8n-nodes-base.hackerNews",
       "priority": 112,
       "tier": "core",
-      "executor": "missing",
-      "spec": "missing"
+      "executor": "implemented",
+      "spec": "specced"
     },
     {
       "type": "n8n-nodes-base.mattermost",
       "priority": 113,
       "tier": "core",
-      "executor": "missing",
-      "spec": "missing"
+      "executor": "implemented",
+      "spec": "specced"
     },
     {
       "type": "n8n-nodes-base.matrix",
       "priority": 114,
       "tier": "core",
-      "executor": "missing",
-      "spec": "missing"
+      "executor": "implemented",
+      "spec": "specced"
     },
     {
       "type": "n8n-nodes-base.rocketchat",
       "priority": 115,
       "tier": "core",
-      "executor": "missing",
-      "spec": "missing"
+      "executor": "implemented",
+      "spec": "specced"
     },
     {
       "type": "n8n-nodes-base.gotify",
       "priority": 116,
       "tier": "core",
-      "executor": "missing",
-      "spec": "missing"
+      "executor": "implemented",
+      "spec": "specced"
     },
     {
       "type": "n8n-nodes-base.pushover",
       "priority": 117,
       "tier": "core",
-      "executor": "missing",
-      "spec": "missing"
+      "executor": "implemented",
+      "spec": "specced"
     },
     {
       "type": "n8n-nodes-base.pushbullet",
       "priority": 118,
       "tier": "core",
-      "executor": "missing",
-      "spec": "missing"
+      "executor": "implemented",
+      "spec": "specced"
     },
     {
       "type": "n8n-nodes-base.messageBird",
       "priority": 119,
       "tier": "core",
-      "executor": "missing",
-      "spec": "missing"
+      "executor": "implemented",
+      "spec": "specced"
     },
     {
       "type": "n8n-nodes-base.sms77",
       "priority": 120,
       "tier": "core",
-      "executor": "missing",
-      "spec": "missing"
+      "executor": "implemented",
+      "spec": "specced"
     },
     {
       "type": "n8n-nodes-base.sendGrid",
       "priority": 121,
       "tier": "core",
-      "executor": "missing",
-      "spec": "missing"
+      "executor": "implemented",
+      "spec": "specced"
     },
     {
       "type": "n8n-nodes-base.sendInBlue",
       "priority": 122,
       "tier": "core",
-      "executor": "missing",
-      "spec": "missing"
+      "executor": "implemented",
+      "spec": "specced"
     },
     {
       "type": "n8n-nodes-base.mailgun",
       "priority": 123,
       "tier": "core",
-      "executor": "missing",
-      "spec": "missing"
+      "executor": "implemented",
+      "spec": "specced"
     },
     {
       "type": "n8n-nodes-base.mailchimp",
       "priority": 124,
       "tier": "core",
-      "executor": "missing",
-      "spec": "missing"
+      "executor": "implemented",
+      "spec": "specced"
     },
     {
       "type": "n8n-nodes-base.mailjet",
       "priority": 125,
       "tier": "core",
-      "executor": "missing",
-      "spec": "missing"
+      "executor": "implemented",
+      "spec": "specced"
     },
     {
       "type": "n8n-nodes-base.postmarkTrigger",
       "priority": 126,
       "tier": "core",
-      "executor": "missing",
-      "spec": "missing"
+      "executor": "implemented",
+      "spec": "specced"
     },
     {
       "type": "n8n-nodes-base.emailReadImap",
       "priority": 127,
       "tier": "core",
-      "executor": "missing",
-      "spec": "missing"
+      "executor": "implemented",
+      "spec": "specced"
     },
     {
       "type": "n8n-nodes-base.microsoftExcel",
       "priority": 128,
       "tier": "core",
-      "executor": "missing",
-      "spec": "missing"
+      "executor": "implemented",
+      "spec": "specced"
     },
     {
       "type": "n8n-nodes-base.microsoftOneDrive",
       "priority": 129,
       "tier": "core",
-      "executor": "missing",
-      "spec": "missing"
+      "executor": "implemented",
+      "spec": "specced"
     },
     {
       "type": "n8n-nodes-base.microsoftSharePoint",
       "priority": 130,
       "tier": "core",
-      "executor": "missing",
-      "spec": "missing"
+      "executor": "implemented",
+      "spec": "specced"
     },
     {
       "type": "n8n-nodes-base.microsoftSql",
       "priority": 131,
       "tier": "core",
-      "executor": "missing",
-      "spec": "missing"
+      "executor": "implemented",
+      "spec": "specced"
     },
     {
       "type": "n8n-nodes-base.microsoftEntra",
       "priority": 132,
       "tier": "core",
-      "executor": "missing",
-      "spec": "missing"
+      "executor": "implemented",
+      "spec": "specced"
     },
     {
       "type": "n8n-nodes-base.microsoftToDo",
       "priority": 133,
       "tier": "core",
-      "executor": "missing",
-      "spec": "missing"
+      "executor": "implemented",
+      "spec": "specced"
     },
     {
       "type": "n8n-nodes-base.googleAnalytics",
       "priority": 134,
       "tier": "core",
-      "executor": "missing",
-      "spec": "missing"
+      "executor": "implemented",
+      "spec": "specced"
     },
     {
       "type": "n8n-nodes-base.googleSlides",
       "priority": 135,
       "tier": "core",
-      "executor": "missing",
-      "spec": "missing"
+      "executor": "implemented",
+      "spec": "specced"
     },
     {
       "type": "n8n-nodes-base.googleTasks",
       "priority": 136,
       "tier": "core",
-      "executor": "missing",
-      "spec": "missing"
+      "executor": "implemented",
+      "spec": "specced"
     },
     {
       "type": "n8n-nodes-base.googleContacts",
       "priority": 137,
       "tier": "core",
-      "executor": "missing",
-      "spec": "missing"
+      "executor": "implemented",
+      "spec": "specced"
     },
     {
       "type": "n8n-nodes-base.googleTranslate",
       "priority": 138,
       "tier": "core",
-      "executor": "missing",
-      "spec": "missing"
+      "executor": "implemented",
+      "spec": "specced"
     },
     {
       "type": "n8n-nodes-base.googleAds",
       "priority": 139,
       "tier": "core",
-      "executor": "missing",
-      "spec": "missing"
+      "executor": "implemented",
+      "spec": "specced"
     },
     {
       "type": "n8n-nodes-base.googleBigQuery",
       "priority": 140,
       "tier": "core",
-      "executor": "missing",
-      "spec": "missing"
+      "executor": "implemented",
+      "spec": "specced"
     },
     {
       "type": "n8n-nodes-base.googleCloudStorage",
       "priority": 141,
       "tier": "core",
-      "executor": "missing",
-      "spec": "missing"
+      "executor": "implemented",
+      "spec": "specced"
     },
     {
       "type": "n8n-nodes-base.googleBusinessProfile",
       "priority": 142,
       "tier": "core",
-      "executor": "missing",
-      "spec": "missing"
+      "executor": "implemented",
+      "spec": "specced"
     },
     {
       "type": "n8n-nodes-base.googleChat",
       "priority": 143,
       "tier": "core",
-      "executor": "missing",
-      "spec": "missing"
+      "executor": "implemented",
+      "spec": "specced"
     },
     {
       "type": "n8n-nodes-base.gSuiteAdmin",
       "priority": 144,
       "tier": "core",
-      "executor": "missing",
-      "spec": "missing"
+      "executor": "implemented",
+      "spec": "specced"
     },
     {
       "type": "n8n-nodes-base.clickUp",
       "priority": 145,
       "tier": "core",
-      "executor": "missing",
-      "spec": "missing"
+      "executor": "implemented",
+      "spec": "specced"
     },
     {
       "type": "n8n-nodes-base.trello",
       "priority": 146,
       "tier": "core",
-      "executor": "missing",
-      "spec": "missing"
+      "executor": "implemented",
+      "spec": "specced"
     },
     {
       "type": "n8n-nodes-base.asana",
       "priority": 147,
       "tier": "core",
-      "executor": "missing",
-      "spec": "missing"
+      "executor": "implemented",
+      "spec": "specced"
     },
     {
       "type": "n8n-nodes-base.mondayCom",
       "priority": 148,
       "tier": "core",
-      "executor": "missing",
-      "spec": "missing"
+      "executor": "implemented",
+      "spec": "specced"
     },
     {
       "type": "n8n-nodes-base.todoist",
       "priority": 149,
       "tier": "core",
-      "executor": "missing",
-      "spec": "missing"
+      "executor": "implemented",
+      "spec": "specced"
     },
     {
       "type": "n8n-nodes-base.linear",
       "priority": 150,
       "tier": "core",
-      "executor": "missing",
-      "spec": "missing"
+      "executor": "implemented",
+      "spec": "specced"
     },
     {
       "type": "n8n-nodes-base.gitlab",
       "priority": 151,
       "tier": "core",
-      "executor": "missing",
-      "spec": "missing"
+      "executor": "implemented",
+      "spec": "specced"
     },
     {
       "type": "n8n-nodes-base.gitlabTrigger",
       "priority": 152,
       "tier": "core",
-      "executor": "missing",
-      "spec": "missing"
+      "executor": "implemented",
+      "spec": "specced"
     },
     {
       "type": "n8n-nodes-base.githubTrigger",
       "priority": 153,
       "tier": "core",
-      "executor": "missing",
-      "spec": "missing"
+      "executor": "implemented",
+      "spec": "specced"
     },
     {
       "type": "n8n-nodes-base.bitbucketTrigger",
       "priority": 154,
       "tier": "core",
-      "executor": "missing",
-      "spec": "missing"
+      "executor": "implemented",
+      "spec": "specced"
     },
     {
       "type": "n8n-nodes-base.jenkins",
       "priority": 155,
       "tier": "core",
-      "executor": "missing",
-      "spec": "missing"
+      "executor": "implemented",
+      "spec": "specced"
     },
     {
       "type": "n8n-nodes-base.circleCi",
       "priority": 156,
       "tier": "core",
-      "executor": "missing",
-      "spec": "missing"
+      "executor": "implemented",
+      "spec": "specced"
     },
     {
       "type": "n8n-nodes-base.salesforce",
       "priority": 157,
       "tier": "core",
-      "executor": "missing",
-      "spec": "missing"
+      "executor": "implemented",
+      "spec": "specced"
     },
     {
       "type": "n8n-nodes-base.pipedrive",
       "priority": 158,
       "tier": "core",
-      "executor": "missing",
-      "spec": "missing"
+      "executor": "implemented",
+      "spec": "specced"
     },
     {
       "type": "n8n-nodes-base.zendesk",
       "priority": 159,
       "tier": "core",
-      "executor": "missing",
-      "spec": "missing"
+      "executor": "implemented",
+      "spec": "specced"
     },
     {
       "type": "n8n-nodes-base.zohoCrm",
       "priority": 160,
       "tier": "core",
-      "executor": "missing",
-      "spec": "missing"
+      "executor": "implemented",
+      "spec": "specced"
     },
     {
       "type": "n8n-nodes-base.highLevel",
       "priority": 161,
       "tier": "core",
-      "executor": "missing",
-      "spec": "missing"
+      "executor": "implemented",
+      "spec": "specced"
     },
     {
       "type": "n8n-nodes-base.odoo",
       "priority": 162,
       "tier": "core",
-      "executor": "missing",
-      "spec": "missing"
+      "executor": "implemented",
+      "spec": "specced"
     },
     {
       "type": "n8n-nodes-base.hubspotTrigger",
       "priority": 163,
       "tier": "core",
-      "executor": "missing",
-      "spec": "missing"
+      "executor": "implemented",
+      "spec": "specced"
     },
     {
       "type": "n8n-nodes-base.wooCommerce",
       "priority": 164,
       "tier": "core",
-      "executor": "missing",
-      "spec": "missing"
+      "executor": "implemented",
+      "spec": "specced"
     },
     {
       "type": "n8n-nodes-base.shopify",
       "priority": 165,
       "tier": "core",
-      "executor": "missing",
-      "spec": "missing"
+      "executor": "implemented",
+      "spec": "specced"
     },
     {
       "type": "n8n-nodes-base.stripe",
       "priority": 166,
       "tier": "core",
-      "executor": "missing",
-      "spec": "missing"
+      "executor": "implemented",
+      "spec": "specced"
     },
     {
       "type": "n8n-nodes-base.stripeTrigger",
       "priority": 167,
       "tier": "core",
-      "executor": "missing",
-      "spec": "missing"
+      "executor": "implemented",
+      "spec": "specced"
     },
     {
       "type": "n8n-nodes-base.quickbooks",
       "priority": 168,
       "tier": "core",
-      "executor": "missing",
-      "spec": "missing"
+      "executor": "implemented",
+      "spec": "specced"
     },
     {
       "type": "n8n-nodes-base.xero",
       "priority": 169,
       "tier": "core",
-      "executor": "missing",
-      "spec": "missing"
+      "executor": "implemented",
+      "spec": "specced"
     },
     {
       "type": "n8n-nodes-base.payPal",
       "priority": 170,
       "tier": "core",
-      "executor": "missing",
-      "spec": "missing"
+      "executor": "implemented",
+      "spec": "specced"
     },
     {
       "type": "n8n-nodes-base.pagerDuty",
       "priority": 171,
       "tier": "core",
-      "executor": "missing",
-      "spec": "missing"
+      "executor": "implemented",
+      "spec": "specced"
     },
     {
       "type": "n8n-nodes-base.baserow",
       "priority": 172,
       "tier": "core",
-      "executor": "missing",
-      "spec": "missing"
+      "executor": "implemented",
+      "spec": "specced"
     },
     {
       "type": "n8n-nodes-base.nocoDb",
       "priority": 173,
       "tier": "core",
-      "executor": "missing",
-      "spec": "missing"
+      "executor": "implemented",
+      "spec": "specced"
     },
     {
       "type": "n8n-nodes-base.dropbox",
       "priority": 174,
       "tier": "core",
-      "executor": "missing",
-      "spec": "missing"
+      "executor": "implemented",
+      "spec": "specced"
     },
     {
       "type": "n8n-nodes-base.nextCloud",
       "priority": 175,
       "tier": "core",
-      "executor": "missing",
-      "spec": "missing"
+      "executor": "implemented",
+      "spec": "specced"
     },
     {
       "type": "n8n-nodes-base.awsS3",
       "priority": 176,
       "tier": "core",
-      "executor": "missing",
-      "spec": "missing"
+      "executor": "implemented",
+      "spec": "specced"
     },
     {
       "type": "n8n-nodes-base.awsLambda",
       "priority": 177,
       "tier": "core",
-      "executor": "missing",
-      "spec": "missing"
+      "executor": "implemented",
+      "spec": "specced"
     },
     {
       "type": "n8n-nodes-base.awsSes",
       "priority": 178,
       "tier": "core",
-      "executor": "missing",
-      "spec": "missing"
+      "executor": "implemented",
+      "spec": "specced"
     },
     {
       "type": "n8n-nodes-base.snowflake",
       "priority": 179,
       "tier": "core",
-      "executor": "missing",
-      "spec": "missing"
+      "executor": "implemented",
+      "spec": "specced"
     },
     {
       "type": "n8n-nodes-base.elasticsearch",
       "priority": 180,
       "tier": "core",
-      "executor": "missing",
-      "spec": "missing"
+      "executor": "implemented",
+      "spec": "specced"
     },
     {
       "type": "n8n-nodes-base.mqtt",
       "priority": 181,
       "tier": "core",
-      "executor": "missing",
-      "spec": "missing"
+      "executor": "implemented",
+      "spec": "specced"
     },
     {
       "type": "n8n-nodes-base.kafka",
       "priority": 182,
       "tier": "core",
-      "executor": "missing",
-      "spec": "missing"
+      "executor": "implemented",
+      "spec": "specced"
     },
     {
       "type": "n8n-nodes-base.rabbitmq",
       "priority": 183,
       "tier": "core",
-      "executor": "missing",
-      "spec": "missing"
+      "executor": "implemented",
+      "spec": "specced"
     },
     {
       "type": "n8n-nodes-base.amqp",
       "priority": 184,
       "tier": "core",
-      "executor": "missing",
-      "spec": "missing"
+      "executor": "implemented",
+      "spec": "specced"
     },
     {
       "type": "n8n-nodes-base.redisTrigger",
       "priority": 185,
       "tier": "core",
-      "executor": "missing",
-      "spec": "missing"
+      "executor": "implemented",
+      "spec": "specced"
     },
     {
       "type": "n8n-nodes-base.postgresTrigger",
       "priority": 186,
       "tier": "core",
-      "executor": "missing",
-      "spec": "missing"
+      "executor": "implemented",
+      "spec": "specced"
     },
     {
       "type": "@n8n/n8n-nodes-langchain.code",
       "priority": 187,
       "tier": "langchain",
-      "executor": "missing",
-      "spec": "missing"
+      "executor": "implemented",
+      "spec": "specced"
     },
     {
       "type": "@n8n/n8n-nodes-langchain.modelSelector",
       "priority": 188,
       "tier": "langchain",
-      "executor": "missing",
-      "spec": "missing"
+      "executor": "implemented",
+      "spec": "specced"
     },
     {
       "type": "@n8n/n8n-nodes-langchain.guardrails",
       "priority": 189,
       "tier": "langchain",
-      "executor": "missing",
-      "spec": "missing"
+      "executor": "implemented",
+      "spec": "specced"
     },
     {
       "type": "n8n-nodes-base.httpRequestTool",
       "priority": 190,
       "tier": "core",
-      "executor": "missing",
-      "spec": "missing"
+      "executor": "implemented",
+      "spec": "specced"
     },
     {
       "type": "n8n-nodes-base.gmailTool",
       "priority": 191,
       "tier": "core",
-      "executor": "missing",
-      "spec": "missing"
+      "executor": "implemented",
+      "spec": "specced"
     },
     {
       "type": "n8n-nodes-base.googleSheetsTool",
       "priority": 192,
       "tier": "core",
-      "executor": "missing",
-      "spec": "missing"
+      "executor": "implemented",
+      "spec": "specced"
     },
     {
       "type": "n8n-nodes-base.googleCalendarTool",
       "priority": 193,
       "tier": "core",
-      "executor": "missing",
-      "spec": "missing"
+      "executor": "implemented",
+      "spec": "specced"
     },
     {
       "type": "n8n-nodes-base.googleTasksTool",
       "priority": 194,
       "tier": "core",
-      "executor": "missing",
-      "spec": "missing"
+      "executor": "implemented",
+      "spec": "specced"
     },
     {
       "type": "n8n-nodes-base.wooCommerceTool",
       "priority": 195,
       "tier": "core",
-      "executor": "missing",
-      "spec": "missing"
+      "executor": "implemented",
+      "spec": "specced"
     },
     {
       "type": "n8n-nodes-base.rssFeedReadTool",
       "priority": 196,
       "tier": "core",
-      "executor": "missing",
-      "spec": "missing"
+      "executor": "implemented",
+      "spec": "specced"
     },
     {
       "type": "n8n-nodes-base.cryptoTool",
       "priority": 197,
       "tier": "core",
-      "executor": "missing",
-      "spec": "missing"
+      "executor": "implemented",
+      "spec": "specced"
     },
     {
       "type": "n8n-nodes-base.dateTimeTool",
       "priority": 198,
       "tier": "core",
-      "executor": "missing",
-      "spec": "missing"
+      "executor": "implemented",
+      "spec": "specced"
     },
     {
       "type": "@n8n/n8n-nodes-langchain.toolSearXng",
       "priority": 199,
       "tier": "langchain",
-      "executor": "missing",
-      "spec": "missing"
+      "executor": "implemented",
+      "spec": "specced"
     },
     {
       "type": "@n8n/n8n-nodes-langchain.toolWolframAlpha",
       "priority": 200,
       "tier": "langchain",
-      "executor": "missing",
-      "spec": "missing"
+      "executor": "implemented",
+      "spec": "specced"
     },
     {
       "type": "@n8n/n8n-nodes-langchain.outputParserItemList",
       "priority": 201,
       "tier": "langchain",
-      "executor": "missing",
-      "spec": "missing"
+      "executor": "implemented",
+      "spec": "specced"
     },
     {
       "type": "@n8n/n8n-nodes-langchain.outputParserAutofixing",
       "priority": 202,
       "tier": "langchain",
-      "executor": "missing",
-      "spec": "missing"
+      "executor": "implemented",
+      "spec": "specced"
     },
     {
       "type": "@n8n/n8n-nodes-langchain.embeddingsCohere",
       "priority": 203,
       "tier": "langchain",
-      "executor": "missing",
-      "spec": "missing"
+      "executor": "implemented",
+      "spec": "specced"
     },
     {
       "type": "@n8n/n8n-nodes-langchain.vectorStoreMilvus",
       "priority": 204,
       "tier": "langchain",
-      "executor": "missing",
-      "spec": "missing"
+      "executor": "implemented",
+      "spec": "specced"
     },
     {
       "type": "@n8n/n8n-nodes-langchain.retrieverVectorStore",
       "priority": 205,
       "tier": "langchain",
-      "executor": "missing",
-      "spec": "missing"
+      "executor": "implemented",
+      "spec": "specced"
     },
     {
       "type": "@n8n/n8n-nodes-langchain.memoryManager",
       "priority": 206,
       "tier": "langchain",
-      "executor": "missing",
-      "spec": "missing"
+      "executor": "implemented",
+      "spec": "specced"
     },
     {
       "type": "n8n-nodes-base.perplexity",
       "priority": 207,
       "tier": "core",
-      "executor": "missing",
-      "spec": "missing"
+      "executor": "implemented",
+      "spec": "specced"
     },
     {
       "type": "n8n-nodes-base.webflow",
@@ -2892,8 +2923,8 @@
       "type": "n8n-nodes-base.homeAssistant",
       "priority": 209,
       "tier": "core",
-      "executor": "missing",
-      "spec": "missing"
+      "executor": "implemented",
+      "spec": "specced"
     }
   ]
 }

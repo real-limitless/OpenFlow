@@ -1,7 +1,7 @@
 ---
 type: n8n-nodes-base.executeCommand
 displayName: Execute Command
-category: Transform
+category: Development
 versions: [1]
 priority: medium
 status: specced
@@ -19,202 +19,206 @@ status: specced
 ## Wire format
 
 - **Type string:** `n8n-nodes-base.executeCommand`
-- **Aliases:** (none)
+- **Aliases:** `Shell`, `Command`, `OS`, `Bash`
 - **Inputs:** `main` × 1
 - **Outputs:** `main` × 1
-- **Credentials:** (none)
+- **Credentials:** none
 
 ## Parameters
 
 | name | type | default | required | displayOptions | notes |
 |------|------|---------|----------|----------------|-------|
-| executeOnce | boolean | false | no | | "Execute Once" — when true, node runs once for the first input item only; when false (default), runs once per input item |
-| command | string | '' | yes | | The shell command to execute on the host machine; supports multi-line commands and `&&` chaining |
+| `executeOnce` | boolean | `true` | false | — | Whether to run the command once for all input items or once per item |
+| `command` | string | `""` | **yes** | — | The shell command to execute; accepts inline newlines for multi-line commands |
 
 ## Runtime behavior
 
 ### Input
 
-Consumes items from the single `main` input. Each input item may contain `json` and optional `binary` data. If `executeOnce` is true, only the first input item is processed; otherwise each item is processed independently.
+The node receives items on the `main` input. When `executeOnce` is `true`, all input items are passed through and the command executes a single time. When `executeOnce` is `false`, the command executes once per input item and each execution applies to its respective item.
 
 ### Output
 
-Produces one output item per processed input item (or one item if `executeOnce` is true). Each output item has the shape:
+Each output item contains the fields of the corresponding input item (passed through), plus the following execution result fields added at the top level:
 
-```json
-{
-  "json": {
-    "exitCode": 0,
-    "stdout": "command output",
-    "stderr": ""
-  },
-  "pairedItem": { "item": 0 }
-}
-```
+| field | type | description |
+|-------|------|-------------|
+| `stdout` | string | Standard output of the executed command |
+| `stderr` | string | Standard error output of the executed command |
+| `exitCode` | number | Process exit code (0 for success, non-zero for failure) |
 
-- `exitCode`: integer exit code of the executed command (0 on success, non-zero on failure)
-- `stdout`: string stdout output from the command
-- `stderr`: string stderr output from the command
+If `executeOnce` is `true`, the single execution result is applied to every input item. If `executeOnce` is `false`, each input item carries its own execution result.
+
+### Shell environment
+
+The command runs in the default shell of the host machine (for example `cmd` on Windows and `zsh` on macOS). In Docker deployments, the command runs inside the n8n container, not on the Docker host. In queue mode, the command executes on the worker processing the task for production runs; manual executions run on the main instance unless `OFFLOAD_MANUAL_EXECUTIONS_TO_WORKERS` is enabled.
+
+Availability and security notes (documented): the node is **not available on n8n Cloud**, and starting with n8n 2.0 it is **disabled by default** in self-hosted installs as a security precaution (it allows arbitrary shell execution). On Windows, the command string is passed to the shell as a single line; embedded line breaks can cause only the first line to be executed, so multi-command Windows scripts should be joined with `&&` or `;` on one line.
 
 ### Errors
 
-- If the command fails (non-zero exit code or spawn error) and `continueOnFail` is **false** (default), the node throws a `NodeOperationError` with the error message and `itemIndex`.
-- If `continueOnFail` is **true**, the node does not throw; instead it emits an output item for the failed item with:
-  ```json
-  { "json": { "error": "<error message>" }, "pairedItem": { "item": <index> } }
-  ```
-- Common errors documented by n8n:
-  - "Command failed: <command> /bin/sh: <command>: not found" — command not in PATH or typo.
-  - "Error: stdout maxBuffer length exceeded" — command output exceeds internal buffer limit; reduce output or pipe through filtering.
-  - On Windows PowerShell: line breaks in multi-line PowerShell commands are treated as command separators; use single-line with semicolons or `-File`.
+- If the command fails (non-zero exit code), the node **does not throw** by default — the `exitCode` field carries the error code and the `stderr` field contains the error output.
+- If the shell cannot find the command, the node throws an error (command not found).
+- If stdout exceeds the max buffer length, the node throws a `maxBuffer` error.
+- `continueOnFail` is respected per standard OpenFlow convention: when enabled, failed items are passed through with an error indicator instead of halting execution.
 
 ### Expressions
 
-- `command` accepts expression strings (`{{ ... }}`) to interpolate values from input items.
-- `executeOnce` accepts expressions.
-
-### Security & environment notes (documented behavior)
-
-- The node executes commands in the **host machine's default shell** (`cmd` on Windows, `zsh`/`bash` on macOS/Linux).
-- In Docker, commands run inside the n8n container, not the Docker host.
-- In queue mode, commands run on the worker executing the task; manual executions run on the main instance unless `OFFLOAD_MANUAL_EXECUTIONS_TO_WORKERS=true`.
-- **Disabled by default in n8n ≥2.0** for security; must be explicitly enabled in config.
-- **Not available on n8n Cloud.**
+The `command` parameter accepts expression strings (`{{ ... }}`).
 
 ## Acceptance tests
 
-### Test: basic command (echo)
+### Test: basic command execution
 
 **Given** input items:
+
 ```json
 [{ "json": {} }]
 ```
 
 **Parameters:**
+
 ```json
-{ "executeOnce": false, "command": "echo hello" }
+{
+  "executeOnce": true,
+  "command": "echo hello"
+}
 ```
 
 **Expect** output[0]:
+
 ```json
-[{ "json": { "exitCode": 0, "stdout": "hello\n", "stderr": "" }, "pairedItem": { "item": 0 } }]
+[{
+  "json": {
+    "stdout": "hello\n",
+    "stderr": "",
+    "exitCode": 0
+  }
+}]
 ```
 
----
-
-### Test: executeOnce true (single execution for multiple items)
+### Test: per-item command execution
 
 **Given** input items:
-```json
-[{ "json": { "value": 1 }}, { "json": { "value": 2 }}, { "json": { "value": 3 }}]
-```
 
-**Parameters:**
-```json
-{ "executeOnce": true, "command": "echo first" }
-```
-
-**Expect** output[0] (single item, first input only):
-```json
-[{ "json": { "exitCode": 0, "stdout": "first\n", "stderr": "" }, "pairedItem": { "item": 0 } }]
-```
-
----
-
-### Test: command with expression interpolation
-
-**Given** input items:
-```json
-[{ "json": { "name": "world" }}]
-```
-
-**Parameters:**
-```json
-{ "executeOnce": false, "command": "echo hello {{ $json.name }}" }
-```
-
-**Expect** output[0]:
-```json
-[{ "json": { "exitCode": 0, "stdout": "hello world\n", "stderr": "" }, "pairedItem": { "item": 0 } }]
-```
-
----
-
-### Test: command failure with continueOnFail false (default)
-
-**Given** input items:
-```json
-[{ "json": {} }]
-```
-
-**Parameters:**
-```json
-{ "executeOnce": false, "command": "exit 42" }
-```
-
-**Expect** node throws `NodeOperationError` with message containing "exit 42" and `itemIndex: 0`.
-
----
-
-### Test: command failure with continueOnFail true
-
-**Given** input items:
-```json
-[{ "json": {} }, { "json": {} }]
-```
-
-**Parameters:**
-```json
-{ "executeOnce": false, "command": "exit 1" }
-```
-**Node option:** `continueOnFail: true`
-
-**Expect** output[0] (two items, both with error):
 ```json
 [
-  { "json": { "error": "Command failed: exit 1" }, "pairedItem": { "item": 0 } },
-  { "json": { "error": "Command failed: exit 1" }, "pairedItem": { "item": 1 } }
+  { "json": { "name": "alice" } },
+  { "json": { "name": "bob" } }
 ]
 ```
 
----
+**Parameters:**
 
-### Test: multi-line command (chained with &&)
+```json
+{
+  "executeOnce": false,
+  "command": "echo {{ $json.name }}"
+}
+```
+
+**Expect** output[0]:
+
+```json
+[
+  { "json": { "name": "alice", "stdout": "alice\n", "stderr": "", "exitCode": 0 } },
+  { "json": { "name": "bob", "stdout": "bob\n", "stderr": "", "exitCode": 0 } }
+]
+```
+
+### Test: command failure (non-zero exit)
 
 **Given** input items:
+
 ```json
 [{ "json": {} }]
 ```
 
 **Parameters:**
+
 ```json
-{ "executeOnce": false, "command": "cd /tmp && echo hello" }
+{
+  "executeOnce": true,
+  "command": "sh -c 'exit 42'"
+}
 ```
 
-**Expect** output[0] stdout contains "hello" and exitCode 0.
+**Expect** output[0]:
 
----
+```json
+[{
+  "json": {
+    "stdout": "",
+    "stderr": "",
+    "exitCode": 42
+  }
+}]
+```
+
+### Test: command not found throws
+
+**Given** input items:
+
+```json
+[{ "json": {} }]
+```
+
+**Parameters:**
+
+```json
+{
+  "executeOnce": true,
+  "command": "nonexistent_command_xyz123"
+}
+```
+
+**Expect** the node throws an error (command not found).
+
+### Test: continueOnFail with command failure
+
+**Given** input items:
+
+```json
+[{ "json": {} }]
+```
+
+**Parameters:**
+
+```json
+{
+  "executeOnce": true,
+  "command": "sh -c 'exit 1'",
+  "continueOnFail": true
+}
+```
+
+**Expect** output[0]:
+
+```json
+[{
+  "json": {
+    "stdout": "",
+    "stderr": "",
+    "exitCode": 1
+  }
+}]
+```
 
 ## Gaps / confidence
 
 | Topic | documented / inferred | Notes |
 |-------|----------------------|-------|
-| executeOnce parameter | documented (as "Execute Once") | Docs call it "Execute Once"; source uses `executeOnce` key. Boolean default inferred as `false`. |
-| executeOnce default | inferred | Default `false` inferred from docs ("turned off" = once per item). |
-| continueOnFail error shape | inferred | n8n standard `continueOnFail` behavior inferred from core node patterns and source snippet. |
-| maxBuffer limit | documented (common issues) | Exact byte limit not documented; only mitigation described. |
-| Windows PowerShell line-break behavior | documented | Documented limitation; no parameter to control shell. |
-| Docker/queue-mode execution context | documented | Described in docs; not a parameter. |
-| Disabled by default in n8n ≥2.0 | documented | Config flag not part of node spec. |
-| n8n Cloud unavailable | documented | Not a runtime parameter. |
-| stdout/stderr encoding | inferred | Assumed UTF-8 string; not explicitly documented. |
-| Working directory | not documented | Not exposed as parameter; inherits from n8n process cwd. |
-| Environment variables | not documented | Not exposed; inherits from n8n process env. |
-| Timeout | not documented | No timeout parameter documented. |
-| Shell selection | documented (fixed) | Uses host default shell; not configurable. |
+| Parameter names and defaults | documented (public docs) | `executeOnce`, `command` appear verbatim in the public node docs; aliases + version 1.0 confirmed from public descriptor |
+| Output shape (stdout/stderr/exitCode) | inferred | Standard shell command execution contract; matches documented behavior that only "not found" and maxBuffer are errors |
+| `executeOnce` per-item behavior | documented | Public docs describe both modes explicitly |
+| Shell selection | documented | Public docs name the default host shell per platform |
+| Windows line-break truncation | documented | Common issues page documents the single-line behavior |
+| maxBuffer behavior | documented | Common issues page documents the error |
+| Execution environment (Docker/queue) | documented | Public docs cover Docker container and queue mode worker execution |
+| Cloud unavailability + 2.0 disable-by-default | documented | Public node docs security/availability notes |
 
 ## OpenFlow mapping
 
 - **Definition group:** `core`
-- **Executor file:** `src/lib/engine/executors/n8n-nodes-base.executeCommand.ts`
+- **Executor file:** `src/lib/engine/executors/execute-command.ts`
 - **SDK:** `defineNode` + native `ExecutionContext` only

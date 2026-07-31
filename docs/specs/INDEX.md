@@ -15,13 +15,15 @@ Status: `missing` | `specced` | `partial` | `implemented`
 | `n8n-nodes-base.if` | IF | specced | [nodes/n8n-nodes-base.if.md](./nodes/n8n-nodes-base.if.md) |
 | `n8n-nodes-base.switch` | Switch | specced | [nodes/n8n-nodes-base.switch.md](./nodes/n8n-nodes-base.switch.md) |
 | `n8n-nodes-base.merge` | Merge | specced | [nodes/n8n-nodes-base.merge.md](./nodes/n8n-nodes-base.merge.md) |
+| `n8n-nodes-base.moveBinaryData` | Move Binary Data | specced | [nodes/n8n-nodes-base.moveBinaryData.md](./nodes/n8n-nodes-base.moveBinaryData.md) |
 | `n8n-nodes-base.wait` | Wait | specced | [nodes/n8n-nodes-base.wait.md](./nodes/n8n-nodes-base.wait.md) |
 | `n8n-nodes-base.executeWorkflow` | Execute Workflow | specced | [nodes/n8n-nodes-base.executeWorkflow.md](./nodes/n8n-nodes-base.executeWorkflow.md) |
 | `n8n-nodes-base.executeWorkflowTrigger` | Execute Sub-workflow Trigger | specced | [nodes/n8n-nodes-base.executeWorkflowTrigger.md](./nodes/n8n-nodes-base.executeWorkflowTrigger.md) |
 | `n8n-nodes-base.stopAndError` | Stop and Error | specced | [nodes/n8n-nodes-base.stopAndError.md](./nodes/n8n-nodes-base.stopAndError.md) |
 | `n8n-nodes-base.noOp` | No Operation | specced | [nodes/n8n-nodes-base.noOp.md](./nodes/n8n-nodes-base.noOp.md) |
-| `n8n-nodes-base.stickyNote` | Sticky Note | partial | — |
+| `n8n-nodes-base.evaluationTrigger` | Evaluation Trigger | specced | [nodes/n8n-nodes-base.evaluationTrigger.md](./nodes/n8n-nodes-base.evaluationTrigger.md) |
 | `n8n-nodes-base.splitOut` | Split Out | specced | [nodes/n8n-nodes-base.splitOut.md](./nodes/n8n-nodes-base.splitOut.md) |
+| `n8n-nodes-base.activationTrigger` | Activation Trigger | specced | [nodes/n8n-nodes-base.activationTrigger.md](./nodes/n8n-nodes-base.activationTrigger.md) |
 | `n8n-nodes-base.aggregate` | Aggregate | specced | [nodes/n8n-nodes-base.aggregate.md](./nodes/n8n-nodes-base.aggregate.md) |
 | `n8n-nodes-base.filter` | Filter | specced | [nodes/n8n-nodes-base.filter.md](./nodes/n8n-nodes-base.filter.md) |
 | `n8n-nodes-base.limit` | Limit | specced | [nodes/n8n-nodes-base.limit.md](./nodes/n8n-nodes-base.limit.md) |
@@ -29,9 +31,15 @@ Status: `missing` | `specced` | `partial` | `implemented`
 | `n8n-nodes-base.itemLists` | Item Lists | specced | [nodes/n8n-nodes-base.itemLists.md](./nodes/n8n-nodes-base.itemLists.md) |
 | `n8n-nodes-base.dateTime` | Date & Time | specced | [nodes/n8n-nodes-base.dateTime.md](./nodes/n8n-nodes-base.dateTime.md) |
 | `n8n-nodes-base.sort` | Sort | specced | [nodes/n8n-nodes-base.sort.md](./nodes/n8n-nodes-base.sort.md) |
+| `n8n-nodes-base.spreadsheetFile` | Spreadsheet File | specced | [nodes/n8n-nodes-base.spreadsheetFile.md](./nodes/n8n-nodes-base.spreadsheetFile.md) |
 | `n8n-nodes-base.renameKeys` | Rename Keys | specced | [nodes/n8n-nodes-base.renameKeys.md](./nodes/n8n-nodes-base.renameKeys.md) |
 | `n8n-nodes-base.errorTrigger` | Error Trigger | specced | [nodes/n8n-nodes-base.errorTrigger.md](./nodes/n8n-nodes-base.errorTrigger.md) |
 | `n8n-nodes-base.splitInBatches` | Split In Batches | specced | [nodes/n8n-nodes-base.splitInBatches.md](./nodes/n8n-nodes-base.splitInBatches.md) |
+| `n8n-nodes-base.supabase` | Supabase | specced | [nodes/n8n-nodes-base.supabase.md](./nodes/n8n-nodes-base.supabase.md) |
+| `n8n-nodes-base.mongoDb` | MongoDB | implemented | [nodes/n8n-nodes-base.mongoDb.md](./nodes/n8n-nodes-base.mongoDb.md) |
+| `n8n-nodes-base.n8n` | n8n | specced | [nodes/n8n-nodes-base.n8n.md](./nodes/n8n-nodes-base.n8n.md) |
+| `n8n-nodes-base.n8nTrigger` | n8n Trigger | specced | [nodes/n8n-nodes-base.n8nTrigger.md](./nodes/n8n-nodes-base.n8nTrigger.md) |
+| `n8n-nodes-base.quickChart` | QuickChart | specced | [nodes/n8n-nodes-base.quickChart.md](./nodes/n8n-nodes-base.quickChart.md) |
 | `n8n-nodes-base.ftp` | FTP | specced | [nodes/n8n-nodes-base.ftp.md](./nodes/n8n-nodes-base.ftp.md) |
 | `n8n-nodes-base.convertToFile` | Convert to File | specced | [nodes/n8n-nodes-base.convertToFile.md](./nodes/n8n-nodes-base.convertToFile.md) |
 | `n8n-nodes-base.extractFromFile` | Extract from File | specced | [nodes/n8n-nodes-base.extractFromFile.md](./nodes/n8n-nodes-base.extractFromFile.md) |
@@ -44,6 +52,7 @@ Status: `missing` | `specced` | `partial` | `implemented`
 | `@n8n/n8n-nodes-langchain.chainSummarization` | Summarization Chain | implemented | [nodes/@n8n/n8n-nodes-langchain.chainSummarization.md](./nodes/@n8n/n8n-nodes-langchain.chainSummarization.md) |
 | `@n8n/n8n-nodes-langchain.documentDefaultDataLoader` | Default Data Loader | specced | [nodes/@n8n/n8n-nodes-langchain.documentDefaultDataLoader.md](./nodes/@n8n/n8n-nodes-langchain.documentDefaultDataLoader.md) |
 | `@n8n/n8n-nodes-langchain.embeddingsOpenAi` | Embeddings OpenAI | specced | [nodes/@n8n/n8n-nodes-langchain.embeddingsOpenAi.md](./nodes/@n8n/n8n-nodes-langchain.embeddingsOpenAi.md) |
+| `@n8n/n8n-nodes-langchain.embeddingsCohere` | Embeddings Cohere | specced | [nodes/@n8n/n8n-nodes-langchain.embeddingsCohere.md](./nodes/@n8n/n8n-nodes-langchain.embeddingsCohere.md) |
 | `@n8n/n8n-nodes-langchain.lmChatOpenAi` | OpenAI Chat Model | specced | [nodes/@n8n/n8n-nodes-langchain.lmChatOpenAi.md](./nodes/@n8n/n8n-nodes-langchain.lmChatOpenAi.md) |
 | `@n8n/n8n-nodes-langchain.vectorStoreInMemory` | Simple Vector Store | specced | [nodes/@n8n/n8n-nodes-langchain.vectorStoreInMemory.md](./nodes/@n8n/n8n-nodes-langchain.vectorStoreInMemory.md) |
 | `@n8n/n8n-nodes-langchain.lmChatGoogleGemini` | Google Gemini Chat Model | implemented | [nodes/@n8n/n8n-nodes-langchain.lmChatGoogleGemini.md](./nodes/@n8n/n8n-nodes-langchain.lmChatGoogleGemini.md) |
@@ -51,21 +60,33 @@ Status: `missing` | `specced` | `partial` | `implemented`
 | `@n8n/n8n-nodes-langchain.lmChatOpenRouter` | OpenRouter Chat Model | specced | [nodes/@n8n/n8n-nodes-langchain.lmChatOpenRouter.md](./nodes/@n8n/n8n-nodes-langchain.lmChatOpenRouter.md) |
 | `@n8n/n8n-nodes-langchain.lmChatOllama` | Ollama Chat Model | implemented | [nodes/@n8n/n8n-nodes-langchain.lmChatOllama.md](./nodes/@n8n/n8n-nodes-langchain.lmChatOllama.md) |
 | `@n8n/n8n-nodes-langchain.mcpClientTool` | MCP Client Tool | specced | [nodes/@n8n/n8n-nodes-langchain.mcpClientTool.md](./nodes/@n8n/n8n-nodes-langchain.mcpClientTool.md) |
+| `@n8n/n8n-nodes-langchain.toolWolframAlpha` | Wolfram Alpha | specced | [nodes/@n8n/n8n-nodes-langchain.toolWolframAlpha.md](./nodes/@n8n/n8n-nodes-langchain.toolWolframAlpha.md) |
+| `@n8n/n8n-nodes-langchain.toolSearXng` | SearXNG Tool | specced | [nodes/@n8n/n8n-nodes-langchain.toolSearXng.md](./nodes/@n8n/n8n-nodes-langchain.toolSearXng.md) |
+| `@n8n/n8n-nodes-langchain.guardrails` | Guardrails | specced | [nodes/@n8n/n8n-nodes-langchain.guardrails.md](./nodes/@n8n/n8n-nodes-langchain.guardrails.md) |
 | `@n8n/n8n-nodes-langchain.mcpTrigger` | MCP Server Trigger | implemented | [nodes/@n8n/n8n-nodes-langchain.mcpTrigger.md](./nodes/@n8n/n8n-nodes-langchain.mcpTrigger.md) |
 | `@n8n/n8n-nodes-langchain.textSplitterRecursiveCharacterTextSplitter` | Recursive Character Text Splitter | specced | [nodes/@n8n/n8n-nodes-langchain.textSplitterRecursiveCharacterTextSplitter.md](./nodes/@n8n/n8n-nodes-langchain.textSplitterRecursiveCharacterTextSplitter.md) |
 | `@n8n/n8n-nodes-langchain.chatTrigger` | Chat Trigger | implemented | [nodes/@n8n/n8n-nodes-langchain.chatTrigger.md](./nodes/@n8n/n8n-nodes-langchain.chatTrigger.md) |
 | `@n8n/n8n-nodes-langchain.memoryBufferWindow` | Simple Memory | implemented | [nodes/@n8n/n8n-nodes-langchain.memoryBufferWindow.md](./nodes/@n8n/n8n-nodes-langchain.memoryBufferWindow.md) |
+| `@n8n/n8n-nodes-langchain.code` | LangChain Code | specced | [nodes/@n8n/n8n-nodes-langchain.code.md](./nodes/@n8n/n8n-nodes-langchain.code.md) |
+| `@n8n/n8n-nodes-langchain.modelSelector` | Model Selector | specced | [nodes/@n8n/n8n-nodes-langchain.modelSelector.md](./nodes/@n8n/n8n-nodes-langchain.modelSelector.md) |
+| `@n8n/n8n-nodes-langchain.outputParserAutofixing` | Auto-fixing Output Parser | specced | [nodes/@n8n/n8n-nodes-langchain.outputParserAutofixing.md](./nodes/@n8n/n8n-nodes-langchain.outputParserAutofixing.md) |
+| `@n8n/n8n-nodes-langchain.outputParserItemList` | Item List Output Parser | specced | [nodes/@n8n/n8n-nodes-langchain.outputParserItemList.md](./nodes/@n8n/n8n-nodes-langchain.outputParserItemList.md) |
 | `n8n-nodes-base.compareDatasets` | Compare Datasets | specced | [nodes/n8n-nodes-base.compareDatasets.md](./nodes/n8n-nodes-base.compareDatasets.md) |
 | `n8n-nodes-base.crypto` | Crypto | specced | [nodes/n8n-nodes-base.crypto.md](./nodes/n8n-nodes-base.crypto.md) |
 | `n8n-nodes-base.html` | HTML | specced | [nodes/n8n-nodes-base.html.md](./nodes/n8n-nodes-base.html.md) |
 | `n8n-nodes-base.markdown` | Markdown | specced | [nodes/n8n-nodes-base.markdown.md](./nodes/n8n-nodes-base.markdown.md) |
+| `n8n-nodes-base.messageBird` | MessageBird | specced | [nodes/n8n-nodes-base.messageBird.md](./nodes/n8n-nodes-base.messageBird.md) |
 | `n8n-nodes-base.xml` | XML | specced | [nodes/n8n-nodes-base.xml.md](./nodes/n8n-nodes-base.xml.md) |
+| `n8n-nodes-base.jira` | Jira Software | specced | [nodes/n8n-nodes-base.jira.md](./nodes/n8n-nodes-base.jira.md) |
 | `n8n-nodes-base.jwt` | JWT | specced | [nodes/n8n-nodes-base.jwt.md](./nodes/n8n-nodes-base.jwt.md) |
 | `n8n-nodes-base.compression` | Compression | specced | [nodes/n8n-nodes-base.compression.md](./nodes/n8n-nodes-base.compression.md) |
 | `n8n-nodes-base.executionData` | Execution Data | specced | [nodes/n8n-nodes-base.executionData.md](./nodes/n8n-nodes-base.executionData.md) |
 | `n8n-nodes-base.formTrigger` | n8n Form | specced | [nodes/n8n-nodes-base.formTrigger.md](./nodes/n8n-nodes-base.formTrigger.md) |
 | `n8n-nodes-base.localFileTrigger` | Local File Trigger | specced | [nodes/n8n-nodes-base.localFileTrigger.md](./nodes/n8n-nodes-base.localFileTrigger.md) |
 | `n8n-nodes-base.workflowTrigger` | Workflow Trigger | specced | [nodes/n8n-nodes-base.workflowTrigger.md](./nodes/n8n-nodes-base.workflowTrigger.md) |
+| `n8n-nodes-base.readPDF` | Read PDF | specced | [nodes/n8n-nodes-base.readPDF.md](./nodes/n8n-nodes-base.readPDF.md) |
+| `n8n-nodes-base.readBinaryFile` | Read Binary File | specced | [nodes/n8n-nodes-base.readBinaryFile.md](./nodes/n8n-nodes-base.readBinaryFile.md) |
+| `n8n-nodes-base.readBinaryFiles` | Read Binary Files | specced | [nodes/n8n-nodes-base.readBinaryFiles.md](./nodes/n8n-nodes-base.readBinaryFiles.md) |
 | `n8n-nodes-base.readWriteFile` | Read/Write Files from Disk | implemented | [nodes/n8n-nodes-base.readWriteFile.md](./nodes/n8n-nodes-base.readWriteFile.md) |
 | `n8n-nodes-base.ssh` | SSH | specced | [nodes/n8n-nodes-base.ssh.md](./nodes/n8n-nodes-base.ssh.md) |
 | `n8n-nodes-base.graphql` | GraphQL | specced | [nodes/n8n-nodes-base.graphql.md](./nodes/n8n-nodes-base.graphql.md) |
@@ -75,19 +96,37 @@ Status: `missing` | `specced` | `partial` | `implemented`
 | `n8n-nodes-base.executeCommand` | Execute Command | specced | [nodes/n8n-nodes-base.executeCommand.md](./nodes/n8n-nodes-base.executeCommand.md) |
 | `@n8n/n8n-nodes-langchain.openAi` | OpenAI | implemented | [nodes/@n8n/n8n-nodes-langchain.openAi.md](./nodes/@n8n/n8n-nodes-langchain.openAi.md) |
 | `n8n-nodes-base._killtest` | _killtest (unpublished) | specced | [nodes/n8n-nodes-base._killtest.md](./nodes/n8n-nodes-base._killtest.md) |
+| `n8n-nodes-base.hubspot` | HubSpot | specced | [nodes/n8n-nodes-base.hubspot.md](./nodes/n8n-nodes-base.hubspot.md) |
 | `n8n-nodes-base.slack` | Slack | specced | [nodes/n8n-nodes-base.slack.md](./nodes/n8n-nodes-base.slack.md) |
 | `n8n-nodes-base.slackTrigger` | Slack Trigger | specced | [nodes/n8n-nodes-base.slack.md](./nodes/n8n-nodes-base.slack.md) |
 | `n8n-nodes-base.telegram` | Telegram | specced | [nodes/n8n-nodes-base.telegram.md](./nodes/n8n-nodes-base.telegram.md) |
 | `n8n-nodes-base.discord` | Discord | specced | [nodes/n8n-nodes-base.discord.md](./nodes/n8n-nodes-base.discord.md) |
 | `n8n-nodes-base.webflow` | Webflow | implemented | [nodes/n8n-nodes-base.webflow.md](./nodes/n8n-nodes-base.webflow.md) |
 | `n8n-nodes-base.whatsApp` | WhatsApp Business Cloud | specced | [nodes/n8n-nodes-base.whatsApp.md](./nodes/n8n-nodes-base.whatsApp.md) |
-| `n8n-nodes-base.todoist` | Todoist | specced | [nodes/n8n-nodes-base.todoist.md](./nodes/n8n-nodes-base.todoist.md) |
+| `n8n-nodes-base.totp` | TOTP | specced | [nodes/n8n-nodes-base.totp.md](./nodes/n8n-nodes-base.totp.md) |
 | `n8n-nodes-base.gmail` | Gmail | specced | [nodes/n8n-nodes-base.gmail.md](./nodes/n8n-nodes-base.gmail.md) |
 | `n8n-nodes-base.twilio` | Twilio | specced | [nodes/n8n-nodes-base.twilio.md](./nodes/n8n-nodes-base.twilio.md) |
+| `n8n-nodes-base.sendGrid` | SendGrid | specced | [nodes/n8n-nodes-base.sendGrid.md](./nodes/n8n-nodes-base.sendGrid.md) |
 | `n8n-nodes-base.googleSheets` | Google Sheets | specced | [nodes/n8n-nodes-base.googleSheets.md](./nodes/n8n-nodes-base.googleSheets.md) |
 | `n8n-nodes-base.googleDocs` | Google Docs | specced | [nodes/n8n-nodes-base.googleDocs.md](./nodes/n8n-nodes-base.googleDocs.md) |
 | `n8n-nodes-base.googleCalendar` | Google Calendar | specced | [nodes/n8n-nodes-base.googleCalendar.md](./nodes/n8n-nodes-base.googleCalendar.md) |
+| `n8n-nodes-base.facebookGraphApi` | Facebook Graph API | implemented | [nodes/n8n-nodes-base.facebookGraphApi.md](./nodes/n8n-nodes-base.facebookGraphApi.md) |
+| `n8n-nodes-base.wordpress` | WordPress | specced | [nodes/n8n-nodes-base.wordpress.md](./nodes/n8n-nodes-base.wordpress.md) |
+| `n8n-nodes-base.hackerNews` | Hacker News | specced | [nodes/n8n-nodes-base.hackerNews.md](./nodes/n8n-nodes-base.hackerNews.md) |
+| `n8n-nodes-base.debugHelper` | Debug Helper | specced | [nodes/n8n-nodes-base.debugHelper.md](./nodes/n8n-nodes-base.debugHelper.md) |
+| `n8n-nodes-base.evaluation` | Evaluation | specced | [nodes/n8n-nodes-base.evaluation.md](./nodes/n8n-nodes-base.evaluation.md) |
+| `n8n-nodes-base.gotify` | Gotify | specced | [nodes/n8n-nodes-base.gotify.md](./nodes/n8n-nodes-base.gotify.md) |
+| `n8n-nodes-base.mattermost` | Mattermost | specced | [nodes/n8n-nodes-base.mattermost.md](./nodes/n8n-nodes-base.mattermost.md) |
+| `n8n-nodes-base.rocketchat` | Rocket.Chat | specced | [nodes/n8n-nodes-base.rocketchat.md](./nodes/n8n-nodes-base.rocketchat.md) |
+| `n8n-nodes-base.form` | n8n Form (page/ending) | specced | [nodes/n8n-nodes-base.form.md](./nodes/n8n-nodes-base.form.md) |
+| `n8n-nodes-base.matrix` | Matrix | specced | [nodes/n8n-nodes-base.matrix.md](./nodes/n8n-nodes-base.matrix.md) |
 | `n8n-nodes-base.googleCalendarTrigger` | Google Calendar Trigger | specced | [nodes/n8n-nodes-base.googleCalendar.md](./nodes/n8n-nodes-base.googleCalendar.md) |
+| `n8n-nodes-base.iCalendar` | iCalendar | specced | [nodes/n8n-nodes-base.iCalendar.md](./nodes/n8n-nodes-base.iCalendar.md) |
+| `n8n-nodes-base.ldap` | LDAP | specced | [nodes/n8n-nodes-base.ldap.md](./nodes/n8n-nodes-base.ldap.md) |
+| `n8n-nodes-base.pushover` | Pushover | specced | [nodes/n8n-nodes-base.pushover.md](./nodes/n8n-nodes-base.pushover.md) |
+| `n8n-nodes-base.sms77` | seven | specced | [nodes/n8n-nodes-base.sms77.md](./nodes/n8n-nodes-base.sms77.md) |
+| `n8n-nodes-base.pushbullet` | Pushbullet | specced | [nodes/n8n-nodes-base.pushbullet.md](./nodes/n8n-nodes-base.pushbullet.md) |
+| `n8n-nodes-base.sendInBlue` | Brevo (formerly Sendinblue) | specced | [nodes/n8n-nodes-base.sendInBlue.md](./nodes/n8n-nodes-base.sendInBlue.md) |
 
 Builtins exist in-tree as native OpenFlow nodes. Formal per-node specs are
 filled by the **openflow-node-spec** skill / Prompt 01. App/integration nodes
@@ -170,4 +209,28 @@ are out of scope for this index until core specs are complete.
 | 2026-07-30 | Factory queue cycle 1: `@n8n/n8n-nodes-langchain.documentDefaultDataLoader` (Default Data Loader; ai_documentLoader sub-node, binary/JSON load, simple 1000/200 or custom splitter, data format MIME/auto-detect+text fallback, metadata, fixtures) | Public docs only |
 | 2026-07-30 | Factory queue cycle 1 refresh: `@n8n/n8n-nodes-langchain.chainRetrievalQa` (spec verified vs live docs — Query param, "No prompt specified" + "A Retriever sub-node must be connected" errors, retriever = vector store OR Workflow Retriever, RAG retrieve→context→single call, no tools/memory; corpus = n8n-nodes-base@2.15.1 has no langchain descriptor + docs/page.md 404 wrong path → public docs only; no changes needed; fix hints none) | Public docs only |
 | 2026-07-30 | Factory queue cycle 1 refresh: `@n8n/n8n-nodes-langchain.chainLlm` (spec verified vs live docs — prompt auto/define + "Connected Chat Trigger Node" reads chatInput, "No prompt specified" error, Require Specific Output Format → 3 output parsers, Chat Messages AI/System/User + Image Binary/URL + Auto/Low/High, no tools/no memory, single model call; typeVersion 1.4 + messages.messageValues `{message}` + ai_languageModel conn confirmed in agents_vs_chains.json; corpus = n8n-nodes-base@2.15.1 has no langchain descriptor + docs/page.md 404 wrong path → public docs only; no changes needed; fix hints none) | Public docs + public workflow JSON |
-| 2026-07-30 | Factory queue cycle 1: `@n8n/n8n-nodes-langchain.mcpTrigger` (MCP Server Trigger; spec agent failed 502 — spec written by implement agent from in-repo sibling mcpClientTool spec + MCP protocol; trigger exposes workflow as MCP server, tools/call→output item, getMcpTriggerTools + shapeMcpToolResult helpers, fixtures) | Public docs only + MCP protocol docs + in-repo sibling spec |
+| 2026-07-30 | Factory queue cycle 1: MCP Server Trigger (`@n8n/n8n-nodes-langchain.mcpTrigger`) — spec written by implement agent | Public docs only + MCP protocol docs + in-repo sibling spec |
+| 2026-07-30 | Factory queue cycle 1: Move Binary Data (`n8n-nodes-base.moveBinaryData`) — hidden transform node, binary↔JSON conversion, 2 modes, 5 fixtures | Public docs 404 + public descriptor metadata |
+| 2026-07-30 | Factory queue cycle 1: Read Binary File (`n8n-nodes-base.readBinaryFile`) — single-file read, per-item processing, JSON pass-through, filePath + dataPropertyName parameters, no options, no credentials | Public docs + public descriptor metadata |
+| 2026-07-30 | Factory queue cycle 1: Jira Software (`n8n-nodes-base.jira`) — 4 resources × 20 operations, issue/issueAttachment/issueComment/user, Jira REST API, 3 credential types | Public docs + public descriptor metadata |
+| 2026-07-30 | Factory queue cycle 1: Item Lists (`n8n-nodes-base.itemLists`) — comprehensive refresh: V1/V2/V3 version model, 6 operations (concatenateItems/limit/removeDuplicates/sort/splitOutItems/summarize), hidden/legacy import-compat node, all params per operation, 5 fixtures | Public descriptor metadata |
+| 2026-07-30 | Factory queue cycle 1: HubSpot (`n8n-nodes-base.hubspot`) — full spec, 7 resources × 34 operations, V1+V2 version model, 5 acceptance test fixtures | Public docs + public descriptor metadata |
+| 2026-07-30 | Factory queue cycle 1: MongoDB (`n8n-nodes-base.mongoDb`) — 2 resources × 11 operations, Document (aggregate/delete/find/findOneAndReplace/findOneAndUpdate/insert/update) + Search Index (create/drop/list/update), mongoDb credential, descriptor-verified params | Public docs + public descriptor metadata |
+| 2026-07-30 | Factory queue cycle 1: WordPress (`n8n-nodes-base.wordpress`) — 3 resources × 12 operations, Post/Page/User CRUD, loadOptions, 2 credential types, 5 fixtures | Public docs + public descriptor metadata + WordPress REST API docs |
+| 2026-07-30 | Factory queue cycle 1: Facebook Graph API (`n8n-nodes-base.facebookGraphApi`) — 2 resource groups × 3 operations, default/video host, GET/POST/DELETE, binary upload, facebookGraphApi credential | Public docs + public descriptor metadata |
+| 2026-07-30 | Factory queue cycle 1: Hacker News (`n8n-nodes-base.hackerNews`) — 3 resources × 3 operations (All/getAll, Article/get, User/get), no credentials, public HN APIs (Algolia + Firebase) | Public docs + public descriptor metadata |
+| 2026-07-30 | Factory queue cycle 1: Read Binary Files (`n8n-nodes-base.readBinaryFiles`) — hidden legacy node, read-only glob-based file reader, predecessor of readWriteFile, no operation param, options for dataPropertyName/fileExtension/fileName/mimeType | Public docs + public descriptor metadata |
+| 2026-07-30 | Factory queue cycle 1: n8n Form (`n8n-nodes-base.form`) — page/ending action node, 2 operations (form/completion), 4 form-ending modes, 13 field types, multi-page accumulation, last-Form-Ending-wins for branches, JSON field definition, hidden fields, file uploads | Public docs + public descriptor metadata |
+| 2026-07-30 | iCalendar (`n8n-nodes-base.iCalendar`) — hidden transform node, single createEventFile operation, strings/datetime/boolean/collection params, binary .ics output, no credentials | Public docs 404 + public descriptor metadata |
+| 2026-07-30 | Factory queue cycle 1: QuickChart (`n8n-nodes-base.quickChart`) — chart image generation via QuickChart API, 5 chart types (bar/doughnut/line/pie/polar), configurable output dimensions/format/version/background, optional quickChartApi credential | Public docs + third-party service API docs |
+| 2026-07-30 | Factory queue cycle 1: seven (`n8n-nodes-base.sms77`) — 2 resources × 2 operations, SMS + Voice, sms77Api credential, seven.io REST API | Public docs + public descriptor metadata + seven.io API docs |
+| 2026-07-30 | Factory queue cycle 1: Pushbullet (`n8n-nodes-base.pushbullet`) — 1 resource × 4 operations, Push (create/delete/getAll/update), pushbulletOAuth2Api credential, Pushbullet REST API | Public docs + third-party service API docs |
+| 2026-07-30 | Factory queue cycle 1: Brevo / Sendinblue (`n8n-nodes-base.sendInBlue`) — 4 resources × 13 operations (Contact/Contact Attribute/Email/Sender), sendInBlueApi credential, Brevo API v3 | Public docs + third-party service API docs + public descriptor metadata |
+| 2026-07-30 | Factory queue cycle 1: SendGrid (`n8n-nodes-base.sendGrid`) — 3 resources × 10 operations, Contact (upsert/delete/get/getAll) + List (create/delete/get/getAll/update) + Mail (send), sendGridApi credential (apiKey), SendGrid v3 API, 5 fixtures | Public docs + SendGrid API docs + public descriptor metadata |
+| 2026-07-30 | Factory queue cycle 1: Guardrails (`@n8n/n8n-nodes-langchain.guardrails`) — 2 operations (check/sanitize), 9 guardrail checks (keywords/jailbreak/nsfw/pii/secretKeys/topicalAlignment/urls/custom/customRegex), 2 main outputs (Pass=0/Fail=1), optional ai_languageModel for LLM checks, wire keys confirmed via template gallery | Public docs + public workflow JSON |
+| 2026-07-30 | Factory queue cycle 1: Model Selector (`@n8n/n8n-nodes-langchain.modelSelector`) — ai_languageModel sub-node, numberInputs + rules (filter-style conditions + modelIndex, first-match-wins, default index 0), sub-node first-item expressions, 5 fixtures | Public docs + public workflow JSON |
+| 2026-07-30 | Factory queue cycle 1: LangChain Code (`@n8n/n8n-nodes-langchain.code`) — deprecated/hidden/self-hosted-only cluster node, execute vs supplyData modes, configurable main + 12 ai_* channels, 7 built-in code helpers, module-loading restriction, 5 fixtures | Public docs only |
+| 2026-07-30 | Factory queue cycle 1: Wolfram|Alpha Tool (`@n8n/n8n-nodes-langchain.toolWolframAlpha`) — ai_tool tool sub-node, no node-level parameters, API-key (App ID) credential, Short Answers API query, plain-text observation, 5 fixtures | Public docs + public workflow JSON + Wolfram service API docs |
+| 2026-07-30 | Factory queue cycle 1: Item List Output Parser (`@n8n/n8n-nodes-langchain.outputParserItemList`) — ai_outputParser sub-node, numberOfItems (-1 = unlimited) + separator (default newline), split-by-separator list parse, 5 fixtures | Public docs only (corpus has no langchain descriptors) |
+| 2026-07-30 | Factory queue cycle 1: Auto-fixing Output Parser (`@n8n/n8n-nodes-langchain.outputParserAutofixing`) — ai_outputParser sub-node, wraps inner parser, LLM repair loop on ai_languageModel, options.prompt + {instructions}/{completion}/{error} placeholders (default verified via templates 1957 + 3891), single-retry, 5 fixtures; CORPUS_DIR = n8n-nodes-base@2.15.1 (no langchain descriptor) + docs 404 → public docs + public workflow JSON | Public docs + public workflow JSON |
+| 2026-07-30 | Factory queue cycle 1: Embeddings Cohere (`@n8n/n8n-nodes-langchain.embeddingsCohere`) — ai_embedding sub-node, only `model` documented (3 v2.0 models + dims), cohereApi credential, Cohere Embed v2 API contract, first-item expression rule, typeVersion 1 via template gallery, 5 fixtures | Public docs + public workflow JSON + Cohere service API docs |
