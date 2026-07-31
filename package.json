@@ -81,6 +81,7 @@
     "isolated-vm": "^5.0.4",
     "lucide-react": "^0.575.0",
     "mongodb": "^7.5.0",
+    "mssql": "^12.7.0",
     "mysql2": "^3.23.2",
     "pdf-parse": "^2.4.5",
     "pg": "^8.22.0",
