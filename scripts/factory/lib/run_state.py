@@ -178,6 +178,20 @@ def build_pending(include_partial: bool = True) -> list[str]:
             pending.append(t)
             continue
         if stage in ("partial", "fail", "interrupted") or verdict == "fail":
+            # Do not auto-loop hard registration/auth failures (needs human / y after fix)
+            if st.get("gateClass") == "hard_fail" and st.get("failReason") in (
+                "impl_not_registered",
+                "impl_not_in_runtime",
+                "impl_no_executor",
+                "impl_n8n_import",
+                "auth_error",
+                "bad_model",
+                "opencode_missing",
+            ):
+                continue
+            if int(st.get("failCount") or 0) >= 5 and st.get("failReason"):
+                # stuck on same failure — wait for manual retry
+                continue
             if include_partial:
                 pending.append(t)
             continue

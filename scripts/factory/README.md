@@ -39,7 +39,7 @@ npm run factory:tui
 |-----|--------|
 | **S** | Start factory (pending queue) |
 | **C** | Continue / resume checkpoint |
-| **X** | Factory Stop (confirm y) — kill all + wipe run tmp |
+| **X** | Factory Stop (confirm y) — **safe** kill of factory worker + agents only (never desktop/session) + wipe run tmp |
 | **m** | Models — full `opencode models` list |
 | **q** | Quit TUI (factory keeps running) |
 
@@ -54,8 +54,9 @@ npm run factory:tui
 | **y** | **Continue** stuck/failed job from last stage only (no full SPEC re-trial) |
 | **L** | **Bypass impl.lock** + continue IMPLEMENT for this job only |
 | **!** | **Steal lock** (kill current lock holder) + continue selected (confirm) |
-| **r** | **Full retry** (reset → SPEC cycle 1 again) |
+| **r** | **Full retry** — archives `cycle-*` → `archive/attempt-K/`, **keeps** `failures.jsonl`, SPEC cycle 1 again |
 | **R** | Retry all failed/partial/interrupted (confirm y) |
+| **H** | **Failure history** for selected job (from `failures.jsonl`) |
 | **k** | Kill selected pipe only (confirm y) |
 | **n** | Run selected **now** full pipeline (bg — TUI stays responsive) |
 
@@ -95,12 +96,35 @@ Default wait attempt **300s**. WAITOUT jobs keep cycling until they get the lock
 
 | After | Gate | Blocks next stage if |
 |-------|------|----------------------|
-| **SPEC** | `gate_spec.sh` | missing/thin spec, agent rate-limit/timeout/error |
-| **IMPLEMENT** | `gate_impl.sh` | no executor/registration, agent error, missing spec |
+| **SPEC** | `gate_spec.sh` | missing/thin/forbidden spec (**artifact wins** — log noise ignored) |
+| **IMPLEMENT** | `gate_impl.sh` | no executor/registration (**artifact wins** — log noise ignored) |
 | **VALIDATE** | `validate_node.sh` | full gates; VAL LLM skipped when gates already red |
 
+**Artifact-first policy:** if the spec/executor files are acceptable, the gate **passes** even when the agent log mentions `502` or `rate_limit_per_user` from corpus dumps (previous false-positive loop).
+
 Fails set `failedStage` + `failReason` in status (shown in TUI as `FAIL spec/rate_limit` etc.).  
-Next cycle retries the **failed stage** (not a blind march forward).
+Next cycle retries the **failed stage** (not a blind march forward).  
+Hard registration/auth failures stop auto-retry (no infinite loop); fix code then **y**.
+
+### Safe stop
+
+Factory stop uses allowlisted PIDs only (`safe_kill.py`). It does **not** `kill -pgid` / `killpg` on the user session (that could crash the desktop).  
+- `CLASS=retryable` → backoff 30s×cycle before retry  
+- `CLASS=hard_fail` (`auth_error`, `bad_model`, …) → stop immediately (no cycle burn)
+
+### Failure memory (learn across cycles)
+
+Each job keeps an append-only ledger:
+
+```text
+scripts/factory/.jobs/nodes/<type>/
+  failures.jsonl      # every SPEC/IMPL/VAL fail with primary + gate excerpt
+  fix_hints.txt       # latest actionable checklist (injected into prompts)
+  archive/attempt-N/  # prior cycle-* dirs after soft retry (r)
+```
+
+On fail, agents get `{{FAILURE_HISTORY}}` + real gate `FAIL` lines (not “See gate.log”).  
+Soft **r** keeps the ledger; `node_ctl.sh reset --hard` wipes memory.
 
 ### Live logs
 
@@ -132,6 +156,9 @@ Bottom strip on the main list shows the selected node’s latest LLM tool lines 
 bash scripts/factory/lib/node_ctl.sh status  n8n-nodes-base.set
 bash scripts/factory/lib/node_ctl.sh reset   n8n-nodes-base.set
 bash scripts/factory/lib/node_ctl.sh kill      n8n-nodes-base.set
+bash scripts/factory/lib/node_ctl.sh kill-all              # all live agents (used by factory:stop)
+bash scripts/factory/lib/node_ctl.sh reset n8n-nodes-base.set          # soft: archive + keep history
+bash scripts/factory/lib/node_ctl.sh reset n8n-nodes-base.set --hard   # wipe history
 # resume stuck job from last stage only (one-shot; skips completed stages)
 bash scripts/factory/lib/node_ctl.sh continue  n8n-nodes-base.set
 bash scripts/factory/lib/node_ctl.sh continue  n8n-nodes-base.set --stage implement
@@ -191,6 +218,9 @@ scripts/factory/.jobs/
       02-implement.out.log
       03-validate.out.log
       gate.log
+    failures.jsonl         # append-only fail ledger
+    fix_hints.txt          # latest actionable hints
+    archive/attempt-N/     # prior cycles after soft retry
 ```
 
 ## Layout

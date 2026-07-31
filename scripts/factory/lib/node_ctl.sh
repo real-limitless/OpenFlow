@@ -111,79 +111,39 @@ cmd_status() {
 }
 
 kill_tree() {
+  # SAFE: only kill this pid + descendants individually — never process groups
   local pid="$1"
-  [[ -n "$pid" && "$pid" =~ ^[0-9]+$ ]] || return 0
-  local kids
-  kids=$(pgrep -P "$pid" 2>/dev/null || true)
-  for k in $kids; do
-    kill_tree "$k" || true
-  done
-  kill -TERM "$pid" 2>/dev/null || true
-  sleep 0.1
-  kill -KILL "$pid" 2>/dev/null || true
+  [[ -n "$pid" && "$pid" =~ ^[0-9]+$ && "$pid" -gt 1 ]] || return 0
+  FACTORY_JOBS="$JOBS" python3 "$ROOT/scripts/factory/lib/safe_kill.py" pids --pids "$pid" >/dev/null 2>&1 || true
   return 0
 }
 
-# Kill by fixed-string match via /proc (pkill -f is regex and fragile).
-# Never match this helper / node_ctl itself.
+# Kill factory processes matching a type (allowlisted cmdline only)
 kill_matching() {
   local needle="$1"
-  NEEDLE="$needle" SELF="$$" python3 - <<'PY' || true
-import os, signal, sys
-
-needle = os.environ.get("NEEDLE", "")
-self_pid = int(os.environ.get("SELF", "0"))
-me = os.getpid()
-parent = os.getppid()
-skip = {me, parent, self_pid}
-killed = []
-
-def cmdline_of(pid: int) -> str:
-    try:
-        raw = open(f"/proc/{pid}/cmdline", "rb").read()
-        return raw.replace(b"\x00", b" ").decode("utf-8", "replace")
-    except Exception:
-        return ""
-
-for name in os.listdir("/proc"):
-    if not name.isdigit():
-        continue
-    pid = int(name)
-    if pid in skip:
-        continue
-    cmd = cmdline_of(pid)
-    if not cmd or needle not in cmd:
-        continue
-    # skip our own control scripts
-    if "node_ctl.sh" in cmd or "kill_matching" in cmd:
-        continue
-    if "resolve_models.py" in cmd:
-        continue
-    try:
-        # kill children first
-        for cname in os.listdir("/proc"):
-            if not cname.isdigit():
-                continue
-            try:
-                stat = open(f"/proc/{cname}/stat").read().split()
-                # field 4 is ppid
-                if int(stat[3]) == pid:
-                    os.kill(int(cname), signal.SIGKILL)
-            except Exception:
-                pass
-        os.kill(pid, signal.SIGTERM)
-        killed.append(pid)
-    except Exception:
-        pass
-
-for pid in list(killed):
-    try:
-        os.kill(pid, signal.SIGKILL)
-    except Exception:
-        pass
-
-print(" ".join(str(x) for x in killed))
-PY
+  # Prefer type-scoped safe kill when needle contains a type
+  if [[ "$needle" == *"--type "* ]]; then
+    local t="${needle#*--type }"
+    t="${t%% *}"
+    FACTORY_JOBS="$JOBS" python3 "$ROOT/scripts/factory/lib/safe_kill.py" type --type "$t" 2>/dev/null || true
+    return 0
+  fi
+  if [[ "$needle" == factory\ SPEC\ * || "$needle" == factory\ IMPL\ * || "$needle" == factory\ VAL\ * ]]; then
+    local t="${needle#factory SPEC }"
+    t="${t#factory IMPL }"
+    t="${t#factory VAL }"
+    t="${t%% c*}"
+    t="${t%% }"
+    if [[ -n "$t" ]]; then
+      FACTORY_JOBS="$JOBS" python3 "$ROOT/scripts/factory/lib/safe_kill.py" type --type "$t" 2>/dev/null || true
+    fi
+    return 0
+  fi
+  # Broad factory-only sweep (queue_worker etc.) — still allowlisted
+  if [[ "$needle" == *queue_worker* || "$needle" == *run_node_pipeline* ]]; then
+    FACTORY_JOBS="$JOBS" python3 "$ROOT/scripts/factory/lib/safe_kill.py" factory-agents 2>/dev/null || true
+  fi
+  return 0
 }
 
 cmd_kill() {
@@ -208,26 +168,14 @@ cmd_kill() {
 
   echo "[kill] type=$TYPE ppid=$ppid opid=$opid pid=$pid stage=$stage"
 
-  # Prefer exact cmdline needles (not regex)
-  kill_matching "run_node_pipeline.sh --type ${TYPE}"
-  kill_matching "factory SPEC ${TYPE}"
-  kill_matching "factory IMPL ${TYPE}"
-  kill_matching "factory VAL ${TYPE}"
-  # also timeout wrappers / stdbuf parents
-  kill_matching "factory SPEC ${TYPE} c"
-  kill_matching "factory IMPL ${TYPE} c"
-  kill_matching "factory VAL ${TYPE} c"
-
+  # SAFE allowlisted kill only (never session/process-group wipe)
+  FACTORY_JOBS="$JOBS" python3 "$ROOT/scripts/factory/lib/safe_kill.py" type --type "$TYPE" 2>&1 || true
   for p in $opid $pid $ppid; do
-    kill_tree "$p"
+    if [[ "$p" =~ ^[0-9]+$ && "$p" -gt 1 ]]; then
+      FACTORY_JOBS="$JOBS" python3 "$ROOT/scripts/factory/lib/safe_kill.py" pids --pids "$p" 2>&1 || true
+    fi
   done
-  sleep 0.3
-  # second pass SIGKILL
-  for p in $opid $pid $ppid; do
-    [[ "$p" =~ ^[0-9]+$ ]] && kill -KILL "$p" 2>/dev/null || true
-    [[ "$p" =~ ^[0-9]+$ ]] && pkill -KILL -P "$p" 2>/dev/null || true
-  done
-  kill_matching "run_node_pipeline.sh --type ${TYPE}"
+  sleep 0.2
 
   rm -f "$dir/pipeline.pid" "$dir/opencode.pid" 2>/dev/null || true
 
@@ -448,12 +396,67 @@ cmd_reset() {
   mkdir -p "$dir"
   cmd_kill >/dev/null 2>&1 || true
   if [[ "$HARD" -eq 1 ]]; then
-    rm -rf "$dir"/cycle-* "$dir"/gate-latest.log "$dir"/fix_hints.txt "$dir"/heartbeat 2>/dev/null || true
+    # Hard: wipe cycles, archive, and failure memory
+    rm -rf "$dir"/cycle-* "$dir"/gate-latest.log "$dir"/heartbeat 2>/dev/null || true
+    python3 "$ROOT/scripts/factory/lib/failure_history.py" clear --job-dir "$dir" --type "$TYPE" >/dev/null 2>&1 || true
+    : >"$dir/fix_hints.txt"
+    write_node_status "$TYPE" "queued" "" "hard reset — history wiped"
+  else
+    # Soft: archive cycle-* → archive/attempt-K/, keep failures.jsonl
+    python3 "$ROOT/scripts/factory/lib/failure_history.py" archive-cycles --job-dir "$dir" --type "$TYPE" 2>/dev/null \
+      || true
+    write_node_status "$TYPE" "queued" "" "soft reset — cycles archived, history kept"
   fi
-  write_node_status "$TYPE" "queued" "" "reset for retry"
-  : >"$dir/fix_hints.txt"
   requeue_type "$TYPE"
-  echo "reset $TYPE → queued"
+  echo "reset $TYPE → queued (hard=$HARD)"
+}
+
+cmd_kill_all() {
+  # Kill every live factory pipeline / opencode agent (+ orphan sweep).
+  # Only marks interrupted for jobs that were mid-flight.
+  set +e
+  local scanned=0 killed_jobs=0
+  local dir type sp stage live p pf
+  echo "[kill-all] scanning nodes…"
+  if [[ -d "$NODES" ]]; then
+    for dir in "$NODES"/*/; do
+      [[ -d "$dir" ]] || continue
+      scanned=$((scanned + 1))
+      sp="$dir/status.json"
+      type=""
+      [[ -f "$sp" ]] && type=$(read_json_field "$sp" type)
+      [[ -z "$type" || "$type" == "None" ]] && type=$(basename "$dir")
+      stage=$(read_json_field "$sp" stage 2>/dev/null || true)
+      live=0
+      for pf in "$dir/pipeline.pid" "$dir/opencode.pid"; do
+        if [[ -f "$pf" ]]; then
+          p=$(cat "$pf" 2>/dev/null || true)
+          if [[ "$p" =~ ^[0-9]+$ ]] && kill -0 "$p" 2>/dev/null; then
+            live=1
+          fi
+        fi
+      done
+      case "$stage" in
+        spec|spec-corpus|implement|implement-wait|validate-gates|validate-llm)
+          live=1
+          ;;
+      esac
+      if [[ "$live" -eq 1 ]]; then
+        echo "[kill-all] killing $type (stage=${stage:-?})"
+        TYPE="$type" cmd_kill 2>&1 | sed 's/^/  /' || true
+        killed_jobs=$((killed_jobs + 1))
+      fi
+    done
+  fi
+  # Single allowlisted sweep — no broad "factory IMPL " session kills
+  echo "[kill-all] safe factory-agents sweep…"
+  FACTORY_JOBS="$JOBS" python3 "$ROOT/scripts/factory/lib/safe_kill.py" factory-agents 2>&1 || true
+  rm -f "$JOBS/impl.lock.holder" 2>/dev/null || true
+  if [[ -f "$JOBS/impl.lock" ]] && ! fuser "$JOBS/impl.lock" >/dev/null 2>&1; then
+    rm -f "$JOBS/impl.lock" 2>/dev/null || true
+  fi
+  set -e
+  echo "kill-all done scanned=$scanned killed_jobs=$killed_jobs"
 }
 
 cmd_skip() {
@@ -576,6 +579,7 @@ case "$CMD" in
   status) cmd_status ;;
   reset|retry) cmd_reset ;;
   kill) cmd_kill ;;
+  kill-all) cmd_kill_all ;;
   continue|resume-job) cmd_continue ;;
   steal-lock) cmd_steal_lock ;;
   skip) cmd_skip ;;
@@ -585,7 +589,7 @@ case "$CMD" in
   models-clear) cmd_models_clear ;;
   retry-all-failed) cmd_retry_all_failed ;;
   *)
-    echo "Usage: $0 {status|reset|retry|kill|continue|steal-lock|skip|unskip|run|models|models-clear|retry-all-failed} <type> [--stage …] [--no-lock] [--hard] [--spec M] [--impl M] [--val M]" >&2
+    echo "Usage: $0 {status|reset|retry|kill|kill-all|continue|steal-lock|skip|unskip|run|models|models-clear|retry-all-failed} <type> [--stage …] [--no-lock] [--hard] [--spec M] [--impl M] [--val M]" >&2
     exit 2
     ;;
 esac

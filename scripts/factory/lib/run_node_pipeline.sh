@@ -80,7 +80,79 @@ LOCK_META="$ROOT/scripts/factory/.jobs/impl.lock.holder"
 STATUS_FILE="$JOB_ROOT/status.json"
 FIX_HINTS_FILE="$JOB_ROOT/fix_hints.txt"
 HEARTBEAT_FILE="$JOB_ROOT/heartbeat"
+FAIL_HIST_PY="$ROOT/scripts/factory/lib/failure_history.py"
 [[ -f "$FIX_HINTS_FILE" ]] || : >"$FIX_HINTS_FILE"
+
+# Active opencode / helper pids for TERM cleanup
+OC_PID=""
+HB_PID=""
+WAIT_HB_PID=""
+
+kill_pid_tree() {
+  # SAFE: never kill process groups (-$pid) — that can wipe a desktop session
+  local pid="$1"
+  [[ -n "$pid" && "$pid" =~ ^[0-9]+$ && "$pid" -gt 1 ]] || return 0
+  local kids
+  kids=$(pgrep -P "$pid" 2>/dev/null || true)
+  for k in $kids; do
+    kill_pid_tree "$k" || true
+  done
+  kill -TERM "$pid" 2>/dev/null || true
+  sleep 0.05
+  kill -KILL "$pid" 2>/dev/null || true
+  return 0
+}
+
+pipeline_signal_cleanup() {
+  local sig="${1:-TERM}"
+  echo "[factory] $TYPE caught $sig — killing children oc=${OC_PID:-?} hb=${HB_PID:-?}" >&2
+  kill_pid_tree "${OC_PID:-}"
+  kill_pid_tree "${HB_PID:-}"
+  kill_pid_tree "${WAIT_HB_PID:-}"
+  # also match by title in case pid file stale
+  if [[ -n "${TYPE:-}" ]]; then
+    NEEDLE1="factory SPEC ${TYPE}" NEEDLE2="factory IMPL ${TYPE}" NEEDLE3="factory VAL ${TYPE}" \
+    NEEDLE4="run_node_pipeline.sh --type ${TYPE}" SELF="$$" python3 - <<'PY' 2>/dev/null || true
+import os, signal
+needles = [os.environ.get(k, "") for k in ("NEEDLE1", "NEEDLE2", "NEEDLE3", "NEEDLE4")]
+needles = [n for n in needles if n]
+self_pid = int(os.environ.get("SELF", "0"))
+me = os.getpid()
+skip = {me, self_pid, os.getppid()}
+for name in os.listdir("/proc"):
+    if not name.isdigit():
+        continue
+    pid = int(name)
+    if pid in skip:
+        continue
+    try:
+        cmd = open(f"/proc/{pid}/cmdline", "rb").read().replace(b"\x00", b" ").decode("utf-8", "replace")
+    except Exception:
+        continue
+    if any(n in cmd for n in needles):
+        try:
+            os.kill(pid, signal.SIGKILL)
+        except Exception:
+            pass
+PY
+  fi
+  release_impl_lock 2>/dev/null || true
+  rm -f "$JOB_ROOT/pipeline.pid" "$JOB_ROOT/opencode.pid" 2>/dev/null || true
+}
+
+record_failure() {
+  # record_failure stage primary gate_log_path [model] [detail]
+  local stage="$1" primary="$2" gate_log="${3:-}" model="${4:-}" detail="${5:-}"
+  local args=(python3 "$FAIL_HIST_PY" record --job-dir "$JOB_ROOT" --type "$TYPE"
+    --stage "$stage" --cycle "$cycle" --primary "$primary")
+  [[ -n "$gate_log" && -f "$gate_log" ]] && args+=(--gate-log "$gate_log" --reasons-file "$gate_log")
+  [[ -n "$model" ]] && args+=(--model "$model")
+  [[ -n "$detail" ]] && args+=(--detail "$detail")
+  [[ -f "$FIX_HINTS_FILE" ]] && args+=(--hints-file "$FIX_HINTS_FILE")
+  "${args[@]}" >/dev/null 2>&1 || true
+  # refresh in-memory hints for next stage in same cycle
+  FIX_HINTS="$(cat "$FIX_HINTS_FILE" 2>/dev/null || true)"
+}
 
 CORPUS_BASE="/tmp/openflow-factory-${RUN_ID}"
 CORPUS_DIR="${CORPUS_BASE}/${SAFE}"
@@ -241,7 +313,8 @@ PY
       sleep 5
     done
   ) &
-  local hb_pid=$!
+  HB_PID=$!
+  local hb_pid=$HB_PID
 
   # Line-buffered so TUI live-tail sees tool lines promptly
   local runner=(opencode run --dir "$ROOT" --auto --model "$model" --title "$title" --file "$prompt_file" -- "$short_msg")
@@ -249,6 +322,7 @@ PY
     runner=(stdbuf -oL -eL "${runner[@]}")
   fi
   if command -v timeout >/dev/null 2>&1; then
+    # timeout puts COMMAND in its own process group — we track oc_pid and kill the group on stop
     runner=(timeout --signal=TERM --kill-after=45 "${limit_s}" "${runner[@]}")
   fi
 
@@ -261,6 +335,7 @@ PY
     "${runner[@]}" >"$out_log" 2>&1 &
   fi
   local oc_pid=$!
+  OC_PID="$oc_pid"
   echo "$oc_pid" >"$JOB_ROOT/opencode.pid"
   # patch status with opencode pid + stage log (best-effort)
   python3 - <<PY 2>/dev/null || true
@@ -277,13 +352,17 @@ PY
 
   wait "$oc_pid"
   local rc=$?
+  OC_PID=""
   rm -f "$JOB_ROOT/opencode.pid"
   kill "$hb_pid" 2>/dev/null || true
   wait "$hb_pid" 2>/dev/null || true
+  HB_PID=""
   set -e
 
   if [[ "$rc" -eq 124 ]]; then
     echo "[factory] TIMEOUT after ${limit_s}s model=$model title=$title" | tee -a "$out_log"
+    # ensure timed-out group is dead
+    kill_pid_tree "$oc_pid"
     return 124
   fi
   return $rc
@@ -491,7 +570,9 @@ release_impl_lock() {
 
 python3 "$ROOT/scripts/factory/lib/run_state.py" mark "$TYPE" --bucket active 2>/dev/null || true
 echo "$$" >"$JOB_ROOT/pipeline.pid"
-trap 'rm -f "$JOB_ROOT/pipeline.pid" "$JOB_ROOT/opencode.pid" 2>/dev/null || true' EXIT
+trap 'pipeline_signal_cleanup EXIT' EXIT
+trap 'pipeline_signal_cleanup TERM; exit 143' TERM
+trap 'pipeline_signal_cleanup INT; exit 130' INT
 
 # Honor skip
 if [[ -f "$STATUS_FILE" ]]; then
@@ -510,8 +591,12 @@ elif [[ -f "$STATUS_FILE" ]]; then
 else
   cycle=1
 fi
-# For full runs (not continue), always start at 1 unless --start-cycle set
+# For full runs (not continue), always start at 1 unless --start-cycle set.
+# Archive prior cycle dirs first so history is not overwritten blindly.
 if [[ "$CONTINUE_MODE" -eq 0 && "$START_CYCLE" -eq 0 ]]; then
+  if compgen -G "$JOB_ROOT/cycle-*" >/dev/null 2>&1; then
+    python3 "$FAIL_HIST_PY" archive-cycles --job-dir "$JOB_ROOT" --type "$TYPE" >/dev/null 2>&1 || true
+  fi
   cycle=1
   FROM_STAGE="spec"
 fi
@@ -557,6 +642,7 @@ while [[ "$cycle" -le "$MAX_CYCLES" ]]; do
   python3 "$ROOT/scripts/factory/lib/assemble_prompt.py" 01-spec-node.md \
     --type "$TYPE" --batch "$BATCH_TAG" --cycle "$cycle" --max-cycles "$MAX_CYCLES" \
     --fix-hints "$FIX_HINTS" \
+    --job-dir "$JOB_ROOT" \
     -o "$CYCLE_DIR/01-spec.prompt.md"
 
   {
@@ -613,8 +699,10 @@ while [[ "$cycle" -le "$MAX_CYCLES" ]]; do
   if [[ "$SPEC_GATE_RC" -ne 0 ]]; then
     primary=$(grep '^PRIMARY ' "$CYCLE_DIR/gate-spec.log" 2>/dev/null | awk '{print $2}' || echo spec_gate_fail)
     reasons=$(grep '^REASON ' "$CYCLE_DIR/gate-spec.log" 2>/dev/null | sed 's/^REASON //' | head -5 | tr '\n' '; ' || true)
-    echo "[factory] SPEC GATE FAIL $TYPE: $primary — $reasons" | tee -a "$CYCLE_DIR/gate-spec.log"
+    gclass=$(grep '^CLASS ' "$CYCLE_DIR/gate-spec.log" 2>/dev/null | awk '{print $2}' || echo hard_fail)
+    echo "[factory] SPEC GATE FAIL $TYPE: $primary class=$gclass — $reasons" | tee -a "$CYCLE_DIR/gate-spec.log"
     echo "SPEC gate failed ($primary): $reasons" >"$FIX_HINTS_FILE"
+    record_failure "spec" "$primary" "$CYCLE_DIR/gate-spec.log" "$MODEL_SPEC" "SPEC gate: $primary"
     write_status "fail" "$cycle" "fail" "SPEC gate: $primary — $reasons" \
       "" "" "" "$primary"
     python3 - <<PY 2>/dev/null || true
@@ -628,6 +716,7 @@ d.update({
   "failReason": "$primary",
   "lastStage": "spec",
   "interruptMessage": d.get("detail"),
+  "gateClass": "$gclass",
   "updatedAt": datetime.now(timezone.utc).isoformat(),
 })
 p.write_text(json.dumps(d, indent=2)+"\n")
@@ -636,7 +725,41 @@ PY
       final="fail"
       break
     fi
-    # retryable rate limits: stay on SPEC next cycle
+    # hard_fail (auth/bad_model/thin spec with no retry hope): stop, do not burn cycles
+    if [[ "$gclass" == "hard_fail" ]]; then
+      case "$primary" in
+        auth_error|bad_model|opencode_missing|spec_forbidden)
+          echo "[factory] SPEC hard_fail ($primary) — stopping (no more cycles)"
+          write_status "interrupted" "$cycle" "fail" \
+            "SPEC hard_fail: $primary — switch model or fix auth (M/m)" \
+            "" "" "" "$primary"
+          python3 - <<PY 2>/dev/null || true
+import json
+from pathlib import Path
+from datetime import datetime, timezone
+p=Path("$STATUS_FILE")
+d=json.loads(p.read_text()) if p.exists() else {}
+d.update({
+  "failedStage": "spec", "failReason": "$primary", "lastStage": "spec",
+  "interruptReason": "$primary",
+  "interruptMessage": "SPEC hard_fail: $primary — fix auth/model before retry",
+  "updatedAt": datetime.now(timezone.utc).isoformat(),
+})
+p.write_text(json.dumps(d, indent=2)+"\n")
+PY
+          final="interrupted"
+          break
+          ;;
+      esac
+    fi
+    # retryable: backoff before next SPEC cycle (avoid instant burn)
+    if [[ "$gclass" == "retryable" ]]; then
+      backoff=$((30 * cycle))
+      [[ "$backoff" -gt 180 ]] && backoff=180
+      echo "[factory] SPEC retryable ($primary) — backoff ${backoff}s before cycle $((cycle + 1))"
+      write_status "spec" "$cycle" "" "backoff ${backoff}s after $primary (retryable)"
+      sleep "$backoff"
+    fi
     STAGE_CURSOR="spec"
     cycle=$((cycle + 1))
     continue
@@ -653,6 +776,7 @@ PY
   python3 "$ROOT/scripts/factory/lib/assemble_prompt.py" 02-implement-node.md \
     --type "$TYPE" --batch "$BATCH_TAG" --cycle "$cycle" --max-cycles "$MAX_CYCLES" \
     --fix-hints "$FIX_HINTS" \
+    --job-dir "$JOB_ROOT" \
     -o "$CYCLE_DIR/02-implement.prompt.md"
   {
     echo ""
@@ -672,9 +796,10 @@ PY
   # Hard require spec before implement (even on continue)
   if [[ "$DRY_RUN" -eq 0 && ! -f "docs/specs/nodes/${TYPE}.md" ]]; then
     echo "[factory] IMPL blocked: missing spec for $TYPE"
+    echo "Missing spec — cannot implement. Re-run SPEC. Write docs/specs/nodes/${TYPE}.md" >"$FIX_HINTS_FILE"
+    record_failure "implement" "spec_missing" "" "" "IMPLEMENT blocked: missing spec"
     write_status "fail" "$cycle" "fail" "IMPLEMENT blocked: missing spec" \
       "" "" "" "spec_missing"
-    echo "Missing spec — cannot implement. Re-run SPEC." >"$FIX_HINTS_FILE"
     if [[ "$ONCE" -eq 1 ]]; then final="fail"; break; fi
     STAGE_CURSOR="spec"
     cycle=$((cycle + 1))
@@ -705,7 +830,8 @@ PY
         final="interrupted"
         break
       fi
-      trap 'release_impl_lock' EXIT
+      # Keep signal cleanup + release lock (do not clobber TERM/INT traps)
+      trap 'release_impl_lock 2>/dev/null || true; pipeline_signal_cleanup EXIT' EXIT
       write_status "implement" "$cycle" "" "model=$MODEL_IMPL lock=held" \
         "$CYCLE_DIR/02-implement.out.log" "$MODEL_IMPL"
     else
@@ -724,7 +850,9 @@ PY
 
     if [[ "$IMPL_LOCK" == "1" || "$IMPL_LOCK" == "true" ]]; then
       release_impl_lock
-      trap - EXIT
+      trap 'pipeline_signal_cleanup EXIT' EXIT
+      trap 'pipeline_signal_cleanup TERM; exit 143' TERM
+      trap 'pipeline_signal_cleanup INT; exit 130' INT
     fi
   fi
 
@@ -745,8 +873,10 @@ PY
   if [[ "$IMPL_GATE_RC" -ne 0 ]]; then
     primary=$(grep '^PRIMARY ' "$CYCLE_DIR/gate-impl.log" 2>/dev/null | awk '{print $2}' || echo impl_gate_fail)
     reasons=$(grep '^REASON ' "$CYCLE_DIR/gate-impl.log" 2>/dev/null | sed 's/^REASON //' | head -5 | tr '\n' '; ' || true)
-    echo "[factory] IMPL GATE FAIL $TYPE: $primary — $reasons" | tee -a "$CYCLE_DIR/gate-impl.log"
+    gclass=$(grep '^CLASS ' "$CYCLE_DIR/gate-impl.log" 2>/dev/null | awk '{print $2}' || echo hard_fail)
+    echo "[factory] IMPL GATE FAIL $TYPE: $primary class=$gclass — $reasons" | tee -a "$CYCLE_DIR/gate-impl.log"
     echo "IMPLEMENT gate failed ($primary): $reasons" >"$FIX_HINTS_FILE"
+    record_failure "implement" "$primary" "$CYCLE_DIR/gate-impl.log" "$MODEL_IMPL" "IMPL gate: $primary"
     write_status "fail" "$cycle" "fail" "IMPL gate: $primary — $reasons" \
       "" "" "" "$primary"
     python3 - <<PY 2>/dev/null || true
@@ -759,6 +889,7 @@ d.update({
   "failedStage": "implement",
   "failReason": "$primary",
   "lastStage": "implement",
+  "gateClass": "$gclass",
   "updatedAt": datetime.now(timezone.utc).isoformat(),
 })
 p.write_text(json.dumps(d, indent=2)+"\n")
@@ -767,7 +898,53 @@ PY
       final="fail"
       break
     fi
-    # Next cycle: if agent/rate-limit, retry IMPL; if no spec, go SPEC
+    # hard_fail auth/model/registration: stop (don't loop forever)
+    if [[ "$gclass" == "hard_fail" ]]; then
+      case "$primary" in
+        auth_error|bad_model|opencode_missing|impl_n8n_import|impl_not_registered|impl_not_in_runtime|impl_no_executor)
+          echo "[factory] IMPL hard_fail ($primary) — stopping (no more cycles)"
+          write_status "partial" "$cycle" "fail" \
+            "IMPL hard_fail: $primary — fix registration/executor then y continue" \
+            "" "" "" "$primary"
+          python3 - <<PY 2>/dev/null || true
+import json
+from pathlib import Path
+from datetime import datetime, timezone
+p=Path("$STATUS_FILE")
+d=json.loads(p.read_text()) if p.exists() else {}
+d.update({
+  "stage": "partial",
+  "failedStage": "implement",
+  "failReason": "$primary",
+  "gateClass": "hard_fail",
+  "detail": "IMPL hard_fail: $primary — not retrying automatically",
+  "updatedAt": datetime.now(timezone.utc).isoformat(),
+})
+p.write_text(json.dumps(d, indent=2)+"\n")
+PY
+          final="fail"
+          break
+          ;;
+      esac
+    fi
+    # Same hard reason repeated → stop (cap infinite retries)
+    fail_n=$(python3 -c "import json;from pathlib import Path;p=Path('$STATUS_FILE');print(int(json.load(open(p)).get('failCount') or 0) if p.exists() else 0)" 2>/dev/null || echo 0)
+    if [[ "$fail_n" -ge 3 ]]; then
+      echo "[factory] IMPL same-gate failCount=$fail_n — stopping auto-retry"
+      write_status "partial" "$cycle" "fail" \
+        "IMPL stuck after ${fail_n} fails ($primary) — fix then y/L" \
+        "" "" "" "$primary"
+      final="fail"
+      break
+    fi
+    # retryable agent-only (no artifact): backoff
+    if [[ "$gclass" == "retryable" && "$primary" == "agent" ]]; then
+      backoff=$((30 * cycle))
+      [[ "$backoff" -gt 180 ]] && backoff=180
+      echo "[factory] IMPL retryable agent fail — backoff ${backoff}s"
+      sleep "$backoff"
+    fi
+    # Next cycle: if no spec, go SPEC; else retry IMPL
     if [[ "$primary" == "spec_missing" ]]; then
       STAGE_CURSOR="spec"
     else
@@ -805,8 +982,12 @@ PY
   if [[ "$GATE_RC" -ne 0 && "$DRY_RUN" -eq 0 ]]; then
     echo "[factory] skipping VAL LLM — deterministic gates failed"
     VERDICT="fail"
-    HINTS="Deterministic gates failed before VAL LLM. See gate.log."
-    echo "$HINTS" >"$FIX_HINTS_FILE"
+    # Extract real FAIL lines into hints (not "see gate.log")
+    {
+      echo "Deterministic gates failed before VAL LLM."
+      grep -E '^(FAIL |REASON |PRIMARY |=== summary)' "$CYCLE_DIR/gate.log" 2>/dev/null | head -40 || true
+    } >"$FIX_HINTS_FILE"
+    record_failure "validate" "validate_gates" "$CYCLE_DIR/gate.log" "" "validate gates failed"
     echo "$VERDICT" >"$CYCLE_DIR/verdict.txt"
     write_status "fail" "$cycle" "fail" "validate gates failed" \
       "" "" "" "validate_gates"
@@ -832,6 +1013,7 @@ PY
   python3 "$ROOT/scripts/factory/lib/assemble_prompt.py" 03-validate-node.md \
     --type "$TYPE" --batch "$BATCH_TAG" --cycle "$cycle" --max-cycles "$MAX_CYCLES" \
     --fix-hints "$FIX_HINTS" \
+    --job-dir "$JOB_ROOT" \
     --gate-log-file "$CYCLE_DIR/gate.log" \
     -o "$CYCLE_DIR/03-validate.prompt.md"
   {
@@ -891,6 +1073,7 @@ $HINTS"
     break
   fi
 
+  record_failure "validate" "validate_fail" "$CYCLE_DIR/gate.log" "$MODEL_VAL" "cycle $cycle validate failed"
   write_status "fail" "$cycle" "fail" "cycle $cycle validate failed" \
     "" "" "" "validate_fail"
   python3 - <<PY 2>/dev/null || true
@@ -915,6 +1098,9 @@ done
 wipe_corpus
 bash "$ROOT/scripts/factory/lib/assert_no_n8n_in_repo.sh" >/dev/null 2>&1 || true
 release_impl_lock 2>/dev/null || true
+# clear signal traps for clean exit (avoid double-kill noise)
+trap - TERM INT
+trap 'rm -f "$JOB_ROOT/pipeline.pid" "$JOB_ROOT/opencode.pid" 2>/dev/null || true; release_impl_lock 2>/dev/null || true' EXIT
 
 if [[ "$final" != "pass" ]]; then
   pc="$cycle"
@@ -926,7 +1112,15 @@ if [[ "$final" != "pass" ]]; then
     echo "RESULT interrupted $TYPE (use TUI y/L to continue)"
     exit 1
   fi
-  write_status "partial" "$pc" "fail" "max cycles, once-stop, or lock timeout"
+  # Preserve the real fail reason from the last gate (don't clobber with generic text)
+  prev_detail=$(python3 -c "import json;d=json.load(open('$STATUS_FILE'));print(d.get('detail') or '')" 2>/dev/null || true)
+  prev_reason=$(python3 -c "import json;d=json.load(open('$STATUS_FILE'));print(d.get('failReason') or d.get('interruptReason') or '')" 2>/dev/null || true)
+  if [[ -n "$prev_detail" && "$prev_detail" != "null" ]]; then
+    det="partial after once/max-cycles: $prev_detail"
+  else
+    det="partial after once/max-cycles${prev_reason:+ ($prev_reason)}"
+  fi
+  write_status "partial" "$pc" "fail" "$det" "" "" "" "${prev_reason:-partial}"
   python3 "$ROOT/scripts/factory/lib/catalog.py" set-status "$TYPE" --factory partial 2>/dev/null || true
   python3 "$ROOT/scripts/factory/lib/run_state.py" mark "$TYPE" --bucket partial 2>/dev/null || true
   echo "RESULT partial $TYPE"

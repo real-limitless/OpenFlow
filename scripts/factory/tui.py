@@ -120,6 +120,8 @@ class PipeStatus:
     lock_holder: str = ""
     fail_reason: str = ""
     failed_stage: str = ""
+    fail_count: int = 0
+    attempt: int = 1
 
 
 @dataclass
@@ -484,6 +486,15 @@ def discover_pipes() -> list[PipeStatus]:
                     st.lock_holder = str(data.get("lockHolder") or "")
                     st.fail_reason = str(data.get("failReason") or data.get("interruptReason") or "")
                     st.failed_stage = str(data.get("failedStage") or "")
+                    st.fail_count = int(data.get("failCount") or 0)
+                    st.attempt = int(data.get("attempt") or 1)
+                    lf = data.get("lastFailure") if isinstance(data.get("lastFailure"), dict) else {}
+                    if lf and not st.fail_reason:
+                        st.fail_reason = str(lf.get("primary") or "")
+                    if lf and not st.failed_stage:
+                        st.failed_stage = str(lf.get("stage") or "")
+                    if not st.fail_count and lf:
+                        st.fail_count = int(lf.get("failCount") or 0)
                     for key, attr in (
                         ("pipelinePid", "pipeline_pid"),
                         ("pid", "pipeline_pid"),
@@ -494,6 +505,14 @@ def discover_pipes() -> list[PipeStatus]:
                             setattr(st, attr, v)
                 except Exception:
                     st.stage = "unknown"
+            # fail_count from ledger if status missing it
+            if st.fail_count <= 0 and st.path:
+                ledger = st.path / "failures.jsonl"
+                if ledger.is_file():
+                    try:
+                        st.fail_count = sum(1 for ln in ledger.read_text(encoding="utf-8").splitlines() if ln.strip())
+                    except Exception:
+                        pass
             hb = d / "heartbeat"
             if hb.is_file():
                 try:
@@ -604,7 +623,8 @@ def stage_label(st: PipeStatus) -> str:
     if st.verdict == "pass" or st.stage == "pass":
         return "PASS"
     if st.stage == "partial":
-        return "PARTIAL"
+        fc = f" ×{st.fail_count}" if st.fail_count else ""
+        return f"PARTIAL{fc}"
     if st.stage == "implement-waitout":
         r = st.waitout_rounds or 0
         return f"WAITOUT r{r}"
@@ -622,12 +642,15 @@ def stage_label(st: PipeStatus) -> str:
     if st.verdict == "fail" or st.stage == "fail":
         fr = st.fail_reason or ""
         fs = st.failed_stage or ""
+        fc = f"×{st.fail_count}" if st.fail_count else ""
         if fr and fs:
-            return f"FAIL {fs[:4]}/{fr[:10]}"
+            return f"FAIL {fs[:4]}/{fr[:8]}{fc}"
         if fr:
-            return f"FAIL {fr[:12]}"
-        return f"FAIL c{st.cycle}"
+            return f"FAIL {fr[:10]}{fc}"
+        return f"FAIL c{st.cycle}{fc}"
     if st.stage == "queued":
+        if st.fail_count:
+            return f"queued ×{st.fail_count}"
         return "queued"
     if st.stage == "implement-wait":
         return f"impl-WAIT c{st.cycle}"
@@ -827,20 +850,42 @@ def start_factory(state: AppState, resume: bool = False, dry: bool = False) -> N
 
 
 def stop_factory(state: AppState) -> None:
-    subprocess.Popen(
-        ["bash", str(FACTORY / "run_queue.sh"), "stop"],
-        cwd=str(ROOT),
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.DEVNULL,
-        start_new_session=True,
-    )
+    """Blocking stop: kill worker + every node agent (incl. TUI orphans)."""
+    state.message = "FACTORY STOP — killing worker + all agents…"
+    log = JOBS / "factory.log"
+    JOBS.mkdir(parents=True, exist_ok=True)
     try:
-        if PIDFILE.exists():
-            os.kill(int(PIDFILE.read_text().strip()), signal.SIGTERM)
-    except Exception:
-        pass
-    state.message = "FACTORY STOP sent…"
-    time.sleep(0.3)
+        with open(log, "a", encoding="utf-8") as lf:
+            lf.write(f"\n=== TUI FACTORY STOP {datetime.now().isoformat()} ===\n")
+        r = subprocess.run(
+            ["bash", str(FACTORY / "run_queue.sh"), "stop"],
+            cwd=str(ROOT),
+            capture_output=True,
+            text=True,
+            timeout=90,
+        )
+        out = ((r.stdout or "") + "\n" + (r.stderr or "")).strip()
+        try:
+            with open(log, "a", encoding="utf-8") as lf:
+                lf.write(out + "\n")
+        except Exception:
+            pass
+        # parse leftover
+        leftover = "?"
+        for line in out.splitlines():
+            if "leftover_agents=" in line:
+                leftover = line.split("leftover_agents=")[-1].split()[0]
+        if r.returncode == 0 and leftover in ("0", "0\n"):
+            state.message = "FACTORY STOPPED — all agents killed"
+        elif leftover not in ("?", ""):
+            state.message = f"FACTORY STOPPED — leftover_agents={leftover} (check factory.log)"
+        else:
+            state.message = f"FACTORY STOP rc={r.returncode} — see factory.log"
+    except subprocess.TimeoutExpired:
+        state.message = "FACTORY STOP timed out (90s) — try: npm run factory:stop"
+    except Exception as e:
+        state.message = f"FACTORY STOP error: {e}"
+    time.sleep(0.2)
     refresh_app(state, reload_models=False)
 
 
@@ -893,7 +938,7 @@ def draw_footer(stdscr: Any, h: int, w: int, state: AppState) -> None:
     else:
         keys = (
             "[S/C/X] [m/M]models [b]atch [y]continue [L]bypass-lock "
-            "[r]retry [n]ow [k]ill [Enter]LIVE [q]"
+            "[r]retry [H]hist [n]ow [k]ill [Enter]LIVE [q]"
         )
     try:
         stdscr.attron(curses.A_DIM)
@@ -1127,9 +1172,10 @@ def draw(stdscr: Any, state: AppState) -> None:
     if state.show_help:
         help_lines = [
             "FACTORY:  S start  C resume-queue  X stop-all  m GLOBAL  b batch",
-            "NODE:     y continue last stage   L bypass impl.lock (this job)",
+            "JOB:      y continue-last-stage  L bypass-impl-lock+continue",
             "          Shift+L steal lock (kill holder) + continue",
-            "          r full-retry  n run-now  k kill  M job-models",
+            "          r full-retry (keeps failure history)  n run-now  k kill",
+            "          M job-models  H failure-history",
             "LOGS:     Enter LIVE  G bottom  g top  Space follow",
             "",
             "n/y/L/k run in background — TUI must not freeze.",
@@ -1238,16 +1284,22 @@ def draw(stdscr: Any, state: AppState) -> None:
             reason = ""
             if sel.stage == "interrupted" and sel.interrupt_message:
                 reason = f"  WHY: {sel.interrupt_message[:40]}"
-            elif sel.stage == "fail" and (sel.fail_reason or sel.detail):
-                reason = f"  WHY: [{sel.failed_stage or '?'}] {sel.fail_reason or sel.detail[:36]}"
+            elif (sel.stage in ("fail", "partial") or sel.fail_count) and (
+                sel.fail_reason or sel.detail
+            ):
+                reason = (
+                    f"  WHY: [{sel.failed_stage or '?'}] {sel.fail_reason or sel.detail[:28]}"
+                    f"{' ×' + str(sel.fail_count) if sel.fail_count else ''} [h=history]"
+                )
             elif sel.stage == "implement-waitout":
                 reason = f"  WHY: {sel.detail[:40]}" if sel.detail else "  WHY: lock busy, still queued"
             act = activity_line(sel)
+            att = f" a{sel.attempt}" if sel.attempt and sel.attempt > 1 else ""
             stdscr.addnstr(
                 dy + 1,
                 0,
                 (
-                    f" [{fl}{stale}] {sel.type}  {stage_label(sel)}  "
+                    f" [{fl}{stale}] {sel.type}  {stage_label(sel)}{att}  "
                     f"{act or ('run=' + (sel.model or jm.get('implement') or '-'))}{jtag}  "
                     f"oc={sel.opencode_pid or '-'}{reason}{wait_hint}"
                 )[: w - 1],
@@ -1487,13 +1539,13 @@ def handle_log_mode(state: AppState, ch: int) -> None:
             state.log_scroll = max(0, len(state.log_lines) - 1)
         state.message = f"Follow {'ON' if state.log_follow else 'OFF'}"
         return
-    if ch in (curses.KEY_UP, ord("k")):
+    # k = kill (not vim-up). Scroll with arrows only.
+    if ch == curses.KEY_UP:
         state.log_follow = False
         state.log_scroll = max(0, state.log_scroll - 1)
         return
-    if ch in (curses.KEY_DOWN, ord("j")):
+    if ch == curses.KEY_DOWN:
         state.log_scroll = min(max(0, len(state.log_lines) - 1), state.log_scroll + 1)
-        # re-enable follow if user scrolled to end
         if state.log_scroll >= max(0, len(state.log_lines) - view_estimate):
             state.log_follow = True
         return
@@ -1535,11 +1587,47 @@ def handle_log_mode(state: AppState, ch: int) -> None:
         return
     if ch == ord("k"):
         state.confirm = "kill"
-        state.message = "Kill this node? y/n"
+        sel = selected_pipe(state)
+        state.message = f"Kill {sel.type if sel else '?'}? y/n"
         return
     if ch == ord("n"):
         do_run_now(state)
         return
+
+
+def show_failure_history(state: AppState) -> None:
+    """Load failures.jsonl render into live-log view."""
+    sel = selected_pipe(state)
+    if not sel or not sel.path:
+        state.message = "No selection"
+        return
+    try:
+        r = subprocess.run(
+            [
+                "python3",
+                str(FACTORY / "lib" / "failure_history.py"),
+                "render",
+                "--job-dir",
+                str(sel.path),
+                "--type",
+                sel.type,
+                "--last",
+                "8",
+            ],
+            cwd=str(ROOT),
+            capture_output=True,
+            text=True,
+            timeout=10,
+        )
+        text = (r.stdout or "").strip() or "(no prior failures recorded)"
+    except Exception as e:
+        text = f"(history error: {e})"
+    state.log_mode = True
+    state.log_follow = False
+    state.log_path = sel.path / "failures.jsonl"
+    state.log_lines = text.splitlines() or ["(empty)"]
+    state.log_scroll = 0
+    state.message = f"Failure history: {sel.type} (fails={sel.fail_count} attempt={sel.attempt}) — Esc back"
 
 
 def do_retry_selected(state: AppState) -> None:
@@ -1769,9 +1857,9 @@ def main_curses(stdscr: Any) -> None:
             if alive:
                 state.message = f"Quit TUI — factory still running pid={pid}"
             break
-        elif ch in (curses.KEY_UP, ord("k")):
+        elif ch == curses.KEY_UP:
             state.selected = max(0, state.selected - 1)
-        elif ch in (curses.KEY_DOWN, ord("j")):
+        elif ch == curses.KEY_DOWN:
             state.selected = min(max(0, len(state.filtered) - 1), state.selected + 1)
         elif ch in (10, 13, ord("l")):
             open_live_log(state)
@@ -1825,6 +1913,8 @@ def main_curses(stdscr: Any) -> None:
         elif ch == ord("R"):
             state.confirm = "retry-all"
             state.message = "Retry ALL failed/partial/interrupted? y/n"
+        elif ch == ord("H"):
+            show_failure_history(state)
         elif ch == ord("k"):
             state.confirm = "kill"
             sel = selected_pipe(state)

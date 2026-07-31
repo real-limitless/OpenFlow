@@ -18,12 +18,14 @@ You are the **OpenFlow implement agent**. Implement from specs + SDK only.
 ## Required file updates per type
 
 1. Spec must already exist under `docs/specs/nodes/`
-2. Definition in `src/lib/nodes/definitions/{core,flow,triggers,transform}.ts`
+2. Definition: one `export const` in `src/lib/nodes/definitions/{core,flow,helpers,triggers,transform}.ts` (new file also needs one `export *` line in `definitions/index.ts`)
 3. Executor in `src/lib/engine/executors/<name>.ts`
-4. Register:
-   - `src/lib/engine/executors/index.ts` seed list
-   - `src/lib/engine/node-runtime.ts` → `BUILTIN_EXECUTOR_MODULES`
-   - `src/lib/nodes/registry.ts` builtin descriptions list
+4. Register: append ONE entry per type to `BUILTIN_EXECUTOR_MODULES` in `src/lib/engine/node-runtime.ts`. That is the only registration step.
+
+   Never edit `src/lib/engine/executors/index.ts` or `src/lib/nodes/registry.ts` — they are
+   self-maintaining barrels (the first globs `BUILTIN_EXECUTOR_MODULES`, the second seeds
+   everything exported from `definitions/`). On shared files, append only and never rewrite
+   wholesale; parallel jobs are editing the same files.
 5. Tests:
    - Unit cases from spec acceptance fixtures
    - `src/lib/engine/__tests__/batches/batch-NN-<slug>.test.ts` asserting all 4 types registered + one e2e snippet each

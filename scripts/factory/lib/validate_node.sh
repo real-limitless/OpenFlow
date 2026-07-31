@@ -51,9 +51,9 @@ FOUND_EXEC=""
 for f in "${EXEC_CANDIDATES[@]}"; do
   if [[ -f "$f" ]]; then FOUND_EXEC="$f"; break; fi
 done
-# also search by type string inside executors
+# also search by type string inside executors (single or double quotes)
 if [[ -z "$FOUND_EXEC" ]]; then
-  hit=$(grep -rl "\"${TYPE}\"" src/lib/engine/executors 2>/dev/null | head -1 || true)
+  hit=$(grep -rlE "['\"]${TYPE}['\"]" src/lib/engine/executors 2>/dev/null | head -1 || true)
   if [[ -n "$hit" ]]; then FOUND_EXEC="$hit"; fi
 fi
 if [[ -n "$FOUND_EXEC" ]]; then
@@ -67,45 +67,68 @@ else
   bad "no executor file found for $TYPE"
 fi
 
-# 3. Registration in seed lists
-if grep -q "\"${TYPE}\"" src/lib/engine/executors/index.ts 2>/dev/null; then
-  pass "registered in executors/index.ts"
-else
-  bad "not in executors/index.ts BUILTIN_PAIRS"
-fi
-if grep -q "\"${TYPE}\"" src/lib/engine/node-runtime.ts 2>/dev/null; then
+# 3. Registration. BUILTIN_EXECUTOR_MODULES is the only seed list; executors/index.ts
+# is a self-maintaining barrel that eagerly globs it and must stay free of node names.
+type_re="['\"]${TYPE}['\"]"
+if grep -qE "${type_re}" src/lib/engine/node-runtime.ts 2>/dev/null; then
   pass "listed in node-runtime BUILTIN_EXECUTOR_MODULES"
 else
   bad "not in node-runtime BUILTIN_EXECUTOR_MODULES"
 fi
-
-# 4. Runtime registration via vitest one-liner
-if npx vitest run src/lib/engine/__tests__/helpers.ts 2>/dev/null; then
-  :
+if grep -qE "${type_re}" src/lib/engine/executors/index.ts 2>/dev/null; then
+  bad "executors/index.ts must not mention ${TYPE} (barrel is generic; register in node-runtime only)"
+else
+  pass "executors/index.ts left generic"
 fi
-REG_TEST="$LOG_DIR/reg-${SAFE_TYPE}.mjs"
-cat >"$REG_TEST" <<EOF
-import { createRequire } from "node:module";
-// Use vitest programmatically is heavy; shell out to a tiny vitest inline instead
+if grep -qE "${type_re}" src/lib/nodes/registry.ts 2>/dev/null; then
+  bad "registry.ts must not mention ${TYPE} (descriptions seed from definitions/ automatically)"
+else
+  pass "registry.ts left generic"
+fi
+
+# 4. Runtime registration via ESM .mts (tsx -e is CJS; breaks top-level await)
+REG_TS_ROOT="$ROOT/scripts/factory/.jobs/tmp/reg-check-${SAFE_TYPE}.mts"
+mkdir -p "$(dirname "$REG_TS_ROOT")"
+# Write checker next to src/ so relative imports resolve under tsx ESM
+cat >"$REG_TS_ROOT" <<EOF
+import {
+  reloadBuiltinExecutors,
+  hasExecutor,
+} from "${ROOT}/src/lib/engine/node-runtime.ts";
+import {
+  seedBuiltinDescriptions,
+  getNodeType,
+} from "${ROOT}/src/lib/nodes/registry.ts";
+
+const t = ${TYPE@Q};
+const { reloaded, errors } = await reloadBuiltinExecutors();
+seedBuiltinDescriptions();
+if (!hasExecutor(t)) {
+  console.error("hasExecutor false for", t);
+  console.error(
+    "reloaded",
+    reloaded.length,
+    "errors_for_type",
+    errors.filter((e) => e.type === t),
+    "sample",
+    errors.slice(0, 5),
+  );
+  process.exit(2);
+}
+const d = getNodeType(t);
+if (!d || (d as { placeholder?: boolean }).placeholder) {
+  console.error("placeholder or missing description", t, d);
+  process.exit(3);
+}
+console.log("runtime ok", t, d.displayName, "reloaded", reloaded.length);
 EOF
 
-# Use node + tsx to import seed
-if npx --yes tsx -e "
-import { seedBuiltinExecutors } from './src/lib/engine/executors/index.ts';
-import { hasExecutor } from './src/lib/engine/node-runtime.ts';
-import { seedBuiltinDescriptions, getNodeType } from './src/lib/nodes/registry.ts';
-seedBuiltinExecutors();
-seedBuiltinDescriptions();
-const t = process.argv[1];
-if (!hasExecutor(t)) { console.error('hasExecutor false'); process.exit(2); }
-const d = getNodeType(t);
-if (d.placeholder) { console.error('placeholder description'); process.exit(3); }
-console.log('runtime ok', t, d.displayName);
-" "$TYPE" >>"$LOG" 2>&1; then
+if (cd "$ROOT" && npx --yes tsx "$REG_TS_ROOT") >>"$LOG" 2>&1; then
   pass "runtime hasExecutor + non-placeholder description"
 else
   bad "runtime registration check failed (see log)"
 fi
+rm -f "$REG_TS_ROOT" 2>/dev/null || true
 
 # 5. Tests mentioning type
 TEST_HITS=$(grep -rl "$TYPE" src/lib/engine/__tests__ 2>/dev/null | head -5 || true)
