@@ -103,9 +103,17 @@ Response: JSON with `success`, `total_price`, `balance`, `debug`, `messages[]` (
 
 Each input item produces one independent API call. Expression strings in `to`, `text`, `from`, and all `additionalFields` are evaluated per-item.
 
+### Pre-flight validation
+
+After resolving expressions, if `to` or `text` is empty or missing, the node must throw a descriptive error (e.g. `'seven: to and text are required'`). This check is not gated by `continueOnFail` — it is always a hard failure.
+
+### API call
+
+The node sends a `POST` request to the appropriate endpoint (`/api/sms` or `/api/voice`) with the resolved parameters as form-encoded body, authenticated via `X-Api-Key` header.
+
 ### Output
 
-Each item is replaced by a single output item with the following structure:
+Each item is replaced by a single output item containing the full API response JSON:
 
 ```json
 {
@@ -133,8 +141,9 @@ For voice calls the response shape is similar but without `sms_type`, `encoding`
 
 ### Error handling
 
-- If `continueOnFail` is enabled, the node returns the error response as output item data and continues to the next item.
-- If `continueOnFail` is disabled, the node throws on any non-`100`/`101` success code, missing credentials, or network failure.
+- **Success code check:** After receiving the API response, inspect `result.success`. If it is present and is not `'100'` or `'101'`, treat the response as an error.
+- **continueOnFail disabled:** Throw on any non-`100`/`101` success code, missing credentials, or network failure.
+- **continueOnFail enabled:** Return the error response as output item data and continue processing the next item. The output item should contain the raw API error response including the `success` code and any error details.
 
 ### Expressions
 
@@ -142,7 +151,7 @@ All parameters accept expression strings.
 
 ## Acceptance tests
 
-### Test: send SMS
+### Test: send SMS with expressions
 
 **Given** input items:
 
@@ -210,7 +219,7 @@ All parameters accept expression strings.
 
 **Expect** output[0] items to contain `success`, `messages[]` with at least one entry.
 
-### Test: missing required field
+### Test: missing required fields throws
 
 **Given** input items:
 
@@ -229,7 +238,28 @@ All parameters accept expression strings.
 }
 ```
 
-**Expect** node throws or returns an error item with `success` indicating validation failure.
+**Expect** node throws with a message like `'seven: to and text are required'` without making an API call.
+
+### Test: non-100/101 success code throws
+
+**Given** mock API returns HTTP 200 with body:
+
+```json
+{ "success": "201", "messages": [], "debug": "invalid sender" }
+```
+
+**Parameters:**
+
+```json
+{
+  "resource": "sms",
+  "operation": "send",
+  "to": "+49176123456789",
+  "text": "test"
+}
+```
+
+**Expect** node throws with an error that includes the `success` code `201`.
 
 ## Gaps / confidence
 
@@ -243,6 +273,7 @@ All parameters accept expression strings.
 | Credential type | documented | n8n credentials docs confirm `sms77Api` with API key |
 | File attachments | documented | seven.io API docs document `files` parameter |
 | Expression support | inferred | Standard n8n convention; all string params accept expressions |
+| Pre-flight validation contract | inferred | Standard pattern for required parameters in n8n app nodes |
 
 ## OpenFlow mapping
 

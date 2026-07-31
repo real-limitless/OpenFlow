@@ -1,10 +1,12 @@
 ---
 type: n8n-nodes-base.googleBusinessProfile
 displayName: Google Business Profile
-category: Productivity
+category: Marketing
+categories: [Marketing, Productivity]
 versions: [1]
 priority: medium
 status: specced
+aliases: ["Google My Business", "GMB", "My Business"]
 ---
 
 # Google Business Profile
@@ -31,7 +33,7 @@ Google My Business v4 API.
 ## Wire format
 
 - **Type string:** `n8n-nodes-base.googleBusinessProfile`
-- **Aliases:** (none)
+- **Aliases:** `Google My Business`, `GMB`, `My Business`
 - **Inputs:** `main` × 1
 - **Outputs:** `main` × 1
 - **Credentials:** `googleBusinessProfileOAuth2Api` (OAuth2; extends the shared
@@ -166,11 +168,32 @@ for location and `accounts/123/locations/456/localPosts/789` for a post.
 |------|------|---------|----------|----------------|-------|
 | review | resourceLocator | — | yes | `resource=review, operation=delete` | Review whose reply to remove |
 
-### Request options (all operations)
+### Runtime data transformation
 
-A generic `requestOptions` collection (batching, allow-unauthorized-certificates,
-proxy, timeout) applies to the underlying HTTP calls. These are platform-level
-transport options and do not alter the API payloads.
+**Date/Time conversion (create):** When creating an EVENT or OFFER post, the
+`startDateTime` / `endDateTime` (or `startDate` / `endDate`) parameters are
+converted from ISO-8601 strings into the Google API's `Date`/`TimeOfDay` object
+format (`{ date: { year, month, day }, time?: { hours, minutes, seconds, nanos } }`)
+and nested under `event.schedule`.
+
+**Update mask (update):** When updating a post, only the fields present in the
+`options` collection are included in the `updateMask` query parameter. The
+property mapping maps each option key to the corresponding API field path
+(e.g. `callToActionType` → `callToAction.actionType`, `title` → `event.title`,
+`startDateTime` → `event.schedule.startDate,event.schedule.startTime`).
+
+**Pagination (getAll):** For both Post Get Many and Review Get Many, the
+response body is inspected for a `localPosts` or `reviews` array respectively.
+Pagination loops on `nextPageToken` up to the requested `limit` (or until
+exhausted when `returnAll=true`). Post Get Many uses `pageSize=100` max per
+page; Review Get Many uses `pageSize=50` max per page.
+
+**Load options (list search):** The node exposes four `listSearch` methods for
+populating resource-locator dropdowns:
+- `searchAccounts` — calls `mybusinessaccountmanagement.googleapis.com/v1/accounts`
+- `searchLocations` — calls `mybusinessbusinessinformation.googleapis.com/v1/{account}/locations`
+- `searchPosts` — calls `mybusinessbusinessinformation.googleapis.com/v4/{account}/{location}/localPosts`
+- `searchReviews` — calls `mybusinessbusinessinformation.googleapis.com/v4/{account}/{location}/reviews`
 
 ## Runtime behavior
 
@@ -393,12 +416,16 @@ expression strings, so values can be pulled from the incoming item.
 | Wire resource / operation defaults | Inferred from descriptor | `post` / `create` |
 | `postType` / `alertType` option values | Documented | Map 1:1 to `LocalPostTopicType` / `AlertType` enums in the Google API; only `COVID_19` is a documented alert subtype |
 | Resource locator modes | Inferred from descriptor | `account`/`location`/`post` use list + name; `review` adds id mode |
-| Post Update request shape | Inferred | API `patch` updates the specified local post; node exposes editable fields through `options` |
-| Get Many response handling | Inferred | Pagination (`pageSize`/`pageToken`) per the Google API; platform-standard list output |
+| Post Update request shape | Inferred | API `patch` updates the specified local post; node exposes editable fields through `options`; updateMask computed from option keys |
+| Get Many response handling | Inferred | Pagination (`pageSize`/`pageToken`) per the Google API; platform-standard list output; response extracted from `localPosts` or `reviews` array |
 | Delete / Delete Reply output shape | Inferred | Success indicator item; API returns no body |
 | Reply 4096-byte limit + verified-location requirement | Documented | Google `ReviewReply` and `updateReply` contract |
 | Deprecation of Google My Business v4 API | Documented | `localPosts` / `reviews` v4 methods remain supported; related v4 insight/media methods already sunset (see sunset-dates page) |
 | Sibling trigger node | Documented | `googleBusinessProfileTrigger` (polling, `reviewAdded` event) is a separate trigger type, out of scope here |
+| Date/Time conversion | Inferred from descriptor | `handleDatesPresend` converts ISO-8601 dateTime strings to `Date`/`TimeOfDay` objects for the API |
+| loadOptions methods | Inferred from descriptor | `searchAccounts`, `searchLocations`, `searchPosts`, `searchReviews` — call different Google API endpoints |
+| Aliases | Inferred from descriptor | `Google My Business`, `GMB`, `My Business` |
+| Categories | Inferred from descriptor | `Marketing`, `Productivity` |
 
 ## OpenFlow mapping
 

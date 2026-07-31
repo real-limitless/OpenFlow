@@ -1056,7 +1056,8 @@
       "priority": "P1",
       "executor": "implemented",
       "spec": "specced",
-      "dogfood": false
+      "dogfood": false,
+      "factory": "partial"
     },
     "n8n-nodes-base.gSuiteAdmin": {
       "priority": "P1",
@@ -1074,7 +1075,8 @@
       "priority": "P1",
       "executor": "implemented",
       "spec": "specced",
-      "dogfood": false
+      "dogfood": false,
+      "factory": "pass"
     },
     "n8n-nodes-base.asana": {
       "priority": "P1",
@@ -1086,37 +1088,43 @@
       "priority": "P1",
       "executor": "implemented",
       "spec": "specced",
-      "dogfood": false
+      "dogfood": false,
+      "factory": "pass"
     },
     "n8n-nodes-base.todoist": {
       "priority": "P1",
       "executor": "implemented",
       "spec": "specced",
-      "dogfood": false
+      "dogfood": false,
+      "factory": "pass"
     },
     "n8n-nodes-base.linear": {
       "priority": "P1",
       "executor": "implemented",
       "spec": "specced",
-      "dogfood": false
+      "dogfood": false,
+      "factory": "pass"
     },
     "n8n-nodes-base.gitlab": {
       "priority": "P1",
       "executor": "implemented",
       "spec": "specced",
-      "dogfood": false
+      "dogfood": false,
+      "factory": "pass"
     },
     "n8n-nodes-base.gitlabTrigger": {
       "priority": "P1",
       "executor": "implemented",
       "spec": "specced",
-      "dogfood": false
+      "dogfood": false,
+      "factory": "pass"
     },
     "n8n-nodes-base.githubTrigger": {
       "priority": "P1",
       "executor": "implemented",
       "spec": "specced",
-      "dogfood": false
+      "dogfood": false,
+      "factory": "pass"
     },
     "n8n-nodes-base.bitbucketTrigger": {
       "priority": "P1",
@@ -1140,7 +1148,8 @@
       "priority": "P1",
       "executor": "implemented",
       "spec": "specced",
-      "dogfood": false
+      "dogfood": false,
+      "factory": "partial"
     },
     "n8n-nodes-base.pipedrive": {
       "priority": "P1",
@@ -2947,6 +2956,13 @@
     {
       "type": "n8n-nodes-base.homeAssistant",
       "priority": 210,
+      "tier": "core",
+      "executor": "implemented",
+      "spec": "specced"
+    },
+    {
+      "type": "n8n-nodes-base.linear",
+      "priority": 200,
       "tier": "core",
       "executor": "implemented",
       "spec": "specced"
