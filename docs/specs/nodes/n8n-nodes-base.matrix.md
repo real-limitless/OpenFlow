@@ -31,7 +31,7 @@ status: specced
 | name | type | default | required |
 |------|------|---------|----------|
 | accessToken | string | — | yes |
-| homeserverUrl | string | `https://matrix.org` | yes |
+| homeserverUrl | string | `https://matrix-client.matrix.org` | yes |
 
 The access token is a Matrix user token obtained from a client session. The homeserver URL is the base URL of the Matrix homeserver.
 

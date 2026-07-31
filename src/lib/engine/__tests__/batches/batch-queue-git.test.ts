@@ -87,10 +87,17 @@ describe("batch-queue git — n8n-nodes-base.git", () => {
     expect(getNodeType(TYPE).displayName).toBe("Git");
   });
 
-  it("throws when no transport client is configured", async () => {
-    await expect(runGit({ operation: "log", path: "/tmp/repo" }, [{}])).rejects.toThrow(
-      /no transport client configured/,
-    );
+  it("uses default simple-git transport when no factory override is set", async () => {
+    // Without setGitClientFactory, DEFAULT_FACTORY loads git-transport (system git).
+    // A missing/invalid path should fail inside git, not with the old stub message.
+    let err: unknown;
+    try {
+      await runGit({ operation: "log", path: "/tmp/openflow-no-such-repo" }, [{}]);
+    } catch (e) {
+      err = e;
+    }
+    expect(err).toBeDefined();
+    expect(String(err)).not.toMatch(/no transport client configured/);
   });
 
   it("clone returns success with path and repository", async () => {

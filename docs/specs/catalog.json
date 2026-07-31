@@ -466,7 +466,7 @@
       "executor": "implemented",
       "spec": "specced",
       "dogfood": false,
-      "factory": "partial"
+      "factory": "pass"
     },
     "@n8n/n8n-nodes-langchain.openAi": {
       "priority": "P1",
@@ -872,7 +872,7 @@
       "executor": "implemented",
       "spec": "specced",
       "dogfood": false,
-      "factory": "partial"
+      "factory": "pass"
     },
     "n8n-nodes-base.matrix": {
       "priority": "P1",
@@ -885,13 +885,15 @@
       "priority": "P1",
       "executor": "implemented",
       "spec": "specced",
-      "dogfood": false
+      "dogfood": false,
+      "factory": "pass"
     },
     "n8n-nodes-base.gotify": {
       "priority": "P1",
       "executor": "implemented",
       "spec": "specced",
-      "dogfood": false
+      "dogfood": false,
+      "factory": "partial"
     },
     "n8n-nodes-base.pushover": {
       "priority": "P1",

@@ -278,9 +278,9 @@ async function runReactionOperation(
   if (operation === "add") {
     const emojiName = String(resolveValue(node.parameters.emojiName, itemJson) ?? "");
     if (!emojiName) throw new Error("Mattermost: emojiName is required");
-    const body: Record<string, unknown> = { post_id: postId, emoji_name: emojiName };
-    const userId = resolveValue(node.parameters.userId, itemJson);
-    if (userId) body.user_id = String(userId);
+    const userId = String(resolveValue(node.parameters.userId, itemJson) ?? "");
+    if (!userId) throw new Error("Mattermost: userId is required for reaction add");
+    const body: Record<string, unknown> = { post_id: postId, emoji_name: emojiName, user_id: userId };
     const res = await mattermostRequest(baseUrl, token, "POST", "/reactions", body);
     return { json: res };
   }
@@ -289,7 +289,7 @@ async function runReactionOperation(
     if (!emojiName) throw new Error("Mattermost: emojiName is required");
     const userId = String(resolveValue(node.parameters.userId, itemJson) ?? "");
     if (!userId) throw new Error("Mattermost: userId is required for reaction remove");
-    await mattermostRequest(baseUrl, token, "DELETE", `/reactions/${userId}/${postId}/${emojiName}`);
+    await mattermostRequest(baseUrl, token, "DELETE", `/users/${userId}/posts/${postId}/reactions/${emojiName}`);
     return { json: { success: true } };
   }
   if (operation === "getAll") {

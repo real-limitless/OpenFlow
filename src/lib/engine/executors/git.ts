@@ -64,10 +64,9 @@ export function setGitClientFactory(factory: GitClientFactory | null): void {
   clientFactory = factory;
 }
 
-const DEFAULT_FACTORY: GitClientFactory = async () => {
-  throw new Error(
-    "Git: no transport client configured. Wire a real Git client via setGitClientFactory.",
-  );
+const DEFAULT_FACTORY: GitClientFactory = async (credentials, options) => {
+  const { defaultGitClientFactory } = await import("./git-transport");
+  return defaultGitClientFactory(credentials, options);
 };
 
 function resolveValue(raw: unknown, itemJson: Record<string, unknown>): unknown {

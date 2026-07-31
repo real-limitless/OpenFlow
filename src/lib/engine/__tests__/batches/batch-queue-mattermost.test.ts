@@ -238,15 +238,16 @@ describe("batch-queue mattermost — n8n-nodes-base.mattermost", () => {
       operation: "add",
       postId: "post123",
       emojiName: "+1",
+      userId: "user1",
     });
     const sent = JSON.parse(calls[0].body as string);
-    expect(sent).toMatchObject({ post_id: "post123", emoji_name: "+1" });
-    expect(out[0][0].json).toMatchObject({ post_id: "post123", emoji_name: "+1" });
+    expect(sent).toMatchObject({ post_id: "post123", emoji_name: "+1", user_id: "user1" });
+    expect(out[0][0].json).toMatchObject({ post_id: "post123", emoji_name: "+1", user_id: "user1" });
   });
 
   it("remove reaction from post uses correct delete URL", async () => {
     installFetch({
-      "DELETE https://mattermost.example.com/api/v4/reactions/user456/post123/+1": mockResponse(null, { status: 200 }),
+      "DELETE https://mattermost.example.com/api/v4/users/user456/posts/post123/reactions/+1": mockResponse(null, { status: 200 }),
     });
     const out = await run({
       resource: "reaction",
@@ -257,7 +258,7 @@ describe("batch-queue mattermost — n8n-nodes-base.mattermost", () => {
     });
     expect(out[0][0].json).toEqual({ success: true });
     expect(calls[0].method).toBe("DELETE");
-    expect(calls[0].url).toBe("https://mattermost.example.com/api/v4/reactions/user456/post123/+1");
+    expect(calls[0].url).toBe("https://mattermost.example.com/api/v4/users/user456/posts/post123/reactions/+1");
   });
 
   it("invite user to team", async () => {
@@ -352,5 +353,16 @@ describe("batch-queue mattermost — n8n-nodes-base.mattermost", () => {
         emojiName: "+1",
       }),
     ).rejects.toThrow("Mattermost: userId is required for reaction remove");
+  });
+
+  it("throws when userId missing for reaction add", async () => {
+    await expect(
+      run({
+        resource: "reaction",
+        operation: "add",
+        postId: "post123",
+        emojiName: "+1",
+      }),
+    ).rejects.toThrow("Mattermost: userId is required for reaction add");
   });
 });

@@ -120,6 +120,8 @@ import { mcpCommunityClientExecutor as exec_113 } from "./mcp-community-client";
 import { homeAssistantExecutor as exec_114 } from "./home-assistant";
 import { mattermostExecutor as exec_115 } from "./n8n-nodes-base.mattermost";
 import { matrixExecutor as exec_116 } from "./matrix";
+import { rocketchatExecutor as exec_117 } from "./rocketchat";
+import { gotifyExecutor as exec_118 } from "./gotify";
 
 /** Register every builtin executor via static imports (Nitro-safe). Idempotent. */
 export function seedBuiltinExecutors(): void {
@@ -240,6 +242,8 @@ export function seedBuiltinExecutors(): void {
   registerExecutor("n8n-nodes-base.homeAssistant", exec_114 as NodeExecutor);
   registerExecutor("n8n-nodes-base.mattermost", exec_115 as NodeExecutor);
   registerExecutor("n8n-nodes-base.matrix", exec_116 as NodeExecutor);
+  registerExecutor("n8n-nodes-base.rocketchat", exec_117 as NodeExecutor);
+  registerExecutor("n8n-nodes-base.gotify", exec_118 as NodeExecutor);
   markExecutorsSeeded();
 }
 

@@ -728,6 +728,16 @@ export const BUILTIN_EXECUTOR_MODULES: Array<{
       modulePath: "./executors/matrix",
       exportName: "matrixExecutor",
     },
+    {
+      type: "n8n-nodes-base.rocketchat",
+      modulePath: "./executors/rocketchat",
+      exportName: "rocketchatExecutor",
+    },
+    {
+      type: "n8n-nodes-base.gotify",
+      modulePath: "./executors/gotify",
+      exportName: "gotifyExecutor",
+    },
   ];
 
 /** Types OpenFlow ships an executor for. Derived, so it needs no maintenance. */
