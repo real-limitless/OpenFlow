@@ -738,6 +738,11 @@ export const BUILTIN_EXECUTOR_MODULES: Array<{
       modulePath: "./executors/gotify",
       exportName: "gotifyExecutor",
     },
+    {
+      type: "n8n-nodes-base.pushbullet",
+      modulePath: "./executors/pushbullet",
+      exportName: "pushbulletExecutor",
+    },
   ];
 
 /** Types OpenFlow ships an executor for. Derived, so it needs no maintenance. */

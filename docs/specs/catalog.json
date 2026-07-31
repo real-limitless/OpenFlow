@@ -879,7 +879,7 @@
       "executor": "implemented",
       "spec": "specced",
       "dogfood": false,
-      "factory": "partial"
+      "factory": "pass"
     },
     "n8n-nodes-base.rocketchat": {
       "priority": "P1",
@@ -905,7 +905,8 @@
       "priority": "P1",
       "executor": "implemented",
       "spec": "specced",
-      "dogfood": false
+      "dogfood": false,
+      "factory": "pass"
     },
     "n8n-nodes-base.messageBird": {
       "priority": "P1",

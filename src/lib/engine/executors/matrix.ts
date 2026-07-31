@@ -109,10 +109,9 @@ export const matrixExecutor: NodeExecutor = async (ctx, node) => {
 
   for (let idx = 0; idx < items.length; idx++) {
     const item = items[idx];
-    const itemJson = item.json ?? {};
     const pairedItem = item.pairedItem ?? { item: idx, input: 0 };
     try {
-      const result = await runOperation(homeserverUrl, accessToken, node, resource, operation, itemJson);
+      const result = await runOperation(homeserverUrl, accessToken, node, resource, operation, item);
       const list = Array.isArray(result) ? result : [result];
       for (const r of list) {
         out.push({ json: r.json, pairedItem });
@@ -133,12 +132,13 @@ async function runOperation(
   node: { parameters: Record<string, unknown> },
   resource: string,
   operation: string,
-  itemJson: Record<string, unknown>,
+  item: INodeExecutionData,
 ): Promise<OpResult | OpResult[]> {
+  const itemJson = item.json ?? {};
   switch (resource) {
     case "account": return runAccountOperation(homeserverUrl, accessToken, operation, itemJson);
     case "event": return runEventOperation(homeserverUrl, accessToken, node, operation, itemJson);
-    case "media": return runMediaOperation(homeserverUrl, accessToken, node, operation, itemJson);
+    case "media": return runMediaOperation(homeserverUrl, accessToken, node, operation, item);
     case "message": return runMessageOperation(homeserverUrl, accessToken, node, operation, itemJson);
     case "room": return runRoomOperation(homeserverUrl, accessToken, node, operation, itemJson);
     case "roomMember": return runRoomMemberOperation(homeserverUrl, accessToken, node, operation, itemJson);
@@ -189,16 +189,120 @@ async function runEventOperation(
 // media
 // ---------------------------------------------------------------------------
 
+async function matrixUploadRequest(
+  homeserverUrl: string,
+  accessToken: string,
+  path: string,
+  contentType: string,
+  body: string,
+): Promise<Record<string, unknown>> {
+  const baseUrl = homeserverUrl.replace(/\/+$/, "");
+  const url = `${baseUrl}${path}`;
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 30000);
+  try {
+    const response = await fetch(url, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        "Content-Type": contentType,
+      },
+      body,
+      signal: controller.signal,
+    });
+    const text = await response.text();
+    let parsed: unknown = text;
+    try {
+      parsed = text ? JSON.parse(text) : null;
+    } catch {
+      /* keep text */
+    }
+    if (response.status < 200 || response.status >= 300) {
+      const obj = asObj(parsed);
+      const errcode = obj.errcode ? String(obj.errcode) : "";
+      const error = obj.error ? String(obj.error) : "";
+      const errMsg = errcode
+        ? `Matrix error ${errcode}: ${error}`
+        : `Matrix upload failed with status code ${response.status}`;
+      throw new Error(errMsg);
+    }
+    return parsed as Record<string, unknown>;
+  } catch (err) {
+    if (err instanceof Error && (err.message.startsWith("Matrix"))) {
+      throw err;
+    }
+    if (err instanceof Error) {
+      throw new Error(`Matrix upload failed: ${err.message}`);
+    }
+    throw err;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+const MEDIA_MSGTYPE: Record<string, string> = {
+  image: "m.image",
+  audio: "m.audio",
+  video: "m.video",
+  file: "m.file",
+};
+
 async function runMediaOperation(
   homeserverUrl: string,
   accessToken: string,
   node: { parameters: Record<string, unknown> },
   operation: string,
-  itemJson: Record<string, unknown>,
+  item: INodeExecutionData,
 ): Promise<OpResult> {
   if (operation === "upload") {
-    const res = await matrixRequest(homeserverUrl, accessToken, "POST", "/_matrix/media/v3/upload");
-    return { json: res as Record<string, unknown> };
+    const binaryPropertyName = String(node.parameters.binaryPropertyName ?? "data");
+    const mediaType = String(node.parameters.mediaType ?? "image");
+    const roomId = String(node.parameters.roomId ?? "");
+    const additionalFields = node.parameters.additionalFields as Record<string, unknown> | undefined;
+    const fileName = additionalFields?.fileName ? String(additionalFields.fileName) : "";
+
+    if (!roomId) throw new Error("Matrix: roomId is required for media:upload");
+    if (!item.binary || !item.binary[binaryPropertyName]) {
+      throw new Error(`Matrix: binary data not found on input under "${binaryPropertyName}"`);
+    }
+
+    const binaryData = item.binary[binaryPropertyName];
+    const mimeType = String(binaryData.mimeType ?? "application/octet-stream");
+    const fileContent = String(binaryData.data ?? "");
+
+    let uploadPath = "/_matrix/media/v3/upload";
+    if (fileName) {
+      uploadPath += `?filename=${encodeURIComponent(fileName)}`;
+    }
+
+    const uploadRes = await matrixUploadRequest(
+      homeserverUrl,
+      accessToken,
+      uploadPath,
+      mimeType,
+      fileContent,
+    );
+
+    const contentUri = String((uploadRes as Record<string, unknown>).content_uri ?? "");
+    if (!contentUri) {
+      throw new Error("Matrix: media upload did not return a content_uri");
+    }
+
+    const msgtype = MEDIA_MSGTYPE[mediaType] ?? "m.file";
+    const txnId = `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+    const messageBody: Record<string, unknown> = {
+      body: fileName || mediaType,
+      msgtype,
+      url: contentUri,
+    };
+    const sendRes = await matrixRequest(
+      homeserverUrl,
+      accessToken,
+      "PUT",
+      `/_matrix/client/v3/rooms/${encodeURIComponent(roomId)}/send/m.room.message/${txnId}`,
+      messageBody,
+    );
+    return { json: sendRes as Record<string, unknown> };
   }
   throw new Error(`Matrix: unsupported media operation "${operation}"`);
 }

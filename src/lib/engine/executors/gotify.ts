@@ -121,36 +121,64 @@ async function handleMessage(
 
   if (operation === "create") {
     const body: Record<string, unknown> = {};
-    const text = String(node.parameters.text ?? "");
-    if (!text) throw new Error("Gotify: text is required for create operation");
-    body.message = text;
-    const title = String(node.parameters.title ?? "");
+    const msg = String(node.parameters.message ?? "");
+    if (!msg) throw new Error("Gotify: message is required for create operation");
+    body.message = msg;
+    const additionalFields = (node.parameters.additionalFields ?? {}) as Record<string, unknown>;
+    const title = String(additionalFields.title ?? "");
     if (title) body.title = title;
-    const priorityRaw = node.parameters.priority;
+    const priorityRaw = additionalFields.priority;
     if (priorityRaw !== undefined && priorityRaw !== "") {
       body.priority = Number(priorityRaw);
+    } else {
+      body.priority = 1;
+    }
+    const opts = (node.parameters.options ?? {}) as Record<string, unknown>;
+    const contentType = String(opts.contentType ?? "text/plain");
+    if (contentType !== "text/plain") {
+      body.extras = {
+        client: {
+          display: { contentType },
+        },
+      };
     }
     const res = await gotifyRequest(cred.url, token, "POST", "/message", body);
     return asObj(res);
   }
 
   if (operation === "delete") {
-    const messageId = Number(node.parameters.messageId ?? 0);
+    const messageId = String(node.parameters.messageId ?? "");
     if (!messageId) throw new Error("Gotify: messageId is required for delete operation");
     await gotifyRequest(cred.url, token, "DELETE", `/message/${messageId}`);
-    return {};
+    return { success: true };
   }
 
   if (operation === "getAll") {
-    const opts = (node.parameters.options ?? {}) as Record<string, unknown>;
+    const returnAll = Boolean(node.parameters.returnAll ?? false);
     const params: Record<string, string> = {};
-    const limitRaw = opts.limit;
-    if (limitRaw !== undefined && limitRaw !== "") params.limit = String(Number(limitRaw));
-    const sinceRaw = opts.since;
-    if (sinceRaw !== undefined && sinceRaw !== "") params.since = String(Number(sinceRaw));
-    const res = await gotifyRequest(cred.url, token, "GET", "/message", undefined, params);
-    const messages = Array.isArray(res) ? (res as Record<string, unknown>[]) : [];
-    return messages.map((m) => asObj(m));
+    const limitRaw = node.parameters.limit;
+    const pageSize = limitRaw !== undefined && limitRaw !== "" ? Number(limitRaw) : 20;
+    if (!returnAll) {
+      params.limit = String(pageSize);
+    }
+    const allMessages: Record<string, unknown>[] = [];
+    let offset = 0;
+    const fetchPage = async (): Promise<boolean> => {
+      const pageParams = { ...params, offset: String(offset) };
+      const res = await gotifyRequest(cred.url, token, "GET", "/message", undefined, pageParams);
+      const obj = res as Record<string, unknown> | undefined;
+      const messages = obj?.messages as Record<string, unknown>[] ?? (Array.isArray(res) ? (res as Record<string, unknown>[]) : []);
+      if (messages.length === 0) return false;
+      for (const m of messages) allMessages.push(asObj(m));
+      offset += messages.length;
+      if (!returnAll) return false;
+      return true;
+    };
+    let hasMore = await fetchPage();
+    while (hasMore) {
+      hasMore = await fetchPage();
+    }
+    return allMessages;
   }
 
   throw new Error(`Gotify: unsupported message operation "${operation}"`);

@@ -156,9 +156,8 @@ describe("batch-queue gotify — n8n-nodes-base.gotify", () => {
       const out = await run({
         resource: "message",
         operation: "create",
-        title: "Test Title",
-        text: "Test body",
-        priority: 5,
+        message: "Test body",
+        additionalFields: { title: "Test Title", priority: 5 },
       });
       expect(calls).toHaveLength(1);
       expect(calls[0].method).toBe("POST");
@@ -174,31 +173,62 @@ describe("batch-queue gotify — n8n-nodes-base.gotify", () => {
       });
     });
 
-    it("throws when text is missing", async () => {
+    it("creates a message with markdown content type", async () => {
+      const created = { id: 2, appid: 1, message: "**bold** and *italic* text", title: "", priority: 1, date: "2024-01-01T12:00:00Z", extras: { client: { display: { contentType: "text/markdown" } } } };
+      installFetch({
+        "POST https://gotify.example.com/message": mockResponse(created),
+      });
+      const out = await run({
+        resource: "message",
+        operation: "create",
+        message: "**bold** and *italic* text",
+        options: { contentType: "text/markdown" },
+      });
+      expect(calls).toHaveLength(1);
+      const sent = JSON.parse(calls[0].body as string);
+      expect(sent.extras).toMatchObject({ client: { display: { contentType: "text/markdown" } } });
+      expect(out[0][0].json).toMatchObject({ message: "**bold** and *italic* text" });
+    });
+
+    it("defaults priority to 1 when omitted", async () => {
+      const created = { id: 3, appid: 1, message: "no priority", title: "", priority: 1, date: "2024-01-01T12:00:00Z" };
+      installFetch({
+        "POST https://gotify.example.com/message": mockResponse(created),
+      });
+      const out = await run({
+        resource: "message",
+        operation: "create",
+        message: "no priority",
+      });
+      const sent = JSON.parse(calls[0].body as string);
+      expect(sent.priority).toBe(1);
+    });
+
+    it("throws when message is missing", async () => {
       await expect(
         run({
           resource: "message",
           operation: "create",
         }),
-      ).rejects.toThrow("Gotify: text is required for create operation");
+      ).rejects.toThrow("Gotify: message is required for create operation");
     });
   });
 
   describe("delete", () => {
-    it("deletes a message and returns pass-through", async () => {
+    it("deletes a message and returns success", async () => {
       installFetch({
         "DELETE https://gotify.example.com/message/1": mockResponse(null, { status: 204 }),
       });
       const out = await run({
         resource: "message",
         operation: "delete",
-        messageId: 1,
+        messageId: "1",
       });
       expect(calls).toHaveLength(1);
       expect(calls[0].method).toBe("DELETE");
       expect(calls[0].url).toBe("https://gotify.example.com/message/1");
       expect(calls[0].headers["X-Gotify-Key"]).toBe("client-token-xyz");
-      expect(out[0][0].json).toEqual({});
+      expect(out[0][0].json).toEqual({ success: true });
     });
 
     it("throws when messageId is missing", async () => {
@@ -206,7 +236,7 @@ describe("batch-queue gotify — n8n-nodes-base.gotify", () => {
         run({
           resource: "message",
           operation: "delete",
-          messageId: 0,
+          messageId: "",
         }),
       ).rejects.toThrow("Gotify: messageId is required for delete operation");
     });
@@ -219,7 +249,7 @@ describe("batch-queue gotify — n8n-nodes-base.gotify", () => {
         { id: 1, appid: 1, message: "first", title: "", priority: 3, date: "2024-01-01T12:00:00Z" },
       ];
       installFetch({
-        "GET https://gotify.example.com/message": mockResponse(messages),
+        "GET https://gotify.example.com/message": mockResponse({ messages }),
       });
       const out = await run({
         resource: "message",
@@ -241,16 +271,87 @@ describe("batch-queue gotify — n8n-nodes-base.gotify", () => {
         { id: 1, appid: 1, message: "first", title: "", priority: 5, date: "2024-01-01T12:00:00Z" },
       ];
       installFetch({
-        "GET https://gotify.example.com/message?limit=2": mockResponse(messages.slice(0, 2)),
+        "GET https://gotify.example.com/message?limit=2": mockResponse({ messages: messages.slice(0, 2) }),
       });
       const out = await run({
         resource: "message",
         operation: "getAll",
-        options: { limit: 2 },
+        limit: 2,
       });
       expect(calls).toHaveLength(1);
       expect(calls[0].url).toBe("https://gotify.example.com/message?limit=2");
       expect(out[0]).toHaveLength(2);
+    });
+
+    it("paginates when returnAll is true", async () => {
+      const page1 = [
+        { id: 2, appid: 1, message: "second", title: "", priority: 0, date: "2024-01-02T12:00:00Z" },
+        { id: 1, appid: 1, message: "first", title: "", priority: 3, date: "2024-01-01T12:00:00Z" },
+      ];
+      const page2 = [
+        { id: 4, appid: 1, message: "fourth", title: "", priority: 0, date: "2024-01-04T12:00:00Z" },
+        { id: 3, appid: 1, message: "third", title: "", priority: 1, date: "2024-01-03T12:00:00Z" },
+      ];
+      let callCount = 0;
+      vi.stubGlobal(
+        "fetch",
+        vi.fn(async (url: string, init: RequestInit | undefined) => {
+          const headers: Record<string, string> = {};
+          const h = init?.headers as Record<string, string> | undefined;
+          if (h) for (const [k, v] of Object.entries(h)) headers[k] = v;
+          const method = (init?.method ?? "GET").toUpperCase();
+          calls.push({
+            url: String(url),
+            method,
+            headers,
+            body: typeof init?.body === "string" ? init.body : undefined,
+          });
+          callCount++;
+          if (callCount === 1) return mockResponse({ messages: page1 });
+          return mockResponse({ messages: page2 });
+        }),
+      );
+      const out = await run({
+        resource: "message",
+        operation: "getAll",
+        returnAll: true,
+      });
+      expect(calls).toHaveLength(2);
+      expect(out[0]).toHaveLength(4);
+      expect(out[0][0].json).toMatchObject({ id: 2, message: "second" });
+      expect(out[0][3].json).toMatchObject({ id: 3, message: "third" });
+    });
+
+    it("stops pagination when empty page returned", async () => {
+      const page1 = [
+        { id: 1, appid: 1, message: "only", title: "", priority: 1, date: "2024-01-01T12:00:00Z" },
+      ];
+      let callCount = 0;
+      vi.stubGlobal(
+        "fetch",
+        vi.fn(async (url: string, init: RequestInit | undefined) => {
+          const headers: Record<string, string> = {};
+          const h = init?.headers as Record<string, string> | undefined;
+          if (h) for (const [k, v] of Object.entries(h)) headers[k] = v;
+          const method = (init?.method ?? "GET").toUpperCase();
+          calls.push({
+            url: String(url),
+            method,
+            headers,
+            body: typeof init?.body === "string" ? init.body : undefined,
+          });
+          callCount++;
+          if (callCount === 1) return mockResponse({ messages: page1 });
+          return mockResponse({ messages: [] });
+        }),
+      );
+      const out = await run({
+        resource: "message",
+        operation: "getAll",
+        returnAll: true,
+      });
+      expect(calls).toHaveLength(2);
+      expect(out[0]).toHaveLength(1);
     });
   });
 
@@ -266,7 +367,7 @@ describe("batch-queue gotify — n8n-nodes-base.gotify", () => {
         run({
           resource: "message",
           operation: "create",
-          text: "should fail",
+          message: "should fail",
         }),
       ).rejects.toThrow("unauthorized");
     });
@@ -282,7 +383,7 @@ describe("batch-queue gotify — n8n-nodes-base.gotify", () => {
         {
           resource: "message",
           operation: "create",
-          text: "should fail gracefully",
+          message: "should fail gracefully",
         },
         [{}],
         { continueOnFail: true },
@@ -295,7 +396,7 @@ describe("batch-queue gotify — n8n-nodes-base.gotify", () => {
     it("throws on missing credential", async () => {
       await expect(
         run(
-          { resource: "message", operation: "create", text: "test" },
+          { resource: "message", operation: "create", message: "test" },
           [{}],
           { credentials: {} },
         ),
@@ -312,7 +413,7 @@ describe("batch-queue gotify — n8n-nodes-base.gotify", () => {
       };
       await expect(
         run(
-          { resource: "message", operation: "create", text: "test" },
+          { resource: "message", operation: "create", message: "test" },
           [{}],
           { credentials: badCreds },
         ),
@@ -329,7 +430,7 @@ describe("batch-queue gotify — n8n-nodes-base.gotify", () => {
       {
         resource: "message",
         operation: "create",
-        text: "multi",
+        message: "multi",
       },
       [{}, {}],
     );

@@ -343,6 +343,72 @@ describe("batch-queue matrix — n8n-nodes-base.matrix", () => {
     expect(out[0][0].json).toMatchObject({ event_id: "$event123:matrix.org" });
   });
 
+  it("media:upload — upload binary file to a room", async () => {
+    installFetch(
+      {
+        "POST https://matrix-client.matrix.org/_matrix/media/v3/upload": mockResponse({ content_uri: "mxc://test.image" }),
+      },
+      mockResponse({ event_id: "$event_upload123" }),
+    );
+    const out = await run(
+      {
+        resource: "media",
+        operation: "upload",
+        roomId: "!test:matrix.org",
+        binaryPropertyName: "data",
+        mediaType: "image",
+      },
+      [{ json: {}, binary: { data: { mimeType: "image/png", data: "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==" } } }],
+    );
+    expect(out[0][0].json).toHaveProperty("event_id");
+    expect(out[0][0].json.event_id).toBe("$event_upload123");
+    expect(calls[0].method).toBe("POST");
+    expect(calls[0].url).toBe("https://matrix-client.matrix.org/_matrix/media/v3/upload");
+    expect(calls[0].headers.Authorization).toBe("Bearer tok_123");
+    expect(calls[0].headers["Content-Type"]).toBe("image/png");
+    expect(calls[1].method).toBe("PUT");
+    expect(calls[1].url).toContain("/_matrix/client/v3/rooms/!test%3Amatrix.org/send/m.room.message/");
+    const msgBody = JSON.parse(calls[1].body as string);
+    expect(msgBody).toMatchObject({ msgtype: "m.image", url: "mxc://test.image" });
+  });
+
+  it("media:upload — throws on missing binary data", async () => {
+    await expect(
+      run(
+        {
+          resource: "media",
+          operation: "upload",
+          roomId: "!test:matrix.org",
+          binaryPropertyName: "data",
+          mediaType: "image",
+        },
+        [{}],
+      ),
+    ).rejects.toThrow(/binary data not found/);
+  });
+
+  it("media:upload — uses optional fileName on upload URL", async () => {
+    installFetch(
+      {
+        "POST https://matrix-client.matrix.org/_matrix/media/v3/upload?filename=photo.png": mockResponse({ content_uri: "mxc://test.photo" }),
+      },
+      mockResponse({ event_id: "$event_photo123" }),
+    );
+    const out = await run(
+      {
+        resource: "media",
+        operation: "upload",
+        roomId: "!test:matrix.org",
+        binaryPropertyName: "data",
+        mediaType: "image",
+        additionalFields: { fileName: "photo.png" },
+      },
+      [{ json: {}, binary: { data: { mimeType: "image/png", data: "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==" } } }],
+    );
+    expect(out[0][0].json).toHaveProperty("event_id");
+    expect(calls[0].url).toContain("filename=photo.png");
+  });
+
   it("continueOnFail — handles API error gracefully", async () => {
     installFetch({
       "GET https://matrix-client.matrix.org/_matrix/client/v3/account/whoami": mockResponse(

@@ -12,11 +12,10 @@ status: specced
 ## Sources
 
 | URL | Source class |
-|-----|--------------|
-| https://docs.n8n.io/integrations/builtin/app-nodes/n8n-nodes-base.gotify/ | Public docs only |
-| https://docs.n8n.io/integrations/builtin/credentials/gotify/ | Public docs only |
-| https://gotify.net/docs/pushmsg | Third-party service docs |
-| https://gotify.net/api-docs | Third-party service docs |
+|-----|----------------|
+| https://docs.n8n.io/integrations/builtin/app-nodes/n8n-nodes-base.gotify.md | Public docs only |
+| https://docs.n8n.io/integrations/builtin/credentials/gotify.md | Public docs only |
+| https://gotify.net/api-docs | Third-party service API docs |
 
 ## Wire format
 
@@ -24,186 +23,187 @@ status: specced
 - **Aliases:** (none)
 - **Inputs:** `main` × 1
 - **Outputs:** `main` × 1
-- **Credentials:** `gotifyApi` (App API Token for create, Client API Token for delete/getAll)
+- **Credentials:** `gotifyApi` (required) — API token credential containing server URL, App API Token (for creating messages), and Client API Token (for reading/deleting messages)
 
 ## Parameters
 
 | name | type | default | required | displayOptions | notes |
 |------|------|---------|----------|----------------|-------|
-| resource | fixed | `message` | yes | — | Only resource; always `message` |
-| operation | options | `create` | yes | — | `create` · `delete` · `getAll` |
-| messageId | number | — | yes | operation = `delete` | ID of the message to delete |
-| title | string | — | no | operation = `create` | Message title (optional; Gotify API accepts empty) |
-| text | string | — | yes | operation = `create` | Message body; required by Gotify API |
-| priority | number | — | no | operation = `create` | Message priority (integer); controls client notification behavior (e.g. Android sound on >= 5) |
-| options.limit | number | — | no | operation = `getAll` | Maximum number of messages to return |
-| options.since | number | — | no | operation = `getAll` | Return only messages with ID greater than this value |
+| resource | options: `message` | `message` | yes | — | Only resource. Selects the Gotify entity to act on. |
+| operation | options: `create` / `delete` / `getAll` | `create` | yes | — | The action to perform on the selected resource. |
+| message | string | `""` | yes | resource=message, operation=create | The body text of the notification message. |
+| additionalFields.priority | number | `1` | no | resource=message, operation=create | Message priority (Gotify 0–10 scale, default 1). Higher values produce more prominent notifications. |
+| additionalFields.title | string | `""` | no | resource=message, operation=create | Optional title displayed at the top of the notification. |
+| options.contentType | options: `text/plain` / `text/markdown` | `text/plain` | no | resource=message, operation=create | Content type for the message body. Markdown enables rich formatting in the notification. |
+| messageId | string | `""` | yes | resource=message, operation=delete | The numeric ID of the message to delete. |
+| returnAll | boolean | `false` | no | resource=message, operation=getAll | If true, fetch all messages (paginating internally). If false, respect the limit parameter. |
+| limit | number | `20` | no | resource=message, operation=getAll, returnAll=false | Maximum number of messages to return (minimum 1). |
 
 ## Runtime behavior
 
-### Input processing
+### Input
 
-Each input item is processed independently. The node performs the chosen operation for every item and collects results.
+Each input item is processed independently. The node reads parameters per-item and may issue one API request per item.
 
-### Output shape
+### Output
 
-**Operation `create`:** Returns the created message object from the Gotify API response wrapped in `{ json: ... }`:
+Single output (`main[0]`) with one result item per input item:
 
-```json
-{
-  "json": {
-    "id": 1,
-    "appid": 1,
-    "message": "hello",
-    "title": "my title",
-    "priority": 5,
-    "date": "2024-01-01T12:00:00Z"
-  }
-}
-```
-
-**Operation `delete`:** Returns the input item unchanged (pass-through) on success. No response body is expected from the API.
-
-**Operation `getAll`:** Returns an array of message objects. Each message object is emitted as a separate output item:
-
-```json
-{
-  "json": {
-    "id": 1,
-    "appid": 1,
-    "message": "hello",
-    "title": "my title",
-    "priority": 5,
-    "date": "2024-01-01T12:00:00Z"
-  }
-}
-```
+- **Create:** Returns the created message object from the Gotify API, containing `id`, `message`, `title`, `priority`, `date`, `appid`, etc.
+- **Delete:** Returns `{ success: true }` on successful deletion.
+- **Get All:** Returns an array of message objects (each containing `id`, `message`, `title`, `priority`, `date`, `appid`). When `returnAll=true`, all messages across pages are collected. When `returnAll=false`, only the number of results specified by `limit` are returned.
 
 ### Errors
 
-- HTTP 4xx/5xx responses from the Gotify API cause the node to throw an error, unless `continueOnFail` is enabled.
-- When `continueOnFail` is true, the node outputs `[{ json: { error: <message> } }]` on the same (only) output branch.
-- Authentication failures (wrong token type for operation) produce a clear error message.
+On API failure (network error, invalid credentials, non-existent message ID for delete, etc.), the node throws an error visible to the workflow. If `continueOnFail` is enabled on the node, the failing item produces `{ json: { error: <message> } }` and execution continues with the next item.
 
 ### Expressions
 
-All parameter values accept expression strings.
+All parameter values support expression strings (`{{ }}`).
+
+## Gotify API contract
+
+The node interacts with the Gotify REST API (v2.x/3.x) at the URL configured in the credential:
+
+- **POST /message** — Creates a message. Request body: `{ message, title?, priority? }`. Content type is sent via the `extras.client.display.contentType` field. Authenticated via App API Token.
+- **DELETE /message/{id}** — Deletes a message by numeric ID. Authenticated via Client API Token.
+- **GET /message** — Lists messages. Supports `?limit=N` and `?offset=N` query parameters. Returns `{ messages: [...], paging: { ... } }`. Authenticated via Client API Token.
+
+Authentication is via the `X-Gotify-Key` header (or `Authorization: Bearer <token>`), with the token type (app vs client) determining allowed operations.
 
 ## Acceptance tests
 
 ### Test: create a message
 
-**Given** a single input item:
+**Given** input items:
 
 ```json
 [{ "json": {} }]
 ```
 
 **Parameters:**
-
 ```json
 {
   "resource": "message",
   "operation": "create",
-  "title": "Test Title",
-  "text": "Test body",
-  "priority": 5
-}
-```
-
-**Expect** the output[0] to contain a single item whose `json.id` is a positive integer, `json.message` equals `"Test body"`, `json.title` equals `"Test Title"`, and `json.priority` equals `5`.
-
-### Test: delete a message
-
-**Given** a single input item:
-
-```json
-[{ "json": {} }]
-```
-
-**Parameters:**
-
-```json
-{
-  "resource": "message",
-  "operation": "delete",
-  "messageId": 1
-}
-```
-
-**Expect** the output[0] to contain the same input item unchanged (pass-through).
-
-### Test: get all messages (empty)
-
-**Given** a single input item:
-
-```json
-[{ "json": {} }]
-```
-
-**Parameters:**
-
-```json
-{
-  "resource": "message",
-  "operation": "getAll"
-}
-```
-
-**Expect** the output[0] to contain one item per message returned by the API. If no messages exist, the output is an empty array.
-
-### Test: get all messages with limit
-
-**Given** a single input item:
-
-```json
-[{ "json": {} }]
-```
-
-**Parameters:**
-
-```json
-{
-  "resource": "message",
-  "operation": "getAll",
-  "options": {
-    "limit": 5
+  "message": "Hello from OpenFlow",
+  "additionalFields": {
+    "title": "Test Notification",
+    "priority": 5
   }
 }
 ```
 
-**Expect** no more than 5 items in output[0], each with `json.id`, `json.message`, `json.title`, `json.priority`, and `json.date`.
+**Expect** output[0] to contain a JSON object with keys: `id` (number), `message` ("Hello from OpenFlow"), `title` ("Test Notification"), `priority` (5), `appid` (number), `date` (string).
 
-### Test: error on invalid credentials
+### Test: create a message with markdown content type
 
-**Given** an invalid App API Token and:
+**Given** input items:
 
 ```json
 [{ "json": {} }]
 ```
 
 **Parameters:**
-
 ```json
 {
   "resource": "message",
   "operation": "create",
-  "text": "should fail"
+  "message": "**bold** and *italic* text",
+  "options": {
+    "contentType": "text/markdown"
+  }
 }
 ```
 
-**Expect** the node to throw an error whose message includes "401" or "Unauthorized" (or equivalent). When `continueOnFail: true`, expect `[{ json: { error: <message> } }]`.
+**Expect** output[0] to contain a JSON object where `message` is "**bold** and *italic* text" and the API call sends the content type as markdown in the extras field.
+
+### Test: delete a message
+
+**Given** input items:
+
+```json
+[{ "json": {} }]
+```
+
+**Parameters:**
+```json
+{
+  "resource": "message",
+  "operation": "delete",
+  "messageId": "42"
+}
+```
+
+**Expect** output[0] to contain `{ "success": true }`.
+
+### Test: get all messages
+
+**Given** input items:
+
+```json
+[{ "json": {} }]
+```
+
+**Parameters:**
+```json
+{
+  "resource": "message",
+  "operation": "getAll",
+  "returnAll": true
+}
+```
+
+**Expect** output[0] to contain an array of message objects (each with `id`, `message`, `title`, `priority`, `date`, `appid`).
+
+### Test: get limited messages
+
+**Given** input items:
+
+```json
+[{ "json": {} }]
+```
+
+**Parameters:**
+```json
+{
+  "resource": "message",
+  "operation": "getAll",
+  "returnAll": false,
+  "limit": 5
+}
+```
+
+**Expect** output[0] to contain at most 5 message objects.
+
+### Test: continue on fail
+
+**Given** input items:
+
+```json
+[{ "json": {} }, { "json": {} }]
+```
+
+**Parameters:**
+```json
+{
+  "resource": "message",
+  "operation": "delete",
+  "messageId": "999999"
+}
+```
+
+With `continueOnFail` enabled on the node, **expect** output[0] to contain at least one item with `{ "json": { "error": <string> } }`.
 
 ## Gaps / confidence
 
 | Topic | documented / inferred | Notes |
 |-------|----------------------|-------|
-| Resource list | Public docs | Message is the only resource |
-| Operations list | Public docs | Create, Delete, GetAll confirmed |
-| Credential token types | Public docs + Gotify docs | App token for create, Client token for delete/getAll |
-| API endpoint paths | inferred from Gotify API docs | POST /message, DELETE /message/{id}, GET /message |
-| Response shape | inferred from Gotify API docs | Standard Gotify message object with id, appid, message, title, priority, date |
-| Pagination (limit/since) | inferred from Gotify API docs | Standard Gotify query parameters |
+| Operations and parameters | Documented in public n8n docs + confirmed via public descriptor metadata | 1 resource (message) with 3 operations (create/delete/getAll). High confidence. |
+| Credential fields | Documented in public credential docs | App API Token (for create), Client API Token (for delete/getAll), server URL. High confidence. |
+| Gotify API contract | Third-party API docs | POST/GET/DELETE /message endpoints. Pagination via messages array in response body. High confidence. |
+| Error response shapes | Inferred from implementation | `continueOnFail` produces `{ error: string }` items. Medium confidence. |
+| Exact output field names | Inferred from Gotify API spec | Standard fields: id, message, title, priority, date, appid. Medium-high confidence. |
 
 ## OpenFlow mapping
 
