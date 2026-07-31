@@ -26,5 +26,12 @@ COPY prisma/migrations prisma/migrations
 COPY prisma.config.ts prisma.config.ts
 COPY --from=build /app/.output ./.output
 COPY --from=deps /app/node_modules/isolated-vm ./node_modules/isolated-vm
+# FTP/SFTP runtime clients (may be externalized by Nitro)
+COPY --from=deps /app/node_modules/basic-ftp ./node_modules/basic-ftp
+COPY --from=deps /app/node_modules/ssh2 ./node_modules/ssh2
+COPY --from=deps /app/node_modules/asn1 ./node_modules/asn1
+COPY --from=deps /app/node_modules/bcrypt-pbkdf ./node_modules/bcrypt-pbkdf
+COPY --from=deps /app/node_modules/buildcheck ./node_modules/buildcheck
+COPY --from=deps /app/node_modules/nan ./node_modules/nan
 EXPOSE 3000
 CMD npx prisma migrate deploy && node .output/server/index.mjs

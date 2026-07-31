@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite dev",
-    "build": "vite build",
+    "build": "npm run generate:executors && vite build",
     "build:dev": "vite build --mode development",
     "preview": "vite preview",
     "dev:api": "tsx watch src/server/api.ts",
@@ -24,7 +24,8 @@
     "factory:resume": "bash scripts/factory/run_queue.sh resume",
     "factory:stop": "bash scripts/factory/run_queue.sh stop",
     "factory:status": "bash scripts/factory/run_queue.sh status",
-    "tui": "bash scripts/tui.sh"
+    "tui": "bash scripts/tui.sh",
+    "generate:executors": "node scripts/generate-executor-register.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
@@ -64,6 +65,7 @@
     "@tanstack/router-plugin": "^1.168.18",
     "@types/dagre": "^0.7.54",
     "@xyflow/react": "^12.11.2",
+    "basic-ftp": "^6.0.2",
     "bcryptjs": "^3.0.3",
     "better-sqlite3": "^13.0.1",
     "bullmq": "^5.81.2",
@@ -90,6 +92,7 @@
     "recharts": "^2.15.4",
     "sharp": "^0.35.3",
     "sonner": "^2.0.7",
+    "ssh2": "^1.17.0",
     "tailwind-merge": "^3.5.0",
     "tailwindcss": "^4.2.1",
     "tw-animate-css": "^1.3.4",
@@ -108,6 +111,7 @@
     "@types/pg": "^8.20.0",
     "@types/react": "^19.2.0",
     "@types/react-dom": "^19.2.0",
+    "@types/ssh2": "^1.15.5",
     "@vitejs/plugin-react": "^5.2.0",
     "dotenv": "^17.4.2",
     "eslint": "^9.32.0",

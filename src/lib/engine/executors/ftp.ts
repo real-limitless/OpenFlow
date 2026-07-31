@@ -41,10 +41,9 @@ export function setFtpClientFactory(factory: FtpClientFactory | null): void {
   clientFactory = factory;
 }
 
-const DEFAULT_FACTORY: FtpClientFactory = async () => {
-  throw new Error(
-    "FTP: no transport client configured. Wire a real FTP/SFTP client via setFtpClientFactory.",
-  );
+const DEFAULT_FACTORY: FtpClientFactory = async (protocol, credentials, options) => {
+  const { defaultFtpClientFactory } = await import("./ftp-transport");
+  return defaultFtpClientFactory(protocol, credentials, options);
 };
 
 function resolveValue(raw: unknown, itemJson: Record<string, unknown>): unknown {

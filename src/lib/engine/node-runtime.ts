@@ -11,12 +11,21 @@ const aliases = new Map<string, string>();
 
 let seeded = false;
 
-export function seedBuiltinExecutors(): void {
-  if (seeded) return;
+/**
+ * Mark the registry as seeded. Real registration lives in executors/index.ts
+ * (eager import.meta.glob) — call seedBuiltinExecutors from there / @/lib/engine.
+ */
+export function markExecutorsSeeded(): void {
   seeded = true;
-  // Executors register as a side effect of importing the executors/index.ts
-  // barrel, which eagerly globs every module named in BUILTIN_EXECUTOR_MODULES.
-  // Nothing to do here; kept as a stable entry point for callers and tests.
+}
+
+/**
+ * @deprecated Import seedBuiltinExecutors from `@/lib/engine` or `./executors`
+ * instead. This no-op remains only so older direct node-runtime imports compile;
+ * it does not load executor modules.
+ */
+export function seedBuiltinExecutors(): void {
+  seeded = true;
 }
 
 function dualKeys(type: string): string[] {
@@ -148,8 +157,9 @@ export function isRuntimeSeeded(): boolean {
   return seeded;
 }
 
+/** @deprecated Use markExecutorsSeeded */
 export function markRuntimeSeeded(): void {
-  seeded = true;
+  markExecutorsSeeded();
 }
 
 /**
@@ -682,6 +692,41 @@ export const BUILTIN_EXECUTOR_MODULES: Array<{
       type: "n8n-nodes-base.totp",
       modulePath: "./executors/totp",
       exportName: "totpExecutor",
+    },
+    {
+      type: "n8n-nodes-base.ldap",
+      modulePath: "./executors/ldap",
+      exportName: "ldapExecutor",
+    },
+    {
+      type: "n8n-nodes-base.iCalendar",
+      modulePath: "./executors/iCalendar",
+      exportName: "iCalendarExecutor",
+    },
+    {
+      type: "n8n-nodes-base.quickChart",
+      modulePath: "./executors/quick-chart",
+      exportName: "quickChartExecutor",
+    },
+    {
+      type: "n8n-nodes-mcp.mcpClientTool",
+      modulePath: "./executors/mcp-community-client",
+      exportName: "mcpCommunityClientExecutor",
+    },
+{
+      type: "n8n-nodes-base.homeAssistant",
+      modulePath: "./executors/home-assistant",
+      exportName: "homeAssistantExecutor",
+    },
+    {
+      type: "n8n-nodes-base.mattermost",
+      modulePath: "./executors/n8n-nodes-base.mattermost",
+      exportName: "mattermostExecutor",
+    },
+    {
+      type: "n8n-nodes-base.matrix",
+      modulePath: "./executors/matrix",
+      exportName: "matrixExecutor",
     },
   ];
 
