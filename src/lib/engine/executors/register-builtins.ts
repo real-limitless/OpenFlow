@@ -176,6 +176,7 @@ import { snowflakeExecutor as exec_169 } from "./n8n-nodes-base.snowflake";
 import { kafkaExecutor as exec_170 } from "./kafkaNode";
 import { nocoDbExecutor as exec_171 } from "./n8n-nodes-base.nocoDb";
 import { stripeTriggerExecutor as exec_172 } from "./stripe-trigger";
+import { quickbooksExecutor as exec_173 } from "./n8n-nodes-base.quickbooks";
 
 /** Register every builtin executor via static imports (Nitro-safe). Idempotent. */
 export function seedBuiltinExecutors(): void {
@@ -352,6 +353,7 @@ export function seedBuiltinExecutors(): void {
   registerExecutor("n8n-nodes-base.kafka", exec_170 as NodeExecutor);
   registerExecutor("n8n-nodes-base.nocoDb", exec_171 as NodeExecutor);
   registerExecutor("n8n-nodes-base.stripeTrigger", exec_172 as NodeExecutor);
+  registerExecutor("n8n-nodes-base.quickbooks", exec_173 as NodeExecutor);
   markExecutorsSeeded();
 }
 
