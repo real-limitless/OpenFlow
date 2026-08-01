@@ -342,17 +342,25 @@ def load_run_state() -> dict[str, Any]:
 
 
 def load_queue_types() -> list[tuple[str, int]]:
+    """Unique types from catalog.queue (first occurrence wins)."""
     if not CATALOG.exists():
         return []
     data = json.loads(CATALOG.read_text())
     q = data.get("queue") or []
     if q:
-        out = []
+        out: list[tuple[str, int]] = []
+        seen: set[str] = set()
         for i, item in enumerate(q):
             if isinstance(item, dict):
-                out.append((item["type"], int(item.get("priority") or i + 1)))
+                t = str(item.get("type") or "")
+                pri = int(item.get("priority") or i + 1)
             else:
-                out.append((str(item), i + 1))
+                t = str(item)
+                pri = i + 1
+            if not t or t in seen:
+                continue
+            seen.add(t)
+            out.append((t, pri))
         return out
     types: list[tuple[str, int]] = []
     seen: set[str] = set()

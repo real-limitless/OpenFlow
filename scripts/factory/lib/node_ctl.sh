@@ -90,14 +90,14 @@ requeue_type() {
 import os, sys
 from pathlib import Path
 sys.path.insert(0, str(Path("scripts/factory/lib").resolve()))
-from run_state import load_state, save_state, build_pending
+from run_state import _dedupe_preserve, load_state, save_state, build_pending
 t = os.environ["NODE_TYPE"]
 s = load_state()
-for k in ("completed", "partial", "failed", "active", "skipped"):
-    s[k] = [x for x in (s.get(k) or []) if x != t]
+for k in ("completed", "partial", "failed", "active", "skipped", "pending"):
+    s[k] = _dedupe_preserve([x for x in (s.get(k) or []) if x != t])
 s["pending"] = build_pending(include_partial=True)
-if t not in s["pending"]:
-    s["pending"].insert(0, t)
+# ensure unique pending and put this type first once
+s["pending"] = _dedupe_preserve([t] + [x for x in s["pending"] if x != t])
 save_state(s)
 print("pending", len(s["pending"]))
 PY

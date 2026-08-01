@@ -45,6 +45,27 @@ def set_node_status(type_name: str, **fields: str) -> None:
     save(data)
 
 
+def dedupe_queue(data: dict | None = None) -> tuple[dict, list[str]]:
+    """Keep first occurrence of each type in catalog.queue. Returns (data, removed)."""
+    data = data if data is not None else load()
+    queue = data.get("queue") or []
+    if not isinstance(queue, list):
+        return data, []
+    seen: set[str] = set()
+    out: list = []
+    removed: list[str] = []
+    for item in queue:
+        t = item.get("type") if isinstance(item, dict) else str(item)
+        if not t or t in seen:
+            if t:
+                removed.append(str(t))
+            continue
+        seen.add(str(t))
+        out.append(item)
+    data["queue"] = out
+    return data, removed
+
+
 def main() -> None:
     p = argparse.ArgumentParser(description="OpenFlow factory catalog CLI")
     sub = p.add_subparsers(dest="cmd", required=True)
@@ -58,6 +79,8 @@ def main() -> None:
     s.add_argument("--spec")
     s.add_argument("--factory")
 
+    sub.add_parser("dedupe-queue", help="Remove duplicate types from catalog.queue (keep first)")
+
     args = p.parse_args()
     if args.cmd == "get-batch":
         print(json.dumps(get_batch(args.batch), indent=2))
@@ -69,6 +92,14 @@ def main() -> None:
             factory=args.factory,
         )
         print("ok")
+    elif args.cmd == "dedupe-queue":
+        data, removed = dedupe_queue()
+        if removed:
+            from datetime import date
+
+            data["updated"] = date.today().isoformat()
+            save(data)
+        print(json.dumps({"removed": removed, "queueLen": len(data.get("queue") or [])}, indent=2))
 
 
 if __name__ == "__main__":

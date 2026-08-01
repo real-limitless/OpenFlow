@@ -190,6 +190,49 @@ npm run factory:status
 FACTORY_DRY_RUN=1 npm run factory:start -- --dry-run
 ```
 
+## Import gaps from scraped workflows
+
+Scan public workflow dumps (from `scripts/scrape-n8n-workflows`) for node types
+missing from `docs/specs/catalog.json`, rank by how many workflows use them, and
+optionally append the top N into the factory queue.
+
+```bash
+# Report official gaps (n8n-nodes-base + @n8n/*), ranked by workflow usage
+npm run factory:gaps
+npm run factory:gaps -- --top 30
+npm run factory:gaps -- --json --top 50
+
+# Preview / enqueue top 50 into catalog nodes + queue (does not start factory)
+npm run factory:import-scraped -- enqueue --top 50 --dry-run
+npm run factory:import-scraped -- enqueue --top 50 --refresh-pending
+
+# Then run the factory on the new pending types
+npm run factory:tui   # or: npm run factory:start
+```
+
+| Flag | Meaning |
+|------|---------|
+| `--scraped-dir PATH` | Dump root or `…/workflows` (default: scrape `outDir` / `.scraped/*`) |
+| `--top N` | Report truncate / enqueue limit (enqueue default **50**; `0` = all) |
+| `--min-workflows N` | Skip rare types (default 1) |
+| `--include-community` | Also include third-party packages |
+| `--no-denylist` | Include stickyNote / deprecated function·cron·start·… |
+| `--dry-run` | Print planned catalog inserts only |
+| `--refresh-pending` | Rebuild `.jobs/run-state.json` pending after enqueue |
+
+**Converted** = already listed in catalog `nodes` or `queue`. Re-runs are
+idempotent (append-only; existing priorities are not reordered).
+
+### Deduplicate factory jobs
+
+Catalog queue and run-state buckets must list each type once. Loaders already
+dedupe in memory; to scrub files:
+
+```bash
+npm run factory:import-scraped -- dedupe
+# or: python3 scripts/factory/lib/catalog.py dedupe-queue
+```
+
 ## Models
 
 Persisted: `scripts/factory/.jobs/models.json` (TUI **m**).
@@ -234,5 +277,7 @@ scripts/factory/
     run_node_pipeline.sh
     queue_worker.sh
     run_state.py
+    import_scraped_nodes.py  # scrape → gap report → catalog enqueue
     …
 ```
+

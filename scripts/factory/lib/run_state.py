@@ -84,11 +84,24 @@ def save_state(state: dict) -> None:
     STATE.write_text(json.dumps(state, indent=2) + "\n")
 
 
+def _dedupe_preserve(items: list[str]) -> list[str]:
+    seen: set[str] = set()
+    out: list[str] = []
+    for t in items:
+        if not t or t in seen:
+            continue
+        seen.add(t)
+        out.append(t)
+    return out
+
+
 def load_queue_types() -> list[str]:
+    """Return unique node types from catalog.queue (first occurrence wins)."""
     data = json.loads(CATALOG.read_text())
     q = data.get("queue") or []
     if q:
-        return [item["type"] if isinstance(item, dict) else str(item) for item in q]
+        types = [item["type"] if isinstance(item, dict) else str(item) for item in q]
+        return _dedupe_preserve(types)
     # fallback batches
     types: list[str] = []
     seen: set[str] = set()
@@ -146,11 +159,13 @@ def build_pending(include_partial: bool = True) -> list[str]:
     pending: list[str] = []
     s = load_state()
     skipped = set(s.get("skipped") or [])
+    seen: set[str] = set()
     for t in load_queue_types():
-        if t in skipped:
+        if not t or t in seen or t in skipped:
             continue
         st = read_node_status(t)
         if st is None:
+            seen.add(t)
             pending.append(t)
             continue
         stage = st.get("stage")
@@ -161,6 +176,7 @@ def build_pending(include_partial: bool = True) -> list[str]:
             continue
         # waitout: always re-queue (no live pipeline by design)
         if stage == "implement-waitout":
+            seen.add(t)
             pending.append(t)
             continue
         # actively running with live process — do not double-queue
@@ -175,6 +191,7 @@ def build_pending(include_partial: bool = True) -> list[str]:
             if _pipeline_alive(st):
                 continue
             # stale mid-flight → re-queue
+            seen.add(t)
             pending.append(t)
             continue
         if stage in ("partial", "fail", "interrupted") or verdict == "fail":
@@ -193,9 +210,11 @@ def build_pending(include_partial: bool = True) -> list[str]:
                 # stuck on same failure — wait for manual retry
                 continue
             if include_partial:
+                seen.add(t)
                 pending.append(t)
             continue
         # queued / unknown
+        seen.add(t)
         pending.append(t)
     return pending
 
@@ -334,11 +353,13 @@ def main() -> None:
         s = load_state()
         t = args.type
         for k in ("pending", "active", "completed", "partial", "failed", "skipped"):
-            s[k] = [x for x in (s.get(k) or []) if x != t]
+            s[k] = _dedupe_preserve([x for x in (s.get(k) or []) if x != t])
         if args.bucket == "clear-active":
             pass
         else:
-            s.setdefault(args.bucket, []).append(t)
+            bucket = s.setdefault(args.bucket, [])
+            if t not in bucket:
+                bucket.append(t)
         save_state(s)
         print("ok")
     elif args.cmd == "set-status":
