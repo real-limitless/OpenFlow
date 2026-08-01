@@ -71,6 +71,50 @@ export function newId(prefix = "n"): string {
   return `${prefix}-${Date.now().toString(36)}-${counter.toString(36)}`;
 }
 
+/**
+ * Normalize common export wrappers into a top-level workflow object.
+ *
+ * Accepts:
+ * - Standard n8n/OpenFlow export: `{ nodes, connections, name, ... }`
+ * - Template API wrapper: `{ id, name, workflow: { nodes, connections, ... } }`
+ * - Nested template meta: `{ workflow: { workflow: { nodes, ... }, name, ... } }`
+ */
+export function unwrapWorkflowPayload(raw: unknown): unknown {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return raw;
+  const obj = raw as Record<string, unknown>;
+
+  // Already a workflow graph
+  if (Array.isArray(obj.nodes)) return obj;
+
+  // { id, name, workflow: { nodes, connections, ... } }  (scraper / templates import API)
+  const inner = obj.workflow;
+  if (inner && typeof inner === "object" && !Array.isArray(inner)) {
+    const w = inner as Record<string, unknown>;
+    if (Array.isArray(w.nodes)) {
+      return {
+        ...w,
+        // Prefer outer name/id when the nested graph omits them
+        name: w.name ?? obj.name ?? "Imported workflow",
+        id: w.id ?? obj.id,
+      };
+    }
+    // { workflow: { workflow: { nodes } } } from templates/workflows/{id} meta
+    const deeper = w.workflow;
+    if (deeper && typeof deeper === "object" && !Array.isArray(deeper)) {
+      const d = deeper as Record<string, unknown>;
+      if (Array.isArray(d.nodes)) {
+        return {
+          ...d,
+          name: d.name ?? w.name ?? obj.name ?? "Imported workflow",
+          id: d.id ?? w.id ?? obj.id,
+        };
+      }
+    }
+  }
+
+  return raw;
+}
+
 /** Parse raw JSON text (or object) into our workflow model. */
 export function parseWorkflowJson(input: string | unknown, fallbackId?: string): ParseResult {
   let raw: unknown = input;
@@ -81,6 +125,8 @@ export function parseWorkflowJson(input: string | unknown, fallbackId?: string):
       return { ok: false, error: `Invalid JSON: ${(e as Error).message}` };
     }
   }
+
+  raw = unwrapWorkflowPayload(raw);
 
   const result = workflowSchema.safeParse(raw);
   if (!result.success) {

@@ -98,4 +98,39 @@ describe("schema round-trip", () => {
     expect(result.ok).toBe(true);
     expect(result.workflow!.tags).toEqual(["alpha", { name: "beta" }]);
   });
+
+  it("unwraps template API { id, name, workflow: { nodes } } wrappers", () => {
+    const wrapped = {
+      id: 4751,
+      name: "Outer name",
+      workflow: {
+        name: "Inner name",
+        nodes: minimalRaw.nodes,
+        connections: minimalRaw.connections,
+        settings: {},
+        active: false,
+      },
+    };
+    const result = parseWorkflowJson(wrapped);
+    expect(result.ok).toBe(true);
+    expect(result.workflow!.name).toBe("Inner name");
+    expect(result.workflow!.nodes).toHaveLength(1);
+    expect(result.workflow!.nodes[0].name).toBe("Start");
+  });
+
+  it("unwraps nested meta { workflow: { workflow: { nodes } } }", () => {
+    const nested = {
+      workflow: {
+        name: "Template title",
+        workflow: {
+          nodes: minimalRaw.nodes,
+          connections: minimalRaw.connections,
+        },
+      },
+    };
+    const result = parseWorkflowJson(nested);
+    expect(result.ok).toBe(true);
+    expect(result.workflow!.name).toBe("Template title");
+    expect(result.workflow!.nodes[0].type).toBe("n8n-nodes-base.manualWorkflowTrigger");
+  });
 });
