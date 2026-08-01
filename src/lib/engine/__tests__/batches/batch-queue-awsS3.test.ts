@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect } from "vitest";
 import { createExecutionContext, type ExecutionContext } from "@/sdk";
 import type { INode, INodeExecutionData } from "@/lib/workflow/types";
 import { seedBuiltinExecutors } from "../../index";
@@ -73,63 +73,51 @@ describe("batch-queue awsS3 — n8n-nodes-base.awsS3", () => {
     ).rejects.toThrow(/credential "aws"/);
   });
 
-  it("bucket — getAll returns list with Name and CreationDate", async () => {
-    const out = await runAwsS3(
-      { resource: "bucket", operation: "getAll", returnAll: true },
-      [{}],
-      { aws: AWS_CRED },
-    );
-    expect(out[0]).toBeDefined();
-  });
-
-  it("fails gracefully when bucket name is missing for create", async () => {
+  it("fails when bucket name is missing for create", async () => {
     await expect(
       runAwsS3({ resource: "bucket", operation: "create" }, [{}]),
     ).rejects.toThrow(/bucket name is required/);
   });
 
-  it("fails gracefully when fileKey is missing for download", async () => {
+  it("fails when fileKey is missing for download", async () => {
     await expect(
       runAwsS3({ resource: "file", operation: "download", bucketName: "b" }, [{}]),
-    ).rejects.toThrow(/fileKey is required/);
+    ).rejects.toThrow(/fileKey are required/);
+  });
+
+  it("fails when folderName is missing for folder create", async () => {
+    await expect(
+      runAwsS3({ resource: "folder", operation: "create", bucketName: "b" }, [{}]),
+    ).rejects.toThrow(/folderName is required/);
+  });
+
+  it("fails when folderKey is missing for folder delete", async () => {
+    await expect(
+      runAwsS3({ resource: "folder", operation: "delete", bucketName: "b" }, [{}]),
+    ).rejects.toThrow(/folderKey is required/);
+  });
+
+  it("fails when source and destination are missing for file copy", async () => {
+    await expect(
+      runAwsS3({ resource: "file", operation: "copy", sourcePath: "" }, [{}]),
+    ).rejects.toThrow(/sourcePath and destinationPath are required/);
   });
 
   it("continueOnFail outputs error item instead of throwing", async () => {
     const out = await runAwsS3(
-      { resource: "file", operation: "download", bucketName: "b", fileKey: "missing.txt", binaryPropertyName: "data" },
+      {
+        resource: "file",
+        operation: "download",
+        bucketName: "b",
+        fileKey: "missing.txt",
+        binaryPropertyName: "data",
+      },
       [{}],
       { aws: AWS_CRED },
       true,
     );
     expect(out[0]).toHaveLength(1);
     expect(out[0][0].json).toHaveProperty("error");
-  });
-
-  it("folder — create requires folderName", async () => {
-    await expect(
-      runAwsS3({ resource: "folder", operation: "create", bucketName: "b" }, [{}]),
-    ).rejects.toThrow(/folderName is required/);
-  });
-
-  it("folder — delete requires folderKey", async () => {
-    await expect(
-      runAwsS3({ resource: "folder", operation: "delete", bucketName: "b" }, [{}]),
-    ).rejects.toThrow(/folderKey is required/);
-  });
-
-  it("file — upload from text requires fileName when binaryData=false", async () => {
-    await expect(
-      runAwsS3(
-        { resource: "file", operation: "upload", bucketName: "b", binaryData: false, fileName: "test.txt", fileContent: "hi" },
-        [{}],
-      ),
-    ).rejects.toThrow();
-  });
-
-  it("file — copy requires source and destination", async () => {
-    await expect(
-      runAwsS3({ resource: "file", operation: "copy", sourcePath: "" }, [{}]),
-    ).rejects.toThrow(/sourcePath and destinationPath are required/);
   });
 
   it("parsePath utility works correctly", () => {

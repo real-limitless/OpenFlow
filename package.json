@@ -34,6 +34,8 @@
     "factory:resume": "bash scripts/factory/run_queue.sh resume",
     "factory:stop": "bash scripts/factory/run_queue.sh stop",
     "factory:status": "bash scripts/factory/run_queue.sh status",
+    "factory:gaps": "python3 scripts/factory/lib/import_scraped_nodes.py report",
+    "factory:import-scraped": "python3 scripts/factory/lib/import_scraped_nodes.py",
     "tui": "bash scripts/tui.sh",
     "generate:executors": "node scripts/generate-executor-register.mjs"
   },
@@ -91,6 +93,7 @@
     "isolated-vm": "^5.0.4",
     "lucide-react": "^0.575.0",
     "mongodb": "^7.5.0",
+    "mqtt": "^5.15.2",
     "mssql": "^12.7.0",
     "mysql2": "^3.23.2",
     "nodemailer": "^9.0.3",

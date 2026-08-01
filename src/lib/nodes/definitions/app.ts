@@ -846,3 +846,204 @@ export const awsS3: INodeTypeDescription = {
     },
   ],
 };
+
+const PERPLEXITY_DOCS = "https://docs.n8n.io/integrations/builtin/app-nodes/n8n-nodes-langchain.perplexity/";
+const PERPLEXITY_CRED_DOCS = "https://docs.n8n.io/integrations/builtin/credentials/perplexity/";
+
+const perplexityResources = [
+  { name: "Chat", value: "chat" },
+  { name: "Agent", value: "agent" },
+  { name: "Embedding", value: "embedding" },
+  { name: "Search", value: "search" },
+];
+
+const perplexityOptions: Array<{
+  displayName: string;
+  name: string;
+  type: string;
+  default: unknown;
+  [k: string]: unknown;
+}> = [
+  { displayName: "Disable Search", name: "disableSearch", type: "boolean", default: false },
+  { displayName: "Enable Search Classifier", name: "enableSearchClassifier", type: "boolean", default: false },
+  { displayName: "Frequency Penalty", name: "frequencyPenalty", type: "number", default: 0 },
+  { displayName: "Max Tokens", name: "maxTokens", type: "number", default: 1 },
+  { displayName: "Temperature", name: "temperature", type: "number", default: 0.2 },
+  { displayName: "Presence Penalty", name: "presencePenalty", type: "number", default: 0 },
+  { displayName: "Top P", name: "topP", type: "number", default: 0.9 },
+  { displayName: "Top K", name: "topK", type: "number", default: 0 },
+  { displayName: "Stop", name: "stop", type: "string", default: "" },
+  { displayName: "Response Format", name: "responseFormat", type: "json", default: "" },
+  { displayName: "Return Images", name: "returnImages", type: "boolean", default: false },
+  { displayName: "Return Related Questions", name: "returnRelatedQuestions", type: "boolean", default: false },
+  { displayName: "Search Domain Filter", name: "searchDomainFilter", type: "string", default: "" },
+  { displayName: "Search Mode", name: "searchMode", type: "options", default: "web", options: [
+    { name: "Web", value: "web" },
+    { name: "Academic", value: "academic" },
+    { name: "SEC", value: "sec" },
+  ]},
+  { displayName: "Search Recency", name: "searchRecency", type: "options", default: "month", options: [
+    { name: "Hour", value: "hour" },
+    { name: "Day", value: "day" },
+    { name: "Week", value: "week" },
+    { name: "Month", value: "month" },
+    { name: "Year", value: "year" },
+  ]},
+  { displayName: "Language Preference", name: "languagePreference", type: "string", default: "" },
+  { displayName: "Search Language Filter", name: "searchLanguageFilter", type: "string", default: "" },
+  { displayName: "Search After Date", name: "searchAfterDate", type: "string", default: "" },
+  { displayName: "Search Before Date", name: "searchBeforeDate", type: "string", default: "" },
+  { displayName: "Last Updated After", name: "lastUpdatedAfter", type: "string", default: "" },
+  { displayName: "Last Updated Before", name: "lastUpdatedBefore", type: "string", default: "" },
+];
+
+export const perplexity: INodeTypeDescription = {
+  name: "n8n-nodes-base.perplexity",
+  displayName: "Perplexity",
+  category: "AI",
+  group: ["output"],
+  version: [1, 2],
+  defaultVersion: 2,
+  description: "Access Perplexity AI models and APIs for chat, agent, embedding, and search operations.",
+  defaults: { name: "Perplexity" },
+  inputs: ["main"],
+  outputs: ["main"],
+  icon: "Zap",
+  credentials: [{ name: "perplexityApi", required: true }],
+  sources: [PERPLEXITY_DOCS, PERPLEXITY_CRED_DOCS],
+  properties: [
+    {
+      displayName: "Version",
+      name: "version",
+      type: "hidden",
+      default: 2,
+    },
+    {
+      displayName: "Resource",
+      name: "resource",
+      type: "options",
+      default: "chat",
+      required: true,
+      noDataExpression: true,
+      options: perplexityResources,
+    },
+    {
+      displayName: "Operation",
+      name: "operation",
+      type: "options",
+      default: "complete",
+      required: true,
+      noDataExpression: true,
+      displayOptions: { show: { resource: ["chat"] } },
+      options: [{ name: "Complete", value: "complete" }],
+    },
+    {
+      displayName: "Operation",
+      name: "operation",
+      type: "options",
+      default: "createResponse",
+      required: true,
+      noDataExpression: true,
+      displayOptions: { show: { resource: ["agent"] } },
+      options: [{ name: "Create Response", value: "createResponse" }],
+    },
+    {
+      displayName: "Operation",
+      name: "operation",
+      type: "options",
+      default: "createEmbedding",
+      required: true,
+      noDataExpression: true,
+      displayOptions: { show: { resource: ["embedding"] } },
+      options: [
+        { name: "Create Embedding", value: "createEmbedding" },
+        { name: "Create Contextualized Embedding", value: "createContextualized" },
+      ],
+    },
+    {
+      displayName: "Operation",
+      name: "operation",
+      type: "options",
+      default: "search",
+      required: true,
+      noDataExpression: true,
+      displayOptions: { show: { resource: ["search"] } },
+      options: [{ name: "Search", value: "search" }],
+    },
+    {
+      displayName: "Model",
+      name: "model",
+      type: "options",
+      default: "sonar",
+      required: true,
+      displayOptions: { show: { resource: ["chat"] } },
+      options: [
+        { name: "Sonar", value: "sonar" },
+        { name: "Sonar Deep Research", value: "sonar-deep-research" },
+        { name: "Sonar Pro", value: "sonar-pro" },
+        { name: "Sonar Reasoning Pro", value: "sonar-reasoning-pro" },
+      ],
+    },
+    {
+      displayName: "Messages",
+      name: "messages",
+      type: "fixedCollection",
+      default: { message: [{ role: "user", content: "" }] },
+      typeOptions: { multipleValues: true },
+      required: true,
+      displayOptions: { show: { resource: ["chat"] } },
+      options: [
+        {
+          name: "message",
+          displayName: "Message",
+          values: [
+            { displayName: "Role", name: "role", type: "options", default: "user", options: [
+              { name: "System", value: "system" },
+              { name: "User", value: "user" },
+              { name: "Assistant", value: "assistant" },
+            ]},
+            { displayName: "Content", name: "content", type: "string", default: "" },
+          ],
+        },
+      ],
+    },
+    {
+      displayName: "Input",
+      name: "input",
+      type: "string",
+      default: "",
+      required: true,
+      displayOptions: { show: { resource: ["agent", "embedding", "search"] } },
+    },
+    {
+      displayName: "Query",
+      name: "query",
+      type: "string",
+      default: "",
+      required: true,
+      displayOptions: { show: { resource: ["search"] } },
+    },
+    {
+      displayName: "Simplify",
+      name: "simplify",
+      type: "boolean",
+      default: false,
+      displayOptions: { show: { resource: ["chat", "agent", "search"] } },
+    },
+    {
+      displayName: "Options",
+      name: "options",
+      type: "collection",
+      default: {},
+      description: "Perplexity API request options",
+      options: perplexityOptions,
+    },
+    {
+      displayName: "Timeout",
+      name: "timeout",
+      type: "number",
+      default: 10000,
+      description: "Request timeout in milliseconds",
+    },
+  ],
+};

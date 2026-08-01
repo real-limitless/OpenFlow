@@ -199,7 +199,7 @@ export const langchainChainRetrievalQaExecutor: NodeExecutor = async (ctx, node)
 
     let output: unknown = finalText;
     if (parserHandle && typeof parserHandle.parse === "function") {
-      output = parserHandle.parse(finalText);
+      output = await parserHandle.parse(finalText);
     }
 
     const json: Record<string, unknown> = { output };

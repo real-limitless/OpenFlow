@@ -442,6 +442,16 @@ export const BUILTIN_EXECUTOR_MODULES: Array<{
     exportName: "langchainOutputParserStructuredExecutor",
   },
   {
+    type: "@n8n/n8n-nodes-langchain.outputParserItemList",
+    modulePath: "./executors/langchain-output-parser-item-list",
+    exportName: "langchainOutputParserItemListExecutor",
+  },
+  {
+    type: "@n8n/n8n-nodes-langchain.outputParserAutofixing",
+    modulePath: "./executors/langchain-output-parser-autofixing",
+    exportName: "langchainOutputParserAutofixingExecutor",
+  },
+  {
     type: "@n8n/n8n-nodes-langchain.memoryBufferWindow",
     modulePath: "./executors/memory-buffer-window",
     exportName: "memoryBufferWindowExecutor",
@@ -567,6 +577,11 @@ export const BUILTIN_EXECUTOR_MODULES: Array<{
     exportName: "vectorStoreInMemoryExecutor",
   },
   {
+    type: "@n8n/n8n-nodes-langchain.vectorStoreMilvus",
+    modulePath: "./executors/vectorStoreMilvus",
+    exportName: "vectorStoreMilvusExecutor",
+  },
+  {
     type: "@n8n/n8n-nodes-langchain.code",
     modulePath: "./executors/langchain-code",
     exportName: "langchainCodeExecutor",
@@ -580,6 +595,11 @@ export const BUILTIN_EXECUTOR_MODULES: Array<{
     type: "@n8n/n8n-nodes-langchain.textSplitterRecursiveCharacterTextSplitter",
     modulePath: "./executors/langchain-text-splitter-recursive-character",
     exportName: "langchainTextSplitterRecursiveCharacterExecutor",
+  },
+  {
+    type: "@n8n/n8n-nodes-langchain.embeddingsCohere",
+    modulePath: "./executors/embeddings-cohere",
+    exportName: "embeddingsCohereExecutor",
   },
   {
     type: "@n8n/n8n-nodes-langchain.embeddingsOpenAi",
@@ -730,6 +750,11 @@ export const BUILTIN_EXECUTOR_MODULES: Array<{
     type: "n8n-nodes-base.form",
     modulePath: "./executors/form",
     exportName: "formExecutor",
+  },
+  {
+    type: "n8n-nodes-base.gmailTrigger",
+    modulePath: "./executors/gmail-trigger",
+    exportName: "gmailTriggerExecutor",
   },
   {
     type: "n8n-nodes-base.totp",
@@ -1055,6 +1080,11 @@ export const BUILTIN_EXECUTOR_MODULES: Array<{
     exportName: "kafkaExecutor",
   },
   {
+    type: "n8n-nodes-base.mqtt",
+    modulePath: "./executors/mqtt",
+    exportName: "mqttExecutor",
+  },
+  {
     type: "n8n-nodes-base.nocoDb",
     modulePath: "./executors/n8n-nodes-base.nocoDb",
     exportName: "nocoDbExecutor",
@@ -1098,6 +1128,135 @@ export const BUILTIN_EXECUTOR_MODULES: Array<{
     type: "n8n-nodes-base.nextCloud",
     modulePath: "./executors/nextCloud",
     exportName: "nextCloudExecutor",
+  },
+  {
+    type: "n8n-nodes-base.awsLambda",
+    modulePath: "./executors/aws-lambda",
+    exportName: "awsLambdaExecutor",
+  },
+  {
+    type: "n8n-nodes-base.awsSes",
+    modulePath: "./executors/n8n-nodes-base.awsSes",
+    exportName: "awsSesExecutor",
+  },
+  {
+    type: "n8n-nodes-base.elasticsearch",
+    modulePath: "./executors/elasticsearch",
+    exportName: "elasticsearchExecutor",
+  },
+  {
+    type: "n8n-nodes-base.rabbitmq",
+    modulePath: "./executors/rabbitmq",
+    exportName: "rabbitmqExecutor",
+  },
+  {
+    type: "n8n-nodes-base.amqp",
+    modulePath: "./executors/amqp",
+    exportName: "amqpExecutor",
+  },
+  {
+    type: "n8n-nodes-base.redisTrigger",
+    modulePath: "./executors/redisTrigger",
+    exportName: "redisTriggerExecutor",
+    unavailable: {
+      setter: "setRedisTriggerClientFactory",
+      reason: "Redis trigger needs a Redis client (e.g. ioredis), which is not bundled in this build.",
+    },
+  },
+  {
+    type: "n8n-nodes-base.postgresTrigger",
+    modulePath: "./executors/postgres-trigger",
+    exportName: "postgresTriggerExecutor",
+  },
+  {
+    type: "@n8n/n8n-nodes-langchain.modelSelector",
+    modulePath: "./executors/langchain-model-selector",
+    exportName: "langchainModelSelectorExecutor",
+  },
+  {
+    type: "@n8n/n8n-nodes-langchain.guardrails",
+    modulePath: "./executors/guardrails",
+    exportName: "guardrailsExecutor",
+  },
+  {
+    type: "n8n-nodes-base.httpRequestTool",
+    modulePath: "./executors/httpRequestTool",
+    exportName: "httpRequestToolExecutor",
+  },
+  {
+    type: "n8n-nodes-base.gmailTool",
+    modulePath: "./executors/n8n-nodes-base.gmailTool",
+    exportName: "gmailToolExecutor",
+  },
+  {
+    type: "n8n-nodes-base.googleSheetsTool",
+    modulePath: "./executors/n8n-nodes-base.googleSheetsTool",
+    exportName: "googleSheetsToolExecutor",
+  },
+  {
+    type: "n8n-nodes-base.googleCalendarTool",
+    modulePath: "./executors/n8n-nodes-base.googleCalendarTool",
+    exportName: "googleCalendarToolExecutor",
+  },
+  {
+    type: "n8n-nodes-base.googleTasksTool",
+    modulePath: "./executors/n8n-nodes-base.googleTasksTool",
+    exportName: "googleTasksToolExecutor",
+  },
+  {
+    type: "n8n-nodes-base.wooCommerceTool",
+    modulePath: "./executors/n8n-nodes-base.wooCommerceTool",
+    exportName: "wooCommerceToolExecutor",
+  },
+  {
+    type: "n8n-nodes-base.cryptoTool",
+    modulePath: "./executors/cryptoTool",
+    exportName: "cryptoToolExecutor",
+  },
+  {
+    type: "n8n-nodes-base.rssFeedReadTool",
+    modulePath: "./executors/rssFeedReadTool",
+    exportName: "rssFeedReadToolExecutor",
+  },
+  {
+    type: "n8n-nodes-base.dateTimeTool",
+    modulePath: "./executors/dateTimeTool",
+    exportName: "dateTimeToolExecutor",
+  },
+  {
+    type: "@n8n/n8n-nodes-langchain.toolSearXng",
+    modulePath: "./executors/tool-searxng",
+    exportName: "toolSearXngExecutor",
+  },
+  {
+    type: "@n8n/n8n-nodes-langchain.toolWolframAlpha",
+    modulePath: "./executors/tool-wolfram-alpha",
+    exportName: "toolWolframAlphaExecutor",
+  },
+  {
+    type: "@n8n/n8n-nodes-langchain.retrieverVectorStore",
+    modulePath: "./executors/retrieverVectorStore",
+    exportName: "retrieverVectorStoreExecutor",
+  },
+  {
+    type: "@n8n/n8n-nodes-langchain.memoryManager",
+    modulePath: "./executors/n8n-nodes-langchain.memoryManager",
+    exportName: "n8nNodesLangchainMemoryManagerExecutor",
+  },
+  {
+    type: "n8n-nodes-base.perplexity",
+    modulePath: "./executors/perplexity",
+    exportName: "perplexityExecutor",
+  },
+  {
+    type: "n8n-nodes-base.telegramTrigger",
+    modulePath: "./executors/telegram-trigger",
+    exportName: "telegramTriggerExecutor",
+  },
+  {
+    type: "n8n-nodes-base.googleDrive",
+    modulePath: "./executors/googleDrive",
+    exportName: "googleDriveExecutor",
   },
 ];
 

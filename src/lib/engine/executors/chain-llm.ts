@@ -251,7 +251,7 @@ export const chainLlmExecutor: NodeExecutor = async (ctx, node) => {
 
       let output: unknown = finalText;
       if (parserHandle && typeof parserHandle.parse === "function") {
-        output = parserHandle.parse(finalText);
+        output = await parserHandle.parse(finalText);
       }
 
       outputItems.push({ json: { output }, pairedItem });

@@ -264,15 +264,39 @@ describe("batch-queue webflow — n8n-nodes-base.webflow", () => {
 
   it("returns success:false on non-204 delete", async () => {
     installFetch(mockResponse({ message: "not found" }, { status: 404 }));
-    await expect(
-      run({
-        authentication: "accessToken",
-        resource: "item",
-        operation: "delete",
-        collectionId: "coll_456",
-        itemId: "item_789",
-      }),
-    ).rejects.toThrow(/HTTP 404/);
+    const out = await run({
+      authentication: "accessToken",
+      resource: "item",
+      operation: "delete",
+      collectionId: "coll_456",
+      itemId: "item_789",
+    });
+    expect(out[0][0].json).toEqual({ success: false });
+  });
+
+  it("deletes via deleteItem operation alias", async () => {
+    installFetch(mockResponse("", { status: 204 }));
+    const out = await run({
+      authentication: "accessToken",
+      resource: "item",
+      operation: "deleteItem",
+      collectionId: "coll_456",
+      itemId: "item_789",
+    });
+    expect(calls[0].method).toBe("DELETE");
+    expect(out[0][0].json).toEqual({ success: true });
+  });
+
+  it("returns success:false on non-204 deleteItem", async () => {
+    installFetch(mockResponse({ message: "forbidden" }, { status: 403 }));
+    const out = await run({
+      authentication: "accessToken",
+      resource: "item",
+      operation: "deleteItem",
+      collectionId: "coll_456",
+      itemId: "item_789",
+    });
+    expect(out[0][0].json).toEqual({ success: false });
   });
 
   it("sends Bearer token from webflowApi credential", async () => {

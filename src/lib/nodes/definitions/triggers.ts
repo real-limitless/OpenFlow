@@ -1393,6 +1393,92 @@ export const respondToWebhook: INodeTypeDescription = {
   ],
 };
 
+export const gmailTrigger: INodeTypeDescription = {
+  name: "n8n-nodes-base.gmailTrigger",
+  displayName: "Gmail Trigger",
+  category: "Communication",
+  group: ["trigger"],
+  version: 1,
+  description: "Starts the workflow when new email arrives in a connected Gmail mailbox.",
+  defaults: { name: "Gmail Trigger" },
+  inputs: [],
+  outputs: ["main"],
+  icon: "Mail",
+  credentials: [{ name: "gmailOAuth2", required: true }],
+  sources: [
+    "https://docs.n8n.io/integrations/builtin/trigger-nodes/n8n-nodes-base.gmailtrigger.md",
+  ],
+  properties: [
+    {
+      displayName: "Poll Times",
+      name: "pollTimes",
+      type: "collection",
+      default: { mode: "everyX", value: 5, unit: "minutes" },
+      options: [
+        {
+          displayName: "Mode",
+          name: "mode",
+          type: "options",
+          default: "everyX",
+          noDataExpression: true,
+          options: [
+            { name: "Every Hour", value: "everyHour" },
+            { name: "Every Day", value: "everyDay" },
+            { name: "Every Week", value: "everyWeek" },
+            { name: "Every Month", value: "everyMonth" },
+            { name: "Every X", value: "everyX" },
+            { name: "Custom (Cron)", value: "cron" },
+          ],
+        },
+        { displayName: "Minute", name: "minute", type: "number", default: 0, typeOptions: { minValue: 0, maxValue: 59 } },
+        { displayName: "Hour", name: "hour", type: "number", default: 0, typeOptions: { minValue: 0, maxValue: 23 } },
+        { displayName: "Weekday", name: "weekday", type: "options", default: 1, options: [
+          { name: "Sunday", value: 0 }, { name: "Monday", value: 1 }, { name: "Tuesday", value: 2 },
+          { name: "Wednesday", value: 3 }, { name: "Thursday", value: 4 }, { name: "Friday", value: 5 },
+          { name: "Saturday", value: 6 },
+        ] },
+        { displayName: "Day of Month", name: "dayOfMonth", type: "number", default: 1, typeOptions: { minValue: 0, maxValue: 31 } },
+        { displayName: "Value", name: "value", type: "number", default: 5, typeOptions: { minValue: 1 } },
+        { displayName: "Unit", name: "unit", type: "options", default: "minutes", options: [
+          { name: "Minutes", value: "minutes" }, { name: "Hours", value: "hours" },
+        ] },
+        { displayName: "Cron Expression", name: "cronExpression", type: "string", default: "" },
+      ],
+    },
+    {
+      displayName: "Simplify",
+      name: "simplify",
+      type: "boolean",
+      default: true,
+      description: "Emit simplified message object instead of raw Gmail payload",
+    },
+    {
+      displayName: "Max Emails Per Poll",
+      name: "maxEmailsPerPoll",
+      type: "number",
+      default: 10,
+      typeOptions: { minValue: 1, maxValue: 50 },
+      description: "Maximum messages fetched per poll cycle",
+    },
+    {
+      displayName: "Filters",
+      name: "filters",
+      type: "collection",
+      default: {},
+      options: [
+        { displayName: "Include Spam and Trash", name: "includeSpamAndTrash", type: "boolean", default: false },
+        { displayName: "Search", name: "search", type: "string", default: "", description: "Gmail search query syntax" },
+        { displayName: "Read Status", name: "readStatus", type: "options", default: "unreadOnly", options: [
+          { name: "Unread and Read", value: "all" },
+          { name: "Unread Only", value: "unreadOnly" },
+          { name: "Read Only", value: "readOnly" },
+        ] },
+        { displayName: "Sender", name: "sender", type: "string", default: "" },
+      ],
+    },
+  ],
+};
+
 export const emailReadImap: INodeTypeDescription = {
   name: "n8n-nodes-base.emailReadImap",
   displayName: "Email Trigger (IMAP)",
@@ -1602,6 +1688,108 @@ export const postmarkTrigger: INodeTypeDescription = {
       displayOptions: { show: { events: ["bounce", "spamComplaint"] } },
       description:
         "When true, the webhook payload includes the full message content for bounce and spam complaint events.",
+    },
+  ],
+};
+
+export const postgresTrigger: INodeTypeDescription = {
+  name: "n8n-nodes-base.postgresTrigger",
+  displayName: "Postgres Trigger",
+  category: "Development",
+  group: ["trigger"],
+  version: 1,
+  description: "Starts the workflow when a Postgres table event occurs (insert/update/delete) or a LISTEN/NOTIFY channel receives a message.",
+  defaults: { name: "Postgres Trigger" },
+  inputs: [],
+  outputs: ["main"],
+  icon: "Database",
+  credentials: [{ name: "postgres", required: true }],
+  sources: [
+    "https://docs.n8n.io/integrations/builtin/trigger-nodes/n8n-nodes-base.postgrestrigger/",
+  ],
+  properties: [
+    {
+      displayName: "Trigger Mode",
+      name: "triggerMode",
+      type: "options",
+      default: "createTrigger",
+      required: true,
+      noDataExpression: true,
+      description: "Selects between creating a table trigger rule or listening on a Postgres channel",
+      options: [
+        { name: "Create Trigger Rule", value: "createTrigger" },
+        { name: "Listen Channel", value: "listenTrigger" },
+      ],
+    },
+    {
+      displayName: "Schema",
+      name: "schema",
+      type: "string",
+      default: "",
+      placeholder: "public",
+      required: true,
+      displayOptions: { show: { triggerMode: ["createTrigger"] } },
+      description: "Target schema name for the trigger rule",
+    },
+    {
+      displayName: "Table Name",
+      name: "tableName",
+      type: "string",
+      default: "",
+      placeholder: "my_table",
+      required: true,
+      displayOptions: { show: { triggerMode: ["createTrigger"] } },
+      description: "Target table name for the trigger rule",
+    },
+    {
+      displayName: "Insert",
+      name: "insert",
+      type: "boolean",
+      default: false,
+      displayOptions: { show: { triggerMode: ["createTrigger"] } },
+      description: "Fire on INSERT events",
+    },
+    {
+      displayName: "Update",
+      name: "update",
+      type: "boolean",
+      default: false,
+      displayOptions: { show: { triggerMode: ["createTrigger"] } },
+      description: "Fire on UPDATE events",
+    },
+    {
+      displayName: "Delete",
+      name: "delete",
+      type: "boolean",
+      default: false,
+      displayOptions: { show: { triggerMode: ["createTrigger"] } },
+      description: "Fire on DELETE events",
+    },
+    {
+      displayName: "Channel Name",
+      name: "channelName",
+      type: "string",
+      default: "",
+      placeholder: "my_channel",
+      required: true,
+      displayOptions: { show: { triggerMode: ["listenTrigger"] } },
+      description: "Postgres channel name to subscribe to via LISTEN",
+    },
+    {
+      displayName: "Additional Options",
+      name: "additionalOptions",
+      type: "collection",
+      default: {},
+      placeholder: "Add option",
+      options: [
+        {
+          displayName: "Connection Timeout (seconds)",
+          name: "connectionTimeout",
+          type: "number",
+          default: 30,
+          typeOptions: { minValue: 1 },
+        },
+      ],
     },
   ],
 };
@@ -2171,6 +2359,56 @@ export const pagerDuty: INodeTypeDescription = {
         show: { operation: ["getAll"], returnAll: [false] },
       },
       description: "Max number of results to return",
+    },
+  ],
+};
+
+export const redisTrigger: INodeTypeDescription = {
+  name: "n8n-nodes-base.redisTrigger",
+  displayName: "Redis Trigger",
+  category: "Triggers",
+  group: ["trigger"],
+  version: 1,
+  description: "Subscribe to Redis channels and emit items for each received message.",
+  defaults: { name: "Redis Trigger" },
+  inputs: [],
+  outputs: ["main"],
+  icon: "Database",
+  credentials: [{ name: "redis", required: true }],
+  sources: [
+    "https://docs.n8n.io/integrations/builtin/trigger-nodes/n8n-nodes-base.redistrigger/",
+  ],
+  properties: [
+    {
+      displayName: "Channels",
+      name: "channels",
+      type: "string",
+      default: "",
+      required: true,
+      description: "Comma-separated Redis channel names or glob patterns (supports * wildcard). Whitespace around commas is trimmed.",
+    },
+    {
+      displayName: "Options",
+      name: "options",
+      type: "collection",
+      default: {},
+      placeholder: "Add option",
+      options: [
+        {
+          displayName: "JSON Parse Body",
+          name: "jsonParseBody",
+          type: "boolean",
+          default: false,
+          description: "Whether to attempt parsing each message as JSON before emission; on failure the raw string is preserved",
+        },
+        {
+          displayName: "Only Message",
+          name: "onlyMessage",
+          type: "boolean",
+          default: false,
+          description: "When true, emit only the message payload; when false, emit { channel, message }",
+        },
+      ],
     },
   ],
 };

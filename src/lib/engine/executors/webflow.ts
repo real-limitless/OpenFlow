@@ -61,7 +61,9 @@ async function runOperation(
 
   const headers = await authHeaders(ctx, authentication);
 
-  switch (operation) {
+  const op = operation === "delete" ? "deleteItem" : operation;
+
+  switch (op) {
     case "create":
       return createItem(node, itemJson, collectionId, headers);
     case "get":
@@ -70,7 +72,7 @@ async function runOperation(
       return getManyItems(node, itemJson, collectionId, headers);
     case "update":
       return updateItem(node, itemJson, collectionId, headers);
-    case "delete":
+    case "deleteItem":
       return deleteItem(node, itemJson, collectionId, headers);
     default:
       throw new Error(`Webflow: unsupported operation "${operation}"`);
@@ -204,10 +206,8 @@ async function deleteItem(
   if (!itemId) throw new Error("Webflow: itemId is required");
   const url = `${API_BASE}/collections/${collectionId}/items/${itemId}`;
   const res = await webflowRequest("DELETE", url, headers);
-  if (res.status < 200 || res.status >= 300) {
-    throw new Error(`Webflow: HTTP ${res.status}`);
-  }
-  return { success: res.status === 204 };
+  if (res.status === 204) return { success: true };
+  return { success: false };
 }
 
 async function webflowRequest(

@@ -11,3 +11,5 @@ export * from "./app";
 export * from "./kafka";
 export * from "./awsLambda";
 export * from "./canvas";
+export * from "./elasticsearch";
+export * from "./mqtt";

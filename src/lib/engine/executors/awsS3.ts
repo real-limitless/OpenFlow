@@ -57,14 +57,15 @@ function sha256(data: string): Promise<string> {
 }
 
 function hmacSha256(key: Uint8Array, data: string): Promise<Uint8Array> {
-  return crypto.subtle.importKey(
-    "raw" as KeyFormat,
-    key,
+  const buf = new Uint8Array(key);
+  return (crypto.subtle as SubtleCrypto).importKey(
+    "raw",
+    buf.buffer as ArrayBuffer,
     { name: "HMAC", hash: "SHA-256" },
     false,
-    ["sign" as KeyUsage],
+    ["sign"],
   ).then((cryptoKey) =>
-    crypto.subtle.sign("HMAC", cryptoKey, new TextEncoder().encode(data)).then((h) => new Uint8Array(h)),
+    (crypto.subtle as SubtleCrypto).sign("HMAC", cryptoKey, new TextEncoder().encode(data)).then((h) => new Uint8Array(h)),
   );
 }
 
@@ -337,7 +338,7 @@ async function runBucketOperation(
     const returnAll = Boolean(params.returnAll);
     const limit = Number(params.limit ?? 100);
     const items = returnAll ? buckets : buckets.slice(0, limit);
-    return { json: items as unknown as Record<string, unknown> };
+    return items.map((b) => ({ json: b as unknown as Record<string, unknown> }));
   }
 
   if (operation === "search") {
@@ -364,7 +365,7 @@ async function runBucketOperation(
       throw new Error(`AWS S3: search failed (${res.status}): ${res.body}`);
     }
     const parsed = parseListObjects(res.body);
-    return { json: parsed.objects as unknown as Record<string, unknown> };
+    return parsed.objects.map((o) => ({ json: o as unknown as Record<string, unknown> }));
   }
 
   throw new Error(`AWS S3: unsupported bucket operation "${operation}"`);
@@ -476,7 +477,7 @@ async function runFileOperation(
       throw new Error(`AWS S3: list objects failed (${res.status}): ${res.body}`);
     }
     const parsed = parseListObjects(res.body);
-    return { json: parsed.objects as unknown as Record<string, unknown> };
+    return parsed.objects.map((o) => ({ json: o as unknown as Record<string, unknown> }));
   }
 
   if (operation === "upload") {
@@ -589,7 +590,7 @@ async function runFolderOperation(
         }))
       : [];
 
-    return { json: items as unknown as Record<string, unknown> };
+    return items.map((item) => ({ json: item }));
   }
 
   throw new Error(`AWS S3: unsupported folder operation "${operation}"`);
