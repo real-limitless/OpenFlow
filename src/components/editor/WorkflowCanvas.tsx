@@ -19,9 +19,14 @@ import type { ExecutionRunData } from "@/lib/engine/types";
 import { BaseNode, StickyNode } from "./BaseNode";
 import { OpenFlowEdge } from "./OpenFlowEdge";
 import { SlotNodePicker } from "./SlotNodePicker";
-import { CanvasInspectDock } from "./CanvasInspectDock";
+import { InspectMediaNode, InspectTableNode } from "./InspectNodes";
 
-const nodeTypes = { openflow: BaseNode, sticky: StickyNode };
+const nodeTypes = {
+  openflow: BaseNode,
+  sticky: StickyNode,
+  inspectTable: InspectTableNode,
+  inspectMedia: InspectMediaNode,
+};
 const edgeTypes = { openflow: OpenFlowEdge };
 
 function CanvasInner({
@@ -57,12 +62,16 @@ function CanvasInner({
 
   const nodes = useMemo(() => {
     const base = toFlowNodes(workflow, selectedNode);
-    if (!runData) return base;
     return base.map((n) => ({
       ...n,
-      data: { ...n.data, executionStatus: runData[n.id]?.status },
+      data: {
+        ...n.data,
+        executionStatus: runData?.[n.id]?.status,
+        runData,
+        refreshKey,
+      },
     }));
-  }, [workflow, selectedNode, runData]);
+  }, [workflow, selectedNode, runData, refreshKey]);
   const edges = useMemo(() => toFlowEdges(workflow), [workflow]);
 
   const onNodesChange = useCallback(
@@ -235,7 +244,6 @@ function CanvasInner({
         onClose={closeSlotPicker}
         onPick={(type, target) => addConnectedNode(type, target)}
       />
-      <CanvasInspectDock runData={runData} refreshKey={refreshKey} />
     </div>
   );
 }

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { RefreshCw, Table2 } from "lucide-react";
+import { Pin, RefreshCw, Table2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -12,6 +12,8 @@ import {
 } from "@/components/ui/select";
 import { apiFetch } from "@/lib/auth/client";
 import type { DataTableColumn, DataTableMeta, DataTableRowDto } from "@/lib/data-tables/types";
+import { useWorkflowStore } from "@/store/workflow-store";
+import { INSPECT_TABLE_TYPE } from "@/lib/nodes/registry";
 import { cn } from "@/lib/utils";
 
 function cellDisplay(value: unknown): string {
@@ -22,11 +24,27 @@ function cellDisplay(value: unknown): string {
 }
 
 export function DataTablesPanel({ refreshKey = 0 }: { refreshKey?: number }) {
+  const addNode = useWorkflowStore((s) => s.addNode);
+  const updateParameters = useWorkflowStore((s) => s.updateParameters);
+  const workflow = useWorkflowStore((s) => s.workflow);
   const [tables, setTables] = useState<DataTableMeta[]>([]);
   const [tableId, setTableId] = useState<string>("");
   const [columns, setColumns] = useState<DataTableColumn[]>([]);
   const [rows, setRows] = useState<DataTableRowDto[]>([]);
   const [loading, setLoading] = useState(false);
+
+  const pinToCanvas = () => {
+    if (!tableId) return;
+    const name = addNode(INSPECT_TABLE_TYPE, {
+      x: 120 + workflow.nodes.length * 36,
+      y: 100 + (workflow.nodes.length % 5) * 40,
+    });
+    const node = useWorkflowStore.getState().workflow.nodes.find((n) => n.name === name);
+    if (node) {
+      updateParameters(name, { ...node.parameters, tableId });
+    }
+    toast.success("Pinned table to canvas");
+  };
 
   const loadTables = useCallback(async () => {
     try {
@@ -102,6 +120,16 @@ export function DataTablesPanel({ refreshKey = 0 }: { refreshKey?: number }) {
               ))}
             </SelectContent>
           </Select>
+          <Button
+            size="icon"
+            variant="ghost"
+            className="size-7"
+            title="Pin table to canvas"
+            disabled={!tableId}
+            onClick={pinToCanvas}
+          >
+            <Pin className="size-3.5" />
+          </Button>
           <Button
             size="icon"
             variant="ghost"

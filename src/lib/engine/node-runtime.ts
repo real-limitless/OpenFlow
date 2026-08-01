@@ -462,6 +462,16 @@ export const BUILTIN_EXECUTOR_MODULES: Array<{
     exportName: "stickyNoteExecutor",
   },
   {
+    type: "openflow.inspectTable",
+    modulePath: "./executors/inspect-canvas",
+    exportName: "inspectTableExecutor",
+  },
+  {
+    type: "openflow.inspectMedia",
+    modulePath: "./executors/inspect-canvas",
+    exportName: "inspectMediaExecutor",
+  },
+  {
     type: "n8n-nodes-base.crypto",
     modulePath: "./executors/crypto",
     exportName: "cryptoExecutor",

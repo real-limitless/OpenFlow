@@ -64,7 +64,13 @@ export interface INodeProperties {
 
 export type NodeGroup = "trigger" | "input" | "output" | "transform" | "organization";
 
-export type NodeCategory = "Triggers" | "Actions" | "Flow" | "Transform" | "Helpers";
+export type NodeCategory =
+  | "Triggers"
+  | "Actions"
+  | "Flow"
+  | "Transform"
+  | "Helpers"
+  | "Canvas";
 
 export interface INodeTypeDescription {
   /** Fully-qualified type key, matching the public workflow JSON type string. */

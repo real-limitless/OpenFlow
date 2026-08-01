@@ -64,7 +64,16 @@ export const NODE_CATEGORIES: NodeCategory[] = [
   "Flow",
   "Transform",
   "Helpers",
+  "Canvas",
 ];
+
+/** Canvas-only annotation / inspect nodes (no execution edges). */
+export const INSPECT_TABLE_TYPE = "openflow.inspectTable";
+export const INSPECT_MEDIA_TYPE = "openflow.inspectMedia";
+
+export function isCanvasInspectType(type: string): boolean {
+  return type === INSPECT_TABLE_TYPE || type === INSPECT_MEDIA_TYPE;
+}
 
 export function allNodeTypes(): INodeTypeDescription[] {
   return listDescriptions();

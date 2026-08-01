@@ -29,6 +29,7 @@ const DEFAULT_OPEN: Record<NodeCategory, boolean> = {
   Flow: false,
   Transform: false,
   Helpers: false,
+  Canvas: true,
 };
 
 export function NodePalette({ onAdd }: Props) {

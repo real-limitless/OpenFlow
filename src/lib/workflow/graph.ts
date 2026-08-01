@@ -1,6 +1,12 @@
 import type { Edge, Node as FlowNode } from "@xyflow/react";
 import type { IConnections, INode, IWorkflow } from "./types";
-import { getNodeType, STICKY_NOTE_TYPE } from "../nodes/registry";
+import {
+  getNodeType,
+  INSPECT_MEDIA_TYPE,
+  INSPECT_TABLE_TYPE,
+  isCanvasInspectType,
+  STICKY_NOTE_TYPE,
+} from "../nodes/registry";
 import { resolveInputs, resolveOutputs } from "../nodes/types";
 import {
   channelEdgeColor,
@@ -9,6 +15,13 @@ import {
   isAiChannel,
   parseHandle,
 } from "./channels";
+
+function flowNodeType(nodeType: string): string {
+  if (nodeType === STICKY_NOTE_TYPE) return "sticky";
+  if (nodeType === INSPECT_TABLE_TYPE) return "inspectTable";
+  if (nodeType === INSPECT_MEDIA_TYPE) return "inspectMedia";
+  return "openflow";
+}
 
 export interface OpenFlowNodeData extends Record<string, unknown> {
   node: INode;
@@ -62,7 +75,7 @@ export function toFlowNodes(workflow: IWorkflow, selectedName?: string | null): 
   const filled = filledHandleSets(workflow);
   return workflow.nodes.map((node) => ({
     id: node.name,
-    type: node.type === STICKY_NOTE_TYPE ? "sticky" : "openflow",
+    type: flowNodeType(node.type),
     position: { x: node.position[0], y: node.position[1] },
     data: {
       node,
@@ -71,7 +84,7 @@ export function toFlowNodes(workflow: IWorkflow, selectedName?: string | null): 
     },
     selected: selectedName === node.name,
     draggable: true,
-    zIndex: node.type === STICKY_NOTE_TYPE ? 0 : 1,
+    zIndex: node.type === STICKY_NOTE_TYPE || isCanvasInspectType(node.type) ? 0 : 1,
   }));
 }
 

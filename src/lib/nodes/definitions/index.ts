@@ -10,3 +10,4 @@ export * from "./integration";
 export * from "./app";
 export * from "./kafka";
 export * from "./awsLambda";
+export * from "./canvas";
