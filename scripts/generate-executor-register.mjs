@@ -41,31 +41,60 @@ function loadModules() {
   const body = src.slice(arrStart, end + 1);
 
   const modules = [];
-  const entryRe =
-    /\{\s*type:\s*"([^"]+)"\s*,\s*modulePath:\s*"([^"]+)"\s*,\s*exportName:\s*"([^"]+)"\s*\}/g;
-  // Also support multi-line entries with fields in any order / formatting
-  const blockRe = /\{([^{}]+)\}/g;
-  let m;
-  while ((m = blockRe.exec(body))) {
-    const block = m[1];
-    const type = /type:\s*"([^"]+)"/.exec(block)?.[1];
-    const modulePath = /modulePath:\s*"([^"]+)"/.exec(block)?.[1];
-    const exportName = /exportName:\s*"([^"]+)"/.exec(block)?.[1];
-    if (type && modulePath && exportName) {
-      modules.push({ type, modulePath, exportName });
-    }
-  }
 
-  if (modules.length === 0) {
-    // Fallback single-line regex
-    let e;
-    while ((e = entryRe.exec(body))) {
-      modules.push({ type: e[1], modulePath: e[2], exportName: e[3] });
+  // Split the array into its top-level `{...}` entries with a depth-aware scan.
+  //
+  // A regex cannot do this. An entry may contain a nested object (e.g. the
+  // `unavailable: { setter, reason }` tag), and an innermost-brace pattern like
+  // /\{([^{}]+)\}/g matches that inner object first -- it has no type/modulePath
+  // /exportName, so it is skipped, and the enclosing entry is then never matched.
+  // The executor silently vanishes from the generated file while the build stays
+  // green. Track string literals too, so braces inside a reason string are inert.
+  let braceDepth = 0;
+  let entryStart = -1;
+  let quote = null;
+  for (let i = 0; i < body.length; i++) {
+    const ch = body[i];
+    if (quote) {
+      if (ch === "\\") i++;
+      else if (ch === quote) quote = null;
+      continue;
+    }
+    if (ch === '"' || ch === "'" || ch === "`") {
+      quote = ch;
+      continue;
+    }
+    if (ch === "{") {
+      if (braceDepth === 0) entryStart = i;
+      braceDepth++;
+    } else if (ch === "}") {
+      braceDepth--;
+      if (braceDepth === 0 && entryStart >= 0) {
+        const block = body.slice(entryStart, i + 1);
+        const type = /type:\s*"([^"]+)"/.exec(block)?.[1];
+        const modulePath = /modulePath:\s*"([^"]+)"/.exec(block)?.[1];
+        const exportName = /exportName:\s*"([^"]+)"/.exec(block)?.[1];
+        if (type && modulePath && exportName) {
+          modules.push({ type, modulePath, exportName });
+        }
+        entryStart = -1;
+      }
     }
   }
 
   if (modules.length === 0) {
     throw new Error("Parsed 0 executor modules from node-runtime.ts");
+  }
+
+  // Every entry declares exactly one modulePath, so this count is the ground
+  // truth for how many entries the manifest holds. Turns any future parse gap
+  // into a build failure instead of a silently under-populated registry.
+  const expected = (body.match(/\bmodulePath:/g) ?? []).length;
+  if (modules.length !== expected) {
+    throw new Error(
+      `Parsed ${modules.length} executor modules but the manifest declares ${expected} ` +
+        `modulePath entries. The BUILTIN_EXECUTOR_MODULES parser is out of date.`,
+    );
   }
   return modules;
 }
