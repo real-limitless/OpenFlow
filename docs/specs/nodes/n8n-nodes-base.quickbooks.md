@@ -3,7 +3,7 @@ type: n8n-nodes-base.quickbooks
 displayName: QuickBooks Online
 category: Finance & Accounting
 versions: [1]
-priority: medium
+priority: high
 status: specced
 ---
 
@@ -12,76 +12,129 @@ status: specced
 ## Sources
 
 | URL | Source class |
-|-----|--------------|
-| https://docs.n8n.io/integrations/builtin/app-nodes/n8n-nodes-base.quickbooks.md | Public docs only |
-| https://docs.n8n.io/integrations/builtin/credentials/quickbooks.md | Public docs only |
+|-----|----------------|
+| https://docs.n8n.io/integrations/builtin/app-nodes/n8n-nodes-base.quickbooks/ | Public docs only |
+| https://docs.n8n.io/integrations/builtin/credentials/quickbooks/ | Public docs only |
 | https://developer.intuit.com/app/developer/qbo/docs/develop | Public docs only |
 
 ## Wire format
 
 - **Type string:** `n8n-nodes-base.quickbooks`
-- **Aliases:** none
+- **Aliases:** (none)
 - **Inputs:** `main` × 1
 - **Outputs:** `main` × 1
-- **Credentials:** QuickBooks OAuth2 (Client ID, Client Secret, Environment: Production or Sandbox)
+- **Credentials:** `quickBooksOAuth2Api` (OAuth2 — clientId, clientSecret, environment: Production | Sandbox)
 
 ## Parameters
 
-| name | type | default | required | displayOptions | notes |
-|------|------|---------|----------|----------------|-------|
-| resource | fixed | `invoice` | yes | always | The QuickBooks Online entity to operate on: `bill`, `customer`, `employee`, `estimate`, `invoice`, `item`, `payment`, `purchase`, `transaction`, `vendor` |
-| operation | fixed | `create` | yes | always | Action to perform. Varies per resource (see Runtime behavior). |
-| id | string | — | conditional | `operation=get\|update\|delete\|send\|void` | The QuickBooks `Id` of the target entity. |
-| queryFilter | string | — | no | `operation=getAll` | Optional QBO query string (e.g. `"WHERE Active = true"`). Applied as a filter parameter to list endpoints. |
-| additionalFields | collection | — | no | `operation=create\|update` | Resource-specific fields to include in the request body (e.g. for Invoice: `DocNumber`, `DueDate`, `Line` array entries, `CustomerRef`). The executor maps these to the Intuit QBO API JSON payload. |
-| updateFields | collection | — | no | `operation=update` | Fields to modify on an existing resource. Requires `SyncToken` from the current resource state to prevent concurrent-modification conflicts. |
+The node is configured via a resource/operation selector plus a set of context-sensitive fields that vary by the selected combination.
 
-**Parameter design rationale:**
+### Top-level
 
-- QBO resources have large, deeply nested schemas defined by Intuit. The node exposes them through a single `additionalFields` / `updateFields` collection rather than flattening every field, keeping the parameter surface manageable while supporting all QBO properties.
-- Load-option methods (populated at design time via QBO queries) provide dropdowns for `CustomerRef`, `ItemRef`, `VendorRef`, `TaxCodeRef`, `TermRef`, `DepartmentRef`, and other reference fields.
+| name | type | default | required | notes |
+|------|------|---------|----------|-------|
+| resource | picklist | `invoice` | yes | One of: `bill`, `customer`, `employee`, `estimate`, `invoice`, `item`, `payment`, `purchase`, `transaction`, `vendor` |
+| operation | picklist | `create` | yes | Varies by resource (see below) |
+
+### Per-resource operations
+
+| Resource | Available operations |
+|----------|---------------------|
+| bill | Create, Delete, Get, GetAll, Update |
+| customer | Create, Get, GetAll, Update |
+| employee | Create, Get, GetAll, Update |
+| estimate | Create, Delete, Get, GetAll, Send, Update |
+| invoice | Create, Delete, Get, GetAll, Send, Update, Void |
+| item | Get, GetAll |
+| payment | Create, Delete, Get, GetAll, Send, Update, Void |
+| purchase | Get, GetAll |
+| transaction | GetReport |
+| vendor | Create, Get, GetAll, Update |
+
+### Shared fields by operation group
+
+**Create / Update** operations accept:
+- `id` (string, required for Update only) — the QBO entity `Id`.
+- `additionalFields` / `updateFields` (object) — a flat or nested map of entity properties to set on the request body. The executor resolves expression strings inside values before building the JSON body. Fields map directly to Intuit entity attributes (e.g. `Line`, `BillAddr`, `CustomerRef`, `DueDate`).
+
+**Get** operations accept:
+- `id` (string, required) — the QBO entity `Id`.
+
+**GetAll** operations accept:
+- `filter` (string, optional) — a raw WHERE clause fragment appended to the QBO `SELECT * FROM {Entity}` query. Example: `WHERE MetaData.CreateTime > '2024-01-01T00:00:00'`.
+- `returnAll` (boolean, default false) — if true, paginate through all results; otherwise use a fixed limit.
+- `limit` (number, default 50) — max results per page when `returnAll` is false.
+
+**Delete** operations accept:
+- `id` (string, required) — the QBO entity `Id`.
+
+**Send** operations accept:
+- `id` (string, required) — the QBO invoice/estimate/payment `Id`.
+
+**Void** operations accept:
+- `id` (string, required) — the QBO invoice/payment `Id`.
+
+**GetReport** (transaction resource) accepts:
+- `reportName` (string, required) — name of the QBO report (e.g. `ProfitAndLoss`, `BalanceSheet`, `TrialBalance`).
+- `dateRange` (object, optional) — with `startDate` and `endDate` strings in YYYY-MM-DD format.
 
 ## Runtime behavior
 
-### Input
+### QBO API routing
 
-The node consumes one item from `main[0]`. For create and update operations, input item JSON may supply field values used in the QBO request body via expressions. For get/delete/send/void operations, the entity `Id` must be supplied (either as a literal parameter or resolved from input item expressions).
+The executor constructs URLs against the Intuit QBO v3 API:
 
-### Output
+- **Production:** `https://quickbooks.api.intuit.com/v3/company/{companyId}`
+- **Sandbox:** `https://sandbox-quickbooks.api.intuit.com/v3/company/{companyId}`
 
-A successful operation emits one output item on `main[0]` containing the QBO API response for the affected entity:
+The `companyId` is extracted from the credential's OAuth token realm or from the token response.
 
-- **Create:** returns the newly created entity with its assigned `Id` and `SyncToken`.
-- **Get:** returns the full entity representation.
-- **Get All:** returns an array of matching entities under a top-level key (Intuit convention: `QueryResponse.{Resource}`). The node flattens this so each entity becomes one output item.
-- **Update:** returns the updated entity with a new `SyncToken`.
-- **Delete:** returns empty body or a confirmation object (`{ "status": "Deleted" }`).
-- **Send:** returns the sent entity (Intuit marks `EmailStatus`).
-- **Void:** returns the voided entity.
+### HTTP method and path selection
 
-No binary output is produced.
+| Operation | HTTP method | Path pattern |
+|-----------|-------------|-------------|
+| Create | POST | `/{entitySingular}` |
+| Get | GET | `/{entitySingular}/{id}` |
+| GetAll | GET | `/query?query=select * from {EntitySingular} {filter}` |
+| Update | POST | `/{entitySingular}?operation=update` |
+| Delete | POST | `/{entitySingular}?operation=delete` |
+| Send | POST | `/{entitySingular}/{id}/send` |
+| Void | POST | `/{entitySingular}/{id}/void` |
+| GetReport | GET | `/reports/{reportName}?start_date={date}&end_date={date}` |
 
-### Errors
+Entity path segments use the Intuit singular lower-case form (e.g. `invoice`, `customer`, `bill`, `estimate`, `vendor`, `employee`, `payment`, `item`, `purchase`). The `FROM` clause in GetAll queries uses the PascalCase singular form (e.g. `Invoice`, `Customer`, `Bill`, `Estimate`, `Vendor`, `Employee`, `Payment`, `Item`, `Purchase`).
 
-- Missing required parameter (e.g. `id` for get/delete) fails validation before the API call.
-- QBO API errors (HTTP 4xx/5xx) surface the Intuit `Fault` object as the error payload, including `Error` array with `Message`, `Detail`, and `code`.
-- With `continueOnFail=true`, a failed input produces an error item on the output branch instead of aborting the execution.
+### Input processing
+
+- Each input item is processed independently.
+- For Create/Update, the body is built by merging top-level JSON fields from `additionalFields`/`updateFields` with any structural fields required by the Intuit API (e.g. `Line` arrays, `CustomerRef` objects).
+- Expression strings (e.g. `{{ $json.someField }}`) inside the fields object are resolved at runtime before the body is serialized.
+- For GetAll, the optional `filter` is appended to the SELECT query string.
+
+### Output shape
+
+- **Create / Get / Update:** Outputs a single item containing the full QBO entity JSON under the `json` key. The wrapper key is the PascalCase entity name (e.g. `{ "Invoice": { ... } }`).
+- **GetAll:** Outputs one item per entity returned by the QBO query. Each item contains the entity JSON under `json`. The executor unwraps the `QueryResponse.{EntityName}` array so that `output[0].length` equals the number of entities.
+- **Delete / Send / Void:** Outputs a single item containing the QBO response JSON (typically the entity with updated status fields).
+- **GetReport:** Outputs one item per row in the report `Rows.Row` array. Each row is flattened into a flat key-value map under `json`.
+
+### Error handling
+
+- HTTP 4xx/5xx responses from the Intuit API should cause the node to throw (or, if `continueOnFail` is set, return an empty output).
+- Missing `id` for Get/Update/Delete/Send/Void should throw a descriptive error.
+- If the QBO query returns zero results for GetAll, the output is an empty array (no items).
 
 ### Expressions
 
-The `id`, `queryFilter`, `additionalFields`, and `updateFields` parameters accept expression strings. Load-option dropdowns (`getCustomers`, `getItems`, `getVendors`, etc.) are resolved at design time.
+All string-typed fields in `additionalFields`/`updateFields` accept expression strings. The `filter` field on GetAll also accepts expressions.
 
 ## Acceptance tests
 
-### Test: Create an invoice
+### Test: create invoice with additional fields
 
 **Given** input items:
 ```json
-[{
-  "json": {
-    "customerName": "Acme Corp"
-  }
-}]
+[{ "json": { "customerId": "1" } }]
 ```
 
 **Parameters:**
@@ -90,17 +143,15 @@ The `id`, `queryFilter`, `additionalFields`, and `updateFields` parameters accep
   "resource": "invoice",
   "operation": "create",
   "additionalFields": {
-    "CustomerRef": "={{ $json.customerName }}",
-    "Line": [
-      { "DetailType": "SalesItemLineDetail", "Amount": 100.00, "Description": "Consulting" }
-    ]
+    "Line": [{ "DetailType": "SalesItemLineDetail", "Amount": 100.0, "SalesItemLineDetail": { "ItemRef": { "value": "1" } } }],
+    "CustomerRef": { "value": "{{ $json.customerId }}" }
   }
 }
 ```
 
-**Expect** output[0] contains an invoice object with `Id` and `SyncToken` assigned, and `CustomerRef.name` matching "Acme Corp".
+**Expect** the executor to POST to `https://quickbooks.api.intuit.com/v3/company/{companyId}/invoice` with a JSON body containing `Line` and `CustomerRef`, and emit output[0] with `{ "Invoice": { ... } }`.
 
-### Test: Get all customers with filter
+### Test: get all customers with filter
 
 **Given** input items:
 ```json
@@ -112,53 +163,50 @@ The `id`, `queryFilter`, `additionalFields`, and `updateFields` parameters accep
 {
   "resource": "customer",
   "operation": "getAll",
-  "queryFilter": "WHERE Active = true MAXRESULTS 10"
+  "returnAll": true,
+  "filter": "WHERE MetaData.CreateTime > '2024-01-01T00:00:00'"
 }
 ```
 
-**Expect** output[0] contains one customer item per active customer (up to 10), each with `Id`, `DisplayName`, and other standard customer fields.
+**Expect** the executor to GET `https://quickbooks.api.intuit.com/v3/company/{companyId}/query?query=select * from Customer WHERE MetaData.CreateTime > '2024-01-01T00:00:00'`, and emit output[0] with length equal to the number of customers returned.
 
-### Test: Update a bill
+### Test: send invoice
 
 **Given** input items:
 ```json
-[{ "json": { "billId": "123", "syncToken": "2" } }]
+[{ "json": { "invoiceId": "123" } }]
 ```
 
 **Parameters:**
 ```json
 {
-  "resource": "bill",
-  "operation": "update",
-  "id": "={{ $json.billId }}",
-  "updateFields": {
-    "SyncToken": "={{ $json.syncToken }}",
-    "TotalAmt": 250.00
-  }
+  "resource": "invoice",
+  "operation": "send",
+  "id": "{{ $json.invoiceId }}"
 }
 ```
 
-**Expect** output[0] contains the updated bill with `TotalAmt` of 250.00 and an incremented `SyncToken`.
+**Expect** the executor to POST to `https://quickbooks.api.intuit.com/v3/company/{companyId}/invoice/123/send` and emit output[0] with the QBO response.
 
-### Test: Delete an estimate
+### Test: void payment
 
 **Given** input items:
 ```json
-[{ "json": { "estimateId": "456" } }]
+[{ "json": { "paymentId": "456" } }]
 ```
 
 **Parameters:**
 ```json
 {
-  "resource": "estimate",
-  "operation": "delete",
-  "id": "={{ $json.estimateId }}"
+  "resource": "payment",
+  "operation": "void",
+  "id": "{{ $json.paymentId }}"
 }
 ```
 
-**Expect** output[0] contains a deletion confirmation for estimate `456`.
+**Expect** the executor to POST to `https://quickbooks.api.intuit.com/v3/company/{companyId}/payment/456/void` and emit output[0] with the QBO response.
 
-### Test: Missing ID on get operation
+### Test: get report
 
 **Given** input items:
 ```json
@@ -168,28 +216,30 @@ The `id`, `queryFilter`, `additionalFields`, and `updateFields` parameters accep
 **Parameters:**
 ```json
 {
-  "resource": "invoice",
-  "operation": "get",
-  "id": ""
+  "resource": "transaction",
+  "operation": "getReport",
+  "reportName": "ProfitAndLoss",
+  "dateRange": { "startDate": "2024-01-01", "endDate": "2024-12-31" }
 }
 ```
 
-**Expect** node fails validation with an error indicating that `id` is required for the `get` operation.
+**Expect** the executor to GET `https://quickbooks.api.intuit.com/v3/company/{companyId}/reports/ProfitAndLoss?start_date=2024-01-01&end_date=2024-12-31` and emit one output item per row in the report.
 
 ## Gaps / confidence
 
 | Topic | documented / inferred | Notes |
 |-------|----------------------|-------|
-| Resource and operation list | documented | Full list confirmed from public n8n docs and Intuit API reference. |
-| Credential model | documented | OAuth2 with Client ID, Client Secret, Environment (Production/Sandbox). |
-| Parameter naming and exact field schemas | inferred | QBO entity schemas are defined by Intuit; the node uses `additionalFields` / `updateFields` collections. Exact option enums for sub-field dropdowns are implementation details. |
-| Load-option endpoint semantics | inferred | `getCustomers`, `getItems`, `getVendors`, etc. exist as load options; exact QBO query behind each is not publicly documented. |
-| Error response mapping | documented | Intuit `Fault` structure is part of the public QBO API contract. |
-| Pagination strategy for getAll | partially documented | `maxResults` and `startPosition` are standard QBO query parameters; the spec describes flattening at the item level. |
-| Version differences | inferred | Node descriptor shows a single version 1.0. |
+| Resource/operation list | Public docs | Exact list from n8n docs page operations section |
+| Credential type | Public docs | QuickBooks OAuth2 — OAuth2 with clientId, clientSecret, environment |
+| QBO API base URL pattern | Public docs (Intuit developer docs) | Standard v3 API pattern |
+| Query path and syntax | Public docs | `select * from {Entity}` via `/query` endpoint |
+| Report endpoint | Public docs | `/reports/{reportName}` with date params |
+| Send/Void path patterns | Inferred from QBO API conventions | Action endpoints `/{entity}/{id}/send` and `/{entity}/{id}/void` |
+| Parameter names (additionalFields, updateFields, filter, returnAll, limit) | Inferred from common n8n patterns | High-level abstraction consistent with other CRUD nodes |
+| Expression resolution on nested fields | Inferred | Required for dynamic field values in body construction |
 
 ## OpenFlow mapping
 
-- **Definition group:** `app`
+- **Definition group:** `core`
 - **Executor file:** `src/lib/engine/executors/n8n-nodes-base.quickbooks.ts`
 - **SDK:** `defineNode` + native `ExecutionContext` only

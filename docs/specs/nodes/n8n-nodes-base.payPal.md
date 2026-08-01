@@ -1,7 +1,7 @@
 ---
 type: n8n-nodes-base.payPal
 displayName: PayPal
-category: Payments
+category: Finance & Accounting
 versions: [1]
 priority: medium
 status: specced
@@ -13,129 +13,167 @@ status: specced
 
 | URL | Source class |
 |-----|--------------|
-| https://docs.n8n.io/integrations/builtin/app-nodes/n8n-nodes-base.paypal/ | Public docs only |
-| https://docs.n8n.io/integrations/builtin/credentials/paypal | Public docs only |
-
-The node is an action node, not a trigger. It requires a configured PayPal credential and communicates with the PayPal API. It does not define a special binary channel.
+| https://docs.n8n.io/integrations/builtin/app-nodes/n8n-nodes-base.paypal.md | Public docs only |
+| https://docs.n8n.io/integrations/builtin/credentials/paypal/ | Public docs only |
+| https://developer.paypal.com/api/rest/ | Third-party service API docs |
 
 ## Wire format
+
 - **Type string:** `n8n-nodes-base.payPal`
-- **Aliases:** none known
 - **Inputs:** `main` × 1
 - **Outputs:** `main` × 1
-- **Credentials:** PayPal credential (type: `payPal` as defined in n8n credentials)
+- **Credentials:** `payPalApi` (Client ID + Secret, OAuth2 client credentials grant, Environment selector: Live or Sandbox)
 
 ## Parameters
-### Operation
-| name | type | default | required | displayOptions | notes |
-|------|------|---------|----------|----------------|-------|
-| operation | selection | `createBatchPayout` | yes | `operation=createBatchPayout` or `operation=showBatchPayoutDetails` or `operation=cancelPayoutItem` or `operation=showPayoutItemDetails` | The specific PayPal action to perform. |
-| batchHeader | object | - | conditional | `operation=createBatchPayout` or `operation=showBatchPayoutDetails` | Contains `batch_status` and `payout_batch_id`. |
-| senderBatchHeader | object | - | conditional | same as above | Optional sender batch identifier. |
-| payoutItemId | string | - | conditional | `operation=cancelPayoutItem` or `operation=showPayoutItemDetails` | Identifier of the payout item to cancel or retrieve. |
-| documentId | string | - | conditional | `operation=cancelPayoutItem` or `operation=showPayoutItemDetails` | Identifier of the payout item (if separate from batch). |
-| operationOptions | collection | - | conditional | varies | Additional operation‑specific options (e.g., `useAppend`, `cellFormat`). |
 
-*Notes:* Parameter names are abstracted; concrete field names are implementation details. The node uses the selected operation and any required identifiers to target the PayPal API endpoint.
+The node uses a **resource** (the PayPal API entity) and **operation** (the action to perform) selector pattern. The API base URL is `https://api-m.paypal.com` (live) or `https://api-m.sandbox.paypal.com` (sandbox). All requests require a Bearer access token obtained via `POST /v1/oauth2/token` using client credentials.
+
+| Resource | Operation | API endpoint method | Required inputs (abstracted) |
+|----------|-----------|---------------------|------------------------------|
+| Payout | create | `POST /v1/payments/payouts` | `senderBatchHeader` object with `emailSubject`, `emailMessage`, and `senderBatchId`; array of `items` each containing `recipientType` (`EMAIL`/`PHONE`/`PAYPAL_ID`), `amount` (with `value` and `currency`), and `receiver` (email/phone/ID depending on type) |
+| Payout | get | `GET /v1/payments/payouts/{payout_batch_id}` | `payoutBatchId` (string) |
+| Payout Item | cancel | `POST /v1/payments/payouts-item/{payout_item_id}/cancel` | `payoutItemId` (string) |
+| Payout Item | get | `GET /v1/payments/payouts-item/{payout_item_id}` | `payoutItemId` (string) |
 
 ## Runtime behavior
-### Input
-The node consumes items from `main[0]`. Input JSON may supply values for operation‑specific identifiers via expressions, but primary identifiers (e.g., batch ID, item ID) are resolved from the node configuration or expressions.
 
-For operation‑based nodes, each input item typically triggers the selected PayPal action. If the operation requires a collection read (e.g., retrieving multiple payouts), the node may emit multiple output items.
+### Input
+
+Each incoming item is processed independently. The node constructs a PayPal REST API request from the selected resource/operation and configured parameters. For create operations, payout recipient details are resolved from the input items or parameter expressions.
 
 ### Output
-Successful outcomes emit items on `main[0]`. The shape of the emitted item depends on the operation:
 
-- **Create a batch payout:** emit a result containing the created batch identifier and status.
-- **Show batch payout details:** emit the retrieved batch details.
-- **Cancel an unclaimed payout item:** emit a result indicating success or failure of the cancellation.
-- **Show payout item details:** emit the item details.
+Each output item contains the full PayPal API response for the executed operation as the `json` property:
 
-No binary output is required.
+- **Payout / create:** Returns the created payout batch object with `batch_header` containing `payout_batch_id` and status fields.
+- **Payout / get:** Returns the batch details including `batch_header`, `items`, and status information.
+- **Payout Item / cancel:** Returns the cancelled payout item object.
+- **Payout Item / get:** Returns the payout item details including recipient, amount, and transaction status.
+
+No binary output is used.
 
 ### Errors
+
 - Missing credential, missing required identifier, or invalid parameter combination triggers validation failure before the API request.
-- Authentication failures, permission errors, and other non‑success API responses result in an error item on the output stream that includes the service error message when available.
-- With `continueOnFail=true`, a failing input produces an error item on the output branch rather than aborting unrelated inputs.
+- PayPal API errors (4xx/5xx) surface as thrown errors. The executor must respect `continueOnFail` to allow downstream nodes to handle failures gracefully.
+- Authentication failures (invalid/expired token) should trigger credential refresh or clear error reporting.
 
 ### Expressions
-Operation‑specific identifiers and some optional parameters support n8n expressions (`{{ $json.field }}`). Expressions are resolved per input item before validation and the API request.
+
+All text, number, and string parameters accept expression strings (`{{ }}`). Resource and operation selectors may also be dynamic.
 
 ## Acceptance tests
-### Test: Create a batch payout
-Given input items:
+
+### Test: create batch payout
+
+**Given** input items:
+
 ```json
-[ { "json": {} } ]
+[{ "json": {} }]
 ```
-Parameters:
+
+**Parameters:**
+
 ```json
 {
-  "operation": "createBatchPayout",
-  "batchHeader": { "batch_status": "completed" }
+  "resource": "payout",
+  "operation": "create",
+  "senderBatchHeader": {
+    "emailSubject": "You have a payout",
+    "senderBatchId": "batch-001"
+  },
+  "items": [
+    {
+      "recipientType": "EMAIL",
+      "receiver": "recipient@example.com",
+      "amount": { "value": "10.00", "currency": "USD" }
+    }
+  ]
 }
 ```
-Expect: exactly one successful item on `main[0]` containing the mocked batch creation response with a batch identifier.
 
-### Test: Show batch payout details
-Given input items:
+**Expect** output[0] contains `json.batch_header.payout_batch_id` as a non-empty string and `json.batch_header.batch_status` equal to `"PENDING"`.
+
+### Test: show batch payout details
+
+**Given** input items:
+
 ```json
-[ { "json": { "batchId": "batch-123" } } ]
+[{ "json": {} }]
 ```
-Parameters:
+
+**Parameters:**
+
 ```json
 {
-  "operation": "showBatchPayoutDetails",
-  "batchHeader": { "payout_batch_id": "={{ $json.batchId }}" }
+  "resource": "payout",
+  "operation": "get",
+  "payoutBatchId": "PDDRAU4NA3P7Q"
 }
 ```
-Expect: one output item containing the mocked batch details for batch `batch-123`.
 
-### Test: Cancel an unclaimed payout item
-Given input items:
+**Expect** output[0] contains `json.batch_header.payout_batch_id` matching the input and `json.batch_header.batch_status` is a recognized status string.
+
+### Test: cancel unclaimed payout item
+
+**Given** input items:
+
 ```json
-[ { "json": { "itemId": "item-456" } } ]
+[{ "json": {} }]
 ```
-Parameters:
+
+**Parameters:**
+
 ```json
 {
-  "operation": "cancelPayoutItem",
-  "payoutItemId": "={{ $json.itemId }}"
+  "resource": "payoutItem",
+  "operation": "cancel",
+  "payoutItemId": "8XDGEWKQ4RHFE"
 }
 ```
-Expect: one output item indicating successful cancellation of item `item-456`.
 
-### Test: Show payout item details
-Given input items:
+**Expect** output[0] contains `json.payout_item_id` matching the input.
+
+### Test: show payout item details
+
+**Given** input items:
+
 ```json
-[ { "json": { "itemId": "item-789" } } ]
+[{ "json": {} }]
 ```
-Parameters:
+
+**Parameters:**
+
 ```json
 {
-  "operation": "showPayoutItemDetails",
-  "payoutItemId": "={{ $json.itemId }}"
+  "resource": "payoutItem",
+  "operation": "get",
+  "payoutItemId": "8XDGEWKQ4RHFE"
 }
 ```
-Expect: one output item with the mocked details of payout item `item-789`.
 
-### Test: Invalid operation (missing identifier)
-Given a configured credential but no `batchHeader` or `payoutItemId` for the selected operation.
-Expect: validation fails with an error indicating the missing required identifier.
+**Expect** output[0] contains `json.payout_item_id` matching the input and `json.payout_item` with recipient and amount details.
+
+### Test: missing required identifier
+
+**Given** a configured credential but no `payoutBatchId` for resource `payout` / operation `get`.
+
+**Expect** validation fails with an error indicating the missing required identifier.
 
 ## Gaps / confidence
+
 | Topic | documented / inferred | Notes |
 |-------|----------------------|-------|
-| Operation list and basic action semantics | documented | Directly listed on the PayPal node page. |
-| Credential model | documented | References PayPal credential documentation. |
-| Parameter names and exact payload schema | inferred | Specific field names (e.g., `batch_header`) come from internal descriptor metadata; the spec avoids copying those details. |
-| Input‑output channel semantics | documented by descriptor metadata | Confirmed as `main` input and `main` output; descriptor used only for high‑level wire facts. |
-| Error handling specifics (e.g., error codes, retry policy) | gap | Public docs do not specify retry or detailed error codes; spec outlines generic OpenFlow error contract. |
-| Version differences (e.g., v1 vs v2 API) | inferred | The node package descriptor indicates a single available version; spec does not differentiate. |
-
-Confidence is high for the node identity, credential requirement, operation list, and basic wire format. Confidence is limited for exact parameter nomenclature and detailed response schemas.
+| Resource/operation list | Documented | Public n8n docs list both resources and operations |
+| Credential model | Documented | PayPal credentials page details Client ID + Secret + Environment |
+| PayPal API endpoints | Documented (third-party) | PayPal REST API docs define all payout endpoints |
+| Request body shapes | Documented (third-party) | PayPal API docs define sender_batch_header, items, amount structure; exact parameter casing may differ at the n8n node level |
+| Response schemas | Documented (third-party) | Full payout batch and item response shapes are in PayPal API docs |
+| Parameter naming convention (snake_case vs camelCase) | Inferred | n8n node may map between conventions; spec uses abstracted naming |
+| Expression support scope | Inferred | All text parameters assumed to support expressions per OpenFlow convention |
 
 ## OpenFlow mapping
-- **Definition group:** `app`
+
+- **Definition group:** `core`
 - **Executor file:** `src/lib/engine/executors/n8n-nodes-base.payPal.ts`
 - **SDK:** `defineNode` + native `ExecutionContext` only

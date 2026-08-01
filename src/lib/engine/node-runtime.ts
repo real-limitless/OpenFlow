@@ -751,6 +751,11 @@ export const BUILTIN_EXECUTOR_MODULES: Array<{
     exportName: "mcpCommunityClientExecutor",
   },
   {
+    type: "n8n-nodes-base.awsS3",
+    modulePath: "./executors/awsS3",
+    exportName: "awsS3Executor",
+  },
+  {
     type: "n8n-nodes-base.homeAssistant",
     modulePath: "./executors/home-assistant",
     exportName: "homeAssistantExecutor",
@@ -1053,6 +1058,36 @@ export const BUILTIN_EXECUTOR_MODULES: Array<{
     type: "n8n-nodes-base.quickbooks",
     modulePath: "./executors/n8n-nodes-base.quickbooks",
     exportName: "quickbooksExecutor",
+  },
+  {
+    type: "n8n-nodes-base.xero",
+    modulePath: "./executors/n8n-nodes-base.xero",
+    exportName: "xeroExecutor",
+  },
+  {
+    type: "n8n-nodes-base.payPal",
+    modulePath: "./executors/n8n-nodes-base.payPal",
+    exportName: "payPalExecutor",
+  },
+  {
+    type: "n8n-nodes-base.pagerDuty",
+    modulePath: "./executors/pagerDuty",
+    exportName: "pagerDutyExecutor",
+  },
+  {
+    type: "n8n-nodes-base.baserow",
+    modulePath: "./executors/n8n-nodes-base.baserow",
+    exportName: "baserowExecutor",
+  },
+  {
+    type: "n8n-nodes-base.dropbox",
+    modulePath: "./executors/n8n-nodes-base.dropbox",
+    exportName: "dropboxExecutor",
+  },
+  {
+    type: "n8n-nodes-base.nextCloud",
+    modulePath: "./executors/nextCloud",
+    exportName: "nextCloudExecutor",
   },
 ];
 

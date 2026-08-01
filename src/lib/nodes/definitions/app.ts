@@ -285,3 +285,564 @@ export const payPal: INodeTypeDescription = {
     },
   ],
 };
+
+const BASEROW_DOCS = "https://docs.n8n.io/integrations/builtin/app-nodes/n8n-nodes-base.baserow/";
+
+export const baserow: INodeTypeDescription = {
+  name: "n8n-nodes-base.baserow",
+  displayName: "Baserow",
+  category: "Data & Storage",
+  group: ["app"],
+  version: 1,
+  description: "Access and manage Baserow database rows",
+  defaults: { name: "Baserow" },
+  inputs: ["main"],
+  outputs: ["main"],
+  icon: "Database",
+  credentials: [{ name: "baserowApi", required: true }],
+  sources: [BASEROW_DOCS],
+  properties: [
+    {
+      displayName: "Table",
+      name: "table",
+      type: "string",
+      default: "",
+      required: true,
+      description: "Name or ID of the Baserow table to operate on",
+    },
+    {
+      displayName: "Operation",
+      name: "operation",
+      type: "options",
+      default: "create",
+      required: true,
+      noDataExpression: true,
+      options: [
+        { name: "Create a Row", value: "create" },
+        { name: "Delete a Row", value: "delete" },
+        { name: "Get a Row", value: "read" },
+        { name: "Get Many Rows", value: "read" },
+        { name: "Update a Row", value: "update" },
+        { name: "Create Multiple Rows", value: "createMultiple" },
+        { name: "Delete Multiple Rows", value: "deleteMultiple" },
+        { name: "Update Multiple Rows", value: "updateMultiple" },
+      ],
+    },
+    {
+      displayName: "Row ID",
+      name: "rowId",
+      type: "number",
+      default: 0,
+      displayOptions: {
+        show: {
+          operation: ["delete", "read", "update"],
+        },
+      },
+      description: "ID of the row to operate on",
+    },
+    {
+      displayName: "Row Data",
+      name: "rowData",
+      type: "json",
+      default: '{"field_1": "value"}',
+      displayOptions: {
+        show: {
+          operation: ["create", "update", "createMultiple", "updateMultiple"],
+        },
+      },
+      description: "Row data as JSON (field key-value pairs)",
+    },
+    {
+      displayName: "Filters",
+      name: "filters",
+      type: "collection",
+      default: {},
+      displayOptions: {
+        show: { operation: ["read"] },
+      },
+      options: [
+        { displayName: "Order By", name: "orderBy", type: "string", default: "" },
+        { displayName: "Search", name: "search", type: "string", default: "" },
+        { displayName: "Page", name: "page", type: "number", default: 1 },
+        { displayName: "Per Page", name: "perPage", type: "number", default: 100 },
+      ],
+    },
+  ],
+};
+
+const DROPBOX_DOCS = "https://docs.n8n.io/integrations/builtin/app-nodes/n8n-nodes-base.dropbox.md";
+const DROPBOX_CRED_DOCS = "https://docs.n8n.io/integrations/builtin/credentials/dropbox.md";
+
+export const dropbox: INodeTypeDescription = {
+  name: "n8n-nodes-base.dropbox",
+  displayName: "Dropbox",
+  category: "Data & Storage",
+  group: ["storage"],
+  version: 1,
+  description: "Access and manage Dropbox files and folders",
+  defaults: { name: "Dropbox" },
+  inputs: ["main"],
+  outputs: ["main"],
+  icon: "HardDrive",
+  credentials: [
+    { name: "dropboxApi", required: true },
+    { name: "dropboxOAuth2Api", required: true },
+  ],
+  sources: [DROPBOX_DOCS, DROPBOX_CRED_DOCS],
+  properties: [
+    {
+      displayName: "Authentication",
+      name: "authentication",
+      type: "options",
+      default: "accessToken",
+      required: true,
+      noDataExpression: true,
+      options: [
+        { name: "Access Token", value: "accessToken" },
+        { name: "OAuth2", value: "oAuth2" },
+      ],
+    },
+    {
+      displayName: "Resource",
+      name: "resource",
+      type: "options",
+      default: "file",
+      required: true,
+      noDataExpression: true,
+      options: [
+        { name: "File", value: "file" },
+        { name: "Folder", value: "folder" },
+        { name: "Search", value: "search" },
+      ],
+    },
+    {
+      displayName: "Operation",
+      name: "operation",
+      type: "options",
+      default: "upload",
+      required: true,
+      noDataExpression: true,
+      displayOptions: {
+        show: { resource: ["file"] },
+      },
+      options: [
+        { name: "Upload", value: "upload" },
+        { name: "Download", value: "download" },
+        { name: "Copy", value: "copy" },
+        { name: "Delete", value: "delete" },
+        { name: "Move", value: "move" },
+      ],
+    },
+    {
+      displayName: "Operation",
+      name: "operation",
+      type: "options",
+      default: "create",
+      required: true,
+      noDataExpression: true,
+      displayOptions: {
+        show: { resource: ["folder"] },
+      },
+      options: [
+        { name: "Create", value: "create" },
+        { name: "Copy", value: "copy" },
+        { name: "Delete", value: "delete" },
+        { name: "Move", value: "move" },
+      ],
+    },
+    {
+      displayName: "Operation",
+      name: "operation",
+      type: "options",
+      default: "query",
+      required: true,
+      noDataExpression: true,
+      displayOptions: {
+        show: { resource: ["search"] },
+      },
+      options: [
+        { name: "Query", value: "query" },
+      ],
+    },
+    {
+      displayName: "Path",
+      name: "path",
+      type: "string",
+      default: "",
+      required: true,
+      displayOptions: {
+        show: { resource: ["file", "folder"] },
+      },
+      description: "Path to the file or folder in Dropbox",
+    },
+    {
+      displayName: "Query",
+      name: "query",
+      type: "string",
+      default: "",
+      displayOptions: {
+        show: { resource: ["search"] },
+      },
+      description: "Search query string",
+    },
+    {
+      displayName: "To Path",
+      name: "toPath",
+      type: "string",
+      default: "",
+      displayOptions: {
+        show: {
+          resource: ["file", "folder"],
+          operation: ["copy", "move"],
+        },
+      },
+      description: "Destination path for copy or move",
+    },
+    {
+      displayName: "Data",
+      name: "data",
+      type: "string",
+      default: "",
+      displayOptions: {
+        show: { resource: ["file"], operation: ["upload"] },
+      },
+      description: "File content data for upload",
+    },
+    {
+      displayName: "Mode",
+      name: "mode",
+      type: "options",
+      default: "add",
+      displayOptions: {
+        show: { resource: ["file"], operation: ["upload"] },
+      },
+      options: [
+        { name: "Add", value: "add" },
+        { name: "Overwrite", value: "overwrite" },
+        { name: "Update", value: "update" },
+      ],
+      description: "Upload conflict resolution mode",
+    },
+    {
+      displayName: "Auto Rename",
+      name: "autorename",
+      type: "boolean",
+      default: true,
+      displayOptions: {
+        show: { resource: ["file", "folder"], operation: ["upload", "create"] },
+      },
+      description: "Automatically rename if a conflict arises",
+    },
+  ],
+};
+
+const AWS_S3_DOCS = "https://docs.n8n.io/integrations/builtin/app-nodes/n8n-nodes-base.awss3/";
+const AWS_CRED_DOCS = "https://docs.n8n.io/integrations/builtin/credentials/aws/";
+
+export const awsS3: INodeTypeDescription = {
+  name: "n8n-nodes-base.awsS3",
+  displayName: "AWS S3",
+  category: "Data & Storage",
+  group: ["storage"],
+  version: 2,
+  description: "Access and manage AWS S3 buckets and files",
+  defaults: { name: "AWS S3" },
+  inputs: ["main"],
+  outputs: ["main"],
+  icon: "HardDrive",
+  credentials: [{ name: "aws", required: true }],
+  sources: [AWS_S3_DOCS, AWS_CRED_DOCS],
+  properties: [
+    {
+      displayName: "Resource",
+      name: "resource",
+      type: "options",
+      default: "bucket",
+      required: true,
+      noDataExpression: true,
+      options: [
+        { name: "Bucket", value: "bucket" },
+        { name: "File", value: "file" },
+        { name: "Folder", value: "folder" },
+      ],
+    },
+    {
+      displayName: "Operation",
+      name: "operation",
+      type: "options",
+      default: "create",
+      required: true,
+      noDataExpression: true,
+      displayOptions: { show: { resource: ["bucket"] } },
+      options: [
+        { name: "Create", value: "create" },
+        { name: "Delete", value: "delete" },
+        { name: "Get All", value: "getAll" },
+        { name: "Search", value: "search" },
+      ],
+    },
+    {
+      displayName: "Operation",
+      name: "operation",
+      type: "options",
+      default: "download",
+      required: true,
+      noDataExpression: true,
+      displayOptions: { show: { resource: ["file"] } },
+      options: [
+        { name: "Copy", value: "copy" },
+        { name: "Delete", value: "delete" },
+        { name: "Download", value: "download" },
+        { name: "Get All", value: "getAll" },
+        { name: "Upload", value: "upload" },
+      ],
+    },
+    {
+      displayName: "Operation",
+      name: "operation",
+      type: "options",
+      default: "create",
+      required: true,
+      noDataExpression: true,
+      displayOptions: { show: { resource: ["folder"] } },
+      options: [
+        { name: "Create", value: "create" },
+        { name: "Delete", value: "delete" },
+        { name: "Get All", value: "getAll" },
+      ],
+    },
+    {
+      displayName: "Bucket Name",
+      name: "bucketName",
+      type: "string",
+      default: "",
+      required: true,
+      displayOptions: {
+        show: { resource: ["file", "folder"] },
+      },
+      description: "Name of the target S3 bucket",
+    },
+    {
+      displayName: "Bucket Name",
+      name: "name",
+      type: "string",
+      default: "",
+      required: true,
+      displayOptions: {
+        show: { resource: ["bucket"], operation: ["create", "delete"] },
+      },
+      description: "Name of the S3 bucket",
+    },
+    {
+      displayName: "File Key",
+      name: "fileKey",
+      type: "string",
+      default: "",
+      required: true,
+      displayOptions: {
+        show: { resource: ["file"], operation: ["download", "delete"] },
+      },
+      description: "Key of the file in S3",
+    },
+    {
+      displayName: "File Name",
+      name: "fileName",
+      type: "string",
+      default: "",
+      displayOptions: {
+        show: { resource: ["file"], operation: ["upload"] },
+      },
+      description: "Name of the uploaded file (required when binaryData=false)",
+    },
+    {
+      displayName: "Binary Data",
+      name: "binaryData",
+      type: "boolean",
+      default: true,
+      displayOptions: {
+        show: { resource: ["file"], operation: ["upload"] },
+      },
+    },
+    {
+      displayName: "File Content",
+      name: "fileContent",
+      type: "string",
+      default: "",
+      displayOptions: {
+        show: { resource: ["file"], operation: ["upload"], binaryData: [false] },
+      },
+      description: "Text content when not using binary data",
+    },
+    {
+      displayName: "Binary Property",
+      name: "binaryPropertyName",
+      type: "string",
+      default: "data",
+      displayOptions: {
+        show: { resource: ["file"], operation: ["upload", "download"] },
+      },
+      description: "Name of the binary property for input (upload) or output (download)",
+    },
+    {
+      displayName: "Source Path",
+      name: "sourcePath",
+      type: "string",
+      default: "",
+      required: true,
+      displayOptions: {
+        show: { resource: ["file"], operation: ["copy"] },
+      },
+      placeholder: "/bucket/key",
+      description: "Source path in format /bucket/key",
+    },
+    {
+      displayName: "Destination Path",
+      name: "destinationPath",
+      type: "string",
+      default: "",
+      required: true,
+      displayOptions: {
+        show: { resource: ["file"], operation: ["copy"] },
+      },
+      placeholder: "/bucket/key",
+      description: "Destination path in format /bucket/key",
+    },
+    {
+      displayName: "Folder Name",
+      name: "folderName",
+      type: "string",
+      default: "",
+      required: true,
+      displayOptions: {
+        show: { resource: ["folder"], operation: ["create"] },
+      },
+      description: "Name of the new folder",
+    },
+    {
+      displayName: "Folder Key",
+      name: "folderKey",
+      type: "string",
+      default: "",
+      required: true,
+      displayOptions: {
+        show: { resource: ["folder"], operation: ["delete"] },
+      },
+      description: "Key of the folder to delete",
+    },
+    {
+      displayName: "Return All",
+      name: "returnAll",
+      type: "boolean",
+      default: false,
+      displayOptions: {
+        show: { resource: ["bucket", "file", "folder"], operation: ["getAll", "search"] },
+      },
+    },
+    {
+      displayName: "Limit",
+      name: "limit",
+      type: "number",
+      default: 100,
+      typeOptions: { minValue: 1, maxValue: 500 },
+      displayOptions: {
+        show: { resource: ["bucket", "file", "folder"], operation: ["getAll", "search"], returnAll: [false] },
+      },
+    },
+    {
+      displayName: "Additional Fields",
+      name: "additionalFields",
+      type: "collection",
+      default: {},
+      displayOptions: {
+        show: { resource: ["bucket"], operation: ["create", "search"] },
+      },
+      options: [
+        { displayName: "ACL", name: "acl", type: "options", default: "", options: [
+          { name: "Authenticated Read", value: "authenticatedRead" },
+          { name: "Private", value: "Private" },
+          { name: "Public Read", value: "publicRead" },
+          { name: "Public Read Write", value: "publicReadWrite" },
+        ]},
+        { displayName: "Bucket Object Lock Enabled", name: "bucketObjectLockEnabled", type: "boolean", default: false },
+        { displayName: "Grant Full Control", name: "grantFullControl", type: "boolean", default: false },
+        { displayName: "Grant Read", name: "grantRead", type: "boolean", default: false },
+        { displayName: "Grant Read ACP", name: "grantReadAcp", type: "boolean", default: false },
+        { displayName: "Grant Write", name: "grantWrite", type: "boolean", default: false },
+        { displayName: "Grant Write ACP", name: "grantWriteAcp", type: "boolean", default: false },
+        { displayName: "Region", name: "region", type: "string", default: "" },
+        { displayName: "Delimiter", name: "delimiter", type: "string", default: "" },
+        { displayName: "Encoding Type", name: "encodingType", type: "options", default: "", options: [{ name: "URL", value: "url" }] },
+        { displayName: "Fetch Owner", name: "fetchOwner", type: "boolean", default: false },
+        { displayName: "Prefix", name: "prefix", type: "string", default: "" },
+        { displayName: "Requester Pays", name: "requesterPays", type: "boolean", default: false },
+        { displayName: "Start After", name: "startAfter", type: "string", default: "" },
+      ],
+    },
+    {
+      displayName: "Additional Fields",
+      name: "additionalFields",
+      type: "collection",
+      default: {},
+      displayOptions: {
+        show: { resource: ["file"], operation: ["copy", "upload"] },
+      },
+      options: [
+        { displayName: "ACL", name: "acl", type: "options", default: "", options: [
+          { name: "Authenticated Read", value: "authenticatedRead" },
+          { name: "Private", value: "Private" },
+          { name: "Public Read", value: "publicRead" },
+          { name: "Public Read Write", value: "publicReadWrite" },
+        ]},
+      ],
+    },
+    {
+      displayName: "Options",
+      name: "options",
+      type: "collection",
+      default: {},
+      displayOptions: {
+        show: { resource: ["file"], operation: ["delete", "getAll"] },
+      },
+      options: [
+        { displayName: "Version ID", name: "versionId", type: "string", default: "" },
+        { displayName: "Fetch Owner", name: "fetchOwner", type: "boolean", default: false },
+        { displayName: "Folder Key", name: "folderKey", type: "string", default: "" },
+      ],
+    },
+    {
+      displayName: "Additional Fields",
+      name: "additionalFields",
+      type: "collection",
+      default: {},
+      displayOptions: {
+        show: { resource: ["folder"], operation: ["create"] },
+      },
+      options: [
+        { displayName: "Parent Folder Key", name: "parentFolderKey", type: "string", default: "" },
+        { displayName: "Requester Pays", name: "requesterPays", type: "boolean", default: false },
+        { displayName: "Storage Class", name: "storageClass", type: "options", default: "", options: [
+          { name: "Standard", value: "STANDARD" },
+          { name: "Reduced Redundancy", value: "REDUCED_REDUNDANCY" },
+          { name: "Glacier", value: "GLACIER" },
+          { name: "Standard IA", value: "STANDARD_IA" },
+          { name: "One Zone IA", value: "ONEZONE_IA" },
+          { name: "Intelligent Tiering", value: "INTELLIGENT_TIERING" },
+          { name: "Deep Archive", value: "DEEP_ARCHIVE" },
+        ]},
+      ],
+    },
+    {
+      displayName: "Options",
+      name: "options",
+      type: "collection",
+      default: {},
+      displayOptions: {
+        show: { resource: ["folder"], operation: ["getAll"] },
+      },
+      options: [
+        { displayName: "Fetch Owner", name: "fetchOwner", type: "boolean", default: false },
+        { displayName: "Folder Key", name: "folderKey", type: "string", default: "" },
+      ],
+    },
+  ],
+};

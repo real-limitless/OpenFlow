@@ -14,6 +14,19 @@ function resolveValue(raw: unknown, itemJson: Record<string, unknown>): unknown 
   return raw;
 }
 
+function deepResolve(v: unknown, itemJson: Record<string, unknown>): unknown {
+  if (typeof v === "string") return resolveValue(v, itemJson);
+  if (v && typeof v === "object") {
+    if (Array.isArray(v)) return v.map((e) => deepResolve(e, itemJson));
+    const obj: Record<string, unknown> = {};
+    for (const [k, val] of Object.entries(v as Record<string, unknown>)) {
+      obj[k] = deepResolve(val, itemJson);
+    }
+    return obj;
+  }
+  return v;
+}
+
 function asObj(body: unknown): Record<string, unknown> {
   if (body && typeof body === "object" && !Array.isArray(body)) {
     return body as Record<string, unknown>;
@@ -21,20 +34,8 @@ function asObj(body: unknown): Record<string, unknown> {
   return { data: body };
 }
 
-function parseJson(raw: unknown): Record<string, unknown> {
-  if (typeof raw === "string") {
-    try { return JSON.parse(raw); } catch { return {}; }
-  }
-  if (raw && typeof raw === "object") return raw as Record<string, unknown>;
-  return {};
-}
-
-function parseJsonArray(raw: unknown): Record<string, unknown>[] {
-  if (typeof raw === "string") {
-    try { const p = JSON.parse(raw); return Array.isArray(p) ? p : []; } catch { return []; }
-  }
-  if (Array.isArray(raw)) return raw;
-  return [];
+function pascalCase(s: string): string {
+  return s.charAt(0).toUpperCase() + s.slice(1);
 }
 
 async function apiRequest(
@@ -81,16 +82,11 @@ async function apiRequest(
   }
 }
 
-function buildQboPath(companyId: string, resource: string, id?: string, queryFilter?: string): { path: string; params?: Record<string, string> } {
-  const resourcePlural = resource + "s";
+function buildQboPath(companyId: string, entitySingular: string, id?: string): { path: string; params?: Record<string, string> } {
   if (id) {
-    return { path: `/v3/company/${companyId}/${resourcePlural}/${id}` };
+    return { path: `/v3/company/${companyId}/${entitySingular}/${id}` };
   }
-  if (queryFilter) {
-    const query = `select * from ${resourcePlural} ${queryFilter}`;
-    return { path: `/v3/company/${companyId}/query`, params: { query } };
-  }
-  return { path: `/v3/company/${companyId}/query`, params: { query: `select * from ${resourcePlural}` } };
+  return { path: `/v3/company/${companyId}/${entitySingular}` };
 }
 
 async function getAuthHeaders(ctx: ExecutionContext): Promise<{ headers: Record<string, string>; companyId: string }> {
@@ -152,7 +148,7 @@ async function runQboOperation(
   companyId: string,
 ): Promise<Array<{ json: Record<string, unknown> }>> {
   const id = String(resolveValue(node.parameters.id, itemJson) ?? "");
-  const queryFilter = String(resolveValue(node.parameters.queryFilter, itemJson) ?? "");
+  const filter = String(resolveValue(node.parameters.filter, itemJson) ?? "");
 
   switch (operation) {
     case "create":
@@ -160,7 +156,7 @@ async function runQboOperation(
     case "get":
       return [await doGet(resource, id, headers, companyId)];
     case "getAll":
-      return [await doGetAll(resource, queryFilter, headers, companyId)];
+      return doGetAll(resource, filter, headers, companyId);
     case "update":
       return [await doUpdate(resource, id, node, itemJson, headers, companyId)];
     case "delete":
@@ -169,9 +165,47 @@ async function runQboOperation(
       return [await doSend(resource, id, headers, companyId)];
     case "void":
       return [await doVoid(resource, id, headers, companyId)];
+    case "getReport":
+      return doGetReport(node, itemJson, headers, companyId);
     default:
       throw new Error(`QuickBooks: unsupported operation "${operation}"`);
   }
+}
+
+function extractFields(
+  params: Record<string, unknown>,
+  key: string,
+  itemJson: Record<string, unknown>,
+): Record<string, unknown> {
+  const raw = params[key];
+  if (!raw) return {};
+  if (typeof raw === "object" && !Array.isArray(raw)) {
+    const obj = raw as Record<string, unknown>;
+    // If it has a .fields string, parse that; otherwise use the object directly
+    if (typeof obj.fields === "string") {
+      const parsed = parseJson(obj.fields);
+      const resolved: Record<string, unknown> = {};
+      for (const [k, v] of Object.entries(parsed)) {
+        resolved[k] = deepResolve(v, itemJson);
+      }
+      return resolved;
+    }
+    // Flat object — resolve each value
+    const resolved: Record<string, unknown> = {};
+    for (const [k, v] of Object.entries(obj)) {
+      resolved[k] = deepResolve(v, itemJson);
+    }
+    return resolved;
+  }
+  if (typeof raw === "string") {
+    const parsed = parseJson(raw);
+    const resolved: Record<string, unknown> = {};
+    for (const [k, v] of Object.entries(parsed)) {
+      resolved[k] = deepResolve(v, itemJson);
+    }
+    return resolved;
+  }
+  return {};
 }
 
 async function doCreate(
@@ -182,19 +216,15 @@ async function doCreate(
   headers: Record<string, string>,
   companyId: string,
 ): Promise<{ json: Record<string, unknown> }> {
-  const rawAdditional = node.parameters.additionalFields;
-  const additional = rawAdditional && typeof rawAdditional === "object"
-    ? parseJson((rawAdditional as Record<string, unknown>).fields)
-    : {};
-  const merged: Record<string, unknown> = { ...additional };
+  const fields = extractFields(node.parameters as Record<string, unknown>, "additionalFields", itemJson);
 
-  const resourceSingular = resource.charAt(0).toUpperCase() + resource.slice(1);
+  const entityName = pascalCase(resource);
   const body: Record<string, unknown> = {};
-  body[resourceSingular] = merged;
+  body[entityName] = fields;
 
   const { path } = buildQboPath(companyId, resource);
   const res = await apiRequest("POST", path, headers, body);
-  return { json: res[resourceSingular] as Record<string, unknown> ?? res };
+  return { json: res[entityName] as Record<string, unknown> ?? res };
 }
 
 async function doGet(
@@ -206,8 +236,8 @@ async function doGet(
   if (!id) throw new Error("QuickBooks: id is required for get operation");
   const { path } = buildQboPath(companyId, resource, id);
   const res = await apiRequest("GET", path, headers);
-  const resourceSingular = resource.charAt(0).toUpperCase() + resource.slice(1);
-  return { json: res[resourceSingular] as Record<string, unknown> ?? res };
+  const entityName = pascalCase(resource);
+  return { json: res[entityName] as Record<string, unknown> ?? res };
 }
 
 async function doGetAll(
@@ -215,13 +245,16 @@ async function doGetAll(
   queryFilter: string,
   headers: Record<string, string>,
   companyId: string,
-): Promise<{ json: Record<string, unknown> }> {
-  const { path, params } = buildQboPath(companyId, resource, undefined, queryFilter || undefined);
-  const res = await apiRequest("GET", path, headers, undefined, params);
-  const resourceSingular = resource.charAt(0).toUpperCase() + resource.slice(1);
+): Promise<Array<{ json: Record<string, unknown> }>> {
+  const entityName = pascalCase(resource);
+  const query = queryFilter
+    ? `select * from ${entityName} ${queryFilter}`
+    : `select * from ${entityName}`;
+  const path = `/v3/company/${companyId}/query`;
+  const res = await apiRequest("GET", path, headers, undefined, { query });
   const queryResponse = res.QueryResponse as Record<string, unknown> ?? {};
-  const entities = queryResponse[resourceSingular] as Array<Record<string, unknown>> ?? [];
-  return { json: { results: entities } };
+  const entities = queryResponse[entityName] as Array<Record<string, unknown>> ?? [];
+  return entities.map((entity) => ({ json: entity }));
 }
 
 async function doUpdate(
@@ -233,22 +266,19 @@ async function doUpdate(
   companyId: string,
 ): Promise<{ json: Record<string, unknown> }> {
   if (!id) throw new Error("QuickBooks: id is required for update operation");
-  const rawUpdate = node.parameters.updateFields;
-  const updateFields = rawUpdate && typeof rawUpdate === "object"
-    ? parseJson((rawUpdate as Record<string, unknown>).fields)
-    : {};
-  if (!updateFields.SyncToken) {
+  const fields = extractFields(node.parameters as Record<string, unknown>, "updateFields", itemJson);
+  if (!fields.SyncToken) {
     throw new Error("QuickBooks: SyncToken is required in updateFields");
   }
-  updateFields.Id = id;
+  fields.Id = id;
 
-  const resourceSingular = resource.charAt(0).toUpperCase() + resource.slice(1);
+  const entityName = pascalCase(resource);
   const body: Record<string, unknown> = {};
-  body[resourceSingular] = updateFields;
+  body[entityName] = { ...fields, sparse: true };
 
   const { path } = buildQboPath(companyId, resource, id);
-  const res = await apiRequest("POST", path, headers, body);
-  return { json: res[resourceSingular] as Record<string, unknown> ?? res };
+  const res = await apiRequest("POST", path + "?operation=update", headers, body);
+  return { json: res[entityName] as Record<string, unknown> ?? res };
 }
 
 async function doDelete(
@@ -258,9 +288,9 @@ async function doDelete(
   companyId: string,
 ): Promise<{ json: Record<string, unknown> }> {
   if (!id) throw new Error("QuickBooks: id is required for delete operation");
-  const resourceSingular = resource.charAt(0).toUpperCase() + resource.slice(1);
+  const entityName = pascalCase(resource);
   const inner: Record<string, unknown> = { Id: id, SyncToken: "0" };
-  const body: Record<string, unknown> = { [resourceSingular]: inner };
+  const body: Record<string, unknown> = { [entityName]: inner };
   const { path } = buildQboPath(companyId, resource, id);
   await apiRequest("POST", path + "?operation=delete", headers, body);
   return { json: { status: "Deleted", id } };
@@ -273,10 +303,10 @@ async function doSend(
   companyId: string,
 ): Promise<{ json: Record<string, unknown> }> {
   if (!id) throw new Error("QuickBooks: id is required for send operation");
-  const { path } = buildQboPath(companyId, resource, id);
-  const res = await apiRequest("POST", path + `/${id}/send`, headers);
-  const resourceSingular = resource.charAt(0).toUpperCase() + resource.slice(1);
-  return { json: res[resourceSingular] as Record<string, unknown> ?? res };
+  const path = `/v3/company/${companyId}/${resource}/${id}/send`;
+  const res = await apiRequest("POST", path, headers);
+  const entityName = pascalCase(resource);
+  return { json: res[entityName] as Record<string, unknown> ?? res };
 }
 
 async function doVoid(
@@ -286,8 +316,55 @@ async function doVoid(
   companyId: string,
 ): Promise<{ json: Record<string, unknown> }> {
   if (!id) throw new Error("QuickBooks: id is required for void operation");
-  const { path } = buildQboPath(companyId, resource, id);
-  const res = await apiRequest("POST", path + `/${id}/void`, headers);
-  const resourceSingular = resource.charAt(0).toUpperCase() + resource.slice(1);
-  return { json: res[resourceSingular] as Record<string, unknown> ?? res };
+  const path = `/v3/company/${companyId}/${resource}/${id}/void`;
+  const res = await apiRequest("POST", path, headers);
+  const entityName = pascalCase(resource);
+  return { json: res[entityName] as Record<string, unknown> ?? res };
+}
+
+async function doGetReport(
+  node: INode,
+  itemJson: Record<string, unknown>,
+  headers: Record<string, string>,
+  companyId: string,
+): Promise<Array<{ json: Record<string, unknown> }>> {
+  const reportName = String(resolveValue(node.parameters.reportName, itemJson) ?? "");
+  if (!reportName) throw new Error("QuickBooks: reportName is required for getReport operation");
+
+  const dateRange = node.parameters.dateRange as Record<string, unknown> | undefined;
+  const params: Record<string, string> = {};
+  if (dateRange) {
+    const startDate = String(resolveValue(dateRange.startDate, itemJson) ?? "");
+    const endDate = String(resolveValue(dateRange.endDate, itemJson) ?? "");
+    if (startDate) params.start_date = startDate;
+    if (endDate) params.end_date = endDate;
+  }
+
+  const path = `/v3/company/${companyId}/reports/${reportName}`;
+  const res = await apiRequest("GET", path, headers, undefined, Object.keys(params).length > 0 ? params : undefined);
+  const rows = (res.Rows as Record<string, unknown> | undefined)?.Row as Array<Record<string, unknown>> ?? [];
+  return rows.map((row) => ({ json: flattenRow(row) }));
+}
+
+function flattenRow(row: Record<string, unknown>): Record<string, unknown> {
+  const result: Record<string, unknown> = {};
+  for (const [k, v] of Object.entries(row)) {
+    if (v && typeof v === "object" && !Array.isArray(v)) {
+      const sub = flattenRow(v as Record<string, unknown>);
+      for (const [sk, sv] of Object.entries(sub)) {
+        result[`${k}.${sk}`] = sv;
+      }
+    } else {
+      result[k] = v;
+    }
+  }
+  return result;
+}
+
+function parseJson(raw: unknown): Record<string, unknown> {
+  if (typeof raw === "string") {
+    try { return JSON.parse(raw); } catch { return {}; }
+  }
+  if (raw && typeof raw === "object") return raw as Record<string, unknown>;
+  return {};
 }

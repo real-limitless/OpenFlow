@@ -28,7 +28,8 @@
 28: 28: 28: 28: 28: 28: 28: n8n-nodes-base.baserow: specced, docs/specs/nodes/n8n-nodes-base.baserow.md
 29: 29: 29: 29: 29: 29: 29: n8n-nodes-base.microsoftOneDrive: specced, docs/specs/nodes/n8n-nodes-base.microsoftOneDrive.md
 30: 30: 30: 30: 30: 30: 30: n8n-nodes-base.nextCloud: specced, docs/specs/nodes/n8n-nodes-base.nextCloud.md
-31: 31: 31: 31: 31: 31: 31: n8n-nodes-base.xero: specced, docs/specs/nodes/n8n-nodes-base.xero.md: 32: 32: 32: 32: 32: n8n-nodes-base.awsS3: specced, docs/specs/nodes/n8n-nodes-base.awsS3.md
+31: 31: 31: 31: 31: 31: 31: n8n-nodes-base.xero: specced, docs/specs/nodes/n8n-nodes-base.xero.md
+n8n-nodes-base.awsS3: specced, docs/specs/nodes/n8n-nodes-base.awsS3.md
 32: 32: 33: 33: 33: 33: 33: n8n-nodes-base.awsLambda: specced, docs/specs/nodes/n8n-nodes-base.awsLambda.md
 33: 33: 33: 33: 33: 33: 33: 33: n8n-nodes-base.awsSes: specced, docs/specs/nodes/n8n-nodes-base.awsSes.md
 34: 34: 34: 34: 34: 34: 34: 34: n8n-nodes-base.elasticsearch: specced, docs/specs/nodes/n8n-nodes-base.elasticsearch.md
@@ -39,5 +40,5 @@
 39: 39: n8n-nodes-base.amqp: specced, docs/specs/nodes/n8n-nodes-base.amqp.md
 40: 40: n8n-nodes-base.payPal: specced, docs/specs/nodes/n8n-nodes-base.payPal.md
 41: 41: n8n-nodes-base.stripeTrigger: specced, docs/specs/nodes/n8n-nodes-base.stripeTrigger.md
-42: n8n-nodes-base.nocodb: specced, docs/specs/nodes/n8n-nodes-base.nocodb.md
+42: n8n-nodes-base.nocoDb: specced, docs/specs/nodes/n8n-nodes-base.nocoDb.md
 43: n8n-nodes-base.dropbox: specced, docs/specs/nodes/n8n-nodes-base.dropbox.md

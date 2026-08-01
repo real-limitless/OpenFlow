@@ -1230,56 +1230,56 @@
       "executor": "implemented",
       "spec": "specced",
       "dogfood": false,
-      "factory": "partial"
+      "factory": "pass"
     },
     "n8n-nodes-base.xero": {
       "priority": "P1",
       "executor": "implemented",
       "spec": "specced",
       "dogfood": false,
-      "factory": "partial"
+      "factory": "pass"
     },
     "n8n-nodes-base.payPal": {
       "priority": "P1",
       "executor": "implemented",
       "spec": "specced",
       "dogfood": false,
-      "factory": "partial"
+      "factory": "pass"
     },
     "n8n-nodes-base.pagerDuty": {
       "priority": "P1",
       "executor": "implemented",
       "spec": "specced",
       "dogfood": false,
-      "factory": "partial"
+      "factory": "pass"
     },
     "n8n-nodes-base.baserow": {
       "priority": "P1",
       "executor": "implemented",
       "spec": "specced",
       "dogfood": false,
-      "factory": "partial"
+      "factory": "pass"
     },
     "n8n-nodes-base.nocoDb": {
       "priority": "P1",
       "executor": "implemented",
       "spec": "specced",
       "dogfood": false,
-      "factory": "partial"
+      "factory": "pass"
     },
     "n8n-nodes-base.dropbox": {
       "priority": "P1",
       "executor": "implemented",
       "spec": "specced",
       "dogfood": false,
-      "factory": "partial"
+      "factory": "pass"
     },
     "n8n-nodes-base.nextCloud": {
       "priority": "P1",
       "executor": "implemented",
       "spec": "specced",
       "dogfood": false,
-      "factory": "partial"
+      "factory": "pass"
     },
     "n8n-nodes-base.awsS3": {
       "priority": "P1",

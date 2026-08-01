@@ -87,7 +87,7 @@ describe("batch-queue quickbooks — n8n-nodes-base.quickbooks", () => {
   });
 
   describe("create invoice", () => {
-    it("sends POST with additionalFields as the entity body", async () => {
+    it("sends POST with flat additionalFields as the entity body", async () => {
       responseQueue = [mockResponse({
         Invoice: { Id: "123", SyncToken: "0", CustomerRef: { name: "Acme Corp" } },
       })];
@@ -98,17 +98,15 @@ describe("batch-queue quickbooks — n8n-nodes-base.quickbooks", () => {
           resource: "invoice",
           operation: "create",
           additionalFields: {
-            fields: JSON.stringify({
-              CustomerRef: { name: "Acme Corp" },
-              Line: [{ DetailType: "SalesItemLineDetail", Amount: 100, Description: "Consulting" }],
-            }),
+            CustomerRef: { value: "{{ $json.customerId }}" },
+            Line: [{ DetailType: "SalesItemLineDetail", Amount: 100, Description: "Consulting" }],
           },
         },
       });
       const ctx = createExecutionContext({
         node,
         workflow: { id: "test", name: "test", active: false, nodes: [node], connections: {}, settings: {} },
-        getNodeInputItems: () => [{ json: { customerName: "Acme Corp" } }],
+        getNodeInputItems: () => [{ json: { customerId: "1" } }],
         continueOnFail: false,
         getCredential: async () => testCred(),
       });
@@ -117,10 +115,43 @@ describe("batch-queue quickbooks — n8n-nodes-base.quickbooks", () => {
       const out = await executor(ctx, node);
       expect(out[0]).toHaveLength(1);
       expect(out[0][0].json).toMatchObject({ Id: "123", SyncToken: "0" });
-      expect(lastCall().url).toContain("/v3/company/1234567890/query");
+      expect(lastCall().url).toBe("https://quickbooks.api.intuit.com/v3/company/1234567890/invoice");
+      expect(lastCall().method).toBe("POST");
       const body = jsonBody(lastCall()) as Record<string, unknown>;
       expect(body.Invoice).toBeDefined();
       expect((body.Invoice as Record<string, unknown>).Line).toBeDefined();
+      // CustomerRef.value should be resolved from expression
+      expect((body.Invoice as Record<string, unknown>).CustomerRef).toMatchObject({ value: "1" });
+    });
+  });
+
+  describe("get all customers without filter", () => {
+    it("sends query with select * from even when filter is empty", async () => {
+      responseQueue = [mockResponse({
+        QueryResponse: { Customer: [{ Id: "1", DisplayName: "Alice" }] },
+      })];
+      const node = makeNode({
+        name: "N",
+        type: TYPE,
+        parameters: {
+          resource: "customer",
+          operation: "getAll",
+        },
+      });
+      const ctx = createExecutionContext({
+        node,
+        workflow: { id: "test", name: "test", active: false, nodes: [node], connections: {}, settings: {} },
+        getNodeInputItems: () => [{ json: {} }],
+        continueOnFail: false,
+        getCredential: async () => testCred(),
+      });
+      const executor = getExecutor(TYPE);
+      if (!executor) throw new Error("no executor");
+      const out = await executor(ctx, node);
+      expect(out[0]).toHaveLength(1);
+      expect(out[0][0].json).toMatchObject({ Id: "1", DisplayName: "Alice" });
+      expect(lastCall().url).toContain("/query");
+      expect(lastCall().url).toContain("query=select+*+from+Customer");
     });
   });
 
@@ -135,7 +166,7 @@ describe("batch-queue quickbooks — n8n-nodes-base.quickbooks", () => {
         parameters: {
           resource: "customer",
           operation: "getAll",
-          queryFilter: "WHERE Active = true MAXRESULTS 10",
+          filter: "WHERE Active = true MAXRESULTS 10",
         },
       });
       const ctx = createExecutionContext({
@@ -148,13 +179,11 @@ describe("batch-queue quickbooks — n8n-nodes-base.quickbooks", () => {
       const executor = getExecutor(TYPE);
       if (!executor) throw new Error("no executor");
       const out = await executor(ctx, node);
-      expect(out[0]).toHaveLength(1);
-      const result = out[0][0].json as Record<string, unknown>;
-      const items = result.results as Record<string, unknown>[];
-      expect(Array.isArray(items)).toBe(true);
-      expect(items).toHaveLength(2);
-      expect(items[0]).toMatchObject({ Id: "1", DisplayName: "Alice" });
-      expect(lastCall().url).toContain("query");
+      expect(out[0]).toHaveLength(2);
+      expect(out[0][0].json).toMatchObject({ Id: "1", DisplayName: "Alice" });
+      expect(out[0][1].json).toMatchObject({ Id: "2", DisplayName: "Bob" });
+      expect(lastCall().url).toContain("/query");
+      expect(lastCall().url).toContain("query=select+*+from+Customer+WHERE+Active+%3D+true+MAXRESULTS+10");
     });
   });
 
@@ -171,10 +200,8 @@ describe("batch-queue quickbooks — n8n-nodes-base.quickbooks", () => {
           operation: "update",
           id: "={{ $json.billId }}",
           updateFields: {
-            fields: JSON.stringify({
-              SyncToken: "={{ $json.syncToken }}",
-              TotalAmt: 250,
-            }),
+            SyncToken: "={{ $json.syncToken }}",
+            TotalAmt: 250,
           },
         },
       });
@@ -270,8 +297,8 @@ describe("batch-queue quickbooks — n8n-nodes-base.quickbooks", () => {
     });
   });
 
-  describe("send operation", () => {
-    it("sends send request and returns entity", async () => {
+  describe("send invoice", () => {
+    it("sends POST to /invoice/{id}/send and returns entity", async () => {
       responseQueue = [mockResponse({
         Invoice: { Id: "123", EmailStatus: "EmailSent" },
       })];
@@ -296,21 +323,23 @@ describe("batch-queue quickbooks — n8n-nodes-base.quickbooks", () => {
       const out = await executor(ctx, node);
       expect(out[0]).toHaveLength(1);
       expect(out[0][0].json).toMatchObject({ Id: "123", EmailStatus: "EmailSent" });
+      expect(lastCall().url).toMatch(/\/invoice\/123\/send$/);
+      expect(lastCall().method).toBe("POST");
     });
   });
 
-  describe("void operation", () => {
-    it("sends void request and returns voided entity", async () => {
+  describe("void payment", () => {
+    it("sends POST to /payment/{id}/void and returns voided entity", async () => {
       responseQueue = [mockResponse({
-        Invoice: { Id: "123", SyncToken: "1" },
+        Payment: { Id: "456", SyncToken: "1" },
       })];
       const node = makeNode({
         name: "N",
         type: TYPE,
         parameters: {
-          resource: "invoice",
+          resource: "payment",
           operation: "void",
-          id: "123",
+          id: "456",
         },
       });
       const ctx = createExecutionContext({
@@ -324,7 +353,47 @@ describe("batch-queue quickbooks — n8n-nodes-base.quickbooks", () => {
       if (!executor) throw new Error("no executor");
       const out = await executor(ctx, node);
       expect(out[0]).toHaveLength(1);
-      expect(out[0][0].json).toMatchObject({ Id: "123" });
+      expect(out[0][0].json).toMatchObject({ Id: "456" });
+      expect(lastCall().url).toMatch(/\/payment\/456\/void$/);
+      expect(lastCall().method).toBe("POST");
+    });
+  });
+
+  describe("getReport", () => {
+    it("sends GET to /reports/{reportName} with date params", async () => {
+      responseQueue = [mockResponse({
+        Rows: {
+          Row: [
+            { ColData: [{ value: "Income" }, { value: "5000" }], type: "Data" },
+            { ColData: [{ value: "Expenses" }, { value: "2000" }], type: "Data" },
+          ],
+        },
+      })];
+      const node = makeNode({
+        name: "N",
+        type: TYPE,
+        parameters: {
+          resource: "transaction",
+          operation: "getReport",
+          reportName: "ProfitAndLoss",
+          dateRange: { startDate: "2024-01-01", endDate: "2024-12-31" },
+        },
+      });
+      const ctx = createExecutionContext({
+        node,
+        workflow: { id: "test", name: "test", active: false, nodes: [node], connections: {}, settings: {} },
+        getNodeInputItems: () => [{ json: {} }],
+        continueOnFail: false,
+        getCredential: async () => testCred(),
+      });
+      const executor = getExecutor(TYPE);
+      if (!executor) throw new Error("no executor");
+      const out = await executor(ctx, node);
+      expect(out[0]).toHaveLength(2);
+      expect(lastCall().url).toContain("/reports/ProfitAndLoss");
+      expect(lastCall().url).toContain("start_date=2024-01-01");
+      expect(lastCall().url).toContain("end_date=2024-12-31");
+      expect(lastCall().method).toBe("GET");
     });
   });
 });

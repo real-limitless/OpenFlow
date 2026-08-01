@@ -16,7 +16,7 @@ seedBuiltinDescriptions();
 const TYPE = "n8n-nodes-base.nocoDb";
 const CREDS = {
   nocoDbApi: {
-    apiKey: "test-key",
+    xcToken: "test-key",
     baseUrl: "http://localhost:8080",
   },
 };
@@ -71,14 +71,30 @@ interface MockCall {
 }
 
 function mockClient(): { client: NocoDbClient; calls: MockCall[] } {
+  let idCounter = 100;
   const calls: MockCall[] = [];
   const client: NocoDbClient = {
     async request(method: string, path: string, body?: unknown) {
       calls.push({ method, path, body });
-      if (path.includes("nonexistent")) {
-        return { status: 404, body: { message: "Invalid table" } };
+      if (method === "POST" && path.includes("/bulk/")) {
+        return { status: 200, body: { id: ++idCounter, ...(body as Record<string, unknown>) } };
       }
-      return { status: 200, body: {} };
+      if (method === "PATCH") {
+        const parts = path.split("/");
+        const rowId = parts[parts.length - 1];
+        return { status: 200, body: { id: Number(rowId), ...(body as Record<string, unknown>) } };
+      }
+      if (method === "DELETE") {
+        return { status: 200, body: {} };
+      }
+      if (method === "GET" && path.includes("/list")) {
+        const rows = [
+          { id: 1, name: "Item 1", status: "active", created_at: "2024-01-01" },
+          { id: 2, name: "Item 2", status: "done", created_at: "2024-01-02" },
+        ];
+        return { status: 200, body: { list: rows } };
+      }
+      return { status: 200, body: { id: 1, name: "Test" } };
     },
   };
   return { client, calls };
@@ -93,50 +109,122 @@ describe("n8n-nodes-base.nocoDb", () => {
     expect(hasExecutor(TYPE)).toBe(true);
   });
 
-  it("select returns records", async () => {
+  it("create row with auto-map", async () => {
     const { client, calls } = mockClient();
     setNocoDbClientFactory(async () => client);
 
     const [results] = await runNoco(
-      {},
-      [{ operation: "select", table: "users", where: { id: { eq: 1 } } }],
+      {
+        operation: "create",
+        projectId: "wksp_abc",
+        table: "tbl_tasks",
+        dataToSend: "autoMapInputData",
+        inputsToIgnore: "",
+      },
+      [{ json: { title: "Hello", status: "done" } }],
     );
 
     expect(results).toHaveLength(1);
-    expect(results[0].json).toMatchObject({ records: {} });
-    expect(calls[0].method).toBe("GET");
-    expect(calls[0].path).toContain("users");
-  });
-
-  it("insert creates record and returns id", async () => {
-    const { client, calls } = mockClient();
-    setNocoDbClientFactory(async () => client);
-
-    const [results] = await runNoco(
-      {},
-      [{
-        operation: "insert",
-        table: "users",
-        payload: { name: "Alice", email: "alice@example.com" },
-      }],
-    );
-
-    expect(results).toHaveLength(1);
-    expect(results[0].json).toMatchObject({ created: true });
+    expect(results[0].json).toMatchObject({ title: "Hello", status: "done" });
     expect(calls[0].method).toBe("POST");
+    expect(calls[0].body).toMatchObject({ title: "Hello", status: "done" });
   });
 
-  it("returns error for invalid table", async () => {
-    const { client } = mockClient();
+  it("create row with define-below fields", async () => {
+    const { client, calls } = mockClient();
     setNocoDbClientFactory(async () => client);
 
     const [results] = await runNoco(
-      {},
-      [{ operation: "select", table: "nonexistent" }],
+      {
+        operation: "create",
+        projectId: "wksp_abc",
+        table: "tbl_tasks",
+        dataToSend: "defineBelow",
+        fieldsUi: {
+          fieldValues: [
+            { fieldName: "name", fieldValue: "Test Task", binaryData: false },
+          ],
+        },
+      },
+      [{}],
     );
 
     expect(results).toHaveLength(1);
-    expect(results[0].json).toMatchObject({ error: "Invalid table: nonexistent" });
+    expect(results[0].json).toMatchObject({ name: "Test Task" });
+    expect(calls[0].method).toBe("POST");
+    expect(calls[0].body).toMatchObject({ name: "Test Task" });
+  });
+
+  it("get many rows with sort and field projection", async () => {
+    const { client, calls } = mockClient();
+    setNocoDbClientFactory(async () => client);
+
+    const [results] = await runNoco(
+      {
+        operation: "getAll",
+        projectId: "wksp_abc",
+        table: "tbl_tasks",
+        returnAll: false,
+        limit: 10,
+        options: {
+          sort: { property: [{ field: "created_at", direction: "desc" }] },
+          fields: ["name", "status"],
+        },
+      },
+      [{}],
+    );
+
+    expect(results).toHaveLength(1);
+    expect(results[0].json).toMatchObject({ list: expect.any(Array) });
+    expect(calls[0].method).toBe("GET");
+    expect(calls[0].path).toContain("/list");
+  });
+
+  it("update existing row", async () => {
+    const { client, calls } = mockClient();
+    setNocoDbClientFactory(async () => client);
+
+    const [results] = await runNoco(
+      {
+        operation: "update",
+        projectId: "proj_abc",
+        table: "Tasks",
+        id: "42",
+        primaryKey: "id",
+        dataToSend: "defineBelow",
+        fieldsUi: {
+          fieldValues: [
+            { fieldName: "status", fieldValue: "completed", binaryData: false },
+          ],
+        },
+      },
+      [{}],
+    );
+
+    expect(results).toHaveLength(1);
+    expect(results[0].json).toMatchObject({ status: "completed" });
+    expect(calls[0].method).toBe("PATCH");
+    expect(calls[0].path).toContain("/42");
+  });
+
+  it("delete row", async () => {
+    const { client, calls } = mockClient();
+    setNocoDbClientFactory(async () => client);
+
+    const [results] = await runNoco(
+      {
+        operation: "delete",
+        projectId: "proj_abc",
+        table: "Tasks",
+        id: "99",
+        primaryKey: "id",
+      },
+      [{}],
+    );
+
+    expect(results).toHaveLength(1);
+    expect(results[0].json).toMatchObject({ success: true });
+    expect(calls[0].method).toBe("DELETE");
   });
 
   it("handles missing credentials gracefully", async () => {
@@ -144,28 +232,27 @@ describe("n8n-nodes-base.nocoDb", () => {
     setNocoDbClientFactory(async () => client);
 
     const [results] = await runNoco(
-      {},
-      [{ operation: "select", table: "items" }],
+      { operation: "create", projectId: "p", table: "t", dataToSend: "defineBelow" },
+      [{}],
       {},
     );
 
     expect(results).toHaveLength(1);
-    expect(results[0].json).toMatchObject({ records: {} });
   });
 
-  it("processes batch with multiple items", async () => {
-    const { client, calls } = mockClient();
-    setNocoDbClientFactory(async () => client);
+  it("continueOnFail returns error item instead of throwing", async () => {
+    setNocoDbClientFactory(async () => {
+      throw new Error("Network error");
+    });
 
     const [results] = await runNoco(
-      { batchSize: 10 },
-      [
-        { operation: "select", table: "users" },
-        { operation: "select", table: "posts" },
-      ],
+      { operation: "create", projectId: "p", table: "t", dataToSend: "defineBelow" },
+      [{}],
+      CREDS,
+      { continueOnFail: true },
     );
 
-    expect(results).toHaveLength(2);
-    expect(calls).toHaveLength(2);
+    expect(results).toHaveLength(1);
+    expect(results[0].json).toMatchObject({ error: expect.any(String) });
   });
 });
