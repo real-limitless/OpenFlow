@@ -72,7 +72,7 @@ async function apiRequest(
       const errArr = faultDetail?.Error as Array<Record<string, unknown>> | undefined;
       const errMsg = errArr?.[0]?.Message ?? fault?.error ?? response.statusText;
       const apiErr = new Error(`QuickBooks API error: ${errMsg}`);
-      (apiErr as Record<string, unknown>).status = response.status;
+      (apiErr as unknown as Record<string, unknown>).status = response.status;
       throw apiErr;
     }
     return asObj(parsed as Record<string, unknown>);
@@ -259,11 +259,8 @@ async function doDelete(
 ): Promise<{ json: Record<string, unknown> }> {
   if (!id) throw new Error("QuickBooks: id is required for delete operation");
   const resourceSingular = resource.charAt(0).toUpperCase() + resource.slice(1);
-  const body: Record<string, unknown> = {
-    Id: id,
-    SyncToken: "0",
-  };
-  body[resourceSingular] = body;
+  const inner: Record<string, unknown> = { Id: id, SyncToken: "0" };
+  const body: Record<string, unknown> = { [resourceSingular]: inner };
   const { path } = buildQboPath(companyId, resource, id);
   await apiRequest("POST", path + "?operation=delete", headers, body);
   return { json: { status: "Deleted", id } };
