@@ -104,10 +104,9 @@ export function setS3ClientFactory(factory: S3ClientFactory | null): void {
   clientFactory = factory;
 }
 
-const DEFAULT_FACTORY: S3ClientFactory = async () => {
-  throw new Error(
-    "S3: no transport client configured. Wire a real S3 client via setS3ClientFactory.",
-  );
+const DEFAULT_FACTORY: S3ClientFactory = async (credentials) => {
+  const { defaultS3ClientFactory } = await import("./s3-transport");
+  return defaultS3ClientFactory(credentials);
 };
 
 function resolveValue(raw: unknown, itemJson: Record<string, unknown>): unknown {

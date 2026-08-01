@@ -26,6 +26,9 @@ export interface CredentialMeta {
   createdAt: string;
   shared?: boolean;
   projectId?: string;
+  secretProviderId?: string | null;
+  externalRef?: string | null;
+  external?: boolean;
 }
 
 const CATALOG: Record<string, CredentialTypeDef> = {
@@ -104,6 +107,42 @@ const CATALOG: Record<string, CredentialTypeDef> = {
       { key: "password", label: "Password", type: "password" },
       { key: "privateKey", label: "Private Key (OpenSSH)", type: "textarea" },
       { key: "passphrase", label: "Passphrase", type: "password" },
+    ],
+  },
+  sshPassword: {
+    name: "sshPassword",
+    displayName: "SSH Password",
+    fields: [
+      { key: "host", label: "Host", required: true },
+      { key: "port", label: "Port", type: "number", placeholder: "22" },
+      { key: "username", label: "Username", required: true },
+      { key: "password", label: "Password", type: "password", required: true },
+    ],
+  },
+  sshPrivateKey: {
+    name: "sshPrivateKey",
+    displayName: "SSH Private Key",
+    fields: [
+      { key: "host", label: "Host", required: true },
+      { key: "port", label: "Port", type: "number", placeholder: "22" },
+      { key: "username", label: "Username", required: true },
+      { key: "privateKey", label: "Private Key (OpenSSH)", type: "textarea", required: true },
+      { key: "passphrase", label: "Passphrase", type: "password" },
+    ],
+  },
+  s3: {
+    name: "s3",
+    displayName: "S3",
+    fields: [
+      { key: "accessKeyId", label: "Access Key ID", required: true },
+      { key: "secretAccessKey", label: "Secret Access Key", type: "password", required: true },
+      { key: "region", label: "Region", placeholder: "us-east-1" },
+      {
+        key: "endpoint",
+        label: "Endpoint",
+        placeholder: "https://s3.example.com (leave blank for AWS)",
+      },
+      { key: "forcePathStyle", label: "Force Path Style", placeholder: "true" },
     ],
   },
   smtp: {

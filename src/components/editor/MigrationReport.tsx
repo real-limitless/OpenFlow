@@ -9,17 +9,18 @@ import {
 } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useWorkflowStore } from "@/store/workflow-store";
-import { hasBuiltinExecutor } from "@/lib/engine/node-runtime";
+import { getExecutorUnavailability, hasBuiltinExecutor } from "@/lib/engine/node-runtime";
 import { getNodeType } from "@/lib/nodes/registry";
 import { cn } from "@/lib/utils";
 
-type RowStatus = "supported" | "partial" | "placeholder";
+type RowStatus = "supported" | "needs-setup" | "partial" | "placeholder";
 
 interface MigrationRow {
   name: string;
   type: string;
   status: RowStatus;
   displayName: string;
+  reason?: string;
 }
 
 /**
@@ -27,9 +28,15 @@ interface MigrationRow {
  * type. Definitions without inputs/outputs (e.g. sticky note) are canvas-only
  * and count as supported since they are never executed. A registered definition
  * with no executor is "partial"; an unknown type is a "placeholder".
+ *
+ * "needs-setup" is checked first and deliberately outranks a registered
+ * executor: those nodes resolve to a real function that throws on first use
+ * because no transport was wired in, so reporting them as supported would be a
+ * promise the build cannot keep.
  */
 function rowStatus(type: string): RowStatus {
   const desc = getNodeType(type);
+  if (getExecutorUnavailability(desc.name)) return "needs-setup";
   if (hasBuiltinExecutor(desc.name)) return "supported";
   if (desc.inputs.length === 0 && desc.outputs.length === 0) return "supported";
   return desc.placeholder ? "placeholder" : "partial";
@@ -43,6 +50,11 @@ const STATUS_META: Record<
     label: "Supported",
     icon: CheckCircle2,
     className: "bg-[var(--success)]/12 text-[var(--success)]",
+  },
+  "needs-setup": {
+    label: "Needs setup",
+    icon: TriangleAlert,
+    className: "bg-[var(--warning)]/12 text-[var(--warning)]",
   },
   partial: {
     label: "Definition only",
@@ -73,6 +85,7 @@ export function MigrationReportDialog({
           type: node.type,
           status: rowStatus(node.type),
           displayName: desc.displayName,
+          reason: getExecutorUnavailability(desc.name)?.reason,
         };
       }),
     [workflow],
@@ -153,7 +166,14 @@ export function MigrationReportDialog({
                 const meta = STATUS_META[row.status];
                 return (
                   <tr key={row.name} className="border-b border-border/60">
-                    <td className="py-2 pr-3">{row.name}</td>
+                    <td className="py-2 pr-3">
+                      {row.name}
+                      {row.reason && (
+                        <span className="mt-0.5 block text-[11px] font-normal text-muted-foreground">
+                          {row.reason}
+                        </span>
+                      )}
+                    </td>
                     <td className="py-2 pr-3 font-mono text-[11px] text-muted-foreground">
                       {row.type}
                     </td>

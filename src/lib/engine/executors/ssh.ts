@@ -28,10 +28,9 @@ export function setSshClientFactory(factory: SshClientFactory | null): void {
   clientFactory = factory;
 }
 
-const DEFAULT_FACTORY: SshClientFactory = async () => {
-  throw new Error(
-    "SSH: no transport client configured. Wire a real SSH client via setSshClientFactory.",
-  );
+const DEFAULT_FACTORY: SshClientFactory = async (credentials, options) => {
+  const { defaultSshClientFactory } = await import("./ssh-transport");
+  return defaultSshClientFactory(credentials, options);
 };
 
 function resolveValue(raw: unknown, itemJson: Record<string, unknown>): unknown {

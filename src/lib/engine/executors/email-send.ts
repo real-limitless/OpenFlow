@@ -39,10 +39,9 @@ export function setSmtpTransportFactory(factory: SmtpTransportFactory | null): v
   transportFactory = factory;
 }
 
-const DEFAULT_FACTORY: SmtpTransportFactory = async () => {
-  throw new Error(
-    "EmailSend: no SMTP transport configured. Wire a real transport via setSmtpTransportFactory.",
-  );
+const DEFAULT_FACTORY: SmtpTransportFactory = async (credentials, options) => {
+  const { defaultSmtpTransportFactory } = await import("./email-send-transport");
+  return defaultSmtpTransportFactory(credentials, options);
 };
 
 function resolveValue(raw: unknown, itemJson: Record<string, unknown>): unknown {
