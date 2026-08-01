@@ -50,3 +50,14 @@ openflow-factory-*/
 # Python
 __pycache__/
 *.py[cod]
+.venv/
+venv/
+
+# Scraped public workflow dumps (local only)
+.scraped/
+
+# n8n scrape TUI job state / proxy dumps
+scripts/scrape-n8n-workflows/.jobs/
+
+# Local DB backups
+backups/
