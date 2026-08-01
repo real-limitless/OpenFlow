@@ -221,7 +221,7 @@ async function doGetAll(
   const resourceSingular = resource.charAt(0).toUpperCase() + resource.slice(1);
   const queryResponse = res.QueryResponse as Record<string, unknown> ?? {};
   const entities = queryResponse[resourceSingular] as Array<Record<string, unknown>> ?? [];
-  return { json: entities };
+  return { json: { results: entities } };
 }
 
 async function doUpdate(

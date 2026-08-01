@@ -149,7 +149,8 @@ describe("batch-queue quickbooks — n8n-nodes-base.quickbooks", () => {
       if (!executor) throw new Error("no executor");
       const out = await executor(ctx, node);
       expect(out[0]).toHaveLength(1);
-      const items = out[0][0].json as Record<string, unknown>[];
+      const result = out[0][0].json as Record<string, unknown>;
+      const items = result.results as Record<string, unknown>[];
       expect(Array.isArray(items)).toBe(true);
       expect(items).toHaveLength(2);
       expect(items[0]).toMatchObject({ Id: "1", DisplayName: "Alice" });
