@@ -1,17 +1,6 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
-import {
-  ArrowRight,
-  Braces,
-  FileJson,
-  KeyRound,
-  Plus,
-  Sparkles,
-  Table2,
-  Trash2,
-  Upload,
-  Workflow as WorkflowIcon,
-} from "lucide-react";
+import { FileJson, Plus, Share2, Sparkles, Trash2, Upload } from "lucide-react";
 import { toast } from "sonner";
 import {
   getRepository,
@@ -29,20 +18,9 @@ import {
   fetchLocalCredentials,
 } from "@/lib/workflow/credentials-inventory";
 import { Button } from "@/components/ui/button";
-import { Link } from "@tanstack/react-router";
 import { ImportCredentialsDialog } from "@/components/credentials";
-import {
-  fetchProjects,
-  getSelectedProjectId,
-  setSelectedProjectId,
-  type ProjectSummary,
-} from "@/lib/projects/client";
-import {
-  fetchEnvironments,
-  getSelectedEnvironmentId,
-  setSelectedEnvironmentId,
-  type EnvironmentSummary,
-} from "@/lib/environments/client";
+import { ShareDialog } from "@/components/share/share-dialog";
+import { PageShell } from "@/components/layout/page-shell";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -51,16 +29,8 @@ export const Route = createFileRoute("/")({
       {
         name: "description",
         content:
-          "Import, edit and export workflow automation JSON in a modern React Flow canvas. Clean-room, self-hosted first, open source.",
+          "Import, edit and export workflow automation JSON in a modern React Flow canvas.",
       },
-      { property: "og:title", content: "OpenFlow — Open-source visual workflow editor" },
-      {
-        property: "og:description",
-        content:
-          "A clean-room visual workflow editor with high-fidelity workflow JSON import and export.",
-      },
-      { property: "og:type", content: "website" },
-      { name: "twitter:card", content: "summary_large_image" },
     ],
   }),
   component: WorkflowList,
@@ -70,48 +40,22 @@ function WorkflowList() {
   const [workflows, setWorkflows] = useState<IWorkflow[] | null>(null);
   const [migrateCount, setMigrateCount] = useState<number | null>(null);
   const [importDraft, setImportDraft] = useState<IWorkflow | null>(null);
-  const [projects, setProjects] = useState<ProjectSummary[]>([]);
-  const [projectId, setProjectId] = useState<string | null>(null);
-  const [environments, setEnvironments] = useState<EnvironmentSummary[]>([]);
-  const [environmentId, setEnvironmentId] = useState<string | null>(null);
+  const [shareWf, setShareWf] = useState<IWorkflow | null>(null);
   const navigate = useNavigate();
   const fileInput = useRef<HTMLInputElement>(null);
 
-  const refresh = () => void getRepository().list().then(setWorkflows);
-  useEffect(refresh, [projectId]);
+  const refresh = () =>
+    void getRepository()
+      .list()
+      .then(setWorkflows)
+      .catch(() => setWorkflows([]));
 
   useEffect(() => {
-    void fetchProjects().then((list) => {
-      setProjects(list);
-      const stored = getSelectedProjectId();
-      const next =
-        (stored && list.find((p) => p.id === stored)?.id) ||
-        list.find((p) => p.type === "personal")?.id ||
-        list[0]?.id ||
-        null;
-      if (next && next !== stored) setSelectedProjectId(next);
-      setProjectId(next);
-    });
+    refresh();
+    const onScope = () => refresh();
+    window.addEventListener("openflow:scope-change", onScope);
+    return () => window.removeEventListener("openflow:scope-change", onScope);
   }, []);
-
-  useEffect(() => {
-    if (!projectId) {
-      setEnvironments([]);
-      setEnvironmentId(null);
-      return;
-    }
-    void fetchEnvironments(projectId).then((list) => {
-      setEnvironments(list);
-      const stored = getSelectedEnvironmentId();
-      const next =
-        (stored && list.find((e) => e.id === stored)?.id) ||
-        list.find((e) => e.isDefault)?.id ||
-        list[0]?.id ||
-        null;
-      if (next !== stored) setSelectedEnvironmentId(next);
-      setEnvironmentId(next);
-    });
-  }, [projectId]);
 
   useEffect(() => {
     void (async () => {
@@ -119,7 +63,6 @@ function WorkflowList() {
       if (!apiUp) return;
       const n = await countLocalWorkflows();
       setMigrateCount(n > 0 ? n : null);
-      // Auto-migrate so execute/subflows see the same ids as the editor
       if (n > 0) {
         try {
           const migrated = await migrateLocalToApi();
@@ -172,69 +115,17 @@ function WorkflowList() {
   };
 
   return (
-    <main className="mx-auto min-h-screen w-full max-w-5xl px-6 py-14">
-      <div className="flex flex-wrap items-center gap-3 text-primary">
-        <div className="flex items-center gap-2">
-          <WorkflowIcon className="size-6" />
-          <span className="font-mono text-[15px] font-semibold tracking-tight text-foreground">
-            OpenFlow
-          </span>
-        </div>
-        {projects.length > 0 && (
-          <label className="flex items-center gap-2 text-sm text-muted-foreground">
-            <span className="sr-only">Project</span>
-            <select
-              className="h-9 rounded-md border border-input bg-background px-2 text-sm text-foreground"
-              value={projectId ?? ""}
-              onChange={(e) => {
-                const id = e.target.value || null;
-                setSelectedProjectId(id);
-                setProjectId(id);
-              }}
-            >
-              {projects.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.name}
-                  {p.type === "personal" ? " (personal)" : ""} · {p.role}
-                </option>
-              ))}
-            </select>
-          </label>
-        )}
-        {environments.length > 0 && (
-          <label className="flex items-center gap-2 text-sm text-muted-foreground">
-            <span className="sr-only">Environment</span>
-            <select
-              className="h-9 rounded-md border border-input bg-background px-2 text-sm text-foreground"
-              value={environmentId ?? ""}
-              onChange={(e) => {
-                const id = e.target.value || null;
-                setSelectedEnvironmentId(id);
-                setEnvironmentId(id);
-              }}
-            >
-              {environments.map((e) => (
-                <option key={e.id} value={e.id}>
-                  {e.name}
-                  {e.isDefault ? " ★" : ""}
-                </option>
-              ))}
-            </select>
-          </label>
-        )}
-      </div>
-
-      <h1 className="mt-8 max-w-2xl text-4xl font-semibold leading-[1.1] tracking-tight">
-        A clean-room workflow editor that speaks your existing workflow JSON.
+    <PageShell>
+      <h1 className="max-w-2xl text-3xl font-semibold leading-[1.15] tracking-tight">
+        Workflows
       </h1>
-      <p className="mt-4 max-w-2xl text-[15px] leading-relaxed text-muted-foreground">
-        Import a workflow export, rewire it on a React Flow canvas, edit parameters through
-        schema-generated forms, and export it back byte-for-byte compatible. Twelve core node types
-        are implemented; everything else round-trips as a preserved placeholder.
+      <p className="mt-2 max-w-2xl text-[14px] text-muted-foreground">
+        Import, edit, and run automation workflows. Use the header to switch project and
+        environment.
       </p>
 
-      <div className="mt-7 flex flex-wrap gap-2">
-        <Button onClick={() => create(EMPTY_WORKFLOW(newId("wf")))}>
+      <div className="mt-6 flex flex-wrap gap-2">
+        <Button onClick={() => void create(EMPTY_WORKFLOW(newId("wf")))}>
           <Plus className="mr-1 size-4" /> New workflow
         </Button>
         <input
@@ -260,26 +151,6 @@ function WorkflowList() {
         >
           <Sparkles className="mr-1 size-4" /> Start from example
         </Button>
-        <Button variant="outline" asChild>
-          <Link to="/credentials">
-            <KeyRound className="mr-1 size-4" /> Credentials
-          </Link>
-        </Button>
-        <Button variant="outline" asChild>
-          <Link to="/variables">
-            <Braces className="mr-1 size-4" /> Variables
-          </Link>
-        </Button>
-        <Button variant="outline" asChild>
-          <Link to="/data-tables">
-            <Table2 className="mr-1 size-4" /> Data tables
-          </Link>
-        </Button>
-        <Button variant="ghost" asChild>
-          <Link to="/docs/compatibility">
-            Compatibility <ArrowRight className="ml-1 size-4" />
-          </Link>
-        </Button>
       </div>
 
       <ImportCredentialsDialog
@@ -296,11 +167,22 @@ function WorkflowList() {
         }}
       />
 
+      {shareWf && (
+        <ShareDialog
+          open
+          onOpenChange={(o) => {
+            if (!o) setShareWf(null);
+          }}
+          resourceType="workflow"
+          resourceId={shareWf.id}
+          resourceName={shareWf.name}
+        />
+      )}
+
       {migrateCount !== null && migrateCount > 0 && (
         <div className="mt-5 flex flex-wrap items-center gap-3 rounded-lg border border-dashed border-primary/40 bg-primary/5 p-4">
           <p className="text-[13px] text-foreground">
-            {migrateCount} workflow{migrateCount > 1 ? "s" : ""} still only in this browser
-            (localStorage). Execution and sub-workflows use the database.
+            {migrateCount} workflow{migrateCount > 1 ? "s" : ""} still only in this browser.
           </p>
           <Button size="sm" variant="outline" onClick={() => void migrateFromLocalStorage()}>
             Sync to database
@@ -308,7 +190,7 @@ function WorkflowList() {
         </div>
       )}
 
-      <section className="mt-14">
+      <section className="mt-10">
         <h2 className="font-mono text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
           Your workflows
           <span className="ml-2 normal-case tracking-normal text-muted-foreground/80">
@@ -345,7 +227,6 @@ function WorkflowList() {
                     {nodeCount} nodes
                     {unsupported > 0 && ` · ${unsupported} unsupported`}
                     {wf.updatedAt && ` · updated ${new Date(wf.updatedAt).toLocaleString()}`}
-                    <span className="ml-1 opacity-70">· {wf.id}</span>
                   </p>
                 </Link>
                 {wf.active && (
@@ -353,6 +234,15 @@ function WorkflowList() {
                     active
                   </span>
                 )}
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  className="size-8"
+                  aria-label={`Share ${wf.name}`}
+                  onClick={() => setShareWf(wf)}
+                >
+                  <Share2 className="size-4" />
+                </Button>
                 <Button
                   size="icon"
                   variant="ghost"
@@ -371,6 +261,6 @@ function WorkflowList() {
           })}
         </div>
       </section>
-    </main>
+    </PageShell>
   );
 }

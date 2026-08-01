@@ -23,7 +23,7 @@ export const CHANNEL_LABELS: Record<string, string> = {
   ai_embedding: "Embedding",
   ai_languageModel: "Chat Model",
   ai_memory: "Memory",
-  ai_outputParser: "Output Parser",
+  ai_outputParser: "Structured Output",
   ai_retriever: "Retriever",
   ai_reranker: "Reranker",
   ai_textSplitter: "Text Splitter",
@@ -211,7 +211,7 @@ export function nodesAcceptingChannel(channel: string): INodeTypeDescription[] {
  * Expand static inputs for multi-index AI slots:
  * - ai_tool: one handle per existing connection index + one empty next slot
  * - ai_languageModel: second handle when needsFallback
- * - ai_outputParser: hidden when hasOutputParser is explicitly false
+ * - ai_outputParser: always shown (structured output port)
  */
 export function expandAiInputs(
   inputs: string[],
@@ -220,10 +220,8 @@ export function expandAiInputs(
 ): string[] {
   const result: string[] = [];
   const needsFallback = Boolean(parameters.needsFallback);
-  const hideParser = parameters.hasOutputParser === false;
 
   for (const channel of inputs) {
-    if (channel === "ai_outputParser" && hideParser) continue;
     if (channel === "ai_languageModel") {
       result.push(channel);
       if (needsFallback) result.push(channel);

@@ -18,6 +18,7 @@ import {
   listCredentialTypes,
   type CredentialMeta,
 } from "@/lib/credentials/types";
+import { apiFetch } from "@/lib/auth/client";
 
 interface CredentialDialogProps {
   open: boolean;
@@ -46,13 +47,22 @@ export function CredentialDialog({
   const [name, setName] = useState(defaultName || edit?.name || "");
   const [fields, setFields] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
+  const [providers, setProviders] = useState<Array<{ id: string; name: string; type: string }>>([]);
+  const [providerId, setProviderId] = useState<string>("");
+  const [externalRef, setExternalRef] = useState("");
 
   useEffect(() => {
     if (!open) return;
     setType(fixedType ?? edit?.type ?? "httpHeaderAuth");
     setName(defaultName || edit?.name || "");
     setFields({});
-  }, [open, fixedType, defaultName, edit?.id, edit?.type, edit?.name]);
+    setProviderId(edit?.secretProviderId ?? "");
+    setExternalRef(edit?.externalRef ?? "");
+    void apiFetch("/api/v1/secret-providers")
+      .then(async (r) => (r.ok ? ((await r.json()) as Array<{ id: string; name: string; type: string }>) : []))
+      .then(setProviders)
+      .catch(() => setProviders([]));
+  }, [open, fixedType, defaultName, edit?.id, edit?.type, edit?.name, edit?.secretProviderId, edit?.externalRef]);
 
   const def = getCredentialTypeDef(type);
   const types = listCredentialTypes();
@@ -79,12 +89,20 @@ export function CredentialDialog({
 
     setSaving(true);
     try {
+      const providerPayload = {
+        secretProviderId: providerId || null,
+        externalRef: externalRef.trim() || null,
+      };
       if (edit) {
-        const body: { name: string; data?: Record<string, unknown> } = { name: name.trim() };
+        const body: {
+          name: string;
+          data?: Record<string, unknown>;
+          secretProviderId?: string | null;
+          externalRef?: string | null;
+        } = { name: name.trim(), ...providerPayload };
         if (hasSecrets) body.data = data;
-        const res = await fetch(`/api/v1/credentials/${edit.id}`, {
+        const res = await apiFetch(`/api/v1/credentials/${edit.id}`, {
           method: "PUT",
-          headers: { "Content-Type": "application/json" },
           body: JSON.stringify(body),
         });
         if (!res.ok) throw new Error("Failed to update credential");
@@ -93,10 +111,9 @@ export function CredentialDialog({
         onCreated?.(credential);
         toast.success("Credential updated");
       } else {
-        const res = await fetch("/api/v1/credentials", {
+        const res = await apiFetch("/api/v1/credentials", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ name: name.trim(), type, data }),
+          body: JSON.stringify({ name: name.trim(), type, data, ...providerPayload }),
         });
         if (!res.ok) {
           const text = await res.text().catch(() => "");
@@ -170,6 +187,35 @@ export function CredentialDialog({
             <p className="text-[11px] text-muted-foreground">
               Leave secret fields blank to keep existing values. Fill any field to replace secrets.
             </p>
+          )}
+
+          {providers.length > 0 && (
+            <div className="space-y-2 rounded-md border border-border p-3">
+              <Label>Secret store</Label>
+              <select
+                className="flex h-9 w-full rounded-md border border-input bg-background px-3 text-[13px]"
+                value={providerId}
+                onChange={(e) => setProviderId(e.target.value)}
+              >
+                <option value="">Local (AES on server)</option>
+                {providers.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.name} ({p.type})
+                  </option>
+                ))}
+              </select>
+              {providerId && (
+                <div className="space-y-1">
+                  <Label className="text-[12px]">External path / ARN</Label>
+                  <Input
+                    className="font-mono text-[12px]"
+                    placeholder="openflow/credentials/my-api"
+                    value={externalRef}
+                    onChange={(e) => setExternalRef(e.target.value)}
+                  />
+                </div>
+              )}
+            </div>
           )}
 
           {def.fields.map((f) => (

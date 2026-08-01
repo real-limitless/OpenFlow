@@ -63,12 +63,8 @@ describe("channels", () => {
       "ai_outputParser",
     ]);
 
-    expect(expandAiInputs(base, { hasOutputParser: false }, {})).toEqual([
-      "main",
-      "ai_languageModel",
-      "ai_tool",
-      "ai_memory",
-    ]);
+    // Structured Output port is always visible (hasOutputParser only gates runtime use)
+    expect(expandAiInputs(base, { hasOutputParser: false }, {})).toEqual(base);
   });
 
   it("countIncomingByChannel tracks max index+1", () => {

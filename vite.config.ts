@@ -7,6 +7,12 @@
 import { defineConfig } from "@lovable.dev/vite-tanstack-config";
 
 export default defineConfig({
+  nitro: {
+    // We run on Node (see Dockerfile), not Workers. Nitro's default cloudflare-module
+    // preset can't bundle the node-only drivers our executors pull in (mongodb, mssql,
+    // mysql2, ssh2, isolated-vm). NITRO_PRESET still overrides this for other targets.
+    preset: "node-server",
+  },
   tanstackStart: {
     // Redirect TanStack Start's bundled server entry to src/server.ts (our SSR error wrapper).
     // nitro/vite builds from this

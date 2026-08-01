@@ -262,10 +262,28 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
     }),
 
   connect: (source, sourceHandle, target, targetHandle) =>
-    get().commit((wf) => ({
-      ...wf,
-      connections: addConnection(wf.connections, source, sourceHandle, target, targetHandle),
-    })),
+    get().commit((wf) => {
+      const connections = addConnection(
+        wf.connections,
+        source,
+        sourceHandle,
+        target,
+        targetHandle,
+      );
+      const handle = targetHandle ?? "main-0";
+      const dash = handle.lastIndexOf("-");
+      const channel = dash === -1 ? handle : handle.slice(0, dash);
+      if (channel !== "ai_outputParser") return { ...wf, connections };
+      return {
+        ...wf,
+        connections,
+        nodes: wf.nodes.map((n) =>
+          n.name === target && n.parameters?.hasOutputParser !== true
+            ? { ...n, parameters: { ...n.parameters, hasOutputParser: true } }
+            : n,
+        ),
+      };
+    }),
 
   disconnect: (edgeId) =>
     get().commit((wf) => ({ ...wf, connections: removeConnectionById(wf.connections, edgeId) })),

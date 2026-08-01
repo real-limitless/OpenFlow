@@ -1,10 +1,12 @@
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { ArrowLeft, Plus, Search, Table2, Trash2 } from "lucide-react";
+import { Plus, Search, Table2, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { CreateTableDialog } from "@/components/data-tables";
+import { PageShell } from "@/components/layout/page-shell";
+import { apiFetch } from "@/lib/auth/client";
 import type { DataTableMeta } from "@/lib/data-tables/types";
 
 export const Route = createFileRoute("/data-tables")({
@@ -28,7 +30,7 @@ function DataTablesPage() {
 
   const refresh = useCallback((q?: string) => {
     const qs = q?.trim() ? `?q=${encodeURIComponent(q.trim())}` : "";
-    void fetch(`/api/v1/data-tables${qs}`)
+    void apiFetch(`/api/v1/data-tables${qs}`)
       .then(async (res) => {
         if (!res.ok) throw new Error("Failed to load");
         return res.json() as Promise<DataTableMeta[]>;
@@ -45,11 +47,17 @@ function DataTablesPage() {
     return () => clearTimeout(t);
   }, [query, refresh]);
 
+  useEffect(() => {
+    const onScope = () => refresh(query);
+    window.addEventListener("openflow:scope-change", onScope);
+    return () => window.removeEventListener("openflow:scope-change", onScope);
+  }, [query, refresh]);
+
   const empty = useMemo(() => list !== null && list.length === 0, [list]);
 
   const remove = async (t: DataTableMeta) => {
     if (!confirm(`Delete table “${t.name}” and all of its rows?`)) return;
-    const res = await fetch(`/api/v1/data-tables/${t.id}`, { method: "DELETE" });
+    const res = await apiFetch(`/api/v1/data-tables/${t.id}`, { method: "DELETE" });
     if (!res.ok) {
       toast.error("Delete failed");
       return;
@@ -59,15 +67,8 @@ function DataTablesPage() {
   };
 
   return (
-    <main className="mx-auto min-h-screen w-full max-w-3xl px-6 py-14">
-      <Link
-        to="/"
-        className="inline-flex items-center gap-1.5 text-[13px] text-muted-foreground hover:text-foreground"
-      >
-        <ArrowLeft className="size-4" /> Back to workflows
-      </Link>
-
-      <div className="mt-8 flex flex-wrap items-end justify-between gap-3">
+    <PageShell maxWidth="max-w-3xl">
+      <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <div className="flex items-center gap-2 text-primary">
             <Table2 className="size-5" />
@@ -151,6 +152,6 @@ function DataTablesPage() {
           navigate({ to: "/data-tables/$id", params: { id: table.id } });
         }}
       />
-    </main>
+    </PageShell>
   );
 }

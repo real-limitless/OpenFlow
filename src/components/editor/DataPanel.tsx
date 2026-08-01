@@ -69,7 +69,7 @@ export function DataPanel({ runData }: { runData?: ExecutionRunData | null }) {
         className="flex h-10 shrink-0 items-center gap-2 px-3 text-left text-[12px] text-muted-foreground hover:text-foreground"
       >
         <Database className="size-4" />
-        <span className="font-mono uppercase tracking-wider">Data</span>
+        <span className="font-mono uppercase tracking-wider">Execution data</span>
         {selected && <span className="text-foreground">· {selected}</span>}
         {hasRunData && (
           <Badge variant="secondary" className="text-[10px]">

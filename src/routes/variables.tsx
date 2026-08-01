@@ -1,23 +1,13 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import { useCallback, useEffect, useState } from "react";
-import { ArrowLeft, Braces, Plus, Trash2 } from "lucide-react";
+import { Braces, Pencil, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  fetchProjects,
-  getSelectedProjectId,
-  projectHeaders,
-  setSelectedProjectId,
-  type ProjectSummary,
-} from "@/lib/projects/client";
-import {
-  fetchEnvironments,
-  getSelectedEnvironmentId,
-  setSelectedEnvironmentId,
-  type EnvironmentSummary,
-} from "@/lib/environments/client";
+import { PageShell } from "@/components/layout/page-shell";
+import { apiFetch } from "@/lib/auth/client";
+import { getSelectedProjectId } from "@/lib/projects/client";
 
 export const Route = createFileRoute("/variables")({
   head: () => ({
@@ -36,32 +26,23 @@ type VariableRow = {
   id: string;
   key: string;
   value: unknown;
-  scope: string;
-  projectId: string | null;
-  environmentId?: string | null;
   secret: boolean;
-  createdAt: string;
-  updatedAt: string;
+  environmentId?: string | null;
 };
 
 function VariablesPage() {
   const [list, setList] = useState<VariableRow[] | null>(null);
-  const [projects, setProjects] = useState<ProjectSummary[]>([]);
-  const [projectId, setProjectId] = useState<string | null>(getSelectedProjectId());
-  const [environments, setEnvironments] = useState<EnvironmentSummary[]>([]);
-  const [environmentId, setEnvironmentId] = useState<string | null>(getSelectedEnvironmentId());
   const [layer, setLayer] = useState<"base" | "env">("base");
   const [key, setKey] = useState("");
   const [value, setValue] = useState("");
   const [secret, setSecret] = useState(false);
+  const [editId, setEditId] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
   const refresh = useCallback(async () => {
     try {
       const q = new URLSearchParams({ scope: "project", layer });
-      const res = await fetch(`/api/v1/variables?${q}`, {
-        headers: projectHeaders(),
-      });
+      const res = await apiFetch(`/api/v1/variables?${q}`);
       if (!res.ok) throw new Error("load failed");
       setList((await res.json()) as VariableRow[]);
     } catch {
@@ -71,89 +52,92 @@ function VariablesPage() {
   }, [layer]);
 
   useEffect(() => {
-    void fetchProjects().then((p) => {
-      setProjects(p);
-      const stored = getSelectedProjectId();
-      const next =
-        (stored && p.find((x) => x.id === stored)?.id) ||
-        p.find((x) => x.type === "personal")?.id ||
-        p[0]?.id ||
-        null;
-      setProjectId(next);
-    });
-  }, []);
-
-  useEffect(() => {
-    if (!projectId) return;
-    void fetchEnvironments(projectId).then((list) => {
-      setEnvironments(list);
-      const stored = getSelectedEnvironmentId();
-      const next =
-        (stored && list.find((e) => e.id === stored)?.id) ||
-        list.find((e) => e.isDefault)?.id ||
-        list[0]?.id ||
-        null;
-      setSelectedEnvironmentId(next);
-      setEnvironmentId(next);
-    });
-  }, [projectId]);
-
-  useEffect(() => {
     void refresh();
-  }, [refresh, projectId, environmentId, layer]);
+    const onScope = () => void refresh();
+    window.addEventListener("openflow:scope-change", onScope);
+    return () => window.removeEventListener("openflow:scope-change", onScope);
+  }, [refresh]);
 
-  const create = async () => {
+  const parseValue = (raw: string): unknown => {
+    try {
+      return raw.trim() === "" ? "" : JSON.parse(raw);
+    } catch {
+      return raw;
+    }
+  };
+
+  const save = async () => {
     const k = key.trim();
     if (!k) {
       toast.error("Key required");
       return;
     }
-    let parsed: unknown = value;
-    try {
-      parsed = value.trim() === "" ? "" : JSON.parse(value);
-    } catch {
-      parsed = value;
-    }
     setBusy(true);
     try {
-      const res = await fetch("/api/v1/variables", {
-        method: "POST",
-        headers: projectHeaders({ "Content-Type": "application/json" }),
-        body: JSON.stringify({
-          key: k,
-          value: parsed,
-          scope: "project",
-          projectId: projectId ?? undefined,
-          environmentId: layer === "env" ? environmentId : null,
-          secret,
-        }),
-      });
-      if (!res.ok) {
-        const body = (await res.json().catch(() => ({}))) as { error?: string };
-        toast.error(body.error ?? "Create failed");
-        return;
+      if (editId) {
+        const res = await apiFetch(`/api/v1/variables/${editId}`, {
+          method: "PUT",
+          body: JSON.stringify({
+            key: k,
+            value: parseValue(value),
+            secret,
+          }),
+        });
+        if (!res.ok) {
+          const body = (await res.json().catch(() => ({}))) as { error?: string };
+          toast.error(body.error ?? "Update failed");
+          return;
+        }
+        toast.success("Updated");
+      } else {
+        const res = await apiFetch("/api/v1/variables", {
+          method: "POST",
+          body: JSON.stringify({
+            key: k,
+            value: parseValue(value),
+            scope: "project",
+            projectId: getSelectedProjectId() ?? undefined,
+            environmentId: layer === "env" ? undefined : null,
+            secret,
+          }),
+        });
+        if (!res.ok) {
+          const body = (await res.json().catch(() => ({}))) as { error?: string };
+          toast.error(body.error ?? "Create failed");
+          return;
+        }
+        toast.success("Variable created");
       }
-      toast.success("Variable created");
       setKey("");
       setValue("");
       setSecret(false);
+      setEditId(null);
       await refresh();
     } finally {
       setBusy(false);
     }
   };
 
+  const startEdit = (row: VariableRow) => {
+    setEditId(row.id);
+    setKey(row.key);
+    setValue(row.secret ? "" : typeof row.value === "string" ? row.value : JSON.stringify(row.value));
+    setSecret(row.secret);
+  };
+
   const remove = async (row: VariableRow) => {
-    if (!confirm(`Delete $${row.key}?`)) return;
-    const res = await fetch(`/api/v1/variables/${row.id}`, {
-      method: "DELETE",
-      headers: projectHeaders(),
-    });
+    if (!confirm(`Delete $vars.${row.key}?`)) return;
+    const res = await apiFetch(`/api/v1/variables/${row.id}`, { method: "DELETE" });
     if (!res.ok) {
       toast.error("Delete failed");
       return;
     }
     toast.success("Deleted");
+    if (editId === row.id) {
+      setEditId(null);
+      setKey("");
+      setValue("");
+    }
     await refresh();
   };
 
@@ -167,74 +151,31 @@ function VariablesPage() {
   };
 
   return (
-    <main className="mx-auto min-h-screen w-full max-w-3xl px-6 py-14">
-      <Link
-        to="/"
-        className="inline-flex items-center gap-1.5 text-[13px] text-muted-foreground hover:text-foreground"
-      >
-        <ArrowLeft className="size-4" /> Back to workflows
-      </Link>
-
-      <div className="mt-8 flex flex-wrap items-end justify-between gap-3">
+    <PageShell maxWidth="max-w-3xl">
+      <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <div className="flex items-center gap-2 text-primary">
             <Braces className="size-5" />
             <h1 className="text-2xl font-semibold tracking-tight text-foreground">Variables</h1>
           </div>
-          <p className="mt-2 max-w-xl text-[14px] text-muted-foreground">
-            Project variables are available in expressions as{" "}
+          <p className="mt-2 max-w-xl text-[14px] text-[14px] text-muted-foreground">
+            Available in expressions as{" "}
             <code className="rounded bg-muted px-1 py-0.5 text-[12px]">{"{{ $vars.key }}"}</code>.
-            Secret values are encrypted and never shown after save.
+            Scope follows the project/environment in the header.
           </p>
         </div>
-        <div className="flex flex-wrap gap-2">
-          {projects.length > 0 && (
-            <select
-              className="h-9 rounded-md border border-input bg-background px-2 text-sm"
-              value={projectId ?? ""}
-              onChange={(e) => {
-                const id = e.target.value || null;
-                setProjectId(id);
-                setSelectedProjectId(id);
-              }}
-            >
-              {projects.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.name}
-                </option>
-              ))}
-            </select>
-          )}
-          {environments.length > 0 && (
-            <select
-              className="h-9 rounded-md border border-input bg-background px-2 text-sm"
-              value={environmentId ?? ""}
-              onChange={(e) => {
-                const id = e.target.value || null;
-                setEnvironmentId(id);
-                setSelectedEnvironmentId(id);
-              }}
-            >
-              {environments.map((e) => (
-                <option key={e.id} value={e.id}>
-                  {e.name}
-                </option>
-              ))}
-            </select>
-          )}
-          <select
-            className="h-9 rounded-md border border-input bg-background px-2 text-sm"
-            value={layer}
-            onChange={(e) => setLayer(e.target.value as "base" | "env")}
-          >
-            <option value="base">Base (all envs)</option>
-            <option value="env">Env override</option>
-          </select>
-        </div>
+        <select
+          className="h-9 rounded-md border border-input bg-background px-2 text-sm"
+          value={layer}
+          onChange={(e) => setLayer(e.target.value as "base" | "env")}
+        >
+          <option value="base">Base (all envs)</option>
+          <option value="env">Env override</option>
+        </select>
       </div>
 
       <section className="mt-8 rounded-lg border border-border p-4">
-        <h2 className="text-[13px] font-medium">Add variable</h2>
+        <h2 className="text-[13px] font-medium">{editId ? "Edit variable" : "Add variable"}</h2>
         <div className="mt-3 grid gap-3 sm:grid-cols-2">
           <div className="space-y-1.5">
             <Label htmlFor="var-key">Key</Label>
@@ -258,16 +199,27 @@ function VariablesPage() {
           </div>
         </div>
         <label className="mt-3 flex items-center gap-2 text-[13px] text-muted-foreground">
-          <input
-            type="checkbox"
-            checked={secret}
-            onChange={(e) => setSecret(e.target.checked)}
-          />
+          <input type="checkbox" checked={secret} onChange={(e) => setSecret(e.target.checked)} />
           Secret (encrypt at rest, redact in UI)
         </label>
-        <Button className="mt-3" onClick={() => void create()} disabled={busy}>
-          <Plus className="mr-1 size-4" /> Add
-        </Button>
+        <div className="mt-3 flex gap-2">
+          <Button onClick={() => void save()} disabled={busy}>
+            <Plus className="mr-1 size-4" /> {editId ? "Update" : "Add"}
+          </Button>
+          {editId && (
+            <Button
+              variant="outline"
+              onClick={() => {
+                setEditId(null);
+                setKey("");
+                setValue("");
+                setSecret(false);
+              }}
+            >
+              Cancel
+            </Button>
+          )}
+        </div>
       </section>
 
       <section className="mt-8">
@@ -275,7 +227,7 @@ function VariablesPage() {
           <p className="text-[13px] text-muted-foreground">Loading…</p>
         ) : list.length === 0 ? (
           <div className="rounded-lg border border-dashed border-border p-10 text-center text-[14px] text-muted-foreground">
-            No project variables yet.
+            No variables in this layer yet.
           </div>
         ) : (
           <ul className="divide-y divide-border rounded-lg border border-border">
@@ -285,7 +237,7 @@ function VariablesPage() {
                   <p className="font-mono text-[14px] font-medium">
                     $vars.{row.key}
                     {row.secret ? (
-                      <span className="ml-2 rounded bg-muted px-1.5 py-0.5 text-[10px] font-sans font-normal text-muted-foreground">
+                      <span className="ml-2 rounded bg-muted px-1.5 py-0.5 font-sans text-[10px] font-normal text-muted-foreground">
                         secret
                       </span>
                     ) : null}
@@ -294,12 +246,14 @@ function VariablesPage() {
                     {displayValue(row.value)}
                   </p>
                 </div>
+                <Button size="icon" variant="ghost" className="size-8" onClick={() => startEdit(row)}>
+                  <Pencil className="size-3.5" />
+                </Button>
                 <Button
                   size="icon"
                   variant="ghost"
                   className="size-8 text-destructive hover:text-destructive"
                   onClick={() => void remove(row)}
-                  aria-label="Delete"
                 >
                   <Trash2 className="size-3.5" />
                 </Button>
@@ -308,6 +262,6 @@ function VariablesPage() {
           </ul>
         )}
       </section>
-    </main>
+    </PageShell>
   );
 }

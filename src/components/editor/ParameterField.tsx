@@ -1,5 +1,15 @@
 import { Fragment, useEffect, useState } from "react";
-import { ArrowDown, ArrowUp, ChevronDown, ChevronRight, Plus, Trash2 } from "lucide-react";
+import {
+  ArrowDown,
+  ArrowUp,
+  ChevronDown,
+  ChevronRight,
+  Loader2,
+  Plus,
+  Sparkles,
+  Trash2,
+} from "lucide-react";
+import { toast } from "sonner";
 import type {
   INodeProperties,
   INodePropertyCollectionEntry,
@@ -10,6 +20,7 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Textarea } from "@/components/ui/textarea";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import {
   Select,
@@ -43,6 +54,8 @@ interface FieldProps {
   value: unknown;
   values: Values;
   onChange: (value: unknown) => void;
+  /** Bulk update for multi-field actions (e.g. AI Transform generate code). */
+  onValuesChange?: (patch: Values) => void;
   context: ExpressionContext;
 }
 
@@ -50,7 +63,7 @@ function isOptionList(options: INodeProperties["options"]): options is INodeProp
   return Array.isArray(options) && options.length > 0 && "value" in options[0];
 }
 
-export function ParameterField({ prop, value, onChange, context }: FieldProps) {
+export function ParameterField({ prop, value, values, onChange, onValuesChange, context }: FieldProps) {
   switch (prop.type) {
     case "notice":
       return (
@@ -331,6 +344,9 @@ export function ParameterField({ prop, value, onChange, context }: FieldProps) {
     case "string":
     default: {
       const rows = prop.typeOptions?.rows ?? 1;
+      const isAiTransformInstructions =
+        prop.name === "instructions" && "AI_TRANSFORM_JS_CODE" in values;
+
       if (prop.typeOptions?.editor === "code") {
         return (
           <FieldShell prop={prop}>
@@ -345,6 +361,32 @@ export function ParameterField({ prop, value, onChange, context }: FieldProps) {
         );
       }
       if (prop.noDataExpression) {
+        // AI Transform: multiline instructions + Generate code
+        if (isAiTransformInstructions) {
+          return (
+            <AiTransformInstructionsField
+              prop={prop}
+              value={typeof value === "string" ? value : ""}
+              onChange={onChange}
+              onValuesChange={onValuesChange}
+              context={context}
+              rows={Math.max(rows, 4)}
+            />
+          );
+        }
+        if (rows > 1) {
+          return (
+            <FieldShell prop={prop}>
+              <ExpressionField
+                value={typeof value === "string" ? value : ""}
+                onChange={onChange}
+                context={context}
+                rows={rows}
+                alwaysCode={false}
+              />
+            </FieldShell>
+          );
+        }
         return (
           <FieldShell prop={prop}>
             <Input
@@ -369,6 +411,95 @@ export function ParameterField({ prop, value, onChange, context }: FieldProps) {
       );
     }
   }
+}
+
+function AiTransformInstructionsField({
+  prop,
+  value,
+  onChange,
+  onValuesChange,
+  context,
+  rows,
+}: {
+  prop: INodeProperties;
+  value: string;
+  onChange: (value: unknown) => void;
+  onValuesChange?: (patch: Values) => void;
+  context: ExpressionContext;
+  rows: number;
+}) {
+  const [busy, setBusy] = useState(false);
+
+  const generate = async () => {
+    const instructions = value.trim();
+    if (!instructions) {
+      toast.error("Enter instructions first");
+      return;
+    }
+    setBusy(true);
+    try {
+      const sampleItems = (context.allItems ?? [{ json: context.json ?? {} }]).map((it) => ({
+        json: it.json ?? {},
+      }));
+      const res = await fetch("/api/v1/ai/generate-transform-code", {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ instructions, sampleItems }),
+      });
+      const data = (await res.json().catch(() => ({}))) as {
+        code?: string;
+        codeGeneratedForPrompt?: string;
+        error?: string;
+      };
+      if (!res.ok || !data.code) {
+        throw new Error(data.error || `Generate failed (${res.status})`);
+      }
+      if (onValuesChange) {
+        onValuesChange({
+          instructions,
+          AI_TRANSFORM_JS_CODE: data.code,
+          codeGeneratedForPrompt: data.codeGeneratedForPrompt ?? instructions,
+        });
+      } else {
+        onChange(instructions);
+      }
+      toast.success("Code generated");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Code generation failed");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <FieldShell prop={prop}>
+      <div className="space-y-2">
+        <Textarea
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          rows={rows}
+          maxLength={500}
+          placeholder={prop.placeholder ?? "Describe the transform in plain English…"}
+          className="min-h-[80px] text-[13px]"
+        />
+        <Button
+          type="button"
+          size="sm"
+          className="h-8 text-[12px]"
+          disabled={busy || !value.trim()}
+          onClick={() => void generate()}
+        >
+          {busy ? (
+            <Loader2 className="mr-1.5 size-3.5 animate-spin" />
+          ) : (
+            <Sparkles className="mr-1.5 size-3.5" />
+          )}
+          {busy ? "Generating…" : "Generate code"}
+        </Button>
+      </div>
+    </FieldShell>
+  );
 }
 
 function FixedCollectionRow({

@@ -1,9 +1,19 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Loader2, Send, Square, Trash2 } from "lucide-react";
+import {
+  History,
+  Loader2,
+  Pencil,
+  RefreshCw,
+  Send,
+  Square,
+  Trash2,
+} from "lucide-react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Textarea } from "@/components/ui/textarea";
 import { useWorkflowStore } from "@/store/workflow-store";
+import type { IWorkflow } from "@/lib/workflow/types";
 import { AssistantMarkdown } from "./AssistantMarkdown";
 import { AssistantToolGroup, type ToolStep } from "./AssistantToolGroup";
 
@@ -66,7 +76,6 @@ function hydrateItems(
 function patchToolGroup(items: ChatItem[], updater: (tools: ToolStep[]) => ToolStep[]): ChatItem[] {
   const next = [...items];
   const last = next[next.length - 1];
-  // Only append to the trailing group so a new turn after assistant text gets a fresh accordion.
   if (last?.kind === "tool_group") {
     next[next.length - 1] = { ...last, tools: updater(last.tools) };
     return next;
@@ -81,10 +90,13 @@ export function AssistantPanel({ workflowId }: { workflowId: string }) {
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
   const [health, setHealth] = useState<Health | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editDraft, setEditDraft] = useState("");
   const abortRef = useRef<AbortController | null>(null);
   const bottomRef = useRef<HTMLDivElement | null>(null);
   const persist = useWorkflowStore((s) => s.persist);
   const dirty = useWorkflowStore((s) => s.dirty);
+  const applyRemote = useWorkflowStore((s) => s.applyRemote);
 
   useEffect(() => {
     void fetch("/api/v1/assistant/health")
@@ -93,21 +105,20 @@ export function AssistantPanel({ workflowId }: { workflowId: string }) {
       .catch(() => setHealth({ enabled: false, backend: "builtin", llmConfigured: false }));
   }, []);
 
-  useEffect(() => {
-    void fetch(`/api/v1/workflows/${workflowId}/assistant/session`)
+  const reloadSession = useCallback(async () => {
+    const data = await fetch(`/api/v1/workflows/${workflowId}/assistant/session`)
       .then((r) => (r.ok ? r.json() : null))
-      .then(
-        (
-          data: {
-            messages?: Array<{ id: string; role: string; content: string; toolName?: string }>;
-          } | null,
-        ) => {
-          if (!data?.messages?.length) return;
-          setItems(hydrateItems(data.messages));
-        },
-      )
-      .catch(() => undefined);
+      .catch(() => null);
+    if (data?.messages?.length) {
+      setItems(hydrateItems(data.messages));
+    } else {
+      setItems([]);
+    }
   }, [workflowId]);
+
+  useEffect(() => {
+    void reloadSession();
+  }, [reloadSession]);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -123,13 +134,48 @@ export function AssistantPanel({ workflowId }: { workflowId: string }) {
     stop();
     await fetch(`/api/v1/workflows/${workflowId}/assistant/session`, { method: "DELETE" });
     setItems([]);
+    setEditingId(null);
   }, [stop, workflowId]);
+
+  const rollbackTo = useCallback(
+    async (messageId: string, opts?: { keepMessage?: boolean }) => {
+      stop();
+      const res = await fetch(`/api/v1/workflows/${workflowId}/assistant/rollback`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          messageId,
+          keepMessage: opts?.keepMessage !== false,
+        }),
+      });
+      if (!res.ok) {
+        const err = await res.text();
+        throw new Error(err || `Rollback failed (${res.status})`);
+      }
+      const data = (await res.json()) as {
+        messages?: Array<{ id: string; role: string; content: string; toolName?: string }>;
+        workflow?: IWorkflow | null;
+        restored?: boolean;
+      };
+      if (data.workflow) {
+        applyRemote(data.workflow);
+      }
+      if (data.messages) {
+        setItems(hydrateItems(data.messages));
+      } else {
+        await reloadSession();
+      }
+      return data;
+    },
+    [workflowId, stop, applyRemote, reloadSession],
+  );
 
   const send = useCallback(
     async (text: string) => {
       const message = text.trim();
       if (!message || busy) return;
       setInput("");
+      setEditingId(null);
       const userId = `u_${Date.now()}`;
       setItems((prev) => [...prev, { kind: "user", id: userId, content: message }]);
       setBusy(true);
@@ -275,6 +321,8 @@ export function AssistantPanel({ workflowId }: { workflowId: string }) {
             }
           }
         }
+        // Align client ids with server session after stream
+        await reloadSession();
       } catch (e) {
         if ((e as Error).name !== "AbortError") {
           setItems((prev) => [
@@ -291,7 +339,34 @@ export function AssistantPanel({ workflowId }: { workflowId: string }) {
         abortRef.current = null;
       }
     },
-    [busy, workflowId, dirty, persist],
+    [busy, workflowId, dirty, persist, reloadSession],
+  );
+
+  const resend = useCallback(
+    async (messageId: string, content: string) => {
+      if (busy) return;
+      try {
+        // Drop this message and everything after; restore graph to pre-turn snapshot
+        await rollbackTo(messageId, { keepMessage: false });
+        await send(content);
+      } catch (e) {
+        toast.error(e instanceof Error ? e.message : "Resend failed");
+      }
+    },
+    [busy, rollbackTo, send],
+  );
+
+  const restoreHere = useCallback(
+    async (messageId: string) => {
+      if (busy) return;
+      try {
+        await rollbackTo(messageId, { keepMessage: true });
+        toast.success("Restored workflow and chat to this point");
+      } catch (e) {
+        toast.error(e instanceof Error ? e.message : "Restore failed");
+      }
+    },
+    [busy, rollbackTo],
   );
 
   const hasRunningTools = items.some(
@@ -322,7 +397,7 @@ export function AssistantPanel({ workflowId }: { workflowId: string }) {
             variant="ghost"
             className="size-7"
             onClick={() => void clear()}
-            title="Clear"
+            title="Clear chat"
           >
             <Trash2 className="size-3.5" />
           </Button>
@@ -335,7 +410,7 @@ export function AssistantPanel({ workflowId }: { workflowId: string }) {
             <div className="space-y-2">
               <p className="text-[12px] leading-relaxed text-muted-foreground">
                 Build and run this workflow with natural language. The assistant uses OpenFlow tools
-                to edit the canvas.
+                to edit the canvas. Use Restore on a message to undo later agent changes.
               </p>
               {SUGGESTIONS.map((s) => (
                 <button
@@ -352,12 +427,85 @@ export function AssistantPanel({ workflowId }: { workflowId: string }) {
           )}
           {items.map((it) => {
             if (it.kind === "user") {
+              const isEditing = editingId === it.id;
               return (
-                <div
-                  key={it.id}
-                  className="ml-6 rounded-lg bg-primary px-2.5 py-2 text-[12px] text-primary-foreground"
-                >
-                  {it.content}
+                <div key={it.id} className="group ml-4 space-y-1">
+                  {isEditing ? (
+                    <div className="space-y-1.5 rounded-lg border border-border bg-background p-2">
+                      <Textarea
+                        value={editDraft}
+                        onChange={(e) => setEditDraft(e.target.value)}
+                        className="min-h-[56px] text-[12px]"
+                        autoFocus
+                      />
+                      <div className="flex justify-end gap-1">
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="h-7 text-[11px]"
+                          onClick={() => setEditingId(null)}
+                        >
+                          Cancel
+                        </Button>
+                        <Button
+                          size="sm"
+                          className="h-7 text-[11px]"
+                          disabled={busy || !editDraft.trim()}
+                          onClick={() => {
+                            const text = editDraft.trim();
+                            setEditingId(null);
+                            void resend(it.id, text);
+                          }}
+                        >
+                          Save &amp; resend
+                        </Button>
+                      </div>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="rounded-lg bg-primary px-2.5 py-2 text-[12px] text-primary-foreground">
+                        {it.content}
+                      </div>
+                      <div className="flex flex-wrap justify-end gap-0.5 opacity-70 transition-opacity group-hover:opacity-100">
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="h-6 gap-1 px-1.5 text-[10px] text-muted-foreground"
+                          disabled={busy}
+                          title="Edit and resend from here"
+                          onClick={() => {
+                            setEditingId(it.id);
+                            setEditDraft(it.content);
+                          }}
+                        >
+                          <Pencil className="size-3" />
+                          Edit
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="h-6 gap-1 px-1.5 text-[10px] text-muted-foreground"
+                          disabled={busy}
+                          title="Resend this message (restores graph first)"
+                          onClick={() => void resend(it.id, it.content)}
+                        >
+                          <RefreshCw className="size-3" />
+                          Resend
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="h-6 gap-1 px-1.5 text-[10px] text-muted-foreground"
+                          disabled={busy}
+                          title="Undo everything after this message (chat + canvas)"
+                          onClick={() => void restoreHere(it.id)}
+                        >
+                          <History className="size-3" />
+                          Restore
+                        </Button>
+                      </div>
+                    </>
+                  )}
                 </div>
               );
             }

@@ -1,12 +1,14 @@
 import { useEffect, useRef, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import {
+  Braces,
   Check,
   Download,
   KeyRound,
   LayoutGrid,
   Redo2,
   Save,
+  Share2,
   Table2,
   Undo2,
   Upload,
@@ -25,7 +27,10 @@ import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { MigrationReportDialog } from "./MigrationReport";
 import { ImportCredentialsDialog } from "@/components/credentials";
+import { ShareDialog } from "@/components/share/share-dialog";
+import { projectHeaders } from "@/lib/projects/client";
 import type { IWorkflow } from "@/lib/workflow/types";
+import { EnvironmentSwitcher } from "./EnvironmentSwitcher";
 
 export function EditorTopBar({ actions }: { actions?: React.ReactNode }) {
   const workflow = useWorkflowStore((s) => s.workflow);
@@ -34,6 +39,7 @@ export function EditorTopBar({ actions }: { actions?: React.ReactNode }) {
   const fileInput = useRef<HTMLInputElement>(null);
   const [reportOpen, setReportOpen] = useState(false);
   const [credsOpen, setCredsOpen] = useState(false);
+  const [shareOpen, setShareOpen] = useState(false);
   const [importDraft, setImportDraft] = useState<IWorkflow | null>(null);
   const [missingCount, setMissingCount] = useState(0);
 
@@ -55,7 +61,8 @@ export function EditorTopBar({ actions }: { actions?: React.ReactNode }) {
     try {
       await fetch(`/api/v1/workflows/${workflow.id}/activate`, {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        headers: projectHeaders({ "Content-Type": "application/json" }),
         body: JSON.stringify({ active }),
       });
       toast.success(active ? "Workflow activated" : "Workflow deactivated");
@@ -181,14 +188,31 @@ export function EditorTopBar({ actions }: { actions?: React.ReactNode }) {
             </span>
           )}
         </Button>
+        <Button
+          variant="ghost"
+          size="sm"
+          className="h-8 text-[12px]"
+          onClick={() => setShareOpen(true)}
+        >
+          <Share2 className="mr-1 size-4" /> Share
+        </Button>
         <Button variant="ghost" size="sm" className="h-8 text-[12px]" asChild>
           <Link to="/credentials">Vault</Link>
+        </Button>
+        <Button variant="ghost" size="sm" className="h-8 text-[12px]" asChild>
+          <Link to="/variables">
+            <Braces className="mr-1 size-4" /> Vars
+          </Link>
         </Button>
         <Button variant="ghost" size="sm" className="h-8 text-[12px]" asChild>
           <Link to="/data-tables">
             <Table2 className="mr-1 size-4" /> Tables
           </Link>
         </Button>
+
+        <span className="mx-1 h-5 w-px bg-border" />
+
+        <EnvironmentSwitcher />
 
         <span className="mx-1 h-5 w-px bg-border" />
 
@@ -211,6 +235,13 @@ export function EditorTopBar({ actions }: { actions?: React.ReactNode }) {
         </Button>
       </div>
 
+      <ShareDialog
+        open={shareOpen}
+        onOpenChange={setShareOpen}
+        resourceType="workflow"
+        resourceId={workflow.id}
+        resourceName={workflow.name}
+      />
       <MigrationReportDialog open={reportOpen} onOpenChange={setReportOpen} />
       <ImportCredentialsDialog
         open={credsOpen}

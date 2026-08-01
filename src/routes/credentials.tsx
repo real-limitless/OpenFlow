@@ -1,15 +1,17 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import { useCallback, useEffect, useState } from "react";
-import { ArrowLeft, KeyRound, Pencil, Plus, Share2, Trash2 } from "lucide-react";
+import { KeyRound, Pencil, Plus, Share2, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { CredentialDialog } from "@/components/credentials";
 import { ShareDialog } from "@/components/share/share-dialog";
+import { PageShell } from "@/components/layout/page-shell";
 import {
   getCredentialTypeDef,
   humanizeType,
   type CredentialMeta,
 } from "@/lib/credentials/types";
+import { apiFetch } from "@/lib/auth/client";
 
 export const Route = createFileRoute("/credentials")({
   head: () => ({
@@ -31,7 +33,7 @@ function CredentialsPage() {
   const [share, setShare] = useState<CredentialMeta | null>(null);
 
   const refresh = useCallback(() => {
-    void fetch("/api/v1/credentials?includeUse=1")
+    void apiFetch("/api/v1/credentials?includeUse=1")
       .then(async (res) => {
         if (!res.ok) throw new Error("Failed to load");
         return res.json() as Promise<CredentialMeta[]>;
@@ -45,13 +47,14 @@ function CredentialsPage() {
 
   useEffect(() => {
     refresh();
+    const onScope = () => refresh();
+    window.addEventListener("openflow:scope-change", onScope);
+    return () => window.removeEventListener("openflow:scope-change", onScope);
   }, [refresh]);
 
   const remove = async (c: CredentialMeta) => {
-    if (!confirm(`Delete credential “${c.name}”? Nodes using it will fail until remapped.`)) {
-      return;
-    }
-    const res = await fetch(`/api/v1/credentials/${c.id}`, { method: "DELETE" });
+    if (!confirm(`Delete credential “${c.name}”?`)) return;
+    const res = await apiFetch(`/api/v1/credentials/${c.id}`, { method: "DELETE" });
     if (!res.ok) {
       toast.error("Delete failed");
       return;
@@ -61,23 +64,15 @@ function CredentialsPage() {
   };
 
   return (
-    <main className="mx-auto min-h-screen w-full max-w-3xl px-6 py-14">
-      <Link
-        to="/"
-        className="inline-flex items-center gap-1.5 text-[13px] text-muted-foreground hover:text-foreground"
-      >
-        <ArrowLeft className="size-4" /> Back to workflows
-      </Link>
-
-      <div className="mt-8 flex flex-wrap items-end justify-between gap-3">
+    <PageShell maxWidth="max-w-3xl">
+      <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <div className="flex items-center gap-2 text-primary">
             <KeyRound className="size-5" />
             <h1 className="text-2xl font-semibold tracking-tight text-foreground">Credentials</h1>
           </div>
           <p className="mt-2 max-w-xl text-[14px] text-muted-foreground">
-            Secrets are encrypted with your server key and never returned after save. Attach them to
-            nodes from the editor Credentials tab.
+            Secrets are encrypted (or stored in an external provider) and never returned after save.
           </p>
         </div>
         <Button onClick={() => setCreateOpen(true)}>
@@ -112,6 +107,11 @@ function CredentialsPage() {
                           shared
                         </span>
                       ) : null}
+                      {c.external || c.secretProviderId ? (
+                        <span className="ml-2 rounded bg-muted px-1.5 py-0.5 text-[10px] font-normal text-muted-foreground">
+                          external
+                        </span>
+                      ) : null}
                     </p>
                     <p className="font-mono text-[11px] text-muted-foreground">
                       {def.displayName || humanizeType(c.type)}
@@ -119,41 +119,36 @@ function CredentialsPage() {
                       {c.type}
                     </p>
                   </div>
-                  <p className="text-[11px] text-muted-foreground">
-                    {c.createdAt ? new Date(c.createdAt).toLocaleString() : ""}
-                  </p>
                   {!c.shared && (
-                    <Button
-                      size="icon"
-                      variant="ghost"
-                      className="size-8"
-                      onClick={() => setShare(c)}
-                      aria-label="Share"
-                    >
-                      <Share2 className="size-3.5" />
-                    </Button>
-                  )}
-                  {!c.shared && (
-                    <Button
-                      size="icon"
-                      variant="ghost"
-                      className="size-8"
-                      onClick={() => setEdit(c)}
-                      aria-label="Edit"
-                    >
-                      <Pencil className="size-3.5" />
-                    </Button>
-                  )}
-                  {!c.shared && (
-                    <Button
-                      size="icon"
-                      variant="ghost"
-                      className="size-8 text-destructive hover:text-destructive"
-                      onClick={() => void remove(c)}
-                      aria-label="Delete"
-                    >
-                      <Trash2 className="size-3.5" />
-                    </Button>
+                    <>
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        className="size-8"
+                        onClick={() => setShare(c)}
+                        aria-label="Share"
+                      >
+                        <Share2 className="size-3.5" />
+                      </Button>
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        className="size-8"
+                        onClick={() => setEdit(c)}
+                        aria-label="Edit"
+                      >
+                        <Pencil className="size-3.5" />
+                      </Button>
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        className="size-8 text-destructive hover:text-destructive"
+                        onClick={() => void remove(c)}
+                        aria-label="Delete"
+                      >
+                        <Trash2 className="size-3.5" />
+                      </Button>
+                    </>
                   )}
                 </li>
               );
@@ -162,11 +157,7 @@ function CredentialsPage() {
         )}
       </section>
 
-      <CredentialDialog
-        open={createOpen}
-        onOpenChange={setCreateOpen}
-        onSaved={() => refresh()}
-      />
+      <CredentialDialog open={createOpen} onOpenChange={setCreateOpen} onSaved={() => refresh()} />
       <CredentialDialog
         open={edit != null}
         onOpenChange={(o) => {
@@ -180,7 +171,7 @@ function CredentialsPage() {
       />
       {share && (
         <ShareDialog
-          open={share != null}
+          open
           onOpenChange={(o) => {
             if (!o) setShare(null);
           }}
@@ -189,6 +180,6 @@ function CredentialsPage() {
           resourceName={share.name}
         />
       )}
-    </main>
+    </PageShell>
   );
 }

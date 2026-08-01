@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
 import { Share2, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { apiFetch } from "@/lib/auth/client";
 import {
   Dialog,
   DialogContent,
@@ -48,7 +49,7 @@ export function ShareDialog({
   const [busy, setBusy] = useState(false);
 
   const refresh = useCallback(async () => {
-    const res = await fetch(
+    const res = await apiFetch(
       `/api/v1/shares?resourceType=${resourceType}&resourceId=${encodeURIComponent(resourceId)}`,
     );
     if (!res.ok) {
@@ -70,9 +71,8 @@ export function ShareDialog({
     }
     setBusy(true);
     try {
-      const res = await fetch("/api/v1/shares", {
+      const res = await apiFetch("/api/v1/shares", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           resourceType,
           resourceId,
@@ -94,7 +94,7 @@ export function ShareDialog({
   };
 
   const revoke = async (id: string) => {
-    const res = await fetch(`/api/v1/shares/${id}`, { method: "DELETE" });
+    const res = await apiFetch(`/api/v1/shares/${id}`, { method: "DELETE" });
     if (!res.ok) {
       toast.error("Could not revoke share");
       return;

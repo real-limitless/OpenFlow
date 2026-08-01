@@ -206,6 +206,30 @@ export function setPinData(
   return { workflow: { ...wf, pinData }, result: { name } };
 }
 
+/** When wiring a parser into ai_outputParser, enable hasOutputParser on the target. */
+function withOutputParserEnabled(
+  wf: IWorkflow,
+  target: string,
+  targetHandle?: string | null,
+): IWorkflow {
+  const [channel] = (() => {
+    const h = targetHandle ?? "main-0";
+    const idx = h.lastIndexOf("-");
+    return idx === -1 ? [h] : [h.slice(0, idx)];
+  })();
+  if (channel !== "ai_outputParser") return wf;
+  const node = wf.nodes.find((n) => n.name === target);
+  if (!node || node.parameters?.hasOutputParser === true) return wf;
+  return {
+    ...wf,
+    nodes: wf.nodes.map((n) =>
+      n.name === target
+        ? { ...n, parameters: { ...n.parameters, hasOutputParser: true } }
+        : n,
+    ),
+  };
+}
+
 export function connectNodes(
   wf: IWorkflow,
   source: string,
@@ -215,17 +239,18 @@ export function connectNodes(
 ): MutationResult<{ source: string; target: string }> {
   requireNode(wf, source);
   requireNode(wf, target);
+  const connected: IWorkflow = {
+    ...wf,
+    connections: addConnection(
+      wf.connections,
+      source,
+      sourceHandle ?? "main-0",
+      target,
+      targetHandle ?? "main-0",
+    ),
+  };
   return {
-    workflow: {
-      ...wf,
-      connections: addConnection(
-        wf.connections,
-        source,
-        sourceHandle ?? "main-0",
-        target,
-        targetHandle ?? "main-0",
-      ),
-    },
+    workflow: withOutputParserEnabled(connected, target, targetHandle),
     result: { source, target },
   };
 }

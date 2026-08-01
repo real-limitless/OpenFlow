@@ -12,7 +12,9 @@ import { NodePalette } from "@/components/editor/NodePalette";
 import { WorkflowCanvas } from "@/components/editor/WorkflowCanvas";
 import { EditorRightRail } from "@/components/editor/EditorRightRail";
 import { DataPanel } from "@/components/editor/DataPanel";
+import { DataTablesPanel } from "@/components/editor/DataTablesPanel";
 import { ExecutionHistory } from "@/components/editor/ExecutionHistory";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { ExecutionRunData } from "@/lib/engine/types";
 import type { IWorkflow } from "@/lib/workflow/types";
 
@@ -72,10 +74,16 @@ function EditorPage() {
       }
       const latest = useWorkflowStore.getState().workflow;
       const execId = latest.id || id;
+      const { projectHeaders } = await import("@/lib/projects/client");
+      const { getSelectedEnvironmentId } = await import("@/lib/environments/client");
       const res = await fetch(`/api/v1/workflows/${execId}/execute`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ workflow: latest }),
+        credentials: "include",
+        headers: projectHeaders({ "Content-Type": "application/json" }),
+        body: JSON.stringify({
+          workflow: latest,
+          environmentId: getSelectedEnvironmentId() ?? undefined,
+        }),
       });
       if (!res.ok) throw new Error("Failed to start execution");
       const { executionId } = await res.json();
@@ -88,7 +96,7 @@ function EditorPage() {
           if (data.data) setRunData(data.data as ExecutionRunData);
           if (data.status === "error") {
             toast.error("Execution failed", {
-              description: "One or more nodes errored. See the data panel for details.",
+              description: "One or more nodes errored. See Execution data for details.",
             });
           }
           setIsExecuting(false);
@@ -233,13 +241,34 @@ function EditorPage() {
         <div className="flex min-h-0 min-w-0 flex-1 flex-col">
           <ResizablePanelGroup orientation="vertical" className="min-h-0 flex-1">
             <ResizablePanel defaultSize={70} minSize={10} className="min-h-0">
-              <WorkflowCanvas runData={runData} />
+              <WorkflowCanvas runData={runData} refreshKey={historyKey} />
             </ResizablePanel>
             <ResizableHandle withHandle className="bg-border" />
             <ResizablePanel defaultSize={30} minSize={8} className="min-h-0">
               <div className="flex h-full min-h-0 border-t border-border">
                 <div className="min-h-0 min-w-0 flex-1">
-                  <DataPanel runData={runData} />
+                  <Tabs defaultValue="execution" className="flex h-full min-h-0 flex-col">
+                    <TabsList className="mx-2 mt-1.5 h-8 w-auto shrink-0 self-start">
+                      <TabsTrigger value="execution" className="text-[11px]">
+                        Execution data
+                      </TabsTrigger>
+                      <TabsTrigger value="tables" className="text-[11px]">
+                        Data tables
+                      </TabsTrigger>
+                    </TabsList>
+                    <TabsContent
+                      value="execution"
+                      className="mt-0 min-h-0 flex-1 data-[state=inactive]:hidden"
+                    >
+                      <DataPanel runData={runData} />
+                    </TabsContent>
+                    <TabsContent
+                      value="tables"
+                      className="mt-0 min-h-0 flex-1 data-[state=inactive]:hidden"
+                    >
+                      <DataTablesPanel refreshKey={historyKey} />
+                    </TabsContent>
+                  </Tabs>
                 </div>
                 <div className="flex h-full min-h-0 w-64 shrink-0 flex-col border-l border-border bg-sidebar">
                   <ExecutionHistory

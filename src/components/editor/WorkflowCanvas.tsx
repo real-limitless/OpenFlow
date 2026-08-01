@@ -19,11 +19,18 @@ import type { ExecutionRunData } from "@/lib/engine/types";
 import { BaseNode, StickyNode } from "./BaseNode";
 import { OpenFlowEdge } from "./OpenFlowEdge";
 import { SlotNodePicker } from "./SlotNodePicker";
+import { CanvasInspectDock } from "./CanvasInspectDock";
 
 const nodeTypes = { openflow: BaseNode, sticky: StickyNode };
 const edgeTypes = { openflow: OpenFlowEdge };
 
-function CanvasInner({ runData }: { runData: ExecutionRunData | null }) {
+function CanvasInner({
+  runData,
+  refreshKey = 0,
+}: {
+  runData: ExecutionRunData | null;
+  refreshKey?: number;
+}) {
   const workflow = useWorkflowStore((s) => s.workflow);
   const selectedNode = useWorkflowStore((s) => s.selectedNode);
   const slotPicker = useWorkflowStore((s) => s.slotPicker);
@@ -159,7 +166,7 @@ function CanvasInner({ runData }: { runData: ExecutionRunData | null }) {
       ref={wrapper}
       role="application"
       aria-label="Workflow canvas"
-      className="group/canvas h-full w-full"
+      className="group/canvas relative h-full w-full"
     >
       <ReactFlow
         nodes={nodes}
@@ -228,6 +235,7 @@ function CanvasInner({ runData }: { runData: ExecutionRunData | null }) {
         onClose={closeSlotPicker}
         onPick={(type, target) => addConnectedNode(type, target)}
       />
+      <CanvasInspectDock runData={runData} refreshKey={refreshKey} />
     </div>
   );
 }
@@ -252,10 +260,16 @@ function ConnectModeClass() {
   return null;
 }
 
-export function WorkflowCanvas({ runData }: { runData: ExecutionRunData | null }) {
+export function WorkflowCanvas({
+  runData,
+  refreshKey = 0,
+}: {
+  runData: ExecutionRunData | null;
+  refreshKey?: number;
+}) {
   return (
     <ReactFlowProvider>
-      <CanvasInner runData={runData} />
+      <CanvasInner runData={runData} refreshKey={refreshKey} />
     </ReactFlowProvider>
   );
 }

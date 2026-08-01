@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { BaseEdge, EdgeLabelRenderer, getBezierPath, type EdgeProps } from "@xyflow/react";
 import { Plus, Trash2 } from "lucide-react";
 import { useWorkflowStore } from "@/store/workflow-store";
@@ -17,6 +17,8 @@ type MenuPhase = "closed" | "actions" | "insert";
 
 type EdgeData = { channel?: string; color?: string };
 
+const HOVER_LEAVE_MS = 120;
+
 export function OpenFlowEdge({
   id,
   sourceX,
@@ -33,6 +35,7 @@ export function OpenFlowEdge({
   const insertNodeOnEdge = useWorkflowStore((s) => s.insertNodeOnEdge);
   const [phase, setPhase] = useState<MenuPhase>("closed");
   const [hovered, setHovered] = useState(false);
+  const leaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const channel = (data as EdgeData | undefined)?.channel ?? "main";
   const channelColor = (data as EdgeData | undefined)?.color ?? channelEdgeColor(channel);
@@ -49,6 +52,28 @@ export function OpenFlowEdge({
   });
 
   const active = phase !== "closed" || selected || hovered;
+
+  const clearLeaveTimer = () => {
+    if (leaveTimer.current) {
+      clearTimeout(leaveTimer.current);
+      leaveTimer.current = null;
+    }
+  };
+
+  const enterHover = () => {
+    clearLeaveTimer();
+    setHovered(true);
+  };
+
+  const leaveHover = () => {
+    clearLeaveTimer();
+    if (phase !== "closed") return;
+    leaveTimer.current = setTimeout(() => setHovered(false), HOVER_LEAVE_MS);
+  };
+
+  useEffect(() => {
+    return () => clearLeaveTimer();
+  }, []);
 
   useEffect(() => {
     if (phase === "closed") return;
@@ -74,6 +99,7 @@ export function OpenFlowEdge({
 
   return (
     <>
+      {/* Visible stroke */}
       <BaseEdge
         id={id}
         path={path}
@@ -83,8 +109,22 @@ export function OpenFlowEdge({
           strokeWidth: active ? 2.5 : ai ? 2.25 : 2,
           opacity: active ? 1 : ai ? 0.85 : 1,
           transition: "stroke 150ms ease, stroke-width 150ms ease, opacity 150ms ease",
+          pointerEvents: "none",
         }}
-        interactionWidth={20}
+        interactionWidth={0}
+      />
+      {/* Wide invisible hit target along the full wire */}
+      <path
+        d={path}
+        fill="none"
+        stroke="transparent"
+        strokeWidth={24}
+        className="react-flow__edge-interaction"
+        style={{ cursor: "pointer" }}
+        onMouseEnter={enterHover}
+        onMouseLeave={leaveHover}
+        onFocus={enterHover}
+        onBlur={leaveHover}
       />
       <EdgeLabelRenderer>
         {phase !== "closed" && (
@@ -96,10 +136,8 @@ export function OpenFlowEdge({
           style={{
             transform: `translate(-50%, -50%) translate(${labelX}px, ${labelY}px)`,
           }}
-          onMouseEnter={() => setHovered(true)}
-          onMouseLeave={() => {
-            if (phase === "closed") setHovered(false);
-          }}
+          onMouseEnter={enterHover}
+          onMouseLeave={leaveHover}
         >
           <div
             className={cn(

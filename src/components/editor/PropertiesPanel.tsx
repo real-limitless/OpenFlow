@@ -184,6 +184,9 @@ export function PropertiesPanel({ embedded = false }: { embedded?: boolean }) {
                       onChange={(v) =>
                         updateParameters(node.name, { ...parameters, [prop.name]: v })
                       }
+                      onValuesChange={(patch) =>
+                        updateParameters(node.name, { ...parameters, ...patch })
+                      }
                     />
                   ))
               )}
