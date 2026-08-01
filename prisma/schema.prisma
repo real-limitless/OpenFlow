@@ -183,10 +183,28 @@ model Workflow {
   executions  Execution[]
   webhookRoutes WebhookRoute[]
   scheduledTriggers ScheduledTrigger[]
+  formRoutes FormRoute[]
 
   @@index([userId])
   @@index([projectId])
   @@map("workflows")
+}
+
+// ─── Form Trigger public routes ─────────────────────────
+
+model FormRoute {
+  id         String  @id @default(cuid())
+  /// URL slug only (served at /form/:path)
+  path       String  @unique
+  workflowId String
+  nodeId     String
+  active     Boolean @default(true)
+
+  workflow Workflow @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+
+  @@index([workflowId])
+  @@index([path])
+  @@map("form_routes")
 }
 
 // ─── Executions ─────────────────────────────────────────

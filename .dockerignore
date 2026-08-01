@@ -11,6 +11,9 @@ graphify-out
 docs
 workflows
 scripts/factory
+scripts/scrape-n8n-workflows
+.tmp
+*.tmp
 *.md
 !README.md
 .env

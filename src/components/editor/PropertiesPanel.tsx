@@ -12,6 +12,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { ExpressionContext } from "@/lib/expressions/evaluate";
 import { CredentialPicker } from "@/components/credentials";
+import { FormTriggerUrls } from "./FormTriggerUrls";
+import { isFormTriggerNode } from "@/lib/forms/path";
 
 export function PropertiesPanel({ embedded = false }: { embedded?: boolean }) {
   const selected = useWorkflowStore((s) => s.selectedNode);
@@ -172,23 +174,26 @@ export function PropertiesPanel({ embedded = false }: { embedded?: boolean }) {
                   />
                 </div>
               ) : (
-                description.properties
-                  .filter((prop) => shouldDisplay(prop, parameters))
-                  .map((prop) => (
-                    <ParameterField
-                      key={prop.name}
-                      prop={prop}
-                      value={parameters[prop.name] ?? prop.default}
-                      values={parameters}
-                      context={context}
-                      onChange={(v) =>
-                        updateParameters(node.name, { ...parameters, [prop.name]: v })
-                      }
-                      onValuesChange={(patch) =>
-                        updateParameters(node.name, { ...parameters, ...patch })
-                      }
-                    />
-                  ))
+                <>
+                  {isFormTriggerNode(node) && <FormTriggerUrls node={node} />}
+                  {description.properties
+                    .filter((prop) => shouldDisplay(prop, parameters))
+                    .map((prop) => (
+                      <ParameterField
+                        key={prop.name}
+                        prop={prop}
+                        value={parameters[prop.name] ?? prop.default}
+                        values={parameters}
+                        context={context}
+                        onChange={(v) =>
+                          updateParameters(node.name, { ...parameters, [prop.name]: v })
+                        }
+                        onValuesChange={(patch) =>
+                          updateParameters(node.name, { ...parameters, ...patch })
+                        }
+                      />
+                    ))}
+                </>
               )}
             </div>
           </ScrollArea>

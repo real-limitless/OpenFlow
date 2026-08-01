@@ -334,12 +334,65 @@ export default function workflowsRoute(app: Hono<AppEnv>) {
           update: { cronExpr, active: true },
         });
       }
+
+      // Form Trigger public routes
+      const { resolveFormPath, isFormTriggerNode } = await import("../forms/register");
+      const formNodes = nodes.filter((n: any) => isFormTriggerNode(n) && !n.disabled);
+      const claimedPaths = new Set<string>();
+      for (const node of formNodes) {
+        const formPath = resolveFormPath(node as import("../../lib/workflow/types").INode);
+        if (claimedPaths.has(formPath)) {
+          return c.json(
+            { error: `Duplicate form path “${formPath}” on this workflow` },
+            409,
+          );
+        }
+        claimedPaths.add(formPath);
+        const existing = await prisma.formRoute.findUnique({ where: { path: formPath } });
+        if (existing && existing.workflowId !== workflowId) {
+          return c.json(
+            {
+              error: `Form path “${formPath}” is already used by another workflow`,
+            },
+            409,
+          );
+        }
+        await prisma.formRoute.upsert({
+          where: { path: formPath },
+          create: {
+            path: formPath,
+            workflowId,
+            nodeId: node.id,
+            active: true,
+          },
+          update: {
+            workflowId,
+            nodeId: node.id,
+            active: true,
+          },
+        });
+      }
+      // Deactivate form routes no longer present on this workflow
+      const activeNodeIds = new Set(formNodes.map((n: any) => n.id as string));
+      const existingForms = await prisma.formRoute.findMany({ where: { workflowId } });
+      for (const fr of existingForms) {
+        if (!activeNodeIds.has(fr.nodeId)) {
+          await prisma.formRoute.update({
+            where: { id: fr.id },
+            data: { active: false },
+          });
+        }
+      }
     } else {
       await prisma.webhookRoute.updateMany({
         where: { workflowId },
         data: { active: false },
       });
       await prisma.scheduledTrigger.updateMany({
+        where: { workflowId },
+        data: { active: false },
+      });
+      await prisma.formRoute.updateMany({
         where: { workflowId },
         data: { active: false },
       });

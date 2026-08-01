@@ -9,7 +9,7 @@ import { config } from "../../config";
 
 export type AppEnv = { Variables: { userId: string } };
 
-const EXEMPT_PATHS = ["/health", "/api/v1/auth", "/webhook"];
+const EXEMPT_PATHS = ["/health", "/api/v1/auth", "/webhook", "/form"];
 
 function hashApiKey(rawKey: string): string {
   return createHash("sha256").update(rawKey).digest("hex");
