@@ -1,93 +1,244 @@
-# Factory job — SPEC (clean-room half A)
-
-**Model:** `xai/grok-4.5`  
-**Node type:** `n8n-nodes-base.rabbitmq`  
-**Batch:** `queue`  
-**Cycle:** `1` of `4`
-
+---
+type: n8n-nodes-base.rabbitmq
+displayName: RabbitMQ
+category: Communication
+versions: [1, 1.1]
+priority: medium
+status: specced
 ---
 
-## Hard rules (non‑negotiable)
+# RabbitMQ
 
-1. **No third‑party engine source.**  
-   Do not clone, read, or cite GitHub `n8n-io`, any `n8n-nodes-base` TypeScript/JavaScript implementation, or full npm package source trees.
+## Sources
 
-2. **Permitted sources only (in strict priority order):**  
-   - Public documentation: `https://docs.n8n.io/**` (prefer `.md` URLs)  
-   - Public workflow JSON shapes  
-   - This repository only:  
-     `docs/specs/nodes/_TEMPLATE.md`,  
-     `docs/clean-room.md`,  
-     `docs/sdk/NON_GOALS.md`
+| URL | Source class |
+|-----|----------------|
+| https://docs.n8n.io/integrations/builtin/app-nodes/n8n-nodes-base.rabbitmq.md | Public docs only |
+| https://docs.n8n.io/integrations/builtin/credentials/rabbitmq.md | Public docs only |
+| https://www.rabbitmq.com/docs/connections | Public docs only |
 
-3. **CORPUS_DIR rules (if present)**  
-   `CORPUS_DIR` is a temporary directory under `/tmp` only.  
-   - It may contain a published npm package snapshot or public docs pages.  
-   - You may use it **only** to confirm the official type string and the high‑level list of resources / operations that also appear in public documentation.  
-   - You must **not** extract nested collection structures, exact option enums, `displayOptions` conditions, default values, or internal algorithms from the package.  
-   - Prefer public docs.n8n.io over the corpus whenever both exist.  
-   - Never copy any content from `CORPUS_DIR` into the OpenFlow git repository.
+## Wire format
 
-4. **Do not implement.**  
-   Do not write executors or edit anything under `src/**`.
+- **Type string:** `n8n-nodes-base.rabbitmq`
+- **Aliases:** (none)
+- **Inputs:** `main` × 1
+- **Outputs:** `main` × 1
+- **Credentials:** `rabbitmq` (required)
+- **Usable as tool:** yes
 
-5. **Abstraction first (critical).**  
-   - Describe *what* the node must achieve and the external contracts it must satisfy.  
-   - Do **not** reconstruct the original node’s internal parameter nesting, UI organization, or exact schema design.  
-   - Prefer functional outcomes over exact original names, defaults, and option lists.  
-   - Only include a specific parameter name, default, or nested structure when it is required for interoperability or is explicitly documented in public n8n docs.  
-   - When in doubt, raise the level of abstraction.
+## Credentials
 
-6. **Paraphrase only.**  
-   Never paste large blocks from any source. Rewrite everything in your own words at the requirements level.
+The node connects to a RabbitMQ broker using `rabbitmq` credentials with these fields:
 
----
+| Field | Type | Default | Notes |
+|-------|------|---------|-------|
+| hostname | string | (none) | Broker hostname or IP |
+| port | number | (none) | Broker port |
+| user | string | guest | Auth username |
+| password | string | guest | Auth password |
+| vhost | string | `/` | Virtual host |
+| ssl | boolean | false | Enable TLS |
+| passwordless | boolean | false | SASL EXTERNAL cert auth (when ssl=true) |
+| ca | string | (none) | CA certificates (when ssl=true) |
+| cert | string | (none) | Client certificate (when ssl=true) |
+| key | string | (none) | Client key (when ssl=true) |
+| passphrase | string | (none) | SSL passphrase (when ssl=true) |
 
-## Style requirements for the SPEC
+A credential test (`rabbitmqConnectionTest`) validates connectivity by attempting a broker connection before execution.
 
-- Write a pure requirements / behavioral document, not a reverse‑engineered schema dump.  
-- Separate “external API / service requirements” (e.g. YouTube Data API) from “how this node exposes configuration inside OpenFlow”.  
-- Keep parameter descriptions at the highest practical abstraction level.  
-- Acceptance tests must verify functional outcomes and required data contracts.  
-  Do not hard‑code response shapes that simply mirror the original node’s JSON output.  
-- Every detailed field or nested structure must be justifiable by an external constraint or public documentation.
+## Parameters
 
----
+### Common
 
-## Tasks
+| name | type | default | required | notes |
+|------|------|---------|----------|-------|
+| operation | hidden/options | `sendMessage` | yes | `sendMessage` (Send a Message to RabbitMQ) or `deleteMessage` (Delete From Queue) |
 
-1. Research using only the permitted sources (public docs first, CORPUS_DIR only under the strict limits above).  
-2. Write or overwrite: `docs/specs/nodes/n8n-nodes-base.rabbitmq.md` using the sections below.  
-3. Update `docs/specs/INDEX.md` — set the row for this type to `specced` + correct path.  
-4. Append a citation row to `docs/clean-room.md` under Node citations if it is missing.
+### Send Message parameters
 
-### Required sections in the SPEC file
+| name | type | default | required | notes |
+|------|------|---------|----------|-------|
+| mode | enum | `queue` | yes | `queue` — publish directly to a named queue; `exchange` — publish to an exchange with routing |
+| queue | string | (none) | conditional | Queue name (required when mode=queue) |
+| exchange | string | (none) | conditional | Exchange name (required when mode=exchange) |
+| exchangeType | enum | `fanout` | conditional | One of `direct`, `topic`, `headers`, `fanout` (used when mode=exchange) |
+| routingKey | string | (none) | conditional | Routing key for the exchange (used when mode=exchange) |
+| sendInputData | boolean | true | no | When true, serializes incoming item JSON as the message payload |
+| message | string | (none) | conditional | Custom message text (shown when sendInputData=false) |
 
-- **Sources** (list URLs + mark “Public docs only”)  
-- **Wire format** (type string, inputs, outputs, credentials)  
-- **Parameters** (high‑level, abstracted; avoid deep original nesting)  
-- **Runtime behavior** (input processing, output shape at outcome level, error handling principles)  
-- **Acceptance tests** (2–5 concrete functional fixtures)  
-- **Gaps / confidence** (what is documented vs inferred, and why)  
-- **OpenFlow mapping** (definition group + intended executor filename)
+### Options (sendMessage)
 
----
+| name | type | default | notes |
+|------|------|---------|-------|
+| options.alternateExchange | string | (none) | Fallback exchange when primary exchange cannot route (exchange mode only) |
+| options.arguments | key-value[] | (none) | AMQP publish arguments (key-value pairs) |
+| options.autoDelete | boolean | false | Delete queue when consumer count drops to zero |
+| options.durable | boolean | true | Queue survives broker restarts |
+| options.exclusive | boolean | false | Scope queue to this connection only (queue mode) |
+| options.headers | key-value[] | (none) | Custom message headers (key-value pairs) |
 
-## Done when
+### Delete Message
 
-- The SPEC file exists and follows the abstraction rules above  
-- `docs/specs/INDEX.md` is updated  
-- Citation added if needed  
-- You stop. Do not write any implementation code.
+The deleteMessage operation has no configurable parameters beyond the operation selector. It works in conjunction with a RabbitMQ Trigger node: items received by the trigger with `acknowledge` set to `laterMessageNode` are acknowledged (deleted from queue) when passed through this node later in the workflow. A notice explains this behavior.
 
----
+## Runtime behavior
 
-## SPEC research corpus (TEMPORARY — under /tmp only)
+### Input
 
-CORPUS_DIR=`/tmp/openflow-factory-run-20260731-171503/n8n-nodes-base.rabbitmq`
+Each item from `main` input is processed independently. Items carry data to be published, or for deleteMessage, the acknowledgment routing metadata from a prior RabbitMQ Trigger node.
 
-If this directory exists, read `INDEX.md`, `docs/page.md` (if present), and JSON descriptors under extract/.
+### Output (sendMessage)
 
-**ISOLATION:** This corpus must never be copied into the OpenFlow git repository.  
-**CLEAN‑ROOM:** Use it only to discover parameter names/enums/defaults. Do not copy implementation source into the repo or the spec.  
-Write the finished spec only to `docs/specs/nodes/n8n-nodes-base.rabbitmq.md`.
+The node publishes one RabbitMQ message per input item to the configured queue or exchange. After all publishes complete, it waits for broker confirmation (when publisher confirms are enabled) and returns the original input items unmodified on output[0]. Each input item produces exactly one output item in order. No new keys are added on success.
+
+### Output (deleteMessage)
+
+Items passed through are acknowledged/deleted from their source queue. Output[0] contains the same items unmodified, representing successful acknowledgment.
+
+### Errors
+
+- Credential validation runs a broker connection test: if the client cannot connect, the credential test returns an error.
+- Publish failures (connection refused, invalid queue/exchange, broker timeout) propagate as execution errors.
+- `continueOnFail` is respected: when enabled, a failed item produces an error item — `{ json: { ...item.json, error: <error message> }, pairedItem: { item: <index> } }` — on the output instead of halting. Non-failed items pass through as identity.
+
+### Expressions
+
+`queue`, `exchange`, `routingKey`, `message`, `alternateExchange`, and credential fields that accept expressions support expression strings.
+
+## Acceptance tests
+
+### Test: send to default queue
+
+**Given** input items:
+
+```json
+[{ "json": { "sensor": "temp-01", "value": 22.5 } }]
+```
+
+**Parameters:**
+
+```json
+{
+  "operation": "sendMessage",
+  "mode": "queue",
+  "queue": "test-queue",
+  "sendInputData": true
+}
+```
+
+**Expect** output[0] to equal the input items (identity passthrough). The executor must have published a message to queue `test-queue` with the JSON-serialized input as payload.
+
+### Test: send to exchange with routing key
+
+**Given** input items:
+
+```json
+[{ "json": {} }]
+```
+
+**Parameters:**
+
+```json
+{
+  "operation": "sendMessage",
+  "mode": "exchange",
+  "exchange": "events",
+  "exchangeType": "topic",
+  "routingKey": "sensor.temperature",
+  "sendInputData": false,
+  "message": "alert: high temperature"
+}
+```
+
+**Expect** output[0] equals input items. The executor must have published to exchange `events` with routing key `sensor.temperature` and payload `"alert: high temperature"`.
+
+### Test: send with options (durable, headers)
+
+**Given** input items:
+
+```json
+[{ "json": { "id": 1 } }]
+```
+
+**Parameters:**
+
+```json
+{
+  "operation": "sendMessage",
+  "mode": "queue",
+  "queue": "opts-queue",
+  "sendInputData": false,
+  "message": "test",
+  "options": {
+    "durable": true,
+    "autoDelete": false,
+    "headers": [
+      { "key": "source", "value": "openflow" }
+    ]
+  }
+}
+```
+
+**Expect** publish executed with durable=true and custom header `source: openflow`. Output[0] equals input items.
+
+### Test: delete from queue
+
+**Given** input items carrying RabbitMQ trigger metadata:
+
+```json
+[{ "json": { "fields": { "consumerTag": "tag-1", "deliveryTag": 42 } } }]
+```
+
+**Parameters:**
+
+```json
+{
+  "operation": "deleteMessage"
+}
+```
+
+**Expect** output[0] equals input items. The executor must have acknowledged the message with deliveryTag 42.
+
+### Test: publish failure with continueOnFail
+
+**Given** input items:
+
+```json
+[{ "json": { "id": 1 } }, { "json": { "id": 2 } }]
+```
+
+**Parameters:**
+
+```json
+{
+  "operation": "sendMessage",
+  "mode": "queue",
+  "queue": "test/fail",
+  "sendInputData": false,
+  "message": "fail",
+  "continueOnFail": true
+}
+```
+
+**And** a broker that rejects the publish (e.g. connection refused).
+
+**Expect** output[0] to contain two items with error metadata on failed publishes. The node does not throw; it returns all items with error info on failed ones.
+
+## Gaps / confidence
+
+| Topic | documented / inferred | Notes |
+|-------|----------------------|-------|
+| Credential fields | Documented | Public docs list all fields (hostname, port, user, password, vhost, SSL) |
+| Node parameters | Inferred | Public docs confirm "Send a Message" and "Delete From Queue" at high level; exact param names and option structure from corpus |
+| deleteMessage behavior | Inferred | Works with RabbitMQ Trigger `laterMessageNode` acknowledge mode to ack messages |
+| Output shape | Inferred | Public docs don't specify passthrough behavior; follow MQTT convention |
+| Credential connection test | Documented | Public docs confirm broker-connect test pattern |
+| Error item shape on continueOnFail | Inferred | n8n convention for `continueOnFail` with `pairedItem` |
+| Usable as tool | Documented | Available in nodes JSON descriptor |
+| Exchange types | Documented | direct, topic, headers, fanout are standard AMQP exchange types |
+
+## OpenFlow mapping
+
+- **Definition group:** `communication`
+- **Executor file:** `src/lib/engine/executors/rabbitmq.ts`
+- **SDK:** `defineNode` + native `ExecutionContext` only

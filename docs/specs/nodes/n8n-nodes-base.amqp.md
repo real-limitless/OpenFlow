@@ -1,103 +1,158 @@
 ---
 type: n8n-nodes-base.amqp
-displayName: AMQP
-category: Queue
+displayName: AMQP Sender
+category: Communication
 versions: [1]
 priority: medium
-status: missing
+status: specced
 ---
 
-# Sources
+# AMQP Sender
+
+## Sources
 
 | URL | Source class |
-|-----|-------------|
+|-----|----------------|
 | https://docs.n8n.io/integrations/builtin/app-nodes/n8n-nodes-base.amqp.md | Public docs only |
 | https://docs.n8n.io/integrations/builtin/credentials/amqp.md | Public docs only |
 
 ## Wire format
-- **Type string:** `amqp`
+
+- **Type string:** `n8n-nodes-base.amqp`
 - **Aliases:** (none)
 - **Inputs:** `main` × 1
 - **Outputs:** `main` × 1
-- **Credentials:** AMQP credentials (hostname, port, username, password, transport type)
+- **Credentials:** `amqp` (required)
+- **Usable as tool:** yes
+
+## Credentials
+
+The node connects to an AMQP 1.0 broker (e.g. ActiveMQ) using `amqp` credentials with these fields:
+
+| Field | Type | Default | Notes |
+|-------|------|---------|-------|
+| hostname | string | (none) | Broker hostname |
+| port | number | (none) | Broker port (commonly 5672 for TCP, 5671 for TLS) |
+| user | string | (none) | Auth username |
+| password | string | (none) | Auth password |
+| transportType | string | `tcp` | `tcp` or `tls` |
+
+A credential test (`amqpConnectionTest`) validates connectivity by attempting a broker connection before execution.
 
 ## Parameters
 
-| name | type | default | required | displayOptions | notes |
-|------|------|---------|----------|----------------|-------|
-| host | string |  | true |  | Hostname of the AMQP broker |
-| port | number | 5672 | true |  | Port of the AMQP broker |
-| username | string |  | true |  | User for authentication |
-| password | string |  | true |  | Password for authentication |
-| transport | string | tcp | false | advanced | `tcp` or `tls` |
-| exchange | string |  | false | advanced | Target exchange name |
-| routingKey | string |  | false | advanced | Routing key for the message |
-| payload | string |  | false | advanced | Message payload content |
-| payloadFormat | string | json | false | advanced | Format of payload (`json`, `string`) |
+The node has a single operation: send a message to an AMQP 1.0 broker exchange with a routing key.
+
+| name | type | default | required | notes |
+|------|------|---------|----------|-------|
+| exchange | string | (none) | no | Target exchange name; if omitted the default exchange is used |
+| routingKey | string | (none) | yes | Routing key for message dispatch |
+| sendInputData | boolean | true | no | When true, serializes incoming item JSON as the message body |
+| message | string | (none) | conditional | Custom message body (shown when sendInputData=false) |
 
 ## Runtime behavior
-When the node receives an input item it builds an AMQP message using the configured connection settings and message parameters and sends it to the configured AMQP broker. On successful send the node passes the input item through unchanged; on error the node follows the workflow’s error handling (e.g., routes to error output or stops). The node supports configurable exchange, routing key, payload content and optional TLS transport.
 
 ### Input
-The node consumes items on its `main` input port. The item’s data is not consumed or transformed by the node itself; it is forwarded unchanged after the external AMQP publish operation completes.
+
+Each item from `main` input is processed independently. Items carry data to be serialized as the AMQP message body.
 
 ### Output
-The node outputs the original input item unchanged on its `main` output port, preserving all fields and metadata.
+
+The node publishes one AMQP 1.0 message per input item to the configured exchange with the given routing key. After the publish completes, the original input items are returned unmodified on output[0]. Each input item produces exactly one output item in order. No new keys are added on success.
 
 ### Errors
-If the broker cannot be reached, authentication fails, or the publish operation is rejected, the node will trigger an error token on its `main` output and optionally propagate an error according to the workflow’s `continueOnFail` setting.
+
+- Credential validation runs a broker connection test: if the client cannot connect, the credential test returns an error.
+- Publish failures (connection refused, broker timeout, authentication failure) propagate as execution errors.
+- `continueOnFail` is respected: when enabled, a failed item produces an error item on the output instead of halting.
+
+### Expressions
+
+`exchange`, `routingKey`, and `message` accept expression strings.
 
 ## Acceptance tests
 
-### Test: basic
+### Test: send with input data as payload
+
 **Given** input items:
 
 ```json
-[ { "json": {} } ]
+[{ "json": { "sensor": "temp-01", "value": 22.5 } }]
 ```
 
-**When** the node is configured with reachable broker credentials and default message parameters.
-
-**Expect** output[0]:
+**Parameters:**
 
 ```json
-[ { "json": {} } ]
+{
+  "exchange": "",
+  "routingKey": "sensor.data",
+  "sendInputData": true
+}
 ```
 
-### Test: json payload
+**Expect** output[0] to equal the input items (identity passthrough). The executor must have published an AMQP message to the default exchange with routing key `sensor.data` and the JSON-serialized input as body.
+
+### Test: send with custom message
+
 **Given** input items:
 
 ```json
-[ { "json": { "order": { "id": 123, "total": 45.67 } } } ]
+[{ "json": {} }]
 ```
 
-**When** `payload` is set to `{{ $json }}` and `payloadFormat` is `json`.
+**Parameters:**
 
-**Expect** the node to forward the item unchanged after attempting to publish the JSON payload.
+```json
+{
+  "exchange": "alerts",
+  "routingKey": "system.critical",
+  "sendInputData": false,
+  "message": "CRITICAL: system load exceeded threshold"
+}
+```
 
-### Test: invalid credentials
-**Given** a configuration with an invalid `username` or `password`.
+**Expect** output[0] equals input items. The executor must have published to exchange `alerts` with routing key `system.critical` and body `"CRITICAL: system load exceeded threshold"`.
 
-**When** the node attempts to connect.
+### Test: TLS transport
 
-**Expect** an error token to be emitted on the output and the workflow to follow its error handling path.
+**Given** an AMQP credential with `transportType` set to `tls` and a broker reachable over TLS.
 
-### Test: tls transport
-**Given** a broker reachable only over TLS and `transport` set to `tls`.
-
-**When** the node connects.
+**When** the node connects and publishes.
 
 **Expect** a successful publish if the broker accepts the TLS connection; otherwise an error token is emitted.
+
+### Test: publish failure with continueOnFail
+
+**Given** input items:
+
+```json
+[{ "json": { "id": 1 } }, { "json": { "id": 2 } }]
+```
+
+**Parameters:**
+
+```json
+{
+  "routingKey": "test.fail",
+  "sendInputData": false,
+  "message": "fail",
+  "continueOnFail": true
+}
+```
+
+**And** a broker that rejects the publish (e.g. connection refused).
+
+**Expect** output[0] to contain two items with error metadata on failed publishes. The node does not throw; it returns all items with error info on failed ones.
 
 ## Gaps / confidence
 
 | Topic | documented / inferred | Notes |
 |-------|----------------------|-------|
-| Default payload format | documented (`json` default) | Assumed based on typical n8n behavior |
-| Error handling semantics | inferred from n8n core patterns | Not explicitly detailed in public docs |
-| Message persistence options | not documented | May exist but not covered in sources |
-| Exact default exchange/routing key behavior | inferred | Default exchange is usually `` (empty) and routing key is required |
-| Broker URL format for TLS | inferred | `amqps://` scheme used for TLS connections |
+| Credential fields | Documented | Public docs list hostname, port, user, password, transportType |
+| Node parameters | Inferred | Public docs confirm single "Send message" operation; exact param names from corpus node descriptor |
+| Output shape | Inferred | Follows MQTT/RabbitMQ passthrough convention; public docs don't specify |
+| Credential connection test | Documented | Type descriptor confirms `amqpConnectionTest` method |
+| Error item shape on continueOnFail | Inferred | n8n convention for `continueOnFail` |
 
 ## OpenFlow mapping
 

@@ -1,41 +1,178 @@
-# Factory job — SPEC (clean-room half A)
+---
+type: n8n-nodes-base.awsLambda
+displayName: AWS Lambda
+category: Development
+versions: [1]
+priority: medium
+status: specced
+---
+
+# AWS Lambda
 
 ## Sources
-- https://docs.n8n.io/n8n-nodes-base/awsLambda/ (public documentation)
-- https://docs.n8n.io/n8n-nodes-base/ (public documentation)
-- Temporary corpus at /tmp/openflow-factory-run-20260731-171503/n8n-nodes-base.awsLambda used only to confirm type string
+
+| URL | Source class |
+|-----|----------------|
+| https://docs.n8n.io/integrations/builtin/app-nodes/n8n-nodes-base.awslambda.md | Public docs only |
+| https://docs.n8n.io/integrations/builtin/credentials/aws.md | Public docs only |
+| https://docs.aws.amazon.com/lambda/latest/dg/API_Invoke.html | Public docs only |
 
 ## Wire format
-- **Node type**: `n8n-nodes-base.awsLambda`
-- **Batch**: `queue`
-- **Cycle**: `1` of `4`
-- **Input**: JSON object containing a `payload` field
-- **Output**: JSON object containing a `result` field
+
+- **Type string:** `n8n-nodes-base.awsLambda`
+- **Aliases:** (none)
+- **Inputs:** `main` × 1
+- **Outputs:** `main` × 1
+- **Credentials:** `aws` (IAM access key or Assume Role)
 
 ## Parameters
-- **Function Name** (string): AWS Lambda function name
-- **Region** (string): AWS region
-- **Payload** (object): Input data passed to the Lambda function
-- **Timeout** (number, optional): Execution timeout in seconds
-- **Credentials** (awsLambda.Credentials): AWS credentials object
+
+| name | type | default | required | displayOptions | notes |
+|------|------|---------|----------|----------------|-------|
+| resource | string | `function` | yes | — | Always `function` (single resource) |
+| operation | string | `invoke` | yes | — | Always `invoke` (single operation) |
+| functionName | string | — | yes | — | ARN or name of the Lambda function to invoke |
+| invocationType | string | `RequestResponse` | no | — | `RequestResponse` (sync), `Event` (async fire-and-forget), or `DryRun` (test permissions) |
+| payload | JSON | `{}` | no | — | JSON payload to pass to the function |
+| qualifier | string | — | no | — | Version or alias qualifier (e.g. `prod`, `1`) |
+| clientContext | JSON | — | no | — | Base64-encoded JSON client context forwarded to the function |
+| logType | string | `None` | no | — | `None` or `Tail` (returns last 4 KB of execution log) |
+| additionalFields | object | `{}` | no | — | See sub-parameters below |
+
+### additionalFields sub-parameters
+
+| name | type | default | required | notes |
+|------|------|---------|----------|-------|
+| simplifyOutput | boolean | `true` | no | When true, extracts the parsed JSON from `Payload` directly instead of wrapping in SDK response envelope |
 
 ## Runtime behavior
-- Processes incoming items by invoking the configured AWS Lambda function.
-- Merges input payload with default parameters before invocation.
-- Returns the Lambda function's result as the node's output item.
-- Errors transition the node to a failure state with an error description.
+
+### Input
+
+Each input item is processed independently. The node uses the configured AWS credentials to call the Lambda Invoke API for the given function.
+
+### Output
+
+One output item per input item. The output shape depends on `simplifyOutput`:
+
+- **simplifyOutput = true:** Returns the parsed `Payload` field from the Invoke response directly (the Lambda function's return value).
+- **simplifyOutput = false:** Returns the full SDK response envelope containing `StatusCode`, `Payload`, `ExecutedVersion`, `FunctionError`, and `LogResult`.
+
+When `InvocationType` is `Event`, the response is empty (202 Accepted). When `DryRun`, no function executes.
+
+### Errors
+
+- If the function does not exist or permissions are insufficient, the node throws an error with the AWS service error code.
+- `InvocationType` `RequestResponse` may return a `FunctionError` key in the response body (e.g., `Handled` or `Unhandled`). These are treated as execution errors unless `continueOnFail` is enabled.
+- `invocationType` `Event` that fails (async invocation) will not surface the error in the node output.
+
+### Expressions
+
+All parameter values accept expression strings.
 
 ## Acceptance tests
-1. Invoke the Lambda with a simple payload and verify the output matches the expected transformation.
-2. Simulate a timeout and verify the node fails with the appropriate error.
-3. Call the node without credentials and verify proper error handling.
-4. Execute with a large payload to confirm streaming behavior.
-5. Test retry logic on transient errors.
+
+### Test: basic invoke
+
+**Given** input items:
+
+```json
+[{ "json": {} }]
+```
+
+**Parameters:**
+
+```json
+{
+  "functionName": "my-function",
+  "invocationType": "RequestResponse",
+  "payload": { "key": "value" }
+}
+```
+
+**Expect** output[0]:
+
+```json
+[{ "json": { "StatusCode": 200, "Payload": { "key": "value" }, "ExecutedVersion": "$LATEST" } }]
+```
+
+### Test: simplified output
+
+**Parameters:**
+
+```json
+{
+  "functionName": "my-function",
+  "invocationType": "RequestResponse",
+  "payload": "={{ $json.body }}",
+  "additionalFields": { "simplifyOutput": true }
+}
+```
+
+**Expect** output[0] to contain the parsed payload directly (the Lambda function's return value) rather than the SDK envelope.
+
+### Test: async invocation
+
+**Parameters:**
+
+```json
+{
+  "functionName": "my-function",
+  "invocationType": "Event",
+  "payload": {}
+}
+```
+
+**Expect** output[0]:
+
+```json
+[{ "json": { "StatusCode": 202 } }]
+```
+
+### Test: dry run
+
+**Parameters:**
+
+```json
+{
+  "functionName": "my-function",
+  "invocationType": "DryRun"
+}
+```
+
+**Expect** output[0]:
+
+```json
+[{ "json": { "StatusCode": 204 } }]
+```
+
+### Test: invocation with qualifier
+
+**Parameters:**
+
+```json
+{
+  "functionName": "my-function",
+  "invocationType": "RequestResponse",
+  "qualifier": "prod",
+  "payload": {}
+}
+```
+
+**Expect** the request to include the qualifier; `ExecutedVersion` in response should match the alias/version.
 
 ## Gaps / confidence
-- Exact schema of payload and result is not fully documented; inferred from publicly available examples.
-- Default timeout assumed to be 30 seconds based on typical AWS Lambda defaults.
+
+| Topic | documented / inferred | Notes |
+|-------|----------------------|-------|
+| Operation set | documented | n8n public docs confirm single "Invoke a function" operation |
+| Credential type | documented | AWS IAM credentials with region, access key, secret key; also supports Assume Role |
+| Parameters | inferred from AWS API | `functionName`, `invocationType`, `payload`, `qualifier`, `clientContext`, `logType`, `simplifyOutput` inferred from AWS Lambda Invoke API and common n8n patterns |
+| Simplify output | inferred | Common n8n pattern for AWS SDK nodes; exact parameter name may differ |
+| UI organization | not applicable | Spec describes functional parameters, not UI groupings |
 
 ## OpenFlow mapping
-- **Definition group**: `awsLambda`
-- **Executor filename**: `src/sdk/awsLambdaExecutor.ts`
+
+- **Definition group:** `core` | `flow` | `triggers` | `transform`
+- **Executor file:** `src/lib/engine/executors/AwsLambda.ts`
+- **SDK:** `defineNode` + native `ExecutionContext` only

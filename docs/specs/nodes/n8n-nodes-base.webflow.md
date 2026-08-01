@@ -1,275 +1,191 @@
 ---
 type: n8n-nodes-base.webflow
 displayName: Webflow
-category: Transform
-versions: [1, 2]
-defaultVersion: 2
+category: Marketing
+versions: [2]
 priority: medium
 status: specced
 ---
 
 # Webflow
 
-Consume the Webflow API to create, read, update, and delete Collection items.
-
 ## Sources
 
 | URL | Source class |
 |-----|----------------|
-| https://docs.n8n.io/integrations/builtin/app-nodes/n8n-nodes-base.webflow/ | Public docs only |
-| https://docs.n8n.io/integrations/builtin/credentials/webflow/ | Public docs only (credentials) |
-| https://developers.webflow.com/ | Third-party service API docs (Webflow API reference, paraphrased) |
+| https://docs.n8n.io/integrations/builtin/app-nodes/n8n-nodes-base.webflow.md | Public docs only |
+| https://docs.n8n.io/integrations/builtin/credentials/webflow.md | Public docs only |
+| https://developers.webflow.com/data/reference/rest-introduction | Public docs only |
 
 ## Wire format
 
 - **Type string:** `n8n-nodes-base.webflow`
-- **Aliases:** (none)
-- **Inputs:** `main` × 1
-- **Outputs:** `main` × 1
-- **Credentials:**
-  - `webflowApi` — access token (`accessToken`) — used when `authentication = accessToken`
-  - `webflowOAuth2Api` — OAuth2 — used when `authentication = oAuth2`
-- **Categories:** Marketing, Transform — group `transform` (**descriptor**)
-
-### Resources and operations (documented)
-
-| Resource | Operation | Webflow API endpoint | Documented |
-|----------|-----------|----------------------|------------|
-| Item | Create | `POST /collections/{collectionId}/items` | yes |
-| Item | Delete | `DELETE /collections/{collectionId}/items/{itemId}` | yes |
-| Item | Get | `GET /collections/{collectionId}/items/{itemId}` | yes |
-| Item | Get Many | `GET /collections/{collectionId}/items` | yes |
-| Item | Update | `PATCH /collections/{collectionId}/items/{itemId}` | yes |
+- **Aliases:** `delete` -> `deleteItem`
+- **Inputs:** `main` x 1
+- **Outputs:** `main` x 1
+- **Credentials:** `webflowOAuth2Api` (OAuth2)
 
 ## Parameters
 
-### Common (all operations)
-
 | name | type | default | required | displayOptions | notes |
 |------|------|---------|----------|----------------|-------|
-| authentication | options | `accessToken` | yes | — | `accessToken` \| `oAuth2` (**documented**) |
-| resource | options | `item` | yes | — | Only `item` available (**documented**) |
-| operation | options | `get` | yes | resource=item | `create` \| `delete` \| `get` \| `getAll` \| `update` (**documented**) |
+| resource | options: ["item"] | "item" | Y | — | Only one resource |
+| operation | options | "get" | Y | resource=item | One of: create, deleteItem, get, getAll, update |
+| siteId | options (loaded) | "" | Y | resource=item | Dynamically populated from Webflow account |
+| collectionId | options (loaded) | "" | Y | resource=item | Depends on siteId; dynamically populated |
+| itemId | string | "" | Y | operation in [get,deleteItem,update] | CMS item identifier |
+| live | boolean | false | N | operation in [create,update] | Publish to live site immediately |
+| returnAll | boolean | false | N | operation=getAll | Return all items vs paginated |
+| limit | number | 100 | N | operation=getAll AND returnAll=false | Max items (1-100) |
+| fieldsUi | fixedCollection | {} | N | operation in [create,update] | Key-value pairs: fieldId + fieldValue |
 
-### Item — Create parameters
-
-| name | type | default | required | displayOptions | notes |
-|------|------|---------|----------|----------------|-------|
-| siteId | options | | yes | resource=item, operation=create | Site containing the collection. Load options via `getSites` (**documented** + **inferred** loadOptionsMethod) |
-| collectionId | options | | yes | resource=item, operation=create | Collection to add item to. Load options via `getCollections` (depends on `siteId`) (**documented** + **inferred** loadOptionsMethod) |
-| live | boolean | `false` | yes | resource=item, operation=create | Publish item to live site (**documented**) |
-| fieldsUi.fieldValues[].fieldId | options | | yes* | resource=item, operation=create | Field to set. Load options via `getFields` (depends on `collectionId`) (**documented** + **inferred** loadOptionsMethod) |
-| fieldsUi.fieldValues[].fieldValue | string | `''` | no | resource=item, operation=create | Value for the field (**documented**) |
-
-* `fieldsUi.fieldValues` is a fixedCollection with `multipleValues: true`; at least one entry is required to create an item with fields.
-
-### Item — Get parameters
-
-| name | type | default | required | displayOptions | notes |
-|------|------|---------|----------|----------------|-------|
-| siteId | options | | yes | resource=item, operation=get | Site containing the collection. Load options via `getSites` (**documented** + **inferred**) |
-| collectionId | options | | yes | resource=item, operation=get | Collection to get item from. Load options via `getCollections` (depends on `siteId`) (**documented** + **inferred**) |
-| itemId | string | | yes | resource=item, operation=get | ID of the item to retrieve (**documented**) |
-
-### Item — Delete parameters
-
-| name | type | default | required | displayOptions | notes |
-|------|------|---------|----------|----------------|-------|
-| siteId | options | | yes | resource=item, operation=delete | Site containing the collection. Load options via `getSites` (**documented** + **inferred**) |
-| collectionId | options | | yes | resource=item, operation=delete | Collection to delete item from. Load options via `getCollections` (depends on `siteId`) (**documented** + **inferred**) |
-| itemId | string | | yes | resource=item, operation=delete | ID of the item to delete (**documented**) |
-
-### Item — Update parameters
-
-| name | type | default | required | displayOptions | notes |
-|------|------|---------|----------|----------------|-------|
-| siteId | options | | yes | resource=item, operation=update | Site containing the collection. Load options via `getSites` (**documented** + **inferred**) |
-| collectionId | options | | yes | resource=item, operation=update | Collection to update item in. Load options via `getCollections` (depends on `siteId`) (**documented** + **inferred**) |
-| itemId | string | | yes | resource=item, operation=update | ID of the item to update (**documented**) |
-| live | boolean | `false` | yes | resource=item, operation=update | Publish updated item to live site (**documented**) |
-| fieldsUi.fieldValues[].fieldId | options | | yes* | resource=item, operation=update | Field to update. Load options via `getFields` (depends on `collectionId`) (**documented** + **inferred**) |
-| fieldsUi.fieldValues[].fieldValue | string | `''` | no | resource=item, operation=update | New value for the field (**documented**) |
-
-* `fieldsUi.fieldValues` is a fixedCollection with `multipleValues: true`; at least one entry is required to update an item with fields.
-
-### Item — Get Many parameters
-
-| name | type | default | required | displayOptions | notes |
-|------|------|---------|----------|----------------|-------|
-| siteId | options | | yes | resource=item, operation=getAll | Site containing the collection. Load options via `getSites` (**documented** + **inferred**) |
-| collectionId | options | | yes | resource=item, operation=getAll | Collection to get items from. Load options via `getCollections` (depends on `siteId`) (**documented** + **inferred**) |
-| returnAll | boolean | `false` | no | resource=item, operation=getAll | Return all items (paginates internally) (**documented**) |
-| limit | number | `100` | no* | resource=item, operation=getAll, returnAll=false | Max items to return (1–100) (**documented**) |
-
-* Required when `returnAll = false`.
-
-### Load options methods (inferred from descriptor)
-
-| method | dependsOn | returns |
-|--------|-----------|---------|
-| getSites | — | Array of `{ name: string, value: string }` — site names and IDs |
-| getCollections | siteId | Array of `{ name: string, value: string }` — collection names and IDs for the site |
-| getFields | collectionId | Array of `{ name: string, value: string }` — field names and IDs for the collection |
+The `fieldsUi` fixedCollection contains a single option group named `fieldValues`. Each entry pairs a `fieldId` (string, the collection field key) with a `fieldValue` (string, the value to set). The fieldId options are dynamically loaded based on the selected collectionId.
 
 ## Runtime behavior
 
 ### Input
 
-- Consumes `main` input items (one API call per item).
-- All string parameters accept n8n expression strings (`{{ … }}`) for per-item templating (**inferred** / standard n8n behaviour).
-- The `fieldsUi.fieldValues` fixedCollection is transformed into a flat `fieldData` object (`fieldId` → `fieldValue`) for the API request body.
+Each input item is processed independently. For `create` and `update`, the `fieldsUi.fieldValues` collection is flattened into the `fieldData` object sent to the Webflow API.
 
 ### Output
 
-| Operation | Output item shape | Documented / inferred |
-|-----------|-------------------|------------------------|
-| Create | `json` = created item object (includes `id`, `fieldData`, `createdOn`, `updatedOn`, …) | documented / Webflow API |
-| Delete | `json` = `{ success: true }` on HTTP 204, `{ success: false }` otherwise | inferred from V1/V2 code |
-| Get | `json` = item object | documented / Webflow API |
-| Get Many | `json` = array of item objects (when `returnAll=true` or up to `limit`) | documented / Webflow API |
-| Update | `json` = updated item object | documented / Webflow API |
+| Operation | Output shape |
+|-----------|-------------|
+| create | Single item object from POST response body: `{ id, fieldData, createdOn, lastUpdated, isArchived, isDraft }` |
+| deleteItem | `{ success: true }` on 204; `{ success: false }` on any other status code |
+| get | Single item object from GET response body |
+| getAll | Array of item objects; paginated or full collection |
+| update | Single item object from PATCH response body |
+
+The `deleteItem` operation accepts the wire value `deleteItem`. It also supports the alias `delete` for convenience, which maps to the same behavior.
 
 ### Errors
 
-- Missing required credential (`webflowApi` or `webflowOAuth2Api`) throws (**inferred**).
-- Invalid/expired access token → HTTP 401 from Webflow, surfaced as node error (**inferred** / standard HTTP behaviour).
-- Missing required parameters (`siteId`, `collectionId`, `itemId`, etc.) throws (**inferred**).
-- Webflow API rate limits (HTTP 429) surface as node errors (**inferred** / standard HTTP behaviour).
-- `continueOnFail` respected: on error, outputs `{ json: { error: string, message: string } }` per item instead of throwing (**inferred** from V1/V2 execute code).
+On API failure (non-2xx status, network error, malformed request), the node throws unless `continueOnFail` is enabled, in which case an error item `{ json: { message, error } }` is emitted for that input index. The `deleteItem` operation does not throw on non-204 statuses; it returns `{ success: false }` instead.
 
 ### Expressions
 
-All string parameters (`siteId`, `collectionId`, `itemId`, `fieldValue`, etc.) accept n8n expression strings (`{{ … }}`) for per-item templating (**inferred** / standard n8n behaviour).
-
-### Live publishing
-
-- `live = true` on Create/Update appends `/live` to the API endpoint path, publishing the item immediately (**inferred** from V1/V2 code).
-- `live = false` creates/updates the item in draft/staging only (**inferred**).
+All parameters that accept string or options values support n8n expression syntax. The `fieldValue` parameter within `fieldsUi.fieldValues` accepts expressions.
 
 ## Acceptance tests
 
 ### Test: create item
 
-**Given** one input item `{}`
+**Given** input items:
+```json
+[{ "json": {} }]
+```
 
 **Parameters:**
-
 ```json
 {
-  "authentication": "accessToken",
   "resource": "item",
   "operation": "create",
-  "siteId": "site_123",
-  "collectionId": "coll_456",
+  "siteId": "site_abc",
+  "collectionId": "col_xyz",
   "live": false,
   "fieldsUi": {
     "fieldValues": [
-      { "fieldId": "name", "fieldValue": "Test Item" },
-      { "fieldId": "slug", "fieldValue": "test-item" }
+      { "fieldId": "name", "fieldValue": "Test Item" }
     ]
   }
 }
 ```
 
-**Expect** one outgoing `POST https://api.webflow.com/v2/collections/coll_456/items` with JSON body `{ "fieldData": { "name": "Test Item", "slug": "test-item" } }` and output[0][0].json = created item object (contains `id`, `fieldData`, etc.).
+**Expect** the executor sends `POST /collections/col_xyz/items` with body `{ "fieldData": { "name": "Test Item" } }` and returns the response body as output items.
 
-### Test: get item
+### Test: delete item (deleteItem operation)
 
-**Given** one input item `{}`
+**Given** input items:
+```json
+[{ "json": {} }]
+```
 
 **Parameters:**
-
 ```json
 {
-  "authentication": "accessToken",
   "resource": "item",
-  "operation": "get",
-  "siteId": "site_123",
-  "collectionId": "coll_456",
-  "itemId": "item_789"
+  "operation": "deleteItem",
+  "siteId": "site_abc",
+  "collectionId": "col_xyz",
+  "itemId": "item_123"
 }
 ```
 
-**Expect** one outgoing `GET https://api.webflow.com/v2/collections/coll_456/items/item_789`; output[0][0].json = item object.
+**Expect** the executor sends `DELETE /collections/col_xyz/items/item_123`. If the API returns 204, output is `{ success: true }`. If any other status, output is `{ success: false }`. Never throws on non-2xx.
 
-### Test: get many items (limited)
+### Test: delete item via alias (delete operation)
 
-**Given** one input item `{}`
-
-**Parameters:**
-
+**Given** input items:
 ```json
-{
-  "authentication": "accessToken",
-  "resource": "item",
-  "operation": "getAll",
-  "siteId": "site_123",
-  "collectionId": "coll_456",
-  "returnAll": false,
-  "limit": 50
-}
+[{ "json": {} }]
 ```
 
-**Expect** one outgoing `GET https://api.webflow.com/v2/collections/coll_456/items?limit=50`; output[0][0].json = array of up to 50 item objects.
-
-### Test: update item
-
-**Given** one input item `{}`
-
 **Parameters:**
-
 ```json
 {
-  "authentication": "accessToken",
-  "resource": "item",
-  "operation": "update",
-  "siteId": "site_123",
-  "collectionId": "coll_456",
-  "itemId": "item_789",
-  "live": true,
-  "fieldsUi": {
-    "fieldValues": [
-      { "fieldId": "name", "fieldValue": "Updated Name" }
-    ]
-  }
-}
-```
-
-**Expect** one outgoing `PATCH https://api.webflow.com/v2/collections/coll_456/items/item_789/live` with JSON body `{ "fieldData": { "name": "Updated Name" } }`; output[0][0].json = updated item object.
-
-### Test: delete item
-
-**Given** one input item `{}`
-
-**Parameters:**
-
-```json
-{
-  "authentication": "accessToken",
   "resource": "item",
   "operation": "delete",
-  "siteId": "site_123",
-  "collectionId": "coll_456",
-  "itemId": "item_789"
+  "siteId": "site_abc",
+  "collectionId": "col_xyz",
+  "itemId": "item_123"
 }
 ```
 
-**Expect** one outgoing `DELETE https://api.webflow.com/v2/collections/coll_456/items/item_789`; output[0][0].json = `{ success: true }` (on HTTP 204).
+**Expect** the executor treats `delete` as equivalent to `deleteItem` and sends `DELETE /collections/col_xyz/items/item_123`.
+
+### Test: get all items with limit
+
+**Given** input items:
+```json
+[{ "json": {} }]
+```
+
+**Parameters:**
+```json
+{
+  "resource": "item",
+  "operation": "getAll",
+  "siteId": "site_abc",
+  "collectionId": "col_xyz",
+  "returnAll": false,
+  "limit": 10
+}
+```
+
+**Expect** the executor sends `GET /collections/col_xyz/items?limit=10` and returns the items array from the response body.
+
+### Test: continue on fail
+
+**Given** input items:
+```json
+[{ "json": {} }]
+```
+
+**Parameters:**
+```json
+{
+  "resource": "item",
+  "operation": "get",
+  "siteId": "site_abc",
+  "collectionId": "col_xyz",
+  "itemId": "nonexistent"
+}
+```
+
+With `continueOnFail: true`, when the API returns an error, the executor emits `{ json: { message: "...", error: ... } }` without throwing.
 
 ## Gaps / confidence
 
 | Topic | documented / inferred | Notes |
 |-------|----------------------|-------|
-| Exact wire field names for `fieldData` object | documented | Webflow API uses `fieldData` as the wrapper; confirmed by V1/V2 code |
-| Output shape for `getAll` when `returnAll=true` | inferred | V2 uses `webflowApiRequestAllItems` which returns flat array; V1 returns `responseData.items` |
-| Delete success response shape | inferred | V1/V2 code maps HTTP 204 → `{ success: true }`, else `{ success: false }` |
-| OAuth2 credential flow details | documented (credentials doc) | `webflowOAuth2Api` uses standard OAuth2; spec does not model auth flow |
-| V1 vs V2 API version differences | partially documented | V2 uses `/v2/` endpoints; V1 used `/v1/` (now deprecated in n8n) — spec targets current V2 behaviour |
-| Load options method signatures | inferred from descriptor | `getSites`, `getCollections`, `getFields` names and `dependsOn` from V2 code |
+| Operation enum values | Confirmed via corpus | Wire value is `deleteItem`; `delete` is an alias |
+| Site/collection/field dynamic loading | Inferred from implementation | Loaded via credential-scoped API calls |
+| Exact response field set | Inferred from schema desciptors | Webflow API may return additional fields per collection schema |
+| Webflow API base URL | Inferred | Standard `https://api.webflow.com` |
 
 ## OpenFlow mapping
 
-- **Definition group:** `transform`
+- **Definition group:** `core`
 - **Executor file:** `src/lib/engine/executors/webflow.ts`
 - **SDK:** `defineNode` + native `ExecutionContext` only
-- **Notes:** Two credential types (`webflowApi` for access token, `webflowOAuth2Api` for OAuth2) selected via `authentication` parameter. Versioned node (v1, v2) with v2 as default.

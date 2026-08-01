@@ -4,8 +4,10 @@ displayName: Snowflake
 category: Data & Storage
 versions: [1]
 priority: medium
-status: spec_complete
+status: specced
 ---
+
+# Snowflake
 
 ## Sources
 
@@ -13,7 +15,6 @@ status: spec_complete
 |-----|----------------|
 | https://docs.n8n.io/integrations/builtin/app-nodes/n8n-nodes-base.snowflake/ | Public docs only |
 | https://docs.n8n.io/integrations/builtin/credentials/snowflake/ | Public docs only |
-| n8n-nodes-base npm package descriptors (v2.15.1) under /tmp isolation | Public descriptor metadata |
 
 ## Wire format
 
@@ -21,121 +22,178 @@ status: spec_complete
 - **Aliases:** (none)
 - **Inputs:** `main` × 1
 - **Outputs:** `main` × 1
-- **Credentials:** Requires a credential of type `snowflake` (name to be configured).
+- **Credentials:** `snowflake` (password or key-pair auth)
 
 ## Parameters
 
 | name | type | default | required | displayOptions | notes |
 |------|------|---------|----------|----------------|-------|
-| operation | string (options) | `insert` | true | (options: Execute Query, Insert, Update) | selects operation mode |
-| query | string | `''` | false | shown when operation = executeQuery | SQL query to execute |
-| table | string | `''` | true when operation = insert or update | shown when operation = insert or update | target table name |
-| columns | string | `''` | true when operation = insert or update | shown when operation = insert or update | comma-separated list of columns |
-| updateKey | string | `id` | true when operation = update | shown when operation = update | key used for row matching |
+| operation | select | `executeQuery` | yes | always | one of `executeQuery`, `insert`, `update` |
+| query | string | — | yes (when operation = executeQuery) | operation = executeQuery | raw SQL; supports `$1`, `$2`, ... positional placeholders |
+| table | string | — | yes (when operation = insert or update) | operation = insert or update | target Snowflake table name |
+| columns | string | — | no | operation = insert or update | comma-separated column list; omitted means all input item keys |
+| updateKey | string | — | yes (when operation = update) | operation = update | column name used to identify rows to update |
+| additionalFields | object | — | no | always | container for optional modifiers (see below) |
+
+**additionalFields sub-parameters:**
+
+| name | type | default | displayOptions | notes |
+|------|------|---------|----------------|-------|
+| queryParameters | string | — | operation = executeQuery | comma-separated values bound to `$1`, `$2`, ... in the query; n8n sanitizes these to prevent SQL injection |
+| schema | string | — | always | override the default schema from credentials for this node instance |
+| warehouse | string | — | always | override the default warehouse from credentials for this node instance |
+| timeout | number | — | always | maximum seconds to wait for query execution |
+| streamResult | boolean | false | always | when true, return results as a stream instead of buffering all rows in memory |
 
 ## Runtime behavior
 
 ### Input
-- **Main input:** Array of items on the `main` input port.
-- **Operation selection:** The `operation` parameter determines the mode:
-  - `executeQuery`: Run a SQL query.
-  - `insert`: Insert rows into the specified table.
-  - `update`: Update rows matching `updateKey` in the specified table.
-- **Credentials:** Uses the configured `snowflake` credential for connection.
+
+Each input item drives one execution of the chosen operation.
+
+- **executeQuery:** The `query` string is sent to Snowflake via the Snowflake Node.js driver. If `queryParameters` is set, values are bound positionally to `$1`, `$2`, ... placeholders. The query is executed once per input item.
+- **insert:** A row is constructed from each input item. The `columns` parameter (if provided) selects which item keys map to table columns; otherwise all top-level item keys are used. An `INSERT INTO table (columns) VALUES (values)` statement is built and executed per item.
+- **update:** An `UPDATE table SET col1 = val1, ... WHERE updateKey = matching_value` statement is executed per item. The `updateKey` column is taken from the corresponding item field. If `columns` is provided, only those columns are included in the SET clause.
 
 ### Output
-- **Main output:** Array of items on the `main` output port.
-- **Execute Query:** Returns query result rows.
-- **Insert / Update:** Returns confirmation of affected rows/inserted IDs.
-- **Errors:** Throws on API errors unless `continueOnFail` is true; otherwise may produce empty output.
+
+- **executeQuery:** The result set rows are emitted as output items. Each row becomes one output item with column names as keys. If no rows are returned, an empty array is output (not an error).
+- **insert:** Each output item contains the number of rows affected (`affectedRows`). If the underlying driver supports it, the generated row ID may also be included.
+- **update:** Each output item contains the number of rows affected (`affectedRows`).
 
 ### Errors
-- API errors (authentication, query syntax, permission, quota) propagate as failures unless `continueOnFail` is true.
-- Invalid operation configuration (e.g., missing query for executeQuery) results in validation error.
+
+- Authentication failures, query syntax errors, permission denials, and timeouts throw an error and halt the node.
+- If `continueOnFail` is true on the node, the error is suppressed for that item and execution continues with the next item. The failing item is omitted from output.
+- Connection-level errors (e.g. network failure) affect all items in the batch.
 
 ### Expressions
-- All string parameters support n8n expressions (`{{ $json.field }}`).
-- Expression evaluation occurs per-item, but `documentId` and `table` are evaluated once per workflow.
+
+All string, number, and boolean parameter values support n8n expressions (`{{ $json.field }}`).
+Expressions are evaluated per-item, so each input item can produce a different query string or set of values.
 
 ## Acceptance tests
 
-### Test: Execute Query (basic)
-Given input items:
+### Test: Execute a simple query
+
+**Given** input items:
 ```json
 [{ "json": {} }]
 ```
-Parameters:
+
+**Parameters:**
 ```json
 {
   "operation": "executeQuery",
-  "query": "SELECT 1 as test_value"
+  "query": "SELECT 1 AS n, 'hello' AS msg"
 }
 ```
-Expect output[0]:
+
+**Expect** output[0]:
 ```json
-[{ "json": { "test_value": 1 } }]
+[{ "json": { "n": 1, "msg": "hello" } }]
 ```
 
-### Test: Insert (basic)
-Given input items:
+### Test: Parameterized query
+
+**Given** input items:
+```json
+[{ "json": { "email": "alice@example.com", "status": "active" } }]
+```
+
+**Parameters:**
+```json
+{
+  "operation": "executeQuery",
+  "query": "SELECT * FROM users WHERE email = $1 AND status = $2",
+  "additionalFields": {
+    "queryParameters": "{{ $json.email }}, {{ $json.status }}"
+  }
+}
+```
+
+**Expect** output[0] to contain the matching user row(s) from the `users` table.
+
+### Test: Insert rows from input items
+
+**Given** input items:
 ```json
 [{ "json": { "name": "Alice", "age": 30 } }]
 ```
-Parameters:
+
+**Parameters:**
 ```json
 {
   "operation": "insert",
-  "table": "users",
+  "table": "employees",
   "columns": "name,age"
 }
 ```
-Expect output[0] contains update metadata indicating a row was inserted.
 
-### Test: Update (basic)
-Given input items:
+**Expect** output[0]:
 ```json
-[{ "json": { "id": "row-1", "name": "Alice Updated", "age": 31 } }]
+[{ "json": { "affectedRows": 1 } }]
 ```
-Parameters:
+
+### Test: Update rows matched by key
+
+**Given** input items:
+```json
+[{ "json": { "id": 42, "name": "Alice Updated", "age": 31 } }]
+```
+
+**Parameters:**
 ```json
 {
   "operation": "update",
-  "table": "users",
+  "table": "employees",
   "updateKey": "id",
-  "columns": "name,age",
-  "documentId": { "mode": "id", "value": "row-1" }
+  "columns": "name,age"
 }
 ```
-Expect output[0] contains update metadata.
 
-### Test: Execute Query with Multiple Rows
-Given input items:
+**Expect** output[0]:
 ```json
-[{ "json": {} }, { "json": {} }]
+[{ "json": { "affectedRows": 1 } }]
 ```
-Parameters:
+
+### Test: Multi-item batch
+
+**Given** input items:
+```json
+[
+  { "json": { "email": "a@x.com" } },
+  { "json": { "email": "b@x.com" } }
+]
+```
+
+**Parameters:**
 ```json
 {
   "operation": "executeQuery",
-  "query": "SELECT {{ $json.count }} as count"
+  "query": "SELECT email FROM users WHERE email = $1",
+  "additionalFields": {
+    "queryParameters": "{{ $json.email }}"
+  }
 }
 ```
-Expect output array length matches input count, each item includes `count`.
+
+**Expect** output.length === 2 and each output is the result of the query for its respective input.
 
 ## Gaps / confidence
 
 | Topic | documented / inferred | Notes |
 |-------|----------------------|-------|
-| Operation options (`executeQuery`, `insert`, `update`) | documented | From public node description and descriptor metadata |
-| Parameter names (`operation`, `query`, `table`, `columns`, `updateKey`) | documented | Directly from node configuration |
-| Default values (`insert`, `id`) | documented | From node static properties |
-| Credential requirement (`snowflake`) | documented | From `credentials` array |
-| Input/output behavior (main port) | documented | Node signature |
-| Expressions support | inferred | From generic n8n parameter expression support |
-| Version differences (v1 vs v2 parameter shapes) | inferred | Based on package descriptor metadata |
-| Detailed SQL parsing behavior | inferred | Not fully described in public docs |
+| Three operations (executeQuery, insert, update) | documented | Explicit in public n8n docs page |
+| Credential fields (account, database, warehouse, schema, role, clientSessionKeepAlive) | documented | Credentials page details password and key-pair auth |
+| $N placeholder / queryParameters pattern | documented | Public docs describe parameterized queries with SQL injection warning |
+| columns / updateKey parameter shapes and defaults | inferred | Not detailed in public docs; inferred from standard SQL node patterns |
+| Insert/update batch behavior (one SQL stmt per item vs bulk) | inferred | Per-item execution is the typical n8n pattern |
+| streamResult option | inferred | Common large-result feature for SQL nodes |
+| Version differences across v1 | inferred | Only v1 is documented |
 
 ## OpenFlow mapping
+
 - **Definition group:** `app`
 - **Executor file:** `src/lib/engine/executors/n8n-nodes-base.snowflake.ts`
 - **SDK:** `defineNode` + native `ExecutionContext` only

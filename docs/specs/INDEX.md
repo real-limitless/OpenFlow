@@ -30,7 +30,7 @@
 30: 30: 30: 30: 30: 30: 30: n8n-nodes-base.nextCloud: specced, docs/specs/nodes/n8n-nodes-base.nextCloud.md
 31: 31: 31: 31: 31: 31: 31: n8n-nodes-base.xero: specced, docs/specs/nodes/n8n-nodes-base.xero.md
 n8n-nodes-base.awsS3: specced, docs/specs/nodes/n8n-nodes-base.awsS3.md
-32: 32: 33: 33: 33: 33: 33: n8n-nodes-base.awsLambda: specced, docs/specs/nodes/n8n-nodes-base.awsLambda.md
+n8n-nodes-base.awsLambda: specced, docs/specs/nodes/n8n-nodes-base.awsLambda.md
 33: 33: 33: 33: 33: 33: 33: 33: n8n-nodes-base.awsSes: specced, docs/specs/nodes/n8n-nodes-base.awsSes.md
 34: 34: 34: 34: 34: 34: 34: 34: n8n-nodes-base.elasticsearch: specced, docs/specs/nodes/n8n-nodes-base.elasticsearch.md
 35: 35: 34: 34: 34: 34: 34: 34: n8n-nodes-base.mqtt: specced, docs/specs/nodes/n8n-nodes-base.mqtt.md
@@ -40,5 +40,26 @@ n8n-nodes-base.awsS3: specced, docs/specs/nodes/n8n-nodes-base.awsS3.md
 39: 39: n8n-nodes-base.amqp: specced, docs/specs/nodes/n8n-nodes-base.amqp.md
 40: 40: n8n-nodes-base.payPal: specced, docs/specs/nodes/n8n-nodes-base.payPal.md
 41: 41: n8n-nodes-base.stripeTrigger: specced, docs/specs/nodes/n8n-nodes-base.stripeTrigger.md
-42: n8n-nodes-base.nocoDb: specced, docs/specs/nodes/n8n-nodes-base.nocoDb.md
+42: n8n-nodes-base.redisTrigger: specced, docs/specs/nodes/n8n-nodes-base.redisTrigger.md
+n8n-nodes-base.nocoDb: specced, docs/specs/nodes/n8n-nodes-base.nocoDb.md
 43: n8n-nodes-base.dropbox: specced, docs/specs/nodes/n8n-nodes-base.dropbox.md
+n8n-nodes-base.postgresTrigger: specced, docs/specs/nodes/n8n-nodes-base.postgresTrigger.md
+@n8n/n8n-nodes-langchain.modelSelector: specced, docs/specs/nodes/@n8n/n8n-nodes-langchain.modelSelector.md
+@n8n/n8n-nodes-langchain.guardrails: specced, docs/specs/nodes/@n8n/n8n-nodes-langchain.guardrails.md
+n8n-nodes-base.httpRequestTool: specced, docs/specs/nodes/n8n-nodes-base.httpRequestTool.md
+n8n-nodes-base.gmailTool: specced, docs/specs/nodes/n8n-nodes-base.gmailTool.md
+n8n-nodes-base.googleSheetsTool: specced, docs/specs/nodes/n8n-nodes-base.googleSheetsTool.md
+n8n-nodes-base.googleCalendarTool: specced, docs/specs/nodes/n8n-nodes-base.googleCalendarTool.md
+n8n-nodes-base.googleTasksTool: specced, docs/specs/nodes/n8n-nodes-base.googleTasksTool.md
+n8n-nodes-base.wooCommerceTool: specced, docs/specs/nodes/n8n-nodes-base.wooCommerceTool.md
+n8n-nodes-base.rssFeedReadTool: specced, docs/specs/nodes/n8n-nodes-base.rssFeedReadTool.md
+n8n-nodes-base.dateTimeTool: specced, docs/specs/nodes/n8n-nodes-base.dateTimeTool.md
+@n8n/n8n-nodes-langchain.vectorStoreMilvus: specced, docs/specs/nodes/@n8n/n8n-nodes-langchain.vectorStoreMilvus.md
+@n8n/n8n-nodes-langchain.retrieverVectorStore: specced, docs/specs/nodes/@n8n/n8n-nodes-langchain.retrieverVectorStore.md
+@n8n/n8n-nodes-langchain.memoryManager: specced, docs/specs/nodes/@n8n/n8n-nodes-langchain.memoryManager.md
+n8n-nodes-base.perplexity: specced, docs/specs/nodes/n8n-nodes-base.perplexity.md
+n8n-nodes-base.webflow: specced, docs/specs/nodes/n8n-nodes-base.webflow.md
+n8n-nodes-base.homeAssistant: specced, docs/specs/nodes/n8n-nodes-base.homeAssistant.md
+n8n-nodes-base.telegramTrigger: specced, docs/specs/nodes/n8n-nodes-base.telegramTrigger.md
+n8n-nodes-base.googleDrive: specced, docs/specs/nodes/n8n-nodes-base.googleDrive.md
+n8n-nodes-base.gmailTrigger: specced, docs/specs/nodes/n8n-nodes-base.gmailTrigger.md

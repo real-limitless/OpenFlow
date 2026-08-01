@@ -103,5 +103,6 @@ docs/
 5. **Batch tests:** `npm run test:batch -- 00`
 6. **Dogfood:** `npm run test:dogfood` · fixtures in `workflows/dogfood/` · `docs/dogfood.md`
 7. **Factory:** `npm run factory:batch -- 05` · see `scripts/factory/README.md`
+8. **Scrape → factory gaps:** `npm run factory:gaps` then `npm run factory:import-scraped -- enqueue --top 50`
 
 See `docs/clean-room.md` and `docs/sdk/OVERVIEW.md`.
