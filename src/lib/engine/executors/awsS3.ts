@@ -58,11 +58,11 @@ function sha256(data: string): Promise<string> {
 
 function hmacSha256(key: Uint8Array, data: string): Promise<Uint8Array> {
   return crypto.subtle.importKey(
-    "raw",
+    "raw" as KeyFormat,
     key,
     { name: "HMAC", hash: "SHA-256" },
     false,
-    ["sign"],
+    ["sign" as KeyUsage],
   ).then((cryptoKey) =>
     crypto.subtle.sign("HMAC", cryptoKey, new TextEncoder().encode(data)).then((h) => new Uint8Array(h)),
   );
@@ -439,8 +439,8 @@ async function runFileOperation(
     const binaryData: IBinaryData = {
       mimeType: contentType,
       data: Buffer.from(res.body).toString("base64"),
-      fileSize: contentLength ?? undefined,
     };
+    if (contentLength) binaryData.fileSize = Number(contentLength);
 
     const metadata: Record<string, unknown> = {};
     if (eTag) metadata.ETag = eTag;
