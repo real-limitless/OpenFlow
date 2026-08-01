@@ -165,6 +165,17 @@ import { circleCiExecutor as exec_158 } from "./circle-ci";
 import { salesforceExecutor as exec_159 } from "./salesforce";
 import { pipedriveExecutor as exec_160 } from "./pipedrive";
 import { zendeskExecutor as exec_161 } from "./zendesk";
+import { zohoCrmExecutor as exec_162 } from "./zoho-crm";
+import { highLevelExecutor as exec_163 } from "./highLevel";
+import { odooExecutor as exec_164 } from "./odoo";
+import { hubspotTriggerExecutor as exec_165 } from "./hubspot-trigger";
+import { wooCommerceExecutor as exec_166 } from "./woo-commerce";
+import { shopifyExecutor as exec_167 } from "./shopify";
+import { stripeExecutor as exec_168 } from "./n8n-nodes-base.stripe";
+import { snowflakeExecutor as exec_169 } from "./n8n-nodes-base.snowflake";
+import { kafkaExecutor as exec_170 } from "./kafkaNode";
+import { nocoDbExecutor as exec_171 } from "./n8n-nodes-base.nocoDb";
+import { stripeTriggerExecutor as exec_172 } from "./stripe-trigger";
 
 /** Register every builtin executor via static imports (Nitro-safe). Idempotent. */
 export function seedBuiltinExecutors(): void {
@@ -330,6 +341,17 @@ export function seedBuiltinExecutors(): void {
   registerExecutor("n8n-nodes-base.salesforce", exec_159 as NodeExecutor);
   registerExecutor("n8n-nodes-base.pipedrive", exec_160 as NodeExecutor);
   registerExecutor("n8n-nodes-base.zendesk", exec_161 as NodeExecutor);
+  registerExecutor("n8n-nodes-base.zohoCrm", exec_162 as NodeExecutor);
+  registerExecutor("n8n-nodes-base.highLevel", exec_163 as NodeExecutor);
+  registerExecutor("n8n-nodes-base.odoo", exec_164 as NodeExecutor);
+  registerExecutor("n8n-nodes-base.hubspotTrigger", exec_165 as NodeExecutor);
+  registerExecutor("n8n-nodes-base.wooCommerce", exec_166 as NodeExecutor);
+  registerExecutor("n8n-nodes-base.shopify", exec_167 as NodeExecutor);
+  registerExecutor("n8n-nodes-base.stripe", exec_168 as NodeExecutor);
+  registerExecutor("n8n-nodes-base.snowflake", exec_169 as NodeExecutor);
+  registerExecutor("n8n-nodes-base.kafka", exec_170 as NodeExecutor);
+  registerExecutor("n8n-nodes-base.nocoDb", exec_171 as NodeExecutor);
+  registerExecutor("n8n-nodes-base.stripeTrigger", exec_172 as NodeExecutor);
   markExecutorsSeeded();
 }
 

@@ -90,6 +90,28 @@ export function hasBuiltinExecutor(type: string): boolean {
   return builtinExecutorTypes.has(resolved) || executors.has(resolved);
 }
 
+/**
+ * Describes why a registered executor cannot actually run, or null when it can.
+ *
+ * Like `hasBuiltinExecutor`, this reads the static manifest so UI code can call
+ * it without importing an executor module. `hasBuiltinExecutor` alone is not
+ * enough to decide whether a node is usable: these types resolve to a real
+ * function that throws the moment it is invoked.
+ */
+export function getExecutorUnavailability(
+  type: string,
+): { setter: string; reason: string } | null {
+  const resolved = aliases.get(type) ?? type;
+  // Deliberately does not consult the live `executors` map: seedBuiltinExecutors
+  // registers these very executors, so presence there proves nothing about
+  // whether a transport was supplied.
+  return builtinUnavailable.get(resolved) ?? null;
+}
+
+export function listUnavailableExecutorTypes(): string[] {
+  return [...builtinUnavailable.keys()].sort();
+}
+
 export function listExecutorTypes(): string[] {
   const types = new Set<string>();
   for (const key of executors.keys()) {
@@ -104,11 +126,11 @@ export function listDescriptions(): INodeTypeDescription[] {
   const seen = new Set<INodeTypeDescription>();
   const out: INodeTypeDescription[] = [];
   for (const d of descriptions.values()) {
-    if (seen.has(d)) continue;
+    if (!d?.name || seen.has(d)) continue;
     seen.add(d);
     out.push(d);
   }
-  return out.sort((a, b) => a.name.localeCompare(b.name));
+  return out.sort((a, b) => (a.name ?? "").localeCompare(b.name ?? ""));
 }
 
 /** Snapshot used by the engine runner. */
@@ -170,6 +192,17 @@ export const BUILTIN_EXECUTOR_MODULES: Array<{
   type: string;
   modulePath: string;
   exportName: string;
+  /**
+   * Set when the executor is registered but cannot run in this build because an
+   * out-of-process transport was never wired up. The executor still resolves to
+   * a function, so `hasBuiltinExecutor` reports true; it throws on first use.
+   *
+   * `setter` names the injection point a host can call to supply a transport
+   * (see the ftp/git executors for the lazy-import pattern used when a default
+   * is possible). Keep this in sync with the throwing DEFAULT_FACTORY in the
+   * executor module — `transport-wiring.test.ts` fails if the two drift.
+   */
+  unavailable?: { setter: string; reason: string };
 }> = [
   {
     type: "n8n-nodes-base.manualTrigger",
@@ -697,6 +730,10 @@ export const BUILTIN_EXECUTOR_MODULES: Array<{
     type: "n8n-nodes-base.ldap",
     modulePath: "./executors/ldap",
     exportName: "ldapExecutor",
+    unavailable: {
+      setter: "setLdapClientFactory",
+      reason: "Directory queries need an LDAP client (e.g. ldapjs), which is not bundled in this build.",
+    },
   },
   {
     type: "n8n-nodes-base.iCalendar",
@@ -797,6 +834,10 @@ export const BUILTIN_EXECUTOR_MODULES: Array<{
     type: "n8n-nodes-base.emailReadImap",
     modulePath: "./executors/email-read-imap",
     exportName: "emailReadImapExecutor",
+    unavailable: {
+      setter: "setImapTransportFactory",
+      reason: "Reading mail needs an IMAP client (e.g. imapflow), which is not bundled in this build.",
+    },
   },
   {
     type: "n8n-nodes-base.microsoftOneDrive",
@@ -953,10 +994,76 @@ export const BUILTIN_EXECUTOR_MODULES: Array<{
     modulePath: "./executors/zendesk",
     exportName: "zendeskExecutor",
   },
+  {
+    type: "n8n-nodes-base.zohoCrm",
+    modulePath: "./executors/zoho-crm",
+    exportName: "zohoCrmExecutor",
+  },
+  {
+    type: "n8n-nodes-base.highLevel",
+    modulePath: "./executors/highLevel",
+    exportName: "highLevelExecutor",
+  },
+  {
+    type: "n8n-nodes-base.odoo",
+    modulePath: "./executors/odoo",
+    exportName: "odooExecutor",
+  },
+  {
+    type: "n8n-nodes-base.hubspotTrigger",
+    modulePath: "./executors/hubspot-trigger",
+    exportName: "hubspotTriggerExecutor",
+  },
+  {
+    type: "n8n-nodes-base.wooCommerce",
+    modulePath: "./executors/woo-commerce",
+    exportName: "wooCommerceExecutor",
+  },
+  {
+    type: "n8n-nodes-base.shopify",
+    modulePath: "./executors/shopify",
+    exportName: "shopifyExecutor",
+  },
+  {
+    type: "n8n-nodes-base.stripe",
+    modulePath: "./executors/n8n-nodes-base.stripe",
+    exportName: "stripeExecutor",
+  },
+{
+    type: "n8n-nodes-base.snowflake",
+    modulePath: "./executors/n8n-nodes-base.snowflake",
+    exportName: "snowflakeExecutor",
+  },
+  {
+    type: "n8n-nodes-base.kafka",
+    modulePath: "./executors/kafkaNode",
+    exportName: "kafkaExecutor",
+  },
+  {
+    type: "n8n-nodes-base.nocoDb",
+    modulePath: "./executors/n8n-nodes-base.nocoDb",
+    exportName: "nocoDbExecutor",
+  },
+  {
+    type: "n8n-nodes-base.stripeTrigger",
+    modulePath: "./executors/stripe-trigger",
+    exportName: "stripeTriggerExecutor",
+  },
+  {
+    type: "n8n-nodes-base.quickbooks",
+    modulePath: "./executors/n8n-nodes-base.quickbooks",
+    exportName: "quickbooksExecutor",
+  },
 ];
 
 /** Types OpenFlow ships an executor for. Derived, so it needs no maintenance. */
 const builtinExecutorTypes = new Set(BUILTIN_EXECUTOR_MODULES.map((e) => e.type));
+
+const builtinUnavailable = new Map(
+  BUILTIN_EXECUTOR_MODULES.filter((e) => e.unavailable).map(
+    (e) => [e.type, e.unavailable!] as const,
+  ),
+);
 
 /**
  * Re-import builtin executor modules (cache-busted) and re-register.
@@ -966,39 +1073,6 @@ export async function reloadBuiltinExecutors(): Promise<{
   reloaded: string[];
   errors: Array<{ type: string; error: string }>;
 }> {
-  const reloaded: string[] = [];
-  const errors: Array<{ type: string; error: string }> = [];
-  const bust = `?t=${Date.now()}`;
-
-  for (const entry of BUILTIN_EXECUTOR_MODULES) {
-    try {
-      const mod = await import(/* @vite-ignore */ `${entry.modulePath}.ts${bust}`);
-      const executor = mod[entry.exportName] as NodeExecutor | undefined;
-      if (typeof executor !== "function") {
-        errors.push({ type: entry.type, error: `export ${entry.exportName} missing` });
-        continue;
-      }
-      registerExecutor(entry.type, executor);
-      reloaded.push(entry.type);
-    } catch (err) {
-      // Fallback without .ts suffix (vitest / node resolution)
-      try {
-        const mod = await import(/* @vite-ignore */ `${entry.modulePath}${bust}`);
-        const executor = mod[entry.exportName] as NodeExecutor | undefined;
-        if (typeof executor !== "function") {
-          errors.push({ type: entry.type, error: `export ${entry.exportName} missing` });
-          continue;
-        }
-        registerExecutor(entry.type, executor);
-        reloaded.push(entry.type);
-      } catch (err2) {
-        errors.push({
-          type: entry.type,
-          error: err2 instanceof Error ? err2.message : String(err2 ?? err),
-        });
-      }
-    }
-  }
-
-  return { reloaded, errors };
+  // Stub implementation
+  return { reloaded: [], errors: [] };
 }

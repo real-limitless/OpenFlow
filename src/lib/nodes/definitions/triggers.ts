@@ -1490,6 +1490,67 @@ export const emailReadImap: INodeTypeDescription = {
   ],
 };
 
+const STRIPE_DOCS =
+  "https://docs.n8n.io/integrations/builtin/trigger-nodes/n8n-nodes-base.stripetrigger/";
+
+export const stripeTrigger: INodeTypeDescription = {
+  name: "n8n-nodes-base.stripeTrigger",
+  displayName: "Stripe Trigger",
+  category: "Triggers",
+  group: ["trigger"],
+  version: 1,
+  description: "Starts the workflow when Stripe sends a webhook event.",
+  defaults: { name: "Stripe Trigger" },
+  inputs: [],
+  outputs: ["main"],
+  icon: "CreditCard",
+  credentials: [{ name: "stripeApi", required: true }],
+  sources: [STRIPE_DOCS],
+  properties: [
+    {
+      displayName: "Events",
+      name: "events",
+      type: "multiOptions",
+      default: [],
+      required: true,
+      noDataExpression: true,
+      description: "The Stripe event types to listen for.",
+      options: [
+        { name: "Charge: Succeeded", value: "charge.succeeded" },
+        { name: "Charge: Failed", value: "charge.failed" },
+        { name: "Invoice: Payment Succeeded", value: "invoice.payment_succeeded" },
+        { name: "Invoice: Payment Failed", value: "invoice.payment_failed" },
+        { name: "Customer: Subscription Updated", value: "customer.subscription.updated" },
+        { name: "Customer: Subscription Deleted", value: "customer.subscription.deleted" },
+        { name: "PaymentIntent: Succeeded", value: "payment_intent.succeeded" },
+        { name: "PaymentIntent: Failed", value: "payment_intent.payment_failed" },
+        { name: "PaymentIntent: Processing", value: "payment_intent.processing" },
+        { name: "Account: Updated", value: "account.updated" },
+        { name: "Payout: Paid", value: "payout.paid" },
+        { name: "Payout: Failed", value: "payout.failed" },
+        { name: "Review: Opened", value: "review.opened" },
+        { name: "SetupIntent: Succeeded", value: "setup_intent.succeeded" },
+        { name: "Checkout Session: Completed", value: "checkout.session.completed" },
+      ],
+    },
+    {
+      displayName: "Resolve Data",
+      name: "resolveData",
+      type: "boolean",
+      default: true,
+      description: "Whether to expand nested Stripe objects into full JSON.",
+    },
+    {
+      displayName:
+        "The Events field is required. Select at least one Stripe event type to trigger on.",
+      name: "eventsNotice",
+      type: "notice",
+      default: "",
+      displayOptions: { show: { events: [] } },
+    },
+  ],
+};
+
 export const postmarkTrigger: INodeTypeDescription = {
   name: "n8n-nodes-base.postmarkTrigger",
   displayName: "Postmark Trigger",
@@ -1750,6 +1811,95 @@ export const bitbucketTrigger: INodeTypeDescription = {
         { name: "Issue Comment Created", value: "issue:comment_created" },
         { name: "Workspace Event", value: "workspace:event" },
       ],
+    },
+  ],
+};
+
+const HUBSPOT_TRIGGER_DOCS =
+  "https://docs.n8n.io/integrations/builtin/trigger-nodes/n8n-nodes-base.hubspottrigger/";
+
+export const hubspotTrigger: INodeTypeDescription = {
+  name: "n8n-nodes-base.hubspotTrigger",
+  displayName: "HubSpot Trigger",
+  category: "Triggers",
+  group: ["trigger"],
+  version: 1,
+  description: "Starts the workflow when a HubSpot webhook event fires (company, contact, conversation, deal, ticket changes).",
+  defaults: { name: "HubSpot Trigger" },
+  inputs: [],
+  outputs: ["main"],
+  icon: "Webhook",
+  credentials: [{ name: "hubspotApi", required: true }],
+  sources: [HUBSPOT_TRIGGER_DOCS],
+  properties: [
+    {
+      displayName: "Event Subscriptions",
+      name: "eventSubscriptions",
+      type: "multiOptions",
+      default: [],
+      required: true,
+      noDataExpression: true,
+      description: "The HubSpot event categories to subscribe to.",
+      options: [
+        { name: "Company", value: "company" },
+        { name: "Contact", value: "contact" },
+        { name: "Conversation", value: "conversation" },
+        { name: "Deal", value: "deal" },
+        { name: "Ticket", value: "ticket" },
+      ],
+    },
+    {
+      displayName: "Object Event",
+      name: "objectEvent",
+      type: "options",
+      default: "created",
+      noDataExpression: true,
+      displayOptions: {
+        show: { eventSubscriptions: ["company", "contact", "deal", "ticket"] },
+      },
+      options: [
+        { name: "Created", value: "created" },
+        { name: "Deleted", value: "deleted" },
+        { name: "Property Changed", value: "propertyChanged" },
+      ],
+    },
+    {
+      displayName: "Contact Event",
+      name: "contactEvent",
+      type: "options",
+      default: "created",
+      noDataExpression: true,
+      displayOptions: { show: { eventSubscriptions: ["contact"] } },
+      options: [
+        { name: "Created", value: "created" },
+        { name: "Deleted", value: "deleted" },
+        { name: "Privacy Deleted", value: "privacyDeleted" },
+        { name: "Property Changed", value: "propertyChanged" },
+      ],
+    },
+    {
+      displayName: "Conversation Event",
+      name: "conversationEvent",
+      type: "options",
+      default: "created",
+      noDataExpression: true,
+      displayOptions: { show: { eventSubscriptions: ["conversation"] } },
+      options: [
+        { name: "Created", value: "created" },
+        { name: "Deleted", value: "deleted" },
+        { name: "New Message", value: "newMessage" },
+        { name: "Privacy Deletion", value: "privacyDeletion" },
+        { name: "Property Changed", value: "propertyChanged" },
+      ],
+    },
+    {
+      displayName: "Property Name",
+      name: "propertyName",
+      type: "string",
+      default: "",
+      placeholder: "email",
+      displayOptions: { show: { objectEvent: ["propertyChanged"] } },
+      description: "Restrict to a specific property for property-changed events. Leave empty for all properties.",
     },
   ],
 };

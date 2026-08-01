@@ -1,185 +1,145 @@
-import type { NodeExecutor, INodeExecutionData } from "@/sdk";
-import { ensureItems } from "@/sdk";
+import type { NodeExecutor } from "@/sdk";
+import { sdkHttpRequest } from "@/sdk/helpers/http";
 
-function asObj(body: unknown): Record<string, unknown> {
-  if (body && typeof body === "object" && !Array.isArray(body)) {
-    return body as Record<string, unknown>;
+export const gotifyExecutor: NodeExecutor = async (ctx) => {
+  const items = ctx.getInputItems(0);
+  if (items.length === 0) {
+    return [[]];
   }
-  return { data: body };
-}
 
-interface GotifyCredential {
-  url: string;
-  appToken: string;
-  clientToken: string;
-}
+  const operation = ctx.getParam("operation");
+  const credential = await ctx.getCredential("gotifyApi");
+  if (!credential) {
+    if (ctx.continueOnFail()) {
+      return [items.map(() => ({ json: { error: "Missing gotifyApi credential" } }))];
+    }
+    throw new Error("Missing gotifyApi credential");
+  }
 
-function getToken(cred: GotifyCredential, operation: string): string {
+  const serverUrl = (credential.url as string)?.replace(/\/+$/g, "");
+  const appToken = credential.appApiToken as string;
+  const clientToken = credential.clientToken as string;
+
+  if (!serverUrl) {
+    if (ctx.continueOnFail()) {
+      return [items.map(() => ({ json: { error: "Missing url in credential" } }))];
+    }
+    throw new Error("Missing url in credential");
+  }
+
   if (operation === "create") {
-    if (!cred.appToken) throw new Error("Gotify: appToken is required for create operation");
-    return cred.appToken;
-  }
-  if (!cred.clientToken) throw new Error("Gotify: clientToken is required for this operation");
-  return cred.clientToken;
-}
-
-async function gotifyRequest(
-  baseUrl: string,
-  token: string,
-  method: string,
-  path: string,
-  body?: unknown,
-  params?: Record<string, string>,
-): Promise<unknown> {
-  const url = new URL(path, baseUrl.replace(/\/+$/, ""));
-  if (params) {
-    for (const [k, v] of Object.entries(params)) {
-      if (v) url.searchParams.set(k, v);
-    }
-  }
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 30000);
-  try {
-    const init: RequestInit = {
-      method,
-      headers: {
-        "X-Gotify-Key": token,
-        "Content-Type": "application/json; charset=utf-8",
-      },
-      signal: controller.signal,
-    };
-    if (body !== undefined && method !== "GET" && method !== "DELETE") {
-      init.body = JSON.stringify(body);
-    }
-    const response = await fetch(url.toString(), init);
-    const text = await response.text();
-    let parsed: unknown = text;
-    try {
-      parsed = text ? JSON.parse(text) : null;
-    } catch {
-      /* keep text */
-    }
-    if (response.status < 200 || response.status >= 300) {
-      const obj = asObj(parsed);
-      const errMsg = String(
-        obj.error ?? obj.message ?? `Gotify request failed with status code ${response.status}`,
-      );
-      throw new Error(errMsg);
-    }
-    if (response.status === 204) return null;
-    return parsed;
-  } finally {
-    clearTimeout(timer);
-  }
-}
-
-export const gotifyExecutor: NodeExecutor = async (ctx, node) => {
-  const items = ensureItems(ctx.getInputItems(0));
-  const out: INodeExecutionData[] = [];
-  const continueOnFail = ctx.continueOnFail();
-
-  const cred = await ctx.getCredential("gotifyApi");
-  if (!cred) throw new Error("Gotify: gotifyApi credential is required");
-  const gotifyCred = cred as unknown as GotifyCredential;
-  if (!gotifyCred.url) throw new Error("Gotify: url is required in credential");
-
-  const resource = String(node.parameters.resource ?? "message");
-  const operation = String(node.parameters.operation ?? "create");
-
-  for (let idx = 0; idx < items.length; idx++) {
-    const item = items[idx];
-    const pairedItem = item.pairedItem ?? { item: idx, input: 0 };
-    try {
-      if (resource === "message") {
-        const result = await handleMessage(gotifyCred, operation, node);
-        if (Array.isArray(result)) {
-          for (const r of result) {
-            out.push({ json: r, pairedItem });
+    const outItems = [];
+    for (const item of items) {
+      try {
+        const message = ctx.getParam("message");
+        if (!message) {
+          if (ctx.continueOnFail()) {
+            outItems.push({ json: { error: "message is required for create operation" } });
+            continue;
           }
-        } else {
-          out.push({ json: result, pairedItem });
+          throw new Error("message is required for create operation");
         }
-      } else {
-        throw new Error(`Gotify: unsupported resource "${resource}"`);
+
+        const body: Record<string, unknown> = { message };
+        const title = ctx.getParam("title");
+        if (title) body.title = title;
+        const priority = ctx.getParam<number | undefined>("priority");
+        body.priority = priority ?? 0;
+
+        const response = await sdkHttpRequest({
+          method: "POST",
+          url: `${serverUrl}/message`,
+          headers: { "X-Gotify-Key": appToken, "Content-Type": "application/json" },
+          body,
+        });
+        outItems.push({ json: response.body as Record<string, unknown> });
+      } catch (err) {
+        if (ctx.continueOnFail()) {
+          outItems.push({ json: { error: (err as Error).message } });
+        } else {
+          throw err;
+        }
       }
-    } catch (err) {
-      if (!continueOnFail) throw err;
-      const message = err instanceof Error ? err.message : String(err);
-      out.push({ json: { error: message }, pairedItem });
     }
-  }
-
-  return [out];
-};
-
-async function handleMessage(
-  cred: GotifyCredential,
-  operation: string,
-  node: { parameters: Record<string, unknown> },
-): Promise<Record<string, unknown> | Record<string, unknown>[]> {
-  const token = getToken(cred, operation);
-
-  if (operation === "create") {
-    const body: Record<string, unknown> = {};
-    const msg = String(node.parameters.message ?? "");
-    if (!msg) throw new Error("Gotify: message is required for create operation");
-    body.message = msg;
-    const additionalFields = (node.parameters.additionalFields ?? {}) as Record<string, unknown>;
-    const title = String(additionalFields.title ?? "");
-    if (title) body.title = title;
-    const priorityRaw = additionalFields.priority;
-    if (priorityRaw !== undefined && priorityRaw !== "") {
-      body.priority = Number(priorityRaw);
-    } else {
-      body.priority = 1;
-    }
-    const opts = (node.parameters.options ?? {}) as Record<string, unknown>;
-    const contentType = String(opts.contentType ?? "text/plain");
-    if (contentType !== "text/plain") {
-      body.extras = {
-        client: {
-          display: { contentType },
-        },
-      };
-    }
-    const res = await gotifyRequest(cred.url, token, "POST", "/message", body);
-    return asObj(res);
+    return [outItems];
   }
 
   if (operation === "delete") {
-    const messageId = String(node.parameters.messageId ?? "");
-    if (!messageId) throw new Error("Gotify: messageId is required for delete operation");
-    await gotifyRequest(cred.url, token, "DELETE", `/message/${messageId}`);
-    return { success: true };
+    const outItems = [];
+    for (const item of items) {
+      try {
+        const messageId = ctx.getParam("messageId");
+        if (!messageId) {
+          if (ctx.continueOnFail()) {
+            outItems.push({ json: { ...item.json, error: "Missing messageId parameter" } });
+            continue;
+          }
+          throw new Error("Missing messageId parameter");
+        }
+
+        await sdkHttpRequest({
+          method: "DELETE",
+          url: `${serverUrl}/message/${messageId}`,
+          headers: { "X-Gotify-Key": clientToken },
+        });
+        outItems.push({ json: { ...item.json, success: true } });
+      } catch (err) {
+        if (ctx.continueOnFail()) {
+          outItems.push({ json: { error: (err as Error).message } });
+        } else {
+          throw err;
+        }
+      }
+    }
+    return [outItems];
   }
 
   if (operation === "getAll") {
-    const returnAll = Boolean(node.parameters.returnAll ?? false);
-    const params: Record<string, string> = {};
-    const limitRaw = node.parameters.limit;
-    const pageSize = limitRaw !== undefined && limitRaw !== "" ? Number(limitRaw) : 20;
-    if (!returnAll) {
-      params.limit = String(pageSize);
+    try {
+      const returnAll = ctx.getParam("returnAll", false) as boolean;
+      const limit = ctx.getParam("limit", 20) as number;
+      const baseUrl = `${serverUrl}/message`;
+
+      let data: { messages: unknown[]; paging?: Record<string, unknown> };
+      if (!returnAll) {
+        const resp = await sdkHttpRequest({
+          method: "GET",
+          url: `${baseUrl}?limit=${limit}`,
+          headers: { "X-Gotify-Key": clientToken },
+        });
+        data = resp.body as { messages: unknown[]; paging?: Record<string, unknown> };
+      } else {
+        let nextUrl: string | undefined = `${baseUrl}?limit=${limit}`;
+        const allMessages: unknown[] = [];
+        let lastPaging: Record<string, unknown> | undefined;
+        while (nextUrl) {
+          const resp = await sdkHttpRequest({
+            method: "GET",
+            url: nextUrl,
+            headers: { "X-Gotify-Key": clientToken },
+          });
+          const pageData = resp.body as { messages: unknown[]; paging?: { next?: string } };
+          allMessages.push(...pageData.messages);
+          lastPaging = pageData.paging;
+          nextUrl = pageData.paging?.next;
+        }
+        data = { messages: allMessages, paging: lastPaging ?? {} };
+      }
+
+      const outItems = items.map(() => ({
+        json: { messages: data.messages, paging: data.paging ?? {} },
+      }));
+      return [outItems];
+    } catch (err) {
+      if (ctx.continueOnFail()) {
+        return [items.map(() => ({ json: { error: (err as Error).message } }))];
+      }
+      throw err;
     }
-    const allMessages: Record<string, unknown>[] = [];
-    let offset = 0;
-    const fetchPage = async (): Promise<boolean> => {
-      const pageParams = { ...params, offset: String(offset) };
-      const res = await gotifyRequest(cred.url, token, "GET", "/message", undefined, pageParams);
-      const obj = res as Record<string, unknown> | undefined;
-      const messages = obj?.messages as Record<string, unknown>[] ?? (Array.isArray(res) ? (res as Record<string, unknown>[]) : []);
-      if (messages.length === 0) return false;
-      for (const m of messages) allMessages.push(asObj(m));
-      offset += messages.length;
-      if (!returnAll) return false;
-      return true;
-    };
-    let hasMore = await fetchPage();
-    while (hasMore) {
-      hasMore = await fetchPage();
-    }
-    return allMessages;
   }
 
-  throw new Error(`Gotify: unsupported message operation "${operation}"`);
-}
+  if (ctx.continueOnFail()) {
+    return [items.map(() => ({ json: { error: `Unsupported operation: ${operation}` } }))];
+  }
+  throw new Error(`Unsupported operation: ${operation}`);
+};

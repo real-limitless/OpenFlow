@@ -1376,6 +1376,121 @@ export const googleBusinessProfile: INodeTypeDescription = {
   ],
 };
 
+const ODOO_DOCS = "https://docs.n8n.io/integrations/builtin/app-nodes/n8n-nodes-base.odoo/";
+
+const ODOO_RESOURCES = [
+  { name: "Contact", value: "contact" },
+  { name: "Custom Resource", value: "customResource" },
+  { name: "Note", value: "note" },
+  { name: "Opportunity", value: "opportunity" },
+];
+
+const ODOO_OPERATIONS = [
+  { name: "Create", value: "create" },
+  { name: "Delete", value: "delete" },
+  { name: "Get", value: "get" },
+  { name: "Get All", value: "getAll" },
+  { name: "Update", value: "update" },
+];
+
+export const odoo: INodeTypeDescription = {
+  name: "n8n-nodes-base.odoo",
+  displayName: "Odoo",
+  category: "Sales",
+  group: ["integration"],
+  version: 1,
+  description: "Access and manage Odoo CRM records (contacts, notes, opportunities, and custom models)",
+  defaults: { name: "Odoo" },
+  inputs: ["main"],
+  outputs: ["main"],
+  icon: "Building2",
+  credentials: [{ name: "odooApi", required: true }],
+  sources: [ODOO_DOCS],
+  properties: [
+    {
+      displayName: "Resource",
+      name: "resource",
+      type: "options",
+      default: "contact",
+      required: true,
+      noDataExpression: true,
+      options: ODOO_RESOURCES,
+    },
+    {
+      displayName: "Operation",
+      name: "operation",
+      type: "options",
+      default: "create",
+      required: true,
+      noDataExpression: true,
+      displayOptions: {
+        show: { resource: ["contact", "note", "opportunity", "customResource"] },
+      },
+      options: ODOO_OPERATIONS,
+    },
+    {
+      displayName: "Custom Resource Model",
+      name: "customResourceModel",
+      type: "string",
+      default: "",
+      required: true,
+      displayOptions: { show: { resource: ["customResource"], operation: ["create", "delete", "get", "getAll", "update"] } },
+    },
+    {
+      displayName: "Record ID",
+      name: "recordId",
+      type: "string",
+      default: "",
+      required: true,
+      displayOptions: { show: { resource: ["contact", "note", "opportunity", "customResource"], operation: ["get", "update", "delete"] } },
+    },
+    {
+      displayName: "Fields",
+      name: "fields",
+      type: "collection",
+      default: {},
+      displayOptions: { show: { resource: ["contact", "note", "opportunity", "customResource"], operation: ["create", "update"] } },
+      options: [
+        { displayName: "Name", name: "name", type: "string", default: "" },
+        { displayName: "Email", name: "email", type: "string", default: "" },
+        { displayName: "Phone", name: "phone", type: "string", default: "" },
+      ],
+    },
+    {
+      displayName: "Return All",
+      name: "returnAll",
+      type: "boolean",
+      default: false,
+      displayOptions: { show: { resource: ["contact", "note", "opportunity", "customResource"], operation: ["getAll"] } },
+    },
+    {
+      displayName: "Limit",
+      name: "limit",
+      type: "number",
+      default: 50,
+      displayOptions: {
+        show: {
+          resource: ["contact", "note", "opportunity", "customResource"],
+          operation: ["getAll"],
+          returnAll: [false],
+        },
+      },
+    },
+    {
+      displayName: "Options",
+      name: "options",
+      type: "collection",
+      default: {},
+      displayOptions: { show: { resource: ["contact", "note", "opportunity", "customResource"], operation: ["getAll"] } },
+      options: [
+        { displayName: "Fields to Return", name: "fieldsToReturn", type: "string", default: "" },
+        { displayName: "Order By", name: "orderBy", type: "string", default: "" },
+        { displayName: "Filter", name: "filter", type: "string", default: "" },
+      ],
+    },
+  ],
+};
+
 const GCS_DOCS = "https://docs.n8n.io/integrations/builtin/app-nodes/n8n-nodes-base.googlecloudstorage/";
 
 const BUCKET_OPERATIONS = [
@@ -3249,6 +3364,399 @@ export const pipedrive: INodeTypeDescription = {
           operation: ["search"],
         },
       },
+    },
+  ],
+};
+
+export const zohoCrm: INodeTypeDescription = {
+  name: "n8n-nodes-base.zohoCrm",
+  displayName: "Zoho CRM",
+  category: "App",
+  group: ["integration"],
+  version: 1,
+  description: "Access Zoho CRM data",
+  defaults: { name: "Zoho CRM" },
+  inputs: ["main"],
+  outputs: ["main"],
+  icon: "Database",
+  credentials: [{ name: "zohoOAuth2Api", required: true }],
+  sources: [
+    "https://docs.n8n.io/integrations/builtin/app-nodes/n8n-nodes-base.zohocrm.md",
+  ],
+  properties: [
+    {
+      displayName: "Module",
+      name: "module",
+      type: "options",
+      default: "Lead",
+      required: true,
+      noDataExpression: true,
+      options: [
+        { name: "Account", value: "Account" },
+        { name: "Contact", value: "Contact" },
+        { name: "Deal", value: "Deal" },
+        { name: "Invoice", value: "Invoice" },
+        { name: "Lead", value: "Lead" },
+        { name: "Product", value: "Product" },
+        { name: "Purchase Order", value: "Purchase Order" },
+        { name: "Quote", value: "Quote" },
+        { name: "Sales Order", value: "Sales Order" },
+        { name: "Vendor", value: "Vendor" },
+      ],
+    },
+    {
+      displayName: "Operation",
+      name: "operation",
+      type: "options",
+      default: "get",
+      required: true,
+      noDataExpression: true,
+      options: [
+        { name: "Create", value: "create" },
+        { name: "Upsert", value: "upsert" },
+        { name: "Delete", value: "delete" },
+        { name: "Get", value: "get" },
+        { name: "Get Many", value: "getAll" },
+        { name: "Update", value: "update" },
+        { name: "Get Lead Fields", value: "getLeadFields" },
+      ],
+    },
+    {
+      displayName: "Record ID",
+      name: "recordId",
+      type: "string",
+      default: "",
+      displayOptions: {
+        show: {
+          operation: ["get", "update", "delete"],
+        },
+      },
+    },
+    {
+      displayName: "Record Data",
+      name: "recordData",
+      type: "json",
+      default: "{}",
+      typeOptions: { alwaysOpenEditWindow: true },
+      displayOptions: {
+        show: {
+          operation: ["create", "upsert", "update"],
+        },
+      },
+    },
+    {
+      displayName: "Retrieval Options",
+      name: "retrievalOptions",
+      type: "json",
+      default: "{}",
+      typeOptions: { alwaysOpenEditWindow: true },
+      displayOptions: {
+        show: {
+          operation: ["getAll"],
+        },
+      },
+    },
+    {
+      displayName: "Delete Options",
+      name: "deleteOptions",
+      type: "json",
+      default: "{}",
+      typeOptions: { alwaysOpenEditWindow: true },
+      displayOptions: {
+        show: {
+          operation: ["delete"],
+        },
+      },
+    },
+    {
+      displayName: "Operation Options",
+      name: "operationOptions",
+      type: "json",
+      default: "{}",
+      typeOptions: { alwaysOpenEditWindow: true },
+      displayOptions: {
+        show: {
+          operation: ["create", "upsert", "update"],
+        },
+      },
+    },
+  ],
+};
+
+const HIGHLIGHT_DOCS = "https://docs.n8n.io/integrations/builtin/app-nodes/n8n-nodes-base.highlevel/";
+
+export const highLevel: INodeTypeDescription = {
+  name: "n8n-nodes-base.highLevel",
+  displayName: "HighLevel",
+  category: "CRM",
+  group: ["integration"],
+  version: 1,
+  description: "Access and manage HighLevel CRM contacts, opportunities, tasks, and calendar",
+  defaults: { name: "HighLevel" },
+  inputs: ["main"],
+  outputs: ["main"],
+  icon: "Phone",
+  credentials: [{ name: "highLevelOAuth2Api", required: true }],
+  sources: [HIGHLIGHT_DOCS],
+  properties: [
+    {
+      displayName: "Resource",
+      name: "resource",
+      type: "options",
+      default: "contact",
+      required: true,
+      noDataExpression: true,
+      options: [
+        { name: "Contact", value: "contact" },
+        { name: "Opportunity", value: "opportunity" },
+        { name: "Task", value: "task" },
+        { name: "Calendar", value: "calendar" },
+      ],
+    },
+    {
+      displayName: "Operation",
+      name: "operation",
+      type: "options",
+      default: "create",
+      required: true,
+      noDataExpression: true,
+      displayOptions: { show: { resource: ["contact"] } },
+      options: [
+        { name: "Create or Update", value: "upsert" },
+        { name: "Delete", value: "delete" },
+        { name: "Get", value: "get" },
+        { name: "Get Many", value: "getAll" },
+        { name: "Update", value: "update" },
+      ],
+    },
+    {
+      displayName: "Operation",
+      name: "operation",
+      type: "options",
+      default: "create",
+      required: true,
+      noDataExpression: true,
+      displayOptions: { show: { resource: ["opportunity"] } },
+      options: [
+        { name: "Create", value: "create" },
+        { name: "Delete", value: "delete" },
+        { name: "Get", value: "get" },
+        { name: "Get Many", value: "getAll" },
+        { name: "Update", value: "update" },
+      ],
+    },
+    {
+      displayName: "Operation",
+      name: "operation",
+      type: "options",
+      default: "create",
+      required: true,
+      noDataExpression: true,
+      displayOptions: { show: { resource: ["task"] } },
+      options: [
+        { name: "Create", value: "create" },
+        { name: "Delete", value: "delete" },
+        { name: "Get", value: "get" },
+        { name: "Get Many", value: "getAll" },
+        { name: "Update", value: "update" },
+      ],
+    },
+    {
+      displayName: "Operation",
+      name: "operation",
+      type: "options",
+      default: "getFreeSlots",
+      required: true,
+      noDataExpression: true,
+      displayOptions: { show: { resource: ["calendar"] } },
+      options: [
+        { name: "Book an Appointment", value: "bookAppointment" },
+        { name: "Get Free Slots", value: "getFreeSlots" },
+      ],
+    },
+    {
+      displayName: "Contact ID",
+      name: "contactId",
+      type: "string",
+      default: "",
+      required: true,
+      displayOptions: {
+        show: { resource: ["contact"], operation: ["get", "delete", "update"] },
+      },
+    },
+    {
+      displayName: "Contact Email",
+      name: "email",
+      type: "string",
+      default: "",
+      placeholder: "email@example.com",
+      displayOptions: {
+        show: { resource: ["contact"], operation: ["upsert"] },
+      },
+    },
+    {
+      displayName: "Contact Fields",
+      name: "contactFields",
+      type: "json",
+      default: "{}",
+      typeOptions: { alwaysOpenEditWindow: true },
+      displayOptions: {
+        show: { resource: ["contact"], operation: ["upsert", "create", "update"] },
+      },
+    },
+    {
+      displayName: "Opportunity ID",
+      name: "opportunityId",
+      type: "string",
+      default: "",
+      required: true,
+      displayOptions: {
+        show: { resource: ["opportunity"], operation: ["get", "delete", "update"] },
+      },
+    },
+    {
+      displayName: "Opportunity Fields",
+      name: "opportunityFields",
+      type: "json",
+      default: "{}",
+      typeOptions: { alwaysOpenEditWindow: true },
+      displayOptions: {
+        show: { resource: ["opportunity"], operation: ["create", "update"] },
+      },
+    },
+    {
+      displayName: "Task ID",
+      name: "taskId",
+      type: "string",
+      default: "",
+      required: true,
+      displayOptions: {
+        show: { resource: ["task"], operation: ["get", "delete", "update"] },
+      },
+    },
+    {
+      displayName: "Task Fields",
+      name: "taskFields",
+      type: "json",
+      default: "{}",
+      typeOptions: { alwaysOpenEditWindow: true },
+      displayOptions: {
+        show: { resource: ["task"], operation: ["create", "update"] },
+      },
+    },
+    {
+      displayName: "Calendar ID",
+      name: "calendarId",
+      type: "string",
+      default: "",
+      required: true,
+      displayOptions: {
+        show: { resource: ["calendar"], operation: ["getFreeSlots", "bookAppointment"] },
+      },
+    },
+    {
+      displayName: "Appointment Fields",
+      name: "appointmentFields",
+      type: "json",
+      default: "{}",
+      typeOptions: { alwaysOpenEditWindow: true },
+      displayOptions: {
+        show: { resource: ["calendar"], operation: ["bookAppointment"] },
+      },
+    },
+    {
+      displayName: "Query Options",
+      name: "queryOptions",
+      type: "json",
+      default: "{}",
+      typeOptions: { alwaysOpenEditWindow: true },
+      displayOptions: {
+        show: { resource: ["contact", "opportunity", "task", "calendar"], operation: ["getAll", "getFreeSlots"] },
+      },
+    },
+    {
+      displayName: "Return All",
+      name: "returnAll",
+      type: "boolean",
+      default: false,
+      displayOptions: {
+        show: {
+          resource: ["contact", "opportunity", "task"],
+          operation: ["getAll"],
+        },
+      },
+    },
+    {
+      displayName: "Limit",
+      name: "limit",
+      type: "number",
+      default: 20,
+      displayOptions: {
+        show: {
+          resource: ["contact", "opportunity", "task"],
+          operation: ["getAll"],
+          returnAll: [false],
+        },
+      },
+    },
+  ],
+};
+const NOCO_DOCS = "https://docs.n8n.io/integrations/builtin/app-nodes/n8n-nodes-base.nocodb/";
+
+export const nocoDb: INodeTypeDescription = {
+  name: "n8n-nodes-base.nocoDb",
+  displayName: "NocoDB",
+  category: "Data & Storage",
+  group: ["integration"],
+  version: 1,
+  description: "Access NocoDB spreadsheet-like database tables — select, insert, update, delete",
+  defaults: { name: "NocoDB" },
+  inputs: ["main"],
+  outputs: ["main"],
+  icon: "Database",
+  credentials: [{ name: "nocoDbApi", required: false }],
+  sources: [NOCO_DOCS],
+  properties: [
+    {
+      displayName: "Operation",
+      name: "operation",
+      type: "options",
+      default: "select",
+      required: true,
+      noDataExpression: true,
+      options: [
+        { name: "Select", value: "select" },
+        { name: "Insert", value: "insert" },
+        { name: "Update", value: "update" },
+        { name: "Delete", value: "delete" },
+      ],
+    },
+    {
+      displayName: "Table Name",
+      name: "table",
+      type: "string",
+      default: "",
+      required: true,
+    },
+    {
+      displayName: "Where (JSON)",
+      name: "where",
+      type: "json",
+      default: "{}",
+      displayOptions: { show: { operation: ["select", "delete"] } },
+    },
+    {
+      displayName: "Payload (JSON)",
+      name: "payload",
+      type: "json",
+      default: "{}",
+      displayOptions: { show: { operation: ["insert", "update"] } },
+    },
+    {
+      displayName: "Batch Size",
+      name: "batchSize",
+      type: "number",
+      default: 1,
     },
   ],
 };

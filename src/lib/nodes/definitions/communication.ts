@@ -868,3 +868,80 @@ export const zendesk: INodeTypeDescription = {
     },
   ],
 };
+
+const GOTIFY_DOCS = "https://docs.n8n.io/integrations/builtin/app-nodes/n8n-nodes-base.gotify/";
+
+export const gotify: INodeTypeDescription = {
+  name: "n8n-nodes-base.gotify",
+  displayName: "Gotify",
+  category: "Communication",
+  group: ["communication"],
+  version: 1,
+  description: "Send push notifications via a Gotify server",
+  defaults: { name: "Gotify" },
+  inputs: ["main"],
+  outputs: ["main"],
+  icon: "MessageCircle",
+  credentials: [{ name: "gotifyApi" }],
+  sources: [GOTIFY_DOCS, "https://gotify.net/docs/pushmsg"],
+  properties: [
+    {
+      displayName: "Operation",
+      name: "operation",
+      type: "options",
+      default: "create",
+      required: true,
+      noDataExpression: true,
+      options: [
+        { name: "Create", value: "create" },
+        { name: "Delete", value: "delete" },
+        { name: "Get All", value: "getAll" },
+      ],
+    },
+    {
+      displayName: "Message",
+      name: "message",
+      type: "string",
+      default: "",
+      required: true,
+      displayOptions: { show: { operation: ["create"] } },
+    },
+    {
+      displayName: "Title",
+      name: "title",
+      type: "string",
+      default: "",
+      displayOptions: { show: { operation: ["create"] } },
+    },
+    {
+      displayName: "Priority",
+      name: "priority",
+      type: "number",
+      default: 0,
+      displayOptions: { show: { operation: ["create"] } },
+    },
+    {
+      displayName: "Message ID",
+      name: "messageId",
+      type: "number",
+      default: 0,
+      required: true,
+      displayOptions: { show: { operation: ["delete"] } },
+    },
+    {
+      displayName: "Return All",
+      name: "returnAll",
+      type: "boolean",
+      default: false,
+      displayOptions: { show: { operation: ["getAll"] } },
+    },
+    {
+      displayName: "Limit",
+      name: "limit",
+      type: "number",
+      default: 20,
+      displayOptions: { show: { operation: ["getAll"], returnAll: [false] } },
+      typeOptions: { minValue: 1 },
+    },
+  ],
+};

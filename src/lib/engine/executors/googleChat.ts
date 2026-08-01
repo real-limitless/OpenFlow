@@ -194,7 +194,7 @@ async function runMemberOperation(
     if (!memberId) throw new Error("GoogleChat: memberId is required for member get");
     const url = `${CHAT_API}/${encodePath(memberId)}`;
     const res = await apiRequest("GET", url, token);
-    return { json: asObj(res.body) };
+    return { json: { data: asObj(res.body) } };
   }
 
   throw new Error(`GoogleChat: unsupported member operation "${operation}"`);
@@ -248,7 +248,7 @@ async function runMessageOperation(
     if (requestId) body.requestId = requestId;
     const url = `${CHAT_API}/${encodePath(spaceId)}/messages`;
     const res = await apiRequest("POST", url, token, body);
-    return { json: asObj(res.body) };
+    return { json: { data: asObj(res.body) } };
   }
 
   if (operation === "delete") {
@@ -264,7 +264,7 @@ async function runMessageOperation(
     if (!messageId) throw new Error("GoogleChat: messageId is required for message get");
     const url = `${CHAT_API}/${encodePath(messageId)}`;
     const res = await apiRequest("GET", url, token);
-    return { json: asObj(res.body) };
+    return { json: { data: asObj(res.body) } };
   }
 
   if (operation === "sendAndWait") {
@@ -323,25 +323,12 @@ async function runMessageOperation(
       text: message,
       cardsV2: [{ cardId: "n8n-card", card: cards[0] }],
     };
-    await apiRequest("POST", url, token, body);
-
-    if (hasLimitWait) {
-      const ms =
-        limitType === "atSpecifiedTime"
-          ? Math.max(0, new Date(maxDateAndTime).getTime() - Date.now())
-          : resumeAmount *
-            (resumeUnit === "hours" ? 3600 : resumeUnit === "days" ? 86400 : 60) *
-            1000;
-      if (ms > 0) await new Promise((resolve) => setTimeout(resolve, ms));
-    }
-
-    const data = buildSendAndWaitData(responseType);
-    return { json: { data } };
+    const res = await apiRequest("POST", url, token, body);
+    return { json: { data: asObj(res.body) } };
   }
 
   if (operation === "update") {
     const spaceId = String(resolveValue(node.parameters.spaceId, itemJson) ?? "").trim();
-    if (!spaceId) throw new Error("GoogleChat: spaceId is required for message update");
     const messageId = String(resolveValue(node.parameters.messageId, itemJson) ?? "").trim();
     if (!messageId) throw new Error("GoogleChat: messageId is required for message update");
     const jsonParameters = Boolean(node.parameters.jsonParameters);
@@ -371,7 +358,7 @@ async function runMessageOperation(
     }
     const url = `${CHAT_API}/${encodePath(messageId)}`;
     const res = await apiRequest("PATCH", url, token, body);
-    return { json: asObj(res.body) };
+    return { json: { data: asObj(res.body) } };
   }
 
   throw new Error(`GoogleChat: unsupported message operation "${operation}"`);
@@ -518,7 +505,7 @@ async function runSpaceOperation(
     if (!spaceId) throw new Error("GoogleChat: spaceId is required for space get");
     const url = `${CHAT_API}/${encodePath(spaceId)}`;
     const res = await apiRequest("GET", url, token);
-    return { json: asObj(res.body) };
+    return { json: { data: asObj(res.body) } };
   }
 
   throw new Error(`GoogleChat: unsupported space operation "${operation}"`);

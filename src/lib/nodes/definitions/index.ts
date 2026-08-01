@@ -7,3 +7,6 @@ export * from "./communication";
 export * from "./marketing";
 export * from "./ecm";
 export * from "./integration";
+export * from "./app";
+export * from "./kafka";
+export * from "./awsLambda";
