@@ -362,6 +362,8 @@ export default function workflowsRoute(app: Hono<AppEnv>) {
       pinData?: Record<string, INodeExecutionData[]>;
       workflow?: IWorkflow;
       environmentId?: string;
+      /** Trigger / node name to start from (partial run). */
+      startNode?: string;
     } = {};
     try {
       body = await c.req.json();
@@ -369,6 +371,10 @@ export default function workflowsRoute(app: Hono<AppEnv>) {
       /* no body is fine */
     }
     const environmentId = body.environmentId || environmentIdFromRequest(c);
+    const startNode =
+      typeof body.startNode === "string" && body.startNode.trim()
+        ? body.startNode.trim()
+        : undefined;
 
     let snapshot: IWorkflow | undefined = body.workflow
       ? { ...body.workflow, id: body.workflow.id || id }
@@ -484,6 +490,7 @@ export default function workflowsRoute(app: Hono<AppEnv>) {
       ownerUserId,
       projectId,
       environmentId,
+      startNode,
     );
 
     return c.json({ executionId: execution.id }, 202);

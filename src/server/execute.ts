@@ -82,9 +82,11 @@ export async function enqueueOrRun(
   userId?: string,
   projectId?: string,
   environmentId?: string | null,
+  startNode?: string | null,
 ): Promise<void> {
   const scope = await resolveScope(workflowId, userId, projectId);
   const envId = await resolveEnvId(scope.projectId, environmentId);
+  const start = startNode?.trim() || undefined;
 
   if (await checkRedis()) {
     await executionQueue.add("execute", {
@@ -96,6 +98,7 @@ export async function enqueueOrRun(
       environmentId: envId,
       pinData,
       workflow: workflow as unknown as Record<string, unknown> | undefined,
+      startNode: start,
     });
     return;
   }
@@ -125,6 +128,7 @@ export async function enqueueOrRun(
     credentialResolver,
     dataTables,
     vars,
+    startNode: start,
     resolveSubWorkflow: resolveSubWorkflowFromDb,
     onProgress: async (partial) => {
       await prisma.execution.update({

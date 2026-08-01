@@ -19,6 +19,8 @@ export interface ExecutionJobData {
   pinData?: Record<string, unknown>;
   /** Canvas snapshot at enqueue time — preferred over DB row when present. */
   workflow?: Record<string, unknown>;
+  /** Optional start trigger/node name for partial runs. */
+  startNode?: string;
 }
 
 export const executionQueue = new Queue<ExecutionJobData>("workflow-execution", {

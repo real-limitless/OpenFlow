@@ -1,9 +1,7 @@
 import { createFileRoute, notFound } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
-import { Play } from "lucide-react";
 import { toast } from "sonner";
 import { Toaster } from "@/components/ui/sonner";
-import { Button } from "@/components/ui/button";
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
 import { getRepository } from "@/lib/storage/repository";
 import { useWorkflowStore } from "@/store/workflow-store";
@@ -14,6 +12,7 @@ import { EditorRightRail } from "@/components/editor/EditorRightRail";
 import { DataPanel } from "@/components/editor/DataPanel";
 import { DataTablesPanel } from "@/components/editor/DataTablesPanel";
 import { ExecutionHistory } from "@/components/editor/ExecutionHistory";
+import { ExecuteTriggerButton } from "@/components/editor/ExecuteTriggerButton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { ExecutionRunData } from "@/lib/engine/types";
 import type { IWorkflow } from "@/lib/workflow/types";
@@ -56,7 +55,7 @@ function EditorPage() {
 
   const bumpHistory = () => setHistoryKey((k) => k + 1);
 
-  const handleExecute = async () => {
+  const handleExecute = async (startNode?: string) => {
     setIsExecuting(true);
     setRunData(null);
     bumpHistory();
@@ -83,6 +82,7 @@ function EditorPage() {
         body: JSON.stringify({
           workflow: latest,
           environmentId: getSelectedEnvironmentId() ?? undefined,
+          startNode: startNode || undefined,
         }),
       });
       if (!res.ok) throw new Error("Failed to start execution");
@@ -217,16 +217,11 @@ function EditorPage() {
     <div className="flex h-screen flex-col overflow-hidden bg-background">
       <EditorTopBar
         actions={
-          <Button
-            variant="default"
-            size="sm"
-            className="h-8 text-[12px]"
-            onClick={handleExecute}
-            disabled={isExecuting}
-          >
-            <Play className="mr-1 size-3.5" />
-            {isExecuting ? "Running\u2026" : "Execute"}
-          </Button>
+          <ExecuteTriggerButton
+            workflow={workflow}
+            isExecuting={isExecuting}
+            onExecute={(startNode) => void handleExecute(startNode)}
+          />
         }
       />
       <div className="flex min-h-0 flex-1">

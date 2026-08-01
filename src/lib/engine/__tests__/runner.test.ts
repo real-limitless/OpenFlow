@@ -31,6 +31,71 @@ describe("Runner", () => {
     expect(plan.workflow).toBe(workflow);
   });
 
+  it("limits run to selected trigger branch", async () => {
+    const workflow = makeWorkflow(
+      [
+        {
+          id: "1",
+          name: "Manual A",
+          type: "n8n-nodes-base.manualTrigger",
+          typeVersion: 1,
+          position: [0, 0],
+          parameters: {},
+        },
+        {
+          id: "2",
+          name: "Manual B",
+          type: "n8n-nodes-base.manualTrigger",
+          typeVersion: 1,
+          position: [0, 100],
+          parameters: {},
+        },
+        {
+          id: "3",
+          name: "Set A",
+          type: "set",
+          typeVersion: 1,
+          position: [200, 0],
+          parameters: {},
+        },
+        {
+          id: "4",
+          name: "Set B",
+          type: "set",
+          typeVersion: 1,
+          position: [200, 100],
+          parameters: {},
+        },
+      ],
+      {
+        "Manual A": { main: [[{ node: "Set A", type: "main", index: 0 }]] },
+        "Manual B": { main: [[{ node: "Set B", type: "main", index: 0 }]] },
+      },
+    );
+
+    const plan = createExecutionPlan(workflow, "Manual B");
+    expect(plan.startNodes).toEqual(["Manual B"]);
+    expect(plan.runOrder).toContain("Manual B");
+    expect(plan.runOrder).toContain("Set B");
+    expect(plan.runOrder).not.toContain("Manual A");
+    expect(plan.runOrder).not.toContain("Set A");
+
+    const mock: NodeExecutor = async () => [[{ json: { ok: true } }]];
+    const result = await executeWorkflow({
+      workflow,
+      nodeExecutors: {
+        "n8n-nodes-base.manualTrigger": mock,
+        set: mock,
+      },
+      startNode: "Manual B",
+    });
+    expect(result.success).toBe(true);
+    expect(result.runData["Manual B"]?.status).toBe("success");
+    expect(result.runData["Set B"]?.status).toBe("success");
+    expect(result.runData["Manual A"]).toBeUndefined();
+    expect(result.runData["Set A"]).toBeUndefined();
+  });
+
   it("creates plan for empty workflow", () => {
     const workflow = makeWorkflow([]);
     const plan = createExecutionPlan(workflow);

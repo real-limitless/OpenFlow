@@ -2,14 +2,39 @@ import type { IWorkflow, INodeExecutionData } from "../workflow/types";
 import type { ExecutionPlan, ExecutionRunData, NodeExecutor } from "./types";
 import type { CredentialResolver } from "./credentials";
 import type { DataTableAccess } from "@/lib/data-tables/access";
-import { buildAdjacency, buildIncoming, resolveStartNodes, topologicalSort } from "./graph";
+import {
+  buildAdjacency,
+  buildIncoming,
+  filterAdjacency,
+  nodesReachableFrom,
+  resolveStartNodes,
+  topologicalSort,
+} from "./graph";
 import { evaluateExpression, isExpression } from "../expressions/evaluate";
 import { createExecutionContext } from "@/sdk";
 
-export function createExecutionPlan(workflow: IWorkflow): ExecutionPlan {
-  const adjacency = buildAdjacency(workflow.connections);
-  const startNodes = resolveStartNodes(workflow);
+export function createExecutionPlan(
+  workflow: IWorkflow,
+  preferredStart?: string | null,
+): ExecutionPlan {
+  const fullAdjacency = buildAdjacency(workflow.connections);
+  const startNodes = resolveStartNodes(workflow, preferredStart);
+  const reachable =
+    startNodes.length > 0
+      ? nodesReachableFrom(fullAdjacency, startNodes)
+      : new Set(workflow.nodes.map((n) => n.name));
+  // Isolated start with no outgoing edges still runs
+  for (const s of startNodes) reachable.add(s);
+  const adjacency = filterAdjacency(fullAdjacency, reachable);
+  // Ensure every reachable node appears even with zero edges
+  for (const name of reachable) {
+    if (!adjacency.has(name)) adjacency.set(name, []);
+  }
   const runOrder = topologicalSort(adjacency);
+  // Prefer start nodes first when they have no edges yet
+  for (const s of startNodes) {
+    if (!runOrder.includes(s)) runOrder.unshift(s);
+  }
   return { workflow, adjacency, startNodes, runOrder };
 }
 
@@ -37,6 +62,11 @@ export interface RunOptions {
   dataTables?: DataTableAccess;
   /** Instance + project custom variables exposed as `$vars`. */
   vars?: Record<string, unknown>;
+  /**
+   * Optional start node (usually a trigger name). When set, only that node and
+   * its downstream graph run — like n8n’s “execute this trigger”.
+   */
+  startNode?: string | null;
 }
 
 export interface RunResult {
@@ -95,7 +125,7 @@ export async function executeWorkflow(options: RunOptions): Promise<RunResult> {
   const { workflow, nodeExecutors, pinData, onProgress } = options;
   const depth = options._depth ?? 0;
   const maxDepth = options.maxSubWorkflowDepth ?? 5;
-  const plan = createExecutionPlan(workflow);
+  const plan = createExecutionPlan(workflow, options.startNode);
   const runData: ExecutionRunData = {};
   const nodeOutputs: Map<string, INodeExecutionData[][]> = new Map();
   const customData: Record<string, string> = {};
@@ -106,14 +136,9 @@ export async function executeWorkflow(options: RunOptions): Promise<RunResult> {
     await onProgress(snapshot);
   };
 
+  // Only track nodes in this run (selected trigger + downstream).
   for (const name of plan.runOrder) {
     runData[name] = { status: "pending" };
-  }
-
-  for (const node of workflow.nodes) {
-    if (!(node.name in runData)) {
-      runData[node.name] = { status: "pending" };
-    }
   }
 
   await emitProgress();

@@ -1,12 +1,50 @@
-import type { IConnections, IWorkflow } from "../workflow/types";
+import type { IConnections, INode, IWorkflow } from "../workflow/types";
+import { getNodeType } from "../nodes/registry";
 
+/** Known trigger type strings (fallback when description lookup is thin). */
 const TRIGGER_TYPES = new Set([
   "n8n-nodes-base.manualTrigger",
+  "n8n-nodes-base.manualWorkflowTrigger",
+  "n8n-nodes-base.start",
   "n8n-nodes-base.webhook",
   "n8n-nodes-base.scheduleTrigger",
   "n8n-nodes-base.executeWorkflowTrigger",
   "n8n-nodes-base.errorTrigger",
+  "n8n-nodes-base.formTrigger",
+  "n8n-nodes-base.sseTrigger",
+  "n8n-nodes-base.localFileTrigger",
+  "n8n-nodes-base.workflowTrigger",
+  "n8n-nodes-base.activationTrigger",
+  "n8n-nodes-base.n8nTrigger",
+  "@n8n/n8n-nodes-langchain.chatTrigger",
+  "@n8n/n8n-nodes-langchain.mcpTrigger",
 ]);
+
+export function isTriggerNode(node: INode): boolean {
+  if (node.disabled) return false;
+  if (TRIGGER_TYPES.has(node.type)) return true;
+  try {
+    const desc = getNodeType(node.type);
+    if (desc.group?.includes("trigger")) return true;
+    if (desc.category === "Triggers") return true;
+    // Trigger-like: no inputs, at least one output
+    if ((desc.inputs?.length ?? 0) === 0 && (desc.outputs?.length ?? 0) > 0) {
+      if (desc.placeholder) return false;
+      // Sticky / inspect canvas nodes have no outputs either — skip empty outputs
+      if ((desc.outputs?.length ?? 0) === 0) return false;
+      // Prefer explicit group; empty-input action nodes still aren't triggers
+      return desc.group?.includes("trigger") === true;
+    }
+  } catch {
+    /* ignore */
+  }
+  return false;
+}
+
+/** Enabled trigger nodes on the canvas (for Execute menu). */
+export function listTriggerNodes(workflow: IWorkflow): INode[] {
+  return workflow.nodes.filter((n) => isTriggerNode(n));
+}
 
 export function buildAdjacency(connections: IConnections): Map<string, string[]> {
   const adj = new Map<string, string[]>();
@@ -60,13 +98,65 @@ export function buildIncoming(connections: IConnections): Map<string, IncomingEd
   return incoming;
 }
 
-export function resolveStartNodes(workflow: IWorkflow): string[] {
-  const triggers = workflow.nodes.filter(
-    (n) => TRIGGER_TYPES.has(n.type) && !n.disabled,
-  );
-  if (triggers.length > 0) return triggers.map((n) => n.name);
-  if (workflow.nodes.length > 0) return [workflow.nodes[0].name];
+/**
+ * Resolve which node(s) start a run.
+ * @param preferredStart optional single trigger/node name from the editor
+ */
+export function resolveStartNodes(workflow: IWorkflow, preferredStart?: string | null): string[] {
+  const known = new Set(workflow.nodes.map((n) => n.name));
+  if (preferredStart && known.has(preferredStart)) {
+    const node = workflow.nodes.find((n) => n.name === preferredStart);
+    if (node && !node.disabled) return [preferredStart];
+  }
+
+  const triggers = listTriggerNodes(workflow);
+  if (triggers.length > 0) {
+    // Prefer Manual Trigger when several exist and none was chosen
+    const manual = triggers.find(
+      (n) =>
+        n.type === "n8n-nodes-base.manualTrigger" ||
+        n.type === "n8n-nodes-base.manualWorkflowTrigger" ||
+        n.type === "n8n-nodes-base.start",
+    );
+    return [manual?.name ?? triggers[0]!.name];
+  }
+
+  if (workflow.nodes.length > 0) {
+    const first = workflow.nodes.find((n) => !n.disabled);
+    if (first) return [first.name];
+  }
   return [];
+}
+
+/** All node names reachable from `starts` following outgoing edges (including starts). */
+export function nodesReachableFrom(
+  adjacency: Map<string, string[]>,
+  starts: string[],
+): Set<string> {
+  const visited = new Set<string>();
+  const queue = [...starts];
+  while (queue.length > 0) {
+    const n = queue.shift()!;
+    if (visited.has(n)) continue;
+    visited.add(n);
+    for (const t of adjacency.get(n) ?? []) {
+      if (!visited.has(t)) queue.push(t);
+    }
+  }
+  return visited;
+}
+
+/** Restrict adjacency to a set of nodes (edges only when both ends are in the set). */
+export function filterAdjacency(
+  adjacency: Map<string, string[]>,
+  keep: Set<string>,
+): Map<string, string[]> {
+  const next = new Map<string, string[]>();
+  for (const name of keep) {
+    const outs = (adjacency.get(name) ?? []).filter((t) => keep.has(t));
+    next.set(name, outs);
+  }
+  return next;
 }
 
 export function topologicalSort(adjacency: Map<string, string[]>): string[] {
@@ -98,6 +188,11 @@ export function topologicalSort(adjacency: Map<string, string[]>): string[] {
       inDegree.set(t, deg);
       if (deg === 0) queue.push(t);
     }
+  }
+
+  // Nodes with cycles or missing edges: append remaining in stable order
+  for (const n of allNodes) {
+    if (!result.includes(n)) result.push(n);
   }
 
   return result;
