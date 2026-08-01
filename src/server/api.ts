@@ -17,6 +17,7 @@ import environmentsRoute from "./routes/environments";
 import secretProvidersRoute from "./routes/secret-providers";
 import devRoute from "./routes/dev";
 import assistantRoute from "./routes/assistant";
+import aiGenerateRoute from "./routes/ai-generate";
 import openflowMcpRoute from "./mcp/openflow-server";
 import { startWorker } from "./worker";
 import { seedBuiltinExecutors } from "../lib/engine";
@@ -49,6 +50,7 @@ webhooksRoute(app);
 workflowsRoute(app);
 schedulesRoute(app);
 assistantRoute(app);
+aiGenerateRoute(app);
 openflowMcpRoute(app);
 devRoute(app);
 

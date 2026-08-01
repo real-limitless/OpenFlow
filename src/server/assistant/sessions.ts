@@ -1,8 +1,18 @@
+import type { IWorkflow } from "../../lib/workflow/types";
+
 export type StoredMessage = {
   id: string;
   role: "user" | "assistant" | "system" | "tool";
   content: string;
   toolName?: string;
+  createdAt: string;
+};
+
+/** Workflow graph as it was before a user turn (for rollback). */
+export type WorkflowCheckpoint = {
+  /** User message id this checkpoint belongs to */
+  messageId: string;
+  workflow: IWorkflow;
   createdAt: string;
 };
 
@@ -12,6 +22,7 @@ export type AssistantSession = {
   userId: string;
   opencodeSessionId?: string;
   messages: StoredMessage[];
+  checkpoints: WorkflowCheckpoint[];
   createdAt: string;
   updatedAt: string;
 };
@@ -28,7 +39,10 @@ export function getOrCreateSession(workflowId: string, userId: string): Assistan
   const existingId = byWorkflow.get(key);
   if (existingId) {
     const s = sessions.get(existingId);
-    if (s) return s;
+    if (s) {
+      if (!s.checkpoints) s.checkpoints = [];
+      return s;
+    }
   }
   const now = new Date().toISOString();
   const session: AssistantSession = {
@@ -36,6 +50,7 @@ export function getOrCreateSession(workflowId: string, userId: string): Assistan
     workflowId,
     userId,
     messages: [],
+    checkpoints: [],
     createdAt: now,
     updatedAt: now,
   };
@@ -64,6 +79,60 @@ export function appendMessage(
     session.messages = session.messages.slice(-160);
   }
   return full;
+}
+
+export function addCheckpoint(
+  session: AssistantSession,
+  messageId: string,
+  workflow: IWorkflow,
+): WorkflowCheckpoint {
+  const cp: WorkflowCheckpoint = {
+    messageId,
+    workflow: structuredClone(workflow),
+    createdAt: new Date().toISOString(),
+  };
+  session.checkpoints.push(cp);
+  // Cap checkpoints
+  if (session.checkpoints.length > 40) {
+    session.checkpoints = session.checkpoints.slice(-30);
+  }
+  return cp;
+}
+
+/**
+ * Truncate messages after `messageId` (inclusive keep of that message when keepMessage=true).
+ * Returns the checkpoint for that user message if any.
+ */
+export function rollbackSession(
+  session: AssistantSession,
+  messageId: string,
+  opts: { keepMessage?: boolean } = {},
+): { checkpoint: WorkflowCheckpoint | null; truncated: number } {
+  const keepMessage = opts.keepMessage !== false;
+  const idx = session.messages.findIndex((m) => m.id === messageId);
+  if (idx === -1) {
+    return { checkpoint: null, truncated: 0 };
+  }
+
+  const checkpoint =
+    session.checkpoints.find((c) => c.messageId === messageId) ??
+    // fallback: nearest earlier checkpoint
+    [...session.checkpoints].reverse().find((c) => {
+      const mi = session.messages.findIndex((m) => m.id === c.messageId);
+      return mi !== -1 && mi <= idx;
+    }) ??
+    null;
+
+  const cutAt = keepMessage ? idx + 1 : idx;
+  const truncated = session.messages.length - cutAt;
+  session.messages = session.messages.slice(0, cutAt);
+
+  // Drop checkpoints for removed messages
+  const keptIds = new Set(session.messages.map((m) => m.id));
+  session.checkpoints = session.checkpoints.filter((c) => keptIds.has(c.messageId));
+  session.updatedAt = new Date().toISOString();
+
+  return { checkpoint, truncated };
 }
 
 export function clearSession(workflowId: string, userId: string): void {

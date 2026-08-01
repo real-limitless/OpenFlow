@@ -1,7 +1,13 @@
 import type { Hono } from "hono";
 import type { AppEnv } from "../middleware/auth";
 import { config } from "../../config";
-import { appendMessage, clearSession, getOrCreateSession } from "../assistant/sessions";
+import {
+  addCheckpoint,
+  appendMessage,
+  clearSession,
+  getOrCreateSession,
+  rollbackSession,
+} from "../assistant/sessions";
 import { runBuiltinAssistant } from "../assistant/builtin-agent";
 import { createOpencodeSession, runOpencodeAssistant } from "../assistant/opencode-manager";
 import { subscribeWorkflowEvents } from "../services/workflow-events";
@@ -95,7 +101,9 @@ export default function assistantRoute(app: Hono<AppEnv>) {
     if (!wf) return c.json({ error: "Workflow not found" }, 404);
 
     const session = getOrCreateSession(workflowId, userId);
-    appendMessage(session, { role: "user", content: message });
+    // Snapshot graph before this turn so rollback can restore canvas + chat.
+    const userMsg = appendMessage(session, { role: "user", content: message });
+    addCheckpoint(session, userMsg.id, wf);
 
     const history = session.messages
       .filter((m) => m.role === "user" || m.role === "assistant")
@@ -168,6 +176,43 @@ export default function assistantRoute(app: Hono<AppEnv>) {
         "Cache-Control": "no-cache",
         Connection: "keep-alive",
       },
+    });
+  });
+
+  /**
+   * Roll back chat + workflow to a user message.
+   * Body: { messageId, keepMessage?: boolean }
+   * - keepMessage true (default): keep that user message, drop everything after it, restore graph to pre-turn snapshot
+   * - keepMessage false: also drop that user message (for edit-then-resend)
+   */
+  app.post("/api/v1/workflows/:id/assistant/rollback", async (c) => {
+    if (!config.assistant.enabled) return c.json({ error: "Assistant disabled" }, 503);
+    const workflowId = c.req.param("id");
+    const userId = c.get("userId") ?? "local";
+    const body = (await c.req.json().catch(() => ({}))) as {
+      messageId?: string;
+      keepMessage?: boolean;
+    };
+    const messageId = body.messageId?.trim();
+    if (!messageId) return c.json({ error: "messageId required" }, 400);
+
+    const session = getOrCreateSession(workflowId, userId);
+    const { checkpoint, truncated } = rollbackSession(session, messageId, {
+      keepMessage: body.keepMessage !== false,
+    });
+
+    let restored = false;
+    if (checkpoint?.workflow) {
+      await saveWorkflow(workflowId, { ...checkpoint.workflow, id: workflowId }, userId, "assistant");
+      restored = true;
+    }
+
+    return c.json({
+      ok: true,
+      truncated,
+      restored,
+      messages: session.messages,
+      workflow: checkpoint?.workflow ?? null,
     });
   });
 
