@@ -18,9 +18,9 @@ export function EditorRightRail({ workflowId }: { workflowId: string }) {
   }, [selected]);
 
   return (
-    <aside className="flex h-full w-[380px] shrink-0 flex-col border-l border-border bg-sidebar">
-      <Tabs value={tab} onValueChange={setTab} className="flex min-h-0 flex-1 flex-col">
-        <TabsList className="mx-2 mt-2 grid h-9 w-auto grid-cols-2">
+    <aside className="flex h-full w-[380px] min-w-0 shrink-0 flex-col overflow-hidden border-l border-border bg-sidebar">
+      <Tabs value={tab} onValueChange={setTab} className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
+        <TabsList className="mx-2 mt-2 grid h-9 w-auto shrink-0 grid-cols-2">
           <TabsTrigger value="properties" className="gap-1 text-[12px]">
             <SlidersHorizontal className="size-3.5" />
             Properties
@@ -32,11 +32,14 @@ export function EditorRightRail({ workflowId }: { workflowId: string }) {
         </TabsList>
         <TabsContent
           value="properties"
-          className="mt-0 min-h-0 flex-1 data-[state=inactive]:hidden"
+          className="mt-0 min-h-0 min-w-0 flex-1 overflow-hidden data-[state=inactive]:hidden"
         >
           <PropertiesPanel embedded />
         </TabsContent>
-        <TabsContent value="assistant" className="mt-0 min-h-0 flex-1 data-[state=inactive]:hidden">
+        <TabsContent
+          value="assistant"
+          className="mt-0 min-h-0 min-w-0 flex-1 overflow-hidden data-[state=inactive]:hidden"
+        >
           <AssistantPanel workflowId={workflowId} />
         </TabsContent>
       </Tabs>

@@ -11,11 +11,14 @@ export type ToolStep = {
   status: "running" | "ok" | "error";
 };
 
-function trunc(value: unknown, max = 220): string {
+function formatValue(value: unknown): string {
   if (value == null) return "";
-  const s = typeof value === "string" ? value : JSON.stringify(value);
-  if (s.length <= max) return s;
-  return `${s.slice(0, max)}…`;
+  if (typeof value === "string") return value;
+  try {
+    return JSON.stringify(value, null, 2);
+  } catch {
+    return String(value);
+  }
 }
 
 function summaryNames(tools: ToolStep[], max = 3): string {
@@ -31,17 +34,17 @@ export function AssistantToolGroup({ tools }: { tools: ToolStep[] }) {
   const count = tools.length;
 
   return (
-    <Collapsible open={open} onOpenChange={setOpen}>
+    <Collapsible open={open} onOpenChange={setOpen} className="min-w-0 w-full max-w-full">
       <div
         className={cn(
-          "rounded-md border bg-background/50",
+          "min-w-0 w-full max-w-full overflow-hidden rounded-md border bg-background/50",
           hasError ? "border-destructive/40" : "border-border/70",
         )}
       >
         <CollapsibleTrigger asChild>
           <button
             type="button"
-            className="flex w-full items-center gap-1.5 px-2 py-1.5 text-left text-[11px] text-muted-foreground hover:bg-muted/40"
+            className="flex w-full min-w-0 items-center gap-1.5 px-2 py-1.5 text-left text-[11px] text-muted-foreground hover:bg-muted/40"
           >
             {open ? (
               <ChevronDown className="size-3.5 shrink-0" />
@@ -66,14 +69,14 @@ export function AssistantToolGroup({ tools }: { tools: ToolStep[] }) {
             </span>
           </button>
         </CollapsibleTrigger>
-        <CollapsibleContent>
-          <ul className="space-y-1.5 border-t border-border/50 px-2 py-2">
+        <CollapsibleContent className="min-w-0 max-w-full overflow-hidden">
+          <ul className="min-w-0 space-y-1.5 border-t border-border/50 px-2 py-2">
             {tools.map((t) => (
               <li
                 key={t.id}
-                className="rounded border border-border/50 bg-background/60 px-2 py-1.5"
+                className="min-w-0 max-w-full overflow-hidden rounded border border-border/50 bg-background/60 px-2 py-1.5"
               >
-                <div className="flex items-center gap-1.5">
+                <div className="flex min-w-0 items-center gap-1.5">
                   {t.status === "running" ? (
                     <Loader2 className="size-3 shrink-0 animate-spin text-primary" />
                   ) : t.status === "error" ? (
@@ -91,19 +94,25 @@ export function AssistantToolGroup({ tools }: { tools: ToolStep[] }) {
                   </span>
                 </div>
                 {t.args != null && (
-                  <p className="mt-1 truncate font-mono text-[10px] text-muted-foreground">
-                    {trunc(t.args)}
-                  </p>
+                  <pre
+                    className={cn(
+                      "mt-1 max-h-32 min-w-0 max-w-full overflow-auto whitespace-pre-wrap break-all",
+                      "rounded bg-muted/40 p-1.5 font-mono text-[10px] leading-snug text-muted-foreground",
+                    )}
+                  >
+                    {formatValue(t.args)}
+                  </pre>
                 )}
                 {t.result != null && (
-                  <p
+                  <pre
                     className={cn(
-                      "mt-0.5 truncate font-mono text-[10px]",
+                      "mt-1 max-h-32 min-w-0 max-w-full overflow-auto whitespace-pre-wrap break-all",
+                      "rounded bg-muted/40 p-1.5 font-mono text-[10px] leading-snug",
                       t.status === "error" ? "text-destructive/90" : "text-muted-foreground/90",
                     )}
                   >
-                    → {trunc(t.result)}
-                  </p>
+                    → {formatValue(t.result)}
+                  </pre>
                 )}
               </li>
             ))}

@@ -374,8 +374,8 @@ export function AssistantPanel({ workflowId }: { workflowId: string }) {
   );
 
   return (
-    <div className="flex h-full min-h-0 w-full flex-col bg-sidebar">
-      <div className="flex items-center justify-between border-b border-border px-3 py-2">
+    <div className="flex h-full min-h-0 w-full min-w-0 max-w-full flex-col overflow-hidden bg-sidebar">
+      <div className="flex shrink-0 items-center justify-between border-b border-border px-3 py-2">
         <div>
           <p className="text-[13px] font-medium">Assistant</p>
           <p className="text-[10px] text-muted-foreground">
@@ -404,8 +404,8 @@ export function AssistantPanel({ workflowId }: { workflowId: string }) {
         </div>
       </div>
 
-      <ScrollArea className="min-h-0 flex-1">
-        <div className="flex flex-col gap-2.5 p-3">
+      <ScrollArea className="min-h-0 min-w-0 flex-1">
+        <div className="flex min-w-0 max-w-full flex-col gap-2.5 overflow-x-hidden p-3">
           {items.length === 0 && (
             <div className="space-y-2">
               <p className="text-[12px] leading-relaxed text-muted-foreground">
@@ -429,9 +429,9 @@ export function AssistantPanel({ workflowId }: { workflowId: string }) {
             if (it.kind === "user") {
               const isEditing = editingId === it.id;
               return (
-                <div key={it.id} className="group ml-4 space-y-1">
+                <div key={it.id} className="group ml-4 min-w-0 max-w-full space-y-1">
                   {isEditing ? (
-                    <div className="space-y-1.5 rounded-lg border border-border bg-background p-2">
+                    <div className="min-w-0 space-y-1.5 rounded-lg border border-border bg-background p-2">
                       <Textarea
                         value={editDraft}
                         onChange={(e) => setEditDraft(e.target.value)}
@@ -463,7 +463,7 @@ export function AssistantPanel({ workflowId }: { workflowId: string }) {
                     </div>
                   ) : (
                     <>
-                      <div className="rounded-lg bg-primary px-2.5 py-2 text-[12px] text-primary-foreground">
+                      <div className="min-w-0 max-w-full break-words rounded-lg bg-primary px-2.5 py-2 text-[12px] text-primary-foreground">
                         {it.content}
                       </div>
                       <div className="flex flex-wrap justify-end gap-0.5 opacity-70 transition-opacity group-hover:opacity-100">
@@ -513,7 +513,7 @@ export function AssistantPanel({ workflowId }: { workflowId: string }) {
               return (
                 <div
                   key={it.id}
-                  className="mr-3 rounded-lg border border-border bg-background px-2.5 py-2"
+                  className="mr-3 min-w-0 max-w-full break-words rounded-lg border border-border bg-background px-2.5 py-2"
                 >
                   <AssistantMarkdown content={it.content} />
                 </div>
