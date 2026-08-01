@@ -303,6 +303,17 @@ isolated-vm for Code node
 - [x] **E7.2** stdout + HTTP/Datadog sinks
 - [x] **E7.3** Config + install docs + `/api/v1/logs/recent`
 
+### Phase U — Enterprise product UI [COMPLETE]
+
+- [x] **U0** AppHeader shell (project/env switchers, nav)
+- [x] **U1** Login/register, auth gate, API keys settings
+- [x] **U2** Projects list + members RBAC
+- [x] **U3** Workflow share + Shared with me
+- [x] **U4** Environments admin settings
+- [x] **U5** Variables edit + editor Vars link
+- [x] **U6** Secret providers settings + credential store picker
+- [x] **U7** Logs settings page
+
 ### Phase E8 — Multi-main mode [PENDING] ← NEXT
 
 - [ ] **E8.1** `OPENFLOW_ROLE=all|main|worker`

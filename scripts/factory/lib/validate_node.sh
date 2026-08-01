@@ -91,28 +91,20 @@ REG_TS_ROOT="$ROOT/scripts/factory/.jobs/tmp/reg-check-${SAFE_TYPE}.mts"
 mkdir -p "$(dirname "$REG_TS_ROOT")"
 # Write checker next to src/ so relative imports resolve under tsx ESM
 cat >"$REG_TS_ROOT" <<EOF
-import {
-  reloadBuiltinExecutors,
-  hasExecutor,
-} from "${ROOT}/src/lib/engine/node-runtime.ts";
+import { hasExecutor } from "${ROOT}/src/lib/engine/node-runtime.ts";
+// register-builtins.ts has an eager side effect that populates the executor
+// map via the real seedBuiltinExecutors(); reloadBuiltinExecutors() in
+// node-runtime.ts is a no-op stub.
+import "${ROOT}/src/lib/engine/executors/register-builtins.ts";
 import {
   seedBuiltinDescriptions,
   getNodeType,
 } from "${ROOT}/src/lib/nodes/registry.ts";
 
 const t = ${TYPE@Q};
-const { reloaded, errors } = await reloadBuiltinExecutors();
 seedBuiltinDescriptions();
 if (!hasExecutor(t)) {
   console.error("hasExecutor false for", t);
-  console.error(
-    "reloaded",
-    reloaded.length,
-    "errors_for_type",
-    errors.filter((e) => e.type === t),
-    "sample",
-    errors.slice(0, 5),
-  );
   process.exit(2);
 }
 const d = getNodeType(t);
@@ -120,7 +112,7 @@ if (!d || (d as { placeholder?: boolean }).placeholder) {
   console.error("placeholder or missing description", t, d);
   process.exit(3);
 }
-console.log("runtime ok", t, d.displayName, "reloaded", reloaded.length);
+console.log("runtime ok", t, d.displayName);
 EOF
 
 if (cd "$ROOT" && npx --yes tsx "$REG_TS_ROOT") >>"$LOG" 2>&1; then

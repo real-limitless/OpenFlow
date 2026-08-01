@@ -972,7 +972,8 @@
       "priority": "P1",
       "executor": "implemented",
       "spec": "specced",
-      "dogfood": false
+      "dogfood": false,
+      "factory": "pass"
     },
     "n8n-nodes-base.microsoftSharePoint": {
       "priority": "P1",
@@ -1057,7 +1058,7 @@
       "executor": "implemented",
       "spec": "specced",
       "dogfood": false,
-      "factory": "partial"
+      "factory": "pass"
     },
     "n8n-nodes-base.gSuiteAdmin": {
       "priority": "P1",
@@ -1159,7 +1160,7 @@
       "executor": "implemented",
       "spec": "specced",
       "dogfood": false,
-      "factory": "partial"
+      "factory": "pass"
     },
     "n8n-nodes-base.zendesk": {
       "priority": "P1",
@@ -1172,109 +1173,127 @@
       "priority": "P1",
       "executor": "implemented",
       "spec": "specced",
-      "dogfood": false
+      "dogfood": false,
+      "factory": "pass"
     },
     "n8n-nodes-base.highLevel": {
       "priority": "P1",
       "executor": "implemented",
       "spec": "specced",
-      "dogfood": false
+      "dogfood": false,
+      "factory": "pass"
     },
     "n8n-nodes-base.odoo": {
       "priority": "P1",
       "executor": "implemented",
       "spec": "specced",
-      "dogfood": false
+      "dogfood": false,
+      "factory": "pass"
     },
     "n8n-nodes-base.hubspotTrigger": {
       "priority": "P1",
       "executor": "implemented",
       "spec": "specced",
-      "dogfood": false
+      "dogfood": false,
+      "factory": "pass"
     },
     "n8n-nodes-base.wooCommerce": {
       "priority": "P1",
       "executor": "implemented",
       "spec": "specced",
-      "dogfood": false
+      "dogfood": false,
+      "factory": "pass"
     },
     "n8n-nodes-base.shopify": {
       "priority": "P1",
       "executor": "implemented",
       "spec": "specced",
-      "dogfood": false
+      "dogfood": false,
+      "factory": "pass"
     },
     "n8n-nodes-base.stripe": {
       "priority": "P1",
       "executor": "implemented",
       "spec": "specced",
-      "dogfood": false
+      "dogfood": false,
+      "factory": "pass"
     },
     "n8n-nodes-base.stripeTrigger": {
       "priority": "P1",
       "executor": "implemented",
       "spec": "specced",
-      "dogfood": false
+      "dogfood": false,
+      "factory": "pass"
     },
     "n8n-nodes-base.quickbooks": {
       "priority": "P1",
       "executor": "implemented",
       "spec": "specced",
-      "dogfood": false
+      "dogfood": false,
+      "factory": "partial"
     },
     "n8n-nodes-base.xero": {
       "priority": "P1",
       "executor": "implemented",
       "spec": "specced",
-      "dogfood": false
+      "dogfood": false,
+      "factory": "partial"
     },
     "n8n-nodes-base.payPal": {
       "priority": "P1",
       "executor": "implemented",
       "spec": "specced",
-      "dogfood": false
+      "dogfood": false,
+      "factory": "partial"
     },
     "n8n-nodes-base.pagerDuty": {
       "priority": "P1",
       "executor": "implemented",
       "spec": "specced",
-      "dogfood": false
+      "dogfood": false,
+      "factory": "partial"
     },
     "n8n-nodes-base.baserow": {
       "priority": "P1",
       "executor": "implemented",
       "spec": "specced",
-      "dogfood": false
+      "dogfood": false,
+      "factory": "partial"
     },
     "n8n-nodes-base.nocoDb": {
       "priority": "P1",
       "executor": "implemented",
       "spec": "specced",
-      "dogfood": false
+      "dogfood": false,
+      "factory": "partial"
     },
     "n8n-nodes-base.dropbox": {
       "priority": "P1",
       "executor": "implemented",
       "spec": "specced",
-      "dogfood": false
+      "dogfood": false,
+      "factory": "partial"
     },
     "n8n-nodes-base.nextCloud": {
       "priority": "P1",
       "executor": "implemented",
       "spec": "specced",
-      "dogfood": false
+      "dogfood": false,
+      "factory": "partial"
     },
     "n8n-nodes-base.awsS3": {
       "priority": "P1",
       "executor": "implemented",
       "spec": "specced",
-      "dogfood": false
+      "dogfood": false,
+      "factory": "partial"
     },
     "n8n-nodes-base.awsLambda": {
       "priority": "P1",
       "executor": "implemented",
       "spec": "specced",
-      "dogfood": false
+      "dogfood": false,
+      "factory": "partial"
     },
     "n8n-nodes-base.awsSes": {
       "priority": "P1",
@@ -1286,7 +1305,8 @@
       "priority": "P1",
       "executor": "implemented",
       "spec": "specced",
-      "dogfood": false
+      "dogfood": false,
+      "factory": "partial"
     },
     "n8n-nodes-base.elasticsearch": {
       "priority": "P1",
@@ -1304,7 +1324,8 @@
       "priority": "P1",
       "executor": "implemented",
       "spec": "specced",
-      "dogfood": false
+      "dogfood": false,
+      "factory": "partial"
     },
     "n8n-nodes-base.rabbitmq": {
       "priority": "P1",
@@ -1316,7 +1337,8 @@
       "priority": "P1",
       "executor": "implemented",
       "spec": "specced",
-      "dogfood": false
+      "dogfood": false,
+      "factory": "partial"
     },
     "n8n-nodes-base.redisTrigger": {
       "priority": "P1",

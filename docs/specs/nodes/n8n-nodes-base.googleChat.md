@@ -12,82 +12,106 @@ status: specced
 ## Sources
 
 | URL | Source class |
-|-----|--------------|
-| https://docs.n8n.io/integrations/builtin/app-nodes/n8n-nodes-base.googlechat.md | Public docs only |
-| https://docs.n8n.io/integrations/builtin/credentials/google.md | Public docs only |
-| https://developers.google.com/workspace/chat/api/reference/rest | Third-party service API docs |
-| https://developers.google.com/workspace/chat/api/reference/rest/v1/spaces.messages | Third-party service API docs |
-| https://developers.google.com/workspace/chat/api/reference/rest/v1/spaces.members | Third-party service API docs |
-| https://developers.google.com/workspace/chat/api/reference/rest/v1/spaces | Third-party service API docs |
+|-----|----------------|
+| https://docs.n8n.io/integrations/builtin/app-nodes/n8n-nodes-base.googlechat/ | Public docs only |
+| https://docs.n8n.io/integrations/builtin/credentials/google/service-account/ | Public docs only |
 
 ## Wire format
 
 - **Type string:** `n8n-nodes-base.googleChat`
-- **Aliases:** (none)
-- **Inputs:** `main` x 1
-- **Outputs:** `main` x 1
-- **Credentials:** Google Chat OAuth2 or Google service-account authentication (`googleChatOAuth2Api` in the node credential contract)
-- **AI tool:** The node may be exposed as an AI tool. Parameters that are expressions in a normal workflow may then be supplied by the agent.
+- **Aliases:** `human`, `form`, `wait`, `hitl`, `approval`
+- **Inputs:** `main` × 1
+- **Outputs:** `main` × 1
+- **Credentials:** `googleChatOAuth2Api` (OAuth2) or Google service account via `googleApi`
+- **Categories:** `Communication`, `HITL`
 
 ## Parameters
 
-The node selects a Google Chat resource and an operation. It does not expose every Google Chat API endpoint; its supported surface is the following three resource families:
+The node is structured as a discriminator pattern: the user selects a **resource** then an **operation** on that resource.
 
-| resource | operations | outcome |
-|----------|------------|---------|
-| `member` | `get`, `getAll` | Retrieve one membership or memberships belonging to a space |
-| `message` | `create`, `delete`, `get`, `sendAndWait`, `update` | Create, inspect, remove, update, or send a message with an optional human response step |
-| `space` | `get`, `getAll` | Retrieve one space or spaces visible to the authenticated caller |
+### Member resource
 
-| name | type | default | required | displayOptions | notes |
-|------|------|---------|----------|----------------|-------|
-| `resource` | option | `message` | yes | always | Selects `member`, `message`, or `space`. |
-| `operation` | option | resource-dependent | yes | selected resource | Selects an operation supported by the resource. |
-| `spaceId` | string or expression | none | operation-dependent | member/space/message operations that address a space | Identifies the Google Chat space. Use the provider's resource identifier, not a display name. |
-| `memberId` | string or expression | none | yes for member get | `resource=member`, `operation=get` | Identifies the membership to retrieve. This operation must not require a separate membership and space identifier when the membership identifier is sufficient. |
-| `messageId` | string or expression | none | yes for message get/delete/update | message operations that address an existing message | Identifies the message resource. The message resource name may include its space context. |
-| `messageUi` | text or structured message input | none | yes for message create | `resource=message`, `operation=create` | Supplies either text or a JSON/card-style Google Chat message. Structured input must be valid for the Google Chat message API. |
-| `message` | text or structured message input | none | yes for sendAndWait | `resource=message`, `operation=sendAndWait` | The message shown before waiting for a response. |
-| `approvalOptions` | object | none | response-type dependent | `operation=sendAndWait`, approval response | Selects approval presentation and may provide approve/disapprove button labels. |
-| `options.limitWaitTime` | interval or wall-time setting | none | no | `operation=sendAndWait` | Causes the workflow to resume after the configured limit if no response arrives. |
-| response/form options | object | none | response-type dependent | `operation=sendAndWait` | Supports approval, free-text, or custom-form response collection, including labels, title/description, and custom form fields. |
+| operation | parameter | type | notes |
+|-----------|-----------|------|-------|
+| `get` | `memberId` | string | Identifier of the membership to retrieve |
+| `getAll` | `spaceId` | string | Parent space whose memberships to list |
+| `getAll` | `returnAll` | boolean | When true, fetch all memberships; when false, use `limit` |
+| `getAll` | `limit` | number | Max memberships to return (used when `returnAll` = false) |
 
-For `getAll` operations, the node may expose a return-all choice and a bounded limit. The implementation must honor the selected limit and provider pagination rather than silently dropping available results. Optional message fields and Google Chat card/form structures are passed through at the level supported by the Google Chat API; they are not redefined by this spec.
+### Message resource
+
+| operation | parameter | type | notes |
+|-----------|-----------|------|-------|
+| `create` | `spaceId` | string | Target space to post the message into |
+| `create` | `messageUi.text` | string | Plain text body of the message (used when `jsonParameters` = false) |
+| `create` | `messageJson` | object/string | JSON-encoded message body (used when `jsonParameters` = true) |
+| `create` | `jsonParameters` | boolean | Toggle between structured UI fields and raw JSON input |
+| `create` | `additionalFields.requestId` | string | Optional request ID for idempotent creation |
+| `get` | `messageId` | string | Identifier of the message to retrieve |
+| `delete` | `messageId` | string | Identifier of the message to delete |
+| `update` | `messageId` | string | Identifier of the message to update |
+| `update` | `updateFieldsUi.text` | string | New text body (used when `jsonParameters` = false) |
+| `update` | `updateFieldsJson` | object/string | JSON-encoded update body (used when `jsonParameters` = true) |
+| `update` | `jsonParameters` | boolean | Toggle between structured UI fields and raw JSON input |
+| `sendAndWait` | `spaceId` | string | Target space for the interactive message |
+| `sendAndWait` | `message` | string | Message text to send |
+| `sendAndWait` | `responseType` | enum: `approval`, `freeText`, `customForm` | Type of interactive response to collect |
+| `sendAndWait` | `approvalOptions.approvalType` | enum: `single`, `double` | Single approve button, or approve + disapprove |
+| `sendAndWait` | `approvalOptions.approveLabel` | string | Custom label for the approve button |
+| `sendAndWait` | `approvalOptions.disapproveLabel` | string | Custom label for the disapprove button |
+| `sendAndWait` | `defineForm` | enum: `fields`, `json` | How to define custom form fields |
+| `sendAndWait` | `formFields[]` | array | Array of form element definitions (fieldName, fieldLabel, fieldType, placeholder, defaultValue, requiredField, etc.) |
+| `sendAndWait` | `jsonOutput` | object/string | JSON-encoded form definition (used when `defineForm` = `json`) |
+| `sendAndWait` | `options.limitWaitTime` | interval/wall-time | Auto-resume after this duration |
+| `sendAndWait` | `options.appendAttribution` | boolean | Whether to append "Sent via n8n" attribution |
+| `sendAndWait` | `options.messageButtonLabel` | string | Label for the message action button |
+| `sendAndWait` | `options.responseFormTitle` | string | Title for the response form |
+| `sendAndWait` | `options.responseFormDescription` | string | Description for the response form |
+| `sendAndWait` | `options.responseFormButtonLabel` | string | Label for the form submit button |
+| `sendAndWait` | `options.responseFormCustomCss` | string | Custom CSS for the response form |
+
+### Space resource
+
+| operation | parameter | type | notes |
+|-----------|-----------|------|-------|
+| `get` | `spaceId` | string | Identifier of the space to retrieve |
+| `getAll` | `returnAll` | boolean | When true, fetch all spaces; when false, use `limit` |
+| `getAll` | `limit` | number | Max spaces to return (used when `returnAll` = false) |
 
 ## Runtime behavior
 
 ### Input
 
-The node processes incoming items. Parameter expressions are evaluated against the current item, so identifiers and message content may be taken from `$json`. For ordinary operations, one API request is made for each input item. A workflow with no input items does not invent a request.
+The node processes each input item independently. For read operations (get/getAll), the item's JSON data may supply parameter values via expressions.
 
 ### Output
 
-Each successful non-delete operation returns the corresponding Google Chat API resource or list result under the output item's `json` value. Returned data must preserve provider fields such as resource identifiers and message/space/member properties without replacing the provider response with a synthetic schema.
+Each operation produces one output item per input item, with the Google Chat API response body placed in `json`:
 
-- `create`, `get`, and `update` return the affected message resource.
-- `member.get` returns one membership; `member.getAll` returns the memberships found in the selected space.
-- `space.get` returns one space; `space.getAll` returns spaces visible to the authenticated caller.
-- `delete` performs the provider delete request and passes the input item through unchanged because the provider response has no resource body.
-- `sendAndWait` first sends the configured message. Its completed result must contain the actual response/continuation data from the human interaction or timeout. It must not claim approval, disapproval, or a submitted message when no such event was received.
-
-The intended complete `sendAndWait` behavior is to pause execution, expose the configured approval/free-text/custom-form interaction, resume on a response or `limitWaitTime`, and return the submitted response together with the relevant sent-message context. Cycle 1 may implement only the send portion; in that scope it returns the real create-message response and does not synthesize `approved`, `message`, or other HITL result fields.
+- **Message create/get**: Returns the created or retrieved message resource (`{ name, text, sender, space, ... }`)
+- **Message delete**: Returns the API response (typically empty body or a success indicator)
+- **Message update**: Returns the updated message resource
+- **Message sendAndWait**: Returns the sent message resource, including interactive card data. The wait/pause lifecycle is handled externally by the workflow engine (cycle-1: send-only stub; does not implement pause/resume).
+- **Member get/getAll**: Returns membership resource(s) (`{ name, state, member, role, ... }`)
+- **Space get/getAll**: Returns space resource(s) (`{ name, displayName, spaceType, ... }`)
 
 ### Errors
 
-Missing credentials, invalid authentication, malformed message/card data, missing required identifiers, provider permission failures, unavailable spaces, and provider HTTP errors must fail the operation with an actionable node error. A failed request must not be reported as a successful message or membership result. If OpenFlow's `continueOnFail` mode is enabled, emit the repository-standard error item for that input item instead of aborting the whole batch.
+- API errors (auth failure, resource not found, rate limits, permission denied) throw an error that the workflow engine handles according to `continueOnFail`.
+- Invalid parameters (missing required `spaceId` or `messageId`) throw before the API call.
 
 ### Expressions
 
-String identifiers, message text, structured message values, labels, and wait-time values may be expression-backed where the corresponding parameter is exposed. Expressions are evaluated per input item. The node must not evaluate arbitrary code supplied as message JSON; it only interpolates workflow expressions before sending the resulting provider request.
+All string/number/boolean parameters accept n8n expression strings.
 
 ## Acceptance tests
 
-### Test: create a text message
+### Test: message create
 
 **Given** input items:
 
 ```json
-[{ "json": { "space": "spaces/AAA" } }]
+[{ "json": {} }]
 ```
 
 **Parameters:**
@@ -96,39 +120,19 @@ String identifiers, message text, structured message values, labels, and wait-ti
 {
   "resource": "message",
   "operation": "create",
-  "spaceId": "{{ $json.space }}",
-  "messageUi": { "text": "Build completed" }
+  "spaceId": "spaces/AAA",
+  "messageUi": { "text": "Hello from OpenFlow" }
 }
 ```
 
-**Expect** one provider create request for `spaces/AAA`, with the text preserved, and output `json` containing the provider's created message resource and a non-empty resource identifier.
+**Expect** output[0].json to contain a `name` field starting with `"spaces/AAA/messages/"` and a `text` field equal to `"Hello from OpenFlow"`.
 
-### Test: get a membership by membership identifier
+### Test: message get
 
 **Given** input items:
 
 ```json
-[{ "json": { "memberId": "spaces/AAA/members/BBB" } }]
-```
-
-**Parameters:**
-
-```json
-{
-  "resource": "member",
-  "operation": "get",
-  "memberId": "{{ $json.memberId }}"
-}
-```
-
-**Expect** a membership-get request addressed by `memberId`, without requiring an unrelated `spaceId` or `membershipId` parameter, and output `json` containing the returned membership resource.
-
-### Test: delete preserves the input item
-
-**Given** input items:
-
-```json
-[{ "json": { "messageId": "spaces/AAA/messages/CCC", "keep": "original" } }]
+[{ "json": {} }]
 ```
 
 **Parameters:**
@@ -136,19 +140,61 @@ String identifiers, message text, structured message values, labels, and wait-ti
 ```json
 {
   "resource": "message",
-  "operation": "delete",
-  "messageId": "{{ $json.messageId }}"
+  "operation": "get",
+  "messageId": "spaces/AAA/messages/BBB"
 }
 ```
 
-**Expect** a successful delete request using `messageId` and output `json.keep` equal to `"original"`; no fabricated delete response is required.
+**Expect** output[0].json to contain `name` equal to `"spaces/AAA/messages/BBB"`.
 
-### Test: send-and-wait does not invent a human decision
+### Test: member getAll with limit
 
 **Given** input items:
 
 ```json
-[{ "json": { "space": "spaces/AAA" } }]
+[{ "json": {} }]
+```
+
+**Parameters:**
+
+```json
+{
+  "resource": "member",
+  "operation": "getAll",
+  "spaceId": "spaces/AAA",
+  "returnAll": false,
+  "limit": 10
+}
+```
+
+**Expect** output[0].json to contain a `memberships` array (or a paginated list response per the Google Chat API) with at most 10 entries.
+
+### Test: space getAll
+
+**Given** input items:
+
+```json
+[{ "json": {} }]
+```
+
+**Parameters:**
+
+```json
+{
+  "resource": "space",
+  "operation": "getAll",
+  "returnAll": true
+}
+```
+
+**Expect** output[0].json to contain a `spaces` array.
+
+### Test: sendAndWait (send-only stub, cycle-1)
+
+**Given** input items:
+
+```json
+[{ "json": {} }]
 ```
 
 **Parameters:**
@@ -157,49 +203,27 @@ String identifiers, message text, structured message values, labels, and wait-ti
 {
   "resource": "message",
   "operation": "sendAndWait",
-  "spaceId": "{{ $json.space }}",
-  "message": "Please review this deployment.",
-  "approvalOptions": { "values": { "approvalType": "single" } },
-  "options": { "limitWaitTime": { "unit": "minutes", "value": 5 } }
+  "spaceId": "spaces/AAA",
+  "message": "Approve this?",
+  "responseType": "approval"
 }
 ```
 
-**Expect** the message is sent to the selected space. If the cycle-1 implementation is send-only, output contains the real provider create-message response and contains no synthetic `approved: true` or approval message. A later full HITL implementation must instead pause and return only an actual response or timeout result.
-
-### Test: get a space and list memberships
-
-**Given** input items:
-
-```json
-[{ "json": { "spaceId": "spaces/AAA" } }]
-```
-
-**Parameters:**
-
-```json
-{
-  "resource": "space",
-  "operation": "get",
-  "spaceId": "{{ $json.spaceId }}"
-}
-```
-
-**Expect** output `json` contains the provider space resource. Changing only `resource` to `member` and `operation` to `getAll` performs a membership listing for the same space and returns the provider's membership resources without requiring a message identifier.
+**Expect** output[0].json to contain the sent message resource (`name`, `text`). The output must NOT include invented `approved`, `message`, `freeText`, `values`, or `customForm` fields. The test does not assert pause/resume behavior (cycle-1 limitation).
 
 ## Gaps / confidence
 
 | Topic | documented / inferred | Notes |
 |-------|----------------------|-------|
-| Resource families and operations | Documented | Google Chat node documentation lists Member, Message, and Space operations and describes send-and-wait response modes. |
-| Google authentication | Documented | Google credentials documentation lists OAuth2 and service-account support for Google Chat. |
-| Provider resource boundaries and HTTP outcomes | Documented | Google Chat REST reference defines spaces, memberships, messages, and their get/list/create/update/delete operations. |
-| Exact OpenFlow parameter grouping | Inferred | Names such as `messageUi`, `message`, `memberId`, and `messageId` are the compatibility-facing abstraction for this implementation; nested UI layout is intentionally unspecified. |
-| Human-in-the-loop continuation payload | Partly documented | Public node docs describe the response modes and timeout, but not a stable provider response JSON shape. Implementations must return observed continuation data, not a guessed schema. |
-| Cycle-1 send-only behavior | Explicit scope gap | Full pause/resume requires workflow suspension and webhook continuation support; cycle 1 must not fabricate a decision result. |
-| Pagination and list output itemization | Inferred | The Google API supports list responses and pagination; OpenFlow should expose all selected results as output items while honoring a configured limit. |
+| Operations list | documented | Public docs list all 3 resources and 8 operations |
+| Parameter names and structure | inferred | Extracted from corpus schema definitions — exact OpenFlow mapping may simplify nesting |
+| `sendAndWait` interactive lifecycle | documented | Public docs describe response types and limit wait; OpenFlow cycle-1 implements send-only without pause/resume |
+| Credential setup | documented | Service account recommended; OAuth2 also supported |
+| API response shapes | inferred | Exact Google Chat API shape depends on chat API version; spec describes at outcome level only |
 
 ## OpenFlow mapping
 
 - **Definition group:** `core`
 - **Executor file:** `src/lib/engine/executors/googleChat.ts`
 - **SDK:** `defineNode` + native `ExecutionContext` only
+- **Cycle-1 scope:** All operations listed above. `sendAndWait` implemented as send-only stub — no pause/resume, no wait simulation. Returns provider message resource (`name`, `text`, `cards`). Output data does NOT include `approved`, `message`, `freeText`, `values`, or `customForm` fields.
