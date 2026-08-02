@@ -97,13 +97,30 @@ async function signRequest(opts: {
   const amzDate = now.toISOString().replace(/[:-]/g, "").replace(/\.\d{3}/, "");
   const dateStamp = amzDate.slice(0, 8);
 
-  const signedHeaders = Object.keys(opts.headers).sort().map((k) => k.toLowerCase()).join(";");
+  // Every header that goes on the wire must also be signed. x-amz-date and
+  // x-amz-content-sha256 used to be appended to the response of this function
+  // *after* the signature was computed, so S3 rejected the request with
+  // "AccessDenied -- There were headers present in the request which were not
+  // signed: x-amz-date". Build the full set up front and sign exactly that.
+  const headers: Record<string, string> = {
+    host: opts.host,
+    "x-amz-date": amzDate,
+    "x-amz-content-sha256": opts.bodyHash,
+    ...(opts.sessionToken ? { "x-amz-security-token": opts.sessionToken } : {}),
+    ...opts.headers,
+  };
+
+  // SigV4 sorts by the *lowercased* header name and trims the value.
+  const canonical = Object.entries(headers)
+    .map(([k, v]) => [k.toLowerCase(), String(v).trim()] as const)
+    .sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0));
+  const signedHeaders = canonical.map(([k]) => k).join(";");
 
   const canonicalRequest = [
     opts.method,
     opts.path,
     opts.queryString,
-    ...Object.entries(opts.headers).sort(([a], [b]) => a.localeCompare(b)).map(([k, v]) => `${k.toLowerCase()}:${v}`),
+    ...canonical.map(([k, v]) => `${k}:${v}`),
     "",
     signedHeaders,
     opts.bodyHash,
@@ -125,13 +142,9 @@ async function signRequest(opts: {
 
   const authorization = `AWS4-HMAC-SHA256 Credential=${opts.accessKeyId}/${credentialScope}, SignedHeaders=${signedHeaders}, Signature=${signature}`;
 
-  const outHeaders: Record<string, string> = {
-    "x-amz-date": amzDate,
-    "x-amz-content-sha256": opts.bodyHash,
-    authorization,
-  };
-  if (opts.sessionToken) outHeaders["x-amz-security-token"] = opts.sessionToken;
-  return outHeaders;
+  // `host` is set by fetch itself and must not be forwarded explicitly.
+  const { host: _host, ...wireHeaders } = headers;
+  return { ...wireHeaders, authorization };
 }
 
 async function s3Request(
@@ -166,7 +179,9 @@ async function s3Request(
     sessionToken: creds.sessionToken,
   });
 
-  const allHeaders: Record<string, string> = { ...headers, ...sigHeaders };
+  // signRequest returns every signed header except `host`, which fetch derives
+  // from the URL and forbids setting by hand.
+  const allHeaders: Record<string, string> = sigHeaders;
   const url = `https://${host}${path}${queryString ? "?" + queryString : ""}`;
 
   const controller = new AbortController();
@@ -216,8 +231,24 @@ function parseXmlSimple(xml: string): Record<string, unknown> {
   return out;
 }
 
+/**
+ * Drop the single wrapping element S3 puts around every response body
+ * (ListAllMyBucketsResult, ListBucketResult, …).
+ *
+ * parseXmlSimple keys the outermost tag, so a document-shaped response parses to
+ * `{ ListBucketResult: { … } }` and a direct `root.Contents` lookup silently
+ * misses — list operations then returned nothing at all against real S3.
+ */
+function unwrapXmlRoot(parsed: Record<string, unknown>): Record<string, unknown> {
+  const keys = Object.keys(parsed);
+  if (keys.length !== 1) return parsed;
+  const only = parsed[keys[0]];
+  if (!only || typeof only !== "object" || Array.isArray(only)) return parsed;
+  return only as Record<string, unknown>;
+}
+
 function parseListBuckets(xml: string): Array<{ Name: string; CreationDate: string }> {
-  const root = parseXmlSimple(xml);
+  const root = unwrapXmlRoot(parseXmlSimple(xml));
   const buckets = root.Buckets as Record<string, unknown> | undefined;
   if (!buckets) return [];
   const items = buckets.Bucket;
@@ -230,7 +261,7 @@ function parseListBuckets(xml: string): Array<{ Name: string; CreationDate: stri
 }
 
 function parseListObjects(xml: string): { objects: Array<Record<string, unknown>>; isTruncated: boolean } {
-  const root = parseXmlSimple(xml);
+  const root = unwrapXmlRoot(parseXmlSimple(xml));
   const contents = root.Contents;
   const objects = contents
     ? (Array.isArray(contents) ? contents : [contents]).map((c: Record<string, unknown>) => ({
