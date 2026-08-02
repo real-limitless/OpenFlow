@@ -1393,6 +1393,135 @@ export const respondToWebhook: INodeTypeDescription = {
   ],
 };
 
+export const rssFeedReadTrigger: INodeTypeDescription = {
+  name: "n8n-nodes-base.rssFeedReadTrigger",
+  displayName: "RSS Feed Trigger",
+  category: "Triggers",
+  group: ["trigger"],
+  version: 1,
+  description: "Starts the workflow when a new item appears in an RSS or Atom feed.",
+  defaults: { name: "RSS Feed Trigger" },
+  inputs: [],
+  outputs: ["main"],
+  icon: "RadioTower",
+  sources: [
+    "https://docs.n8n.io/integrations/builtin/core-nodes/n8n-nodes-base.rssfeedreadtrigger/",
+  ],
+  properties: [
+    {
+      displayName: "Feed URL",
+      name: "feedUrl",
+      type: "string",
+      default: "",
+      required: true,
+      placeholder: "https://example.com/feed.xml",
+      description: "URL of the RSS feed to poll. Accepts an expression.",
+    },
+    {
+      displayName: "Poll Schedule",
+      name: "rule",
+      type: "collection",
+      default: { interval: { mode: "everyHour", minute: 0 } },
+      noDataExpression: true,
+      description: "Poll schedule configuration.",
+      options: [
+        {
+          displayName: "Interval",
+          name: "interval",
+          values: [
+            {
+              displayName: "Mode",
+              name: "mode",
+              type: "options",
+              default: "everyHour",
+              noDataExpression: true,
+              options: [
+                { name: "Every Hour", value: "everyHour" },
+                { name: "Every Day", value: "everyDay" },
+                { name: "Every Week", value: "everyWeek" },
+                { name: "Every Month", value: "everyMonth" },
+                { name: "Every X", value: "everyX" },
+                { name: "Custom (Cron)", value: "custom" },
+              ],
+            },
+            {
+              displayName: "Minute",
+              name: "minute",
+              type: "number",
+              default: 0,
+              typeOptions: { minValue: 0, maxValue: 59 },
+              displayOptions: {
+                show: {
+                  mode: ["everyHour", "everyDay", "everyWeek", "everyMonth"],
+                },
+              },
+            },
+            {
+              displayName: "Hour",
+              name: "hour",
+              type: "number",
+              default: 0,
+              typeOptions: { minValue: 0, maxValue: 23 },
+              displayOptions: { show: { mode: ["everyDay", "everyWeek", "everyMonth"] } },
+            },
+            {
+              displayName: "Weekday",
+              name: "weekday",
+              type: "options",
+              default: 1,
+              displayOptions: { show: { mode: ["everyWeek"] } },
+              options: [
+                { name: "Sunday", value: 0 },
+                { name: "Monday", value: 1 },
+                { name: "Tuesday", value: 2 },
+                { name: "Wednesday", value: 3 },
+                { name: "Thursday", value: 4 },
+                { name: "Friday", value: 5 },
+                { name: "Saturday", value: 6 },
+              ],
+            },
+            {
+              displayName: "Day of Month",
+              name: "monthDay",
+              type: "number",
+              default: 1,
+              typeOptions: { minValue: 0, maxValue: 31 },
+              displayOptions: { show: { mode: ["everyMonth"] } },
+            },
+            {
+              displayName: "Value",
+              name: "value",
+              type: "number",
+              default: 5,
+              typeOptions: { minValue: 1 },
+              displayOptions: { show: { mode: ["everyX"] } },
+            },
+            {
+              displayName: "Unit",
+              name: "unit",
+              type: "options",
+              default: "hours",
+              displayOptions: { show: { mode: ["everyX"] } },
+              options: [
+                { name: "Minutes", value: "minutes" },
+                { name: "Hours", value: "hours" },
+              ],
+            },
+            {
+              displayName: "Cron Expression",
+              name: "cronExpression",
+              type: "string",
+              default: "",
+              placeholder: "30 8 4 * * *",
+              displayOptions: { show: { mode: ["custom"] } },
+            },
+          ],
+        },
+      ],
+    },
+  ],
+};
+
 export const gmailTrigger: INodeTypeDescription = {
   name: "n8n-nodes-base.gmailTrigger",
   displayName: "Gmail Trigger",
@@ -2363,6 +2492,420 @@ export const pagerDuty: INodeTypeDescription = {
   ],
 };
 
+export const googleDriveTrigger: INodeTypeDescription = {
+  name: "n8n-nodes-base.googleDriveTrigger",
+  displayName: "Google Drive Trigger",
+  category: "Data & Storage",
+  group: ["trigger"],
+  version: 1,
+  description:
+    "Starts the workflow when a matching change happens in a connected Google Drive: a file or folder is created, updated, or deleted.",
+  defaults: { name: "Google Drive Trigger" },
+  inputs: [],
+  outputs: ["main"],
+  icon: "Drive",
+  credentials: [{ name: "googleDriveOAuth2Api", required: true }],
+  sources: [
+    "https://docs.n8n.io/integrations/builtin/trigger-nodes/n8n-nodes-base.googledrivetrigger.md",
+  ],
+  properties: [
+    {
+      displayName: "Event",
+      name: "event",
+      type: "options",
+      default: "fileCreated",
+      required: true,
+      noDataExpression: true,
+      description: "The change to watch for.",
+      options: [
+        { name: "File Created", value: "fileCreated" },
+        { name: "File Updated", value: "fileUpdated" },
+        { name: "File Deleted", value: "fileDeleted" },
+        { name: "Folder Created", value: "folderCreated" },
+        { name: "Folder Updated", value: "folderUpdated" },
+        { name: "Folder Deleted", value: "folderDeleted" },
+      ],
+    },
+    {
+      displayName: "Trigger On",
+      name: "triggerOn",
+      type: "options",
+      default: "specificFolder",
+      required: true,
+      noDataExpression: true,
+      description: "The scope to watch.",
+      options: [
+        { name: "Specific Folder", value: "specificFolder" },
+        { name: "Drive-Wide Changes", value: "driveWide" },
+      ],
+    },
+    {
+      displayName: "Folder to Watch",
+      name: "folderToWatch",
+      type: "string",
+      default: "",
+      required: true,
+      displayOptions: { show: { triggerOn: ["specificFolder"] } },
+      placeholder: "1HwOAKkkgveLji8vVpW9Xrg1EsBskwMNb",
+      description:
+        "The Drive folder to watch; supports picking an existing folder, pasting a folder URL/id, or an expression.",
+    },
+    {
+      displayName: "Poll Times",
+      name: "pollTimes",
+      type: "fixedCollection",
+      default: { item: [{ mode: "everyMinute" }] },
+      typeOptions: { multipleValues: true },
+      required: true,
+      noDataExpression: true,
+      description: "The poll schedule.",
+      options: [
+        {
+          name: "item",
+          displayName: "Schedule Rule",
+          values: [
+            {
+              displayName: "Mode",
+              name: "mode",
+              type: "options",
+              default: "everyMinute",
+              noDataExpression: true,
+              options: [
+                { name: "Every Minute", value: "everyMinute" },
+              ],
+            },
+          ],
+        },
+      ],
+    },
+    {
+      displayName: "Options",
+      name: "options",
+      type: "collection",
+      default: {},
+      placeholder: "Add option",
+      options: [
+        {
+          displayName: "File Type Filter (MIME)",
+          name: "fileType",
+          type: "string",
+          default: "all",
+          description:
+            "Optional MIME type filter on the changed file (e.g. application/vnd.google-apps.audio); leave as 'all' to ignore file type.",
+        },
+      ],
+    },
+  ],
+};
+
+export const googleSheetsTrigger: INodeTypeDescription = {
+  name: "n8n-nodes-base.googleSheetsTrigger",
+  displayName: "Google Sheets Trigger",
+  category: "Data & Storage",
+  group: ["trigger"],
+  version: 1,
+  description:
+    "Starts the workflow when rows change in a connected Google Sheets spreadsheet. Polls on a configurable schedule and emits one item per matching changed row.",
+  defaults: { name: "Google Sheets Trigger" },
+  inputs: [],
+  outputs: ["main"],
+  icon: "FileSpreadsheet",
+  credentials: [
+    { name: "googleSheetsTriggerOAuth2Api", required: true },
+    { name: "googleApi", required: false },
+  ],
+  sources: [
+    "https://docs.n8n.io/integrations/builtin/trigger-nodes/n8n-nodes-base.googlesheetstrigger.md",
+    "https://docs.n8n.io/integrations/builtin/trigger-nodes/n8n-nodes-base.googlesheetstrigger/common-issues.md",
+    "https://docs.n8n.io/integrations/builtin/credentials/google.md",
+    "https://docs.n8n.io/integrations/builtin/credentials/google/oauth-single-service.md",
+    "https://developers.google.com/sheets/api",
+  ],
+  properties: [
+    {
+      displayName: "Authentication",
+      name: "authentication",
+      type: "options",
+      default: "triggerOAuth2",
+      noDataExpression: true,
+      options: [
+        { name: "OAuth2", value: "triggerOAuth2" },
+        { name: "Service Account", value: "serviceAccount" },
+      ],
+    },
+    {
+      displayName: "Document",
+      name: "documentId",
+      type: "resourceLocator",
+      default: { mode: "list", value: "" },
+      required: true,
+      description: "The spreadsheet to watch. Select an existing spreadsheet, paste a URL, or provide the spreadsheet id.",
+    },
+    {
+      displayName: "Sheet",
+      name: "sheetName",
+      type: "resourceLocator",
+      default: { mode: "list", value: "" },
+      required: true,
+      description: "The sheet (tab) within the document.",
+    },
+    {
+      displayName: "Event",
+      name: "event",
+      type: "options",
+      default: "rowAdded",
+      required: true,
+      noDataExpression: true,
+      description: "Which change to watch for.",
+      options: [
+        { name: "Row Added", value: "rowAdded" },
+        { name: "Row Updated", value: "rowUpdate" },
+        { name: "Row Added or Updated", value: "anyUpdate" },
+      ],
+    },
+    {
+      displayName: "Poll Times",
+      name: "pollTimes",
+      type: "fixedCollection",
+      default: { item: [{ mode: "everyMinute" }] },
+      typeOptions: { multipleValues: true },
+      required: true,
+      noDataExpression: true,
+      description: "The poll schedule.",
+      options: [
+        {
+          name: "item",
+          displayName: "Schedule Rule",
+          values: [
+            {
+              displayName: "Mode",
+              name: "mode",
+              type: "options",
+              default: "everyMinute",
+              noDataExpression: true,
+              options: [
+                { name: "Every Minute", value: "everyMinute" },
+                { name: "Every X Minutes", value: "everyX" },
+                { name: "Custom (Cron)", value: "cron" },
+              ],
+            },
+          ],
+        },
+      ],
+    },
+    {
+      displayName: "Options",
+      name: "options",
+      type: "collection",
+      default: {},
+      placeholder: "Add option",
+      options: [
+        {
+          displayName: "Data Location on Sheet",
+          name: "dataLocationOnSheet",
+          type: "collection",
+          default: {},
+          placeholder: "Add location rule",
+          options: [
+            {
+              displayName: "Header Row",
+              name: "headerRow",
+              type: "number",
+              default: 1,
+              typeOptions: { minValue: 1 },
+            },
+            {
+              displayName: "First Data Row",
+              name: "firstDataRow",
+              type: "number",
+              default: 2,
+              typeOptions: { minValue: 1 },
+            },
+          ],
+        },
+        {
+          displayName: "Value Render",
+          name: "valueRender",
+          type: "options",
+          default: "unformatted",
+          noDataExpression: true,
+          displayOptions: {
+            show: { "/event": ["rowAdded"] },
+          },
+          options: [
+            { name: "Unformatted", value: "unformatted" },
+            { name: "Formatted", value: "formatted" },
+            { name: "Formulas", value: "formulas" },
+          ],
+        },
+        {
+          displayName: "Date/Time Render",
+          name: "dateTimeRender",
+          type: "options",
+          default: "formattedString",
+          noDataExpression: true,
+          displayOptions: {
+            show: { "/event": ["rowAdded"] },
+          },
+          options: [
+            { name: "Serial Number", value: "serialNumber" },
+            { name: "Formatted String", value: "formattedString" },
+          ],
+        },
+      ],
+    },
+  ],
+};
+
+const WHATSAPP_TRIGGER_DOCS =
+  "https://docs.n8n.io/integrations/builtin/trigger-nodes/n8n-nodes-base.whatsapptrigger/";
+
+export const whatsAppTrigger: INodeTypeDescription = {
+  name: "n8n-nodes-base.whatsAppTrigger",
+  displayName: "WhatsApp Trigger",
+  category: "Communication",
+  group: ["trigger"],
+  version: 1,
+  description:
+    "Starts the workflow when events occur on a WhatsApp Business account via Meta's WhatsApp Cloud API webhook delivery.",
+  defaults: { name: "WhatsApp Trigger" },
+  inputs: [],
+  outputs: ["main"],
+  icon: "MessageCircle",
+  credentials: [{ name: "whatsAppTriggerApi", required: true }],
+  sources: [WHATSAPP_TRIGGER_DOCS],
+  properties: [
+    {
+      displayName: "Events",
+      name: "events",
+      type: "multiOptions",
+      default: [],
+      required: true,
+      noDataExpression: true,
+      description: "One or more WhatsApp Cloud API webhook fields to subscribe to.",
+      options: [
+        { name: "Account Review Update", value: "account_review_update" },
+        { name: "Account Update", value: "account_update" },
+        { name: "Business Capability Update", value: "business_capability_update" },
+        { name: "Message Template Quality Update", value: "message_template_quality_update" },
+        { name: "Message Template Status Update", value: "message_template_status_update" },
+        { name: "Messages", value: "messages" },
+        { name: "Phone Number Name Update", value: "phone_number_name_update" },
+        { name: "Phone Number Quality Update", value: "phone_number_quality_update" },
+        { name: "Security", value: "security" },
+        { name: "Template Category Update", value: "template_category_update" },
+      ],
+    },
+    {
+      displayName: "Options",
+      name: "options",
+      type: "collection",
+      default: {},
+      placeholder: "Add option",
+      options: [
+        {
+          displayName: "Verify Token",
+          name: "verifyToken",
+          type: "string",
+          default: "",
+          description: "The Verify Token configured in the Meta App Dashboard; must match the token Meta sends during the verification handshake.",
+        },
+      ],
+    },
+  ],
+};
+
+const SLACK_TRIGGER_DOCS = "https://docs.n8n.io/integrations/builtin/trigger-nodes/n8n-nodes-base.slacktrigger/";
+
+export const slackTrigger: INodeTypeDescription = {
+  name: "n8n-nodes-base.slackTrigger",
+  displayName: "Slack Trigger",
+  category: "Communication",
+  group: ["trigger"],
+  version: 1,
+  description: "Starts the workflow when a subscribed Slack event occurs via the Events API.",
+  defaults: { name: "Slack Trigger" },
+  inputs: [],
+  outputs: ["main"],
+  icon: "Slack",
+  credentials: [{ name: "slackApi", required: true }],
+  sources: [SLACK_TRIGGER_DOCS],
+  properties: [
+    {
+      displayName: "Trigger on",
+      name: "events",
+      type: "multiOptions",
+      default: [],
+      noDataExpression: true,
+      description: "Which Slack events to accept",
+      options: [
+        { name: "Any Event", value: "*" },
+        { name: "App Home Opened", value: "app_home_opened" },
+        { name: "Bot / App Mention", value: "app_mention" },
+        { name: "File Made Public", value: "file_public" },
+        { name: "File Shared", value: "file_shared" },
+        { name: "New Message Posted to Channel", value: "message" },
+        { name: "New Public Channel Created", value: "channel_created" },
+        { name: "New User", value: "team_join" },
+        { name: "Reaction Added", value: "reaction_added" },
+      ],
+    },
+    {
+      displayName: "Watch Whole Workspace",
+      name: "watchWholeWorkspace",
+      type: "boolean",
+      default: false,
+      description: "Watch for events everywhere the app is present instead of a single channel",
+    },
+    {
+      displayName: "Channel",
+      name: "channel",
+      type: "resourceLocator",
+      default: { mode: "list", value: "" },
+      required: false,
+      displayOptions: { hide: { watchWholeWorkspace: [true] } },
+      description: "Channel to watch. Modes: From list, By ID, By URL.",
+    },
+    {
+      displayName: "Download Files",
+      name: "downloadFiles",
+      type: "boolean",
+      default: false,
+      description: "Download files referenced by File Made Public / File Shared events",
+    },
+    {
+      displayName: "Options",
+      name: "options",
+      type: "collection",
+      default: {},
+      placeholder: "Add option",
+      options: [
+        {
+          displayName: "Resolve IDs",
+          name: "resolveIds",
+          type: "boolean",
+          default: false,
+          description: "Resolve Slack IDs (users, channels) to names in the emitted payload",
+        },
+        {
+          displayName: "Ignore Users",
+          name: "ignoreUsers",
+          type: "string",
+          default: "",
+          description: "Comma-separated usernames or encoded user IDs whose events are dropped",
+        },
+        {
+          displayName: "Emoji Filter",
+          name: "emojiFilter",
+          type: "string",
+          default: "",
+          description: "Comma-separated emoji names to filter Reaction Added events (e.g. thumbsup, eyes)",
+        },
+      ],
+    },
+  ],
+};
+
 export const redisTrigger: INodeTypeDescription = {
   name: "n8n-nodes-base.redisTrigger",
   displayName: "Redis Trigger",
@@ -2409,6 +2952,49 @@ export const redisTrigger: INodeTypeDescription = {
           description: "When true, emit only the message payload; when false, emit { channel, message }",
         },
       ],
+    },
+  ],
+};
+
+const JOTFORM_DOCS =
+  "https://docs.n8n.io/integrations/builtin/trigger-nodes/n8n-nodes-base.jotformtrigger.md";
+
+export const jotFormTrigger: INodeTypeDescription = {
+  name: "n8n-nodes-base.jotFormTrigger",
+  displayName: "Jotform Trigger",
+  category: "Communication",
+  group: ["trigger"],
+  version: 1,
+  description:
+    "Starts the workflow when a Jotform form receives a new submission. Registers a webhook with Jotform for the chosen form.",
+  defaults: { name: "Jotform Trigger" },
+  inputs: [],
+  outputs: ["main"],
+  icon: "Form",
+  credentials: [{ name: "jotFormApi", required: true }],
+  sources: [JOTFORM_DOCS],
+  properties: [
+    {
+      displayName: "Form",
+      name: "form",
+      type: "resourceLocator",
+      default: { mode: "list", value: "" },
+      required: true,
+      description: "The Jotform form to watch, chosen from the account's forms or entered as a numeric form ID",
+    },
+    {
+      displayName: "Resolve Data",
+      name: "resolveData",
+      type: "boolean",
+      default: true,
+      description: "Whether emitted answer keys use the human-readable question labels instead of Jotform's internal question IDs",
+    },
+    {
+      displayName: "Only Answers",
+      name: "onlyAnswers",
+      type: "boolean",
+      default: true,
+      description: "Whether to emit only the submission's answers, discarding the metadata envelope",
     },
   ],
 };

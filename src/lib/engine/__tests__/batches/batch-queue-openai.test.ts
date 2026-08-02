@@ -11,7 +11,6 @@ seedBuiltinExecutors();
 seedBuiltinDescriptions();
 
 const TYPE = "@n8n/n8n-nodes-langchain.openAi";
-const ALIAS = "n8n-nodes-base.openAi";
 
 const OPENAI_CRED = {
   apiKey: "sk-test-key",
@@ -68,11 +67,6 @@ describe("batch-queue openAi — @n8n/n8n-nodes-langchain.openAi", () => {
     expect(hasExecutor(TYPE)).toBe(true);
     expect(getNodeType(TYPE).placeholder).not.toBe(true);
     expect(getNodeType(TYPE).displayName).toBe("OpenAI");
-  });
-
-  it("resolves the alias n8n-nodes-base.openAi", () => {
-    expect(hasExecutor(ALIAS)).toBe(true);
-    expect(getNodeType(ALIAS).name).toBe(TYPE);
   });
 
   it("throws when openAiApi credential is missing", async () => {

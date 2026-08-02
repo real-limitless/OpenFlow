@@ -152,25 +152,31 @@ export const gmailTriggerExecutor: NodeExecutor = async (ctx) => {
 
   const query = buildSearchQuery({ includeSpamAndTrash, search, readStatus, sender });
 
-  const params: Record<string, string> = {
-    maxResults: String(maxEmails),
+  const DISCOVERY_CAP = 500;
+  const queryParams: Record<string, string> = {
+    maxResults: String(Math.max(maxEmails * 2, Math.min(DISCOVERY_CAP, 500))),
   };
-  if (query) params.q = query;
-  if (!includeSpamAndTrash) params.includeSpamAndTrash = "false";
-  if (labelIds.length > 0) params.labelIds = labelIds.join(",");
+  if (query) queryParams.q = query;
+  if (includeSpamAndTrash) queryParams.includeSpamAndTrash = "true";
+  if (labelIds.length > 0) {
+    queryParams.labelIds = labelIds.join(",");
+  }
 
-  const listRes = await gmailRequest(token, "GET", `${API_BASE}/messages`, undefined, {
-    maxResults: String(maxEmails),
-    q: query,
-    ...(labelIds.length > 0 ? { labelIds: labelIds.join(",") } : {}),
-  });
+  const allDiscovered: Array<{ id: string }> = [];
+  let pageToken: string | undefined;
+  do {
+    if (pageToken) queryParams.pageToken = pageToken;
+    const pageRes = await gmailRequest(token, "GET", `${API_BASE}/messages`, undefined, queryParams);
+    const page = pageRes as { messages?: Array<{ id: string }>; nextPageToken?: string };
+    allDiscovered.push(...(page.messages ?? []));
+    pageToken = page.nextPageToken;
+  } while (pageToken && allDiscovered.length < DISCOVERY_CAP);
+  delete queryParams.pageToken;
 
-  const list = listRes as { messages?: Array<{ id: string }> };
-  const messages = list.messages ?? [];
   const state = getPollState(ctx);
 
   const idsFromQueue: string[] = [];
-  const allIds = [...state.queuedIds, ...messages.map((m) => m.id)];
+  const allIds = [...state.queuedIds, ...allDiscovered.map((m) => m.id)];
   const newIds: string[] = [];
 
   for (const id of allIds) {

@@ -1,4 +1,4 @@
-import { describe, it, expect, afterEach, vi } from "vitest";
+import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { seedBuiltinExecutors } from "../../index";
 import { hasExecutor, getExecutor } from "@/lib/engine/node-runtime";
 import { seedBuiltinDescriptions } from "@/lib/nodes/registry";
@@ -50,6 +50,9 @@ function makeCtxWithToken(node: Parameters<typeof makeNode>[0], token: string): 
 }
 
 describe("gmailTrigger", () => {
+  beforeEach(() => {
+    _clearPollStatesForTest();
+  });
   afterEach(() => {
     vi.unstubAllGlobals();
   });
@@ -153,5 +156,174 @@ describe("gmailTrigger", () => {
 
     const result2 = await executor(makeCtxWithToken(node, "test-token"), node);
     expect(result2[0]).toHaveLength(0);
+  });
+
+  it("emits raw payload when simplify is false", async () => {
+    const rawMsg = {
+      id: "raw1", threadId: "raw1", labelIds: ["INBOX"],
+      payload: {
+        mimeType: "text/plain",
+        body: { size: 10, data: "dGVzdA==" },
+      },
+      snippet: "test",
+    };
+
+    let callCount = 0;
+    vi.stubGlobal("fetch", vi.fn(async () => {
+      callCount++;
+      return callCount === 1
+        ? mockResponse({ messages: [{ id: "raw1" }] })
+        : mockResponse(rawMsg);
+    }));
+
+    const executor = getExecutor(TYPE) as NodeExecutor;
+    const node = makeNode({ name: "Gmail Trigger", type: TYPE, parameters: {
+      pollTimes: { mode: "everyX", value: 5, unit: "minutes" },
+      simplify: false,
+      maxEmailsPerPoll: 10,
+      filters: { includeSpamAndTrash: false, readStatus: "unreadOnly", search: "", sender: "" },
+    } });
+    const ctx = makeCtxWithToken(node, "test-token");
+
+    const result = await executor(ctx, node);
+    expect(result[0]).toHaveLength(1);
+    expect(result[0][0].json.id).toBe("raw1");
+    expect((result[0][0].json as Record<string, unknown>).payload).toBeDefined();
+  });
+
+  it("respects readStatus readOnly and unreadOnly", async () => {
+    const msgDetail = (id: string, hasUnread: boolean) => ({
+      id, threadId: id, labelIds: hasUnread ? ["INBOX", "UNREAD"] : ["INBOX"],
+      payload: { headers: [{ name: "From", value: "x@y.com" }, { name: "To", value: "me@x.com" }, { name: "Subject", value: "Test" }, { name: "Date", value: "" }, { name: "Cc", value: "" }, { name: "Bcc", value: "" }] },
+    });
+
+    // readOnly — q contains is:read, so list returns a read message
+    let fetchIdx = 0;
+    vi.stubGlobal("fetch", vi.fn(async (url: string) => {
+      fetchIdx++;
+      if (fetchIdx === 1) return mockResponse({ messages: [{ id: "read1" }] });
+      return mockResponse(msgDetail("read1", false));
+    }));
+    const executor = getExecutor(TYPE) as NodeExecutor;
+    const nodeRead = makeNode({ name: "Gmail Trigger", type: TYPE, parameters: {
+      pollTimes: { mode: "everyX", value: 5, unit: "minutes" },
+      simplify: true,
+      maxEmailsPerPoll: 10,
+      filters: { includeSpamAndTrash: false, readStatus: "readOnly", search: "", sender: "" },
+    } });
+    const result = await executor(makeCtxWithToken(nodeRead, "test-token"), nodeRead);
+    expect(result[0]).toHaveLength(1);
+    expect(result[0][0].json.id).toBe("read1");
+
+    // unreadOnly — q contains is:unread, so list returns an unread message
+    _clearPollStatesForTest();
+    vi.unstubAllGlobals();
+    fetchIdx = 0;
+    vi.stubGlobal("fetch", vi.fn(async (url: string) => {
+      fetchIdx++;
+      if (fetchIdx === 1) return mockResponse({ messages: [{ id: "unread1" }] });
+      return mockResponse(msgDetail("unread1", true));
+    }));
+    const nodeUnread = makeNode({ name: "Gmail Trigger", type: TYPE, parameters: {
+      pollTimes: { mode: "everyX", value: 5, unit: "minutes" },
+      simplify: true,
+      maxEmailsPerPoll: 10,
+      filters: { includeSpamAndTrash: false, readStatus: "unreadOnly", search: "", sender: "" },
+    } });
+    const result2 = await executor(makeCtxWithToken(nodeUnread, "test-token"), nodeUnread);
+    expect(result2[0]).toHaveLength(1);
+    expect(result2[0][0].json.id).toBe("unread1");
+  });
+
+  it("drains 25 messages across multiple polls with maxEmailsPerPoll=10", async () => {
+    const makeDetail = (id: string) => ({
+      id, threadId: id, labelIds: ["INBOX"],
+      payload: { headers: [{ name: "From", value: "a@b.com" }, { name: "To", value: "me@x.com" }, { name: "Subject", value: `Msg ${id}` }, { name: "Date", value: "" }, { name: "Cc", value: "" }, { name: "Bcc", value: "" }] },
+    });
+    const allIds = Array.from({ length: 25 }, (_, i) => ({ id: `msg${i}` }));
+
+    let fetchCount = 0;
+    vi.stubGlobal("fetch", vi.fn(async (url: string) => {
+      fetchCount++;
+      // list call (contains /messages with no trailing /<id>)
+      if (!url.includes("/messages/")) return mockResponse({ messages: allIds });
+      // detail call
+      const match = url.match(/\/messages\/(msg\d+)/);
+      return mockResponse(makeDetail(match ? match[1] : "unknown"));
+    }));
+
+    const executor = getExecutor(TYPE) as NodeExecutor;
+    const node = makeNode({ name: "Gmail Trigger", type: TYPE, parameters: {
+      pollTimes: { mode: "everyX", value: 5, unit: "minutes" },
+      simplify: true,
+      maxEmailsPerPoll: 10,
+      filters: { includeSpamAndTrash: false, readStatus: "unreadOnly", search: "", sender: "" },
+    } });
+
+    // poll 1: emit 10
+    const r1 = await executor(makeCtxWithToken(node, "test-token"), node);
+    expect(r1[0]).toHaveLength(10);
+
+    // poll 2: emit next 10
+    const r2 = await executor(makeCtxWithToken(node, "test-token"), node);
+    expect(r2[0]).toHaveLength(10);
+
+    // poll 3: emit last 5
+    const r3 = await executor(makeCtxWithToken(node, "test-token"), node);
+    expect(r3[0]).toHaveLength(5);
+
+    // poll 4: all emitted, empty
+    const r4 = await executor(makeCtxWithToken(node, "test-token"), node);
+    expect(r4[0]).toHaveLength(0);
+  });
+
+  it("filters by sender and labelIds", async () => {
+    const matchingMsg = {
+      id: "match1", threadId: "match1", labelIds: ["Label_1", "INBOX"],
+      payload: { headers: [{ name: "From", value: "ada@example.com" }, { name: "To", value: "me@x.com" }, { name: "Subject", value: "Match" }, { name: "Date", value: "" }, { name: "Cc", value: "" }, { name: "Bcc", value: "" }] },
+    };
+    const otherMsg = {
+      id: "other1", threadId: "other1", labelIds: ["INBOX"],
+      payload: { headers: [{ name: "From", value: "other@x.com" }, { name: "To", value: "me@x.com" }, { name: "Subject", value: "Other" }, { name: "Date", value: "" }, { name: "Cc", value: "" }, { name: "Bcc", value: "" }] },
+    };
+
+    let callCount = 0;
+    vi.stubGlobal("fetch", vi.fn(async (url: string) => {
+      callCount++;
+      // list call — return only match1 (simulating Gmail API label/search filter)
+      if (!url.includes("/messages/")) return mockResponse({ messages: [{ id: "match1" }] });
+      // detail call
+      if (url.includes("match1")) return mockResponse(matchingMsg);
+      return mockResponse(otherMsg);
+    }));
+
+    const executor = getExecutor(TYPE) as NodeExecutor;
+    const node = makeNode({ name: "Gmail Trigger", type: TYPE, parameters: {
+      pollTimes: { mode: "everyX", value: 5, unit: "minutes" },
+      simplify: true,
+      maxEmailsPerPoll: 10,
+      filters: { includeSpamAndTrash: false, labelIds: ["Label_1"], search: "from:ada@example.com", readStatus: "unreadOnly", sender: "ada@example.com" },
+    } });
+    const ctx = makeCtxWithToken(node, "test-token");
+    const result = await executor(ctx, node);
+    expect(result[0]).toHaveLength(1);
+    expect(result[0][0].json.id).toBe("match1");
+  });
+
+  it("excludes spam/trash by default", async () => {
+    vi.stubGlobal("fetch", vi.fn(async () =>
+      mockResponse({ messages: [] }),
+    ));
+
+    const executor = getExecutor(TYPE) as NodeExecutor;
+    const node = makeNode({ name: "Gmail Trigger", type: TYPE, parameters: {
+      pollTimes: { mode: "everyX", value: 5, unit: "minutes" },
+      simplify: true,
+      maxEmailsPerPoll: 10,
+      filters: { includeSpamAndTrash: false, readStatus: "unreadOnly", search: "", sender: "" },
+    } });
+    const ctx = makeCtxWithToken(node, "test-token");
+    const result = await executor(ctx, node);
+    expect(result[0]).toHaveLength(0);
   });
 });

@@ -382,6 +382,11 @@ export const BUILTIN_EXECUTOR_MODULES: Array<{
     exportName: "rssFeedReadExecutor",
   },
   {
+    type: "n8n-nodes-base.rssFeedReadTrigger",
+    modulePath: "./executors/rss-feed-read-trigger",
+    exportName: "rssFeedReadTriggerExecutor",
+  },
+  {
     type: "n8n-nodes-base.emailSend",
     modulePath: "./executors/email-send",
     exportName: "emailSendExecutor",
@@ -602,6 +607,11 @@ export const BUILTIN_EXECUTOR_MODULES: Array<{
     exportName: "embeddingsCohereExecutor",
   },
   {
+    type: "@n8n/n8n-nodes-langchain.embeddingsGoogleGemini",
+    modulePath: "./executors/embeddings-google-gemini",
+    exportName: "embeddingsGoogleGeminiExecutor",
+  },
+  {
     type: "@n8n/n8n-nodes-langchain.embeddingsOpenAi",
     modulePath: "./executors/embeddings-openai",
     exportName: "embeddingsOpenAiExecutor",
@@ -735,6 +745,11 @@ export const BUILTIN_EXECUTOR_MODULES: Array<{
     type: "n8n-nodes-base.n8n",
     modulePath: "./executors/n8n",
     exportName: "n8nExecutor",
+  },
+  {
+    type: "n8n-nodes-base.hackerNews",
+    modulePath: "./executors/hacker-news",
+    exportName: "hackerNewsExecutor",
   },
   {
     type: "n8n-nodes-base.evaluation",
@@ -908,6 +923,11 @@ export const BUILTIN_EXECUTOR_MODULES: Array<{
     type: "n8n-nodes-base.googleAnalytics",
     modulePath: "./executors/google-analytics",
     exportName: "googleAnalyticsExecutor",
+  },
+  {
+    type: "n8n-nodes-base.microsoftTeams",
+    modulePath: "./executors/microsoft-teams",
+    exportName: "microsoftTeamsExecutor",
   },
   {
     type: "n8n-nodes-base.microsoftToDo",
@@ -1155,13 +1175,11 @@ export const BUILTIN_EXECUTOR_MODULES: Array<{
     exportName: "amqpExecutor",
   },
   {
+    // Not `unavailable`: redisTrigger.ts ships a real lazy-import default over
+    // ioredis (a declared dependency), exactly like the redis executor.
     type: "n8n-nodes-base.redisTrigger",
     modulePath: "./executors/redisTrigger",
     exportName: "redisTriggerExecutor",
-    unavailable: {
-      setter: "setRedisTriggerClientFactory",
-      reason: "Redis trigger needs a Redis client (e.g. ioredis), which is not bundled in this build.",
-    },
   },
   {
     type: "n8n-nodes-base.postgresTrigger",
@@ -1254,9 +1272,174 @@ export const BUILTIN_EXECUTOR_MODULES: Array<{
     exportName: "telegramTriggerExecutor",
   },
   {
+    type: "@n8n/n8n-nodes-langchain.googleGemini",
+    modulePath: "./executors/google-gemini",
+    exportName: "googleGeminiExecutor",
+  },
+  {
     type: "n8n-nodes-base.googleDrive",
     modulePath: "./executors/googleDrive",
     exportName: "googleDriveExecutor",
+  },
+  {
+    type: "n8n-nodes-base.googleDriveTrigger",
+    modulePath: "./executors/google-drive-trigger",
+    exportName: "googleDriveTriggerExecutor",
+  },
+  {
+    type: "@n8n/n8n-nodes-langchain.toolWorkflow",
+    modulePath: "./executors/toolWorkflow",
+    exportName: "toolWorkflowExecutor",
+  },
+  {
+    type: "@n8n/n8n-nodes-langchain.informationExtractor",
+    modulePath: "./executors/langchain-information-extractor",
+    exportName: "langchainInformationExtractorExecutor",
+  },
+  {
+    type: "n8n-nodes-base.googleSheetsTrigger",
+    modulePath: "./executors/google-sheets-trigger",
+    exportName: "googleSheetsTriggerExecutor",
+  },
+  {
+    type: "@n8n/n8n-nodes-langchain.lmChatGroq",
+    modulePath: "./executors/lm-chat-groq",
+    exportName: "lmChatGroqExecutor",
+  },
+  {
+    type: "@n8n/n8n-nodes-langchain.lmChatMistralCloud",
+    modulePath: "./executors/lm-chat-mistral-cloud",
+    exportName: "lmChatMistralCloudExecutor",
+  },
+  {
+    type: "@n8n/n8n-nodes-langchain.toolThink",
+    modulePath: "./executors/toolThink",
+    exportName: "toolThinkExecutor",
+  },
+  {
+    type: "@n8n/n8n-nodes-langchain.vectorStoreSupabase",
+    modulePath: "./executors/vectorStoreSupabase",
+    exportName: "vectorStoreSupabaseExecutor",
+  },
+  {
+    type: "@n8n/n8n-nodes-langchain.vectorStorePinecone",
+    modulePath: "./executors/vectorStorePinecone",
+    exportName: "vectorStorePineconeExecutor",
+  },
+  {
+    type: "@n8n/n8n-nodes-langchain.toolCalculator",
+    modulePath: "./executors/toolCalculator",
+    exportName: "toolCalculatorExecutor",
+  },
+  {
+    type: "@n8n/n8n-nodes-langchain.lmChatDeepSeek",
+    modulePath: "./executors/lm-chat-deepseek",
+    exportName: "lmChatDeepSeekExecutor",
+  },
+  {
+    type: "@n8n/n8n-nodes-langchain.lmChatAzureOpenAi",
+    modulePath: "./executors/lm-chat-azure-openai",
+    exportName: "lmChatAzureOpenAiExecutor",
+  },
+  {
+    type: "@n8n/n8n-nodes-langchain.agentTool",
+    modulePath: "./executors/langchain-agent-tool",
+    exportName: "langchainAgentToolExecutor",
+  },
+  {
+    type: "n8n-nodes-base.linkedIn",
+    modulePath: "./executors/linkedin",
+    exportName: "linkedInExecutor",
+  },
+  {
+    type: "@n8n/n8n-nodes-langchain.textClassifier",
+    modulePath: "./executors/langchain-text-classifier",
+    exportName: "langchainTextClassifierExecutor",
+  },
+  {
+    type: "n8n-nodes-base.whatsAppTrigger",
+    modulePath: "./executors/whatsapp-trigger",
+    exportName: "whatsAppTriggerExecutor",
+  },
+  {
+    type: "n8n-nodes-base.github",
+    modulePath: "./executors/github",
+    exportName: "githubExecutor",
+  },
+  {
+    type: "n8n-nodes-base.twitter",
+    modulePath: "./executors/twitter",
+    exportName: "twitterExecutor",
+  },
+  {
+    type: "n8n-nodes-base.microsoftOutlook",
+    modulePath: "./executors/microsoft-outlook",
+    exportName: "microsoftOutlookExecutor",
+  },
+  {
+    type: "n8n-nodes-base.openAi",
+    modulePath: "./executors/openai",
+    exportName: "openAiExecutor",
+  },
+  {
+    type: "@n8n/n8n-nodes-langchain.toolCode",
+    modulePath: "./executors/toolCode",
+    exportName: "toolCodeExecutor",
+  },
+  {
+    type: "@n8n/n8n-nodes-langchain.vectorStoreQdrant",
+    modulePath: "./executors/vectorStoreQdrant",
+    exportName: "vectorStoreQdrantExecutor",
+  },
+  {
+    type: "@n8n/n8n-nodes-langchain.memoryPostgresChat",
+    modulePath: "./executors/memory-postgres-chat",
+    exportName: "memoryPostgresChatExecutor",
+  },
+  {
+    type: "@n8n/n8n-nodes-langchain.toolHttpRequest",
+    modulePath: "./executors/toolHttpRequest",
+    exportName: "toolHttpRequestExecutor",
+  },
+  {
+    type: "@n8n/n8n-nodes-langchain.toolVectorStore",
+    modulePath: "./executors/toolVectorStore",
+    exportName: "toolVectorStoreExecutor",
+  },
+  {
+    type: "@n8n/n8n-nodes-langchain.toolSerpApi",
+    modulePath: "./executors/toolSerpApi",
+    exportName: "toolSerpApiExecutor",
+  },
+  {
+    type: "n8n-nodes-base.slackTrigger",
+    modulePath: "./executors/slack-trigger",
+    exportName: "slackTriggerExecutor",
+  },
+  {
+    type: "n8n-nodes-base.jotFormTrigger",
+    modulePath: "./executors/jotform-trigger",
+    exportName: "jotFormTriggerExecutor",
+  },
+  {
+    type: "n8n-nodes-base.reddit",
+    modulePath: "./executors/reddit",
+    exportName: "redditExecutor",
+  },
+  {
+    type: "n8n-nodes-base.perplexityTool",
+    modulePath: "./executors/n8n-nodes-base.perplexityTool",
+    exportName: "perplexityToolExecutor",
+  },
+  {
+    type: "n8n-nodes-base.googleDocsTool",
+    modulePath: "./executors/n8n-nodes-base.googleDocsTool",
+    exportName: "googleDocsToolExecutor",
+  },
+  {
+    type: "n8n-nodes-base.airtableTool",
+    modulePath: "./executors/n8n-nodes-base.airtableTool",
+    exportName: "airtableToolExecutor",
   },
 ];
 

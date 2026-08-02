@@ -2,7 +2,9 @@ import type { NodeExecutor, INodeExecutionData, ExecutionContext, INode } from "
 import { ensureItems } from "@/sdk";
 import { evaluateExpression } from "../../expressions/evaluate";
 
-const DRIVE_API = "https://www.googleapis.com/drive/v3";
+const DRIVE_API = "https://www.googleapis.com/drive/v3/files";
+const UPLOAD_API = "https://www.googleapis.com/upload/drive/v3/files";
+const DRIVE_DRIVE_API = "https://www.googleapis.com/drive/v3/drives";
 
 function resolveValue(raw: unknown, itemJson: Record<string, unknown>): unknown {
   if (typeof raw !== "string") return raw;
@@ -13,485 +15,192 @@ function resolveValue(raw: unknown, itemJson: Record<string, unknown>): unknown 
   return raw;
 }
 
-function val(raw: unknown, itemJson: Record<string, unknown>): string {
-  const v = resolveValue(raw, itemJson);
-  return v == null ? "" : String(v);
+function asObj(body: unknown): Record<string, unknown> {
+  if (body && typeof body === "object" && !Array.isArray(body)) {
+    return body as Record<string, unknown>;
+  }
+  return { data: body };
 }
 
-async function getAccessToken(ctx: ExecutionContext): Promise<string> {
-  const credName = "googleApi";
+function resolveParent(
+  params: Record<string, unknown>,
+  itemJson: Record<string, unknown>,
+): string {
+  const p = resolveValue(params.parentId, itemJson);
+  if (p && typeof p === "string") return p;
+  const f = resolveValue(params.folderId, itemJson);
+  if (f && typeof f === "string") return String(f);
+  const d = resolveValue(params.driveId, itemJson);
+  if (d && typeof d === "string") return String(d);
+  return "";
+}
+
+function resolvePermissions(
+  raw: unknown,
+  itemJson: Record<string, unknown>,
+): Array<Record<string, unknown>> {
+  const r = resolveValue(raw, itemJson);
+  if (Array.isArray(r)) return r as Array<Record<string, unknown>>;
+  if (r && typeof r === "object") {
+    const obj = r as Record<string, unknown>;
+    const vals = obj.permissionValues;
+    if (Array.isArray(vals)) return vals as Array<Record<string, unknown>>;
+    if (Array.isArray(obj.values)) return obj.values as Array<Record<string, unknown>>;
+  }
+  return [];
+}
+
+async function getAccessToken(ctx: ExecutionContext, node: INode): Promise<string> {
+  const authentication = String(
+    node.parameters.authentication ?? ctx.getParam("authentication", "oAuth2") ?? "oAuth2",
+  );
+  const credName = authentication === "serviceAccount" ? "googleApi" : "googleDriveOAuth2Api";
   const cred = await ctx.getCredential(credName);
   if (!cred) {
-    throw new Error("GoogleDrive: googleApi credential is not configured");
+    throw new Error(`GoogleDrive: ${credName} credential is not configured`);
   }
-  const accessToken = (cred as Record<string, unknown>).accessToken as string | undefined;
+  const accessToken = String(cred.accessToken ?? cred.access_token ?? "");
   if (!accessToken) {
-    throw new Error("GoogleDrive: no accessToken in googleApi credential");
+    throw new Error(`GoogleDrive: ${credName} has no accessToken`);
   }
   return accessToken;
 }
 
-async function apiFetch(
+async function apiRequest(
+  method: string,
   url: string,
-  accessToken: string,
-  options: { method?: string; body?: unknown; headers?: Record<string, string> } = {},
-): Promise<Record<string, unknown>> {
+  token: string,
+  body?: unknown,
+): Promise<{ status: number; body: unknown }> {
   const headers: Record<string, string> = {
-    Authorization: `Bearer ${accessToken}`,
-    ...(options.headers ?? {}),
+    Authorization: `Bearer ${token}`,
+    Accept: "application/json",
   };
-  if (options.body && !headers["Content-Type"]) {
+  const init: RequestInit = { method, headers };
+  if (body !== undefined) {
     headers["Content-Type"] = "application/json";
+    init.body = JSON.stringify(body);
   }
-  const res = await fetch(url, {
-    method: options.method ?? "GET",
-    headers,
-    body: options.body ? JSON.stringify(options.body) : undefined,
-  });
-  if (!res.ok) {
-    const text = await res.text().catch(() => "");
-    throw new Error(`GoogleDrive API ${res.status}: ${text || res.statusText}`);
+  const res = await fetch(url, init);
+  const text = await res.text();
+  let parsed: unknown = {};
+  if (text) {
+    try {
+      parsed = JSON.parse(text);
+    } catch {
+      parsed = { raw: text };
+    }
   }
-  const ct = res.headers.get("content-type") ?? "";
-  if (ct.includes("application/json")) {
-    return (await res.json()) as Record<string, unknown>;
+  if (res.status < 200 || res.status >= 300) {
+    const errObj = asObj(parsed);
+    const msg =
+      (errObj.error as { message?: string } | undefined)?.message ??
+      String(errObj.message ?? `HTTP ${res.status}`);
+    throw new Error(`GoogleDrive: ${msg}`);
   }
-  return { data: await res.text() };
+  return { status: res.status, body: parsed };
 }
 
-async function runFileOperation(
-  ctx: ExecutionContext,
-  node: INode,
-  operation: string,
-  itemJson: Record<string, unknown>,
+async function uploadBinary(
+  method: string,
+  url: string,
+  token: string,
+  fileName: string,
+  binaryData: { data: string; mimeType: string },
+  parentId: string,
 ): Promise<Record<string, unknown>> {
-  const accessToken = await getAccessToken(ctx);
+  const boundary = "openflow_boundary_" + Date.now();
+  const mimeType = binaryData.mimeType || "application/octet-stream";
+  const body_parts: string[] = [];
 
-  switch (operation) {
-    case "create": {
-      const fileName = val(ctx.getParam("fileName") ?? node.parameters.fileName, itemJson);
-      const content = val(ctx.getParam("content") ?? node.parameters.content, itemJson);
-      const convertToDoc = ctx.getParam("convertToGoogleDocument") ?? node.parameters.convertToGoogleDocument ?? false;
-      const parentId = val(ctx.getParam("parentId") ?? node.parameters.parentId ?? "", itemJson);
-      const mimeType = convertToDoc ? "application/vnd.google-apps.document" : "text/plain";
-
-      const body: Record<string, unknown> = {
-        name: fileName || "Untitled",
-        mimeType,
-      };
-      if (parentId) {
-        body.parents = [parentId];
-      }
-
-      const file = await apiFetch(`${DRIVE_API}/files`, accessToken, {
-        method: "POST",
-        body,
-        headers: { "Content-Type": "application/json" },
-      });
-      const fileId = file.id as string;
-
-      if (content && fileId) {
-        await fetch(
-          `https://www.googleapis.com/upload/drive/v3/files/${fileId}?uploadType=media`,
-          {
-            method: "PATCH",
-            headers: {
-              Authorization: `Bearer ${accessToken}`,
-              "Content-Type": mimeType,
-            },
-            body: content,
-          },
-        );
-      }
-
-      const meta = await apiFetch(`${DRIVE_API}/files/${fileId}?fields=id,name,mimeType,parents,webViewLink`, accessToken);
-      return meta as Record<string, unknown>;
-    }
-
-    case "copy": {
-      const fileId = val(ctx.getParam("fileId") ?? node.parameters.fileId, itemJson);
-      const newName = val(ctx.getParam("newName") ?? node.parameters.newName, itemJson);
-      const copyInSameFolder = ctx.getParam("copyInSameFolder") ?? node.parameters.copyInSameFolder ?? true;
-      if (!fileId) throw new Error("GoogleDrive: fileId is required for copy");
-
-      const body: Record<string, unknown> = {};
-      if (newName) body.name = newName;
-      if (!copyInSameFolder) {
-        const parentId = val(ctx.getParam("parentId") ?? node.parameters.parentId ?? "", itemJson);
-        if (parentId) body.parents = [parentId];
-      }
-
-      const meta = await apiFetch(`${DRIVE_API}/files/${fileId}/copy`, accessToken, {
-        method: "POST",
-        body,
-      });
-      return meta as Record<string, unknown>;
-    }
-
-    case "delete": {
-      const fileId = val(ctx.getParam("fileId") ?? node.parameters.fileId, itemJson);
-      if (!fileId) throw new Error("GoogleDrive: fileId is required for delete");
-      const permanent = ctx.getParam("deletePermanently") ?? node.parameters.deletePermanently ?? false;
-      const url = permanent
-        ? `${DRIVE_API}/files/${fileId}?supportsAllDrives=true&enforceSingleParent=true`
-        : `${DRIVE_API}/files/${fileId}?supportsAllDrives=true`;
-      await apiFetch(url, accessToken, { method: "DELETE" });
-      return { id: fileId, deleted: true, permanent };
-    }
-
-    case "download": {
-      const fileId = val(ctx.getParam("fileId") ?? node.parameters.fileId, itemJson);
-      if (!fileId) throw new Error("GoogleDrive: fileId is required for download");
-      const outputField = val(ctx.getParam("outputField") ?? node.parameters.outputField ?? "data", itemJson);
-      const convertTo = val(ctx.getParam("convertTo") ?? node.parameters.convertTo ?? "", itemJson);
-
-      const meta = await apiFetch(
-        `${DRIVE_API}/files/${fileId}?fields=id,name,mimeType,parents,webViewLink,size,trashed`,
-        accessToken,
-      );
-
-      const exportUrl = convertTo
-        ? `https://www.googleapis.com/drive/v3/files/${fileId}/export?mimeType=${encodeURIComponent(convertTo)}`
-        : `https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`;
-
-      const res = await fetch(exportUrl, {
-        headers: { Authorization: `Bearer ${accessToken}` },
-      });
-      if (!res.ok) {
-        const text = await res.text().catch(() => "");
-        throw new Error(`GoogleDrive download failed: ${res.status}: ${text || res.statusText}`);
-      }
-
-      const buffer = await res.arrayBuffer();
-      const mimeTypeFromRes = res.headers.get("content-type") ?? (convertTo || "application/octet-stream");
-      const fileName = (meta.name as string) || "download";
-
-      return {
-        json: meta,
-        binary: {
-          [outputField]: {
-            data: Buffer.from(buffer).toString("base64"),
-            mimeType: mimeTypeFromRes,
-            fileName,
-          },
-        },
-      } as unknown as Record<string, unknown>;
-    }
-
-    case "move": {
-      const fileId = val(ctx.getParam("fileId") ?? node.parameters.fileId, itemJson);
-      if (!fileId) throw new Error("GoogleDrive: fileId is required for move");
-      const parentId = val(ctx.getParam("parentId") ?? node.parameters.parentId, itemJson);
-      if (!parentId) throw new Error("GoogleDrive: parentId is required for move");
-
-      await apiFetch(`${DRIVE_API}/files/${fileId}?supportsAllDrives=true&addParents=${encodeURIComponent(parentId)}&removeParents=root`, accessToken, {
-        method: "PATCH",
-        body: {},
-      });
-      return { id: fileId, moved: true, parents: [parentId] };
-    }
-
-    case "share": {
-      const fileId = val(ctx.getParam("fileId") ?? node.parameters.fileId, itemJson);
-      if (!fileId) throw new Error("GoogleDrive: fileId is required for share");
-      const permissionsRaw = ctx.getParam("permissions") ?? node.parameters.permissions ?? {};
-      const perms = (permissionsRaw as Record<string, unknown>).permissionValues as Array<Record<string, unknown>> | undefined;
-      if (!perms || perms.length === 0) throw new Error("GoogleDrive: at least one permission is required");
-
-      const results: Record<string, unknown>[] = [];
-      for (const perm of perms) {
-        const role = String(perm.role ?? "reader");
-        const type = String(perm.type ?? "user");
-        const email = val(perm.email ?? "", itemJson) || undefined;
-        const body: Record<string, unknown> = { role, type };
-        if (email) body.emailAddress = email;
-        const result = await apiFetch(
-          `${DRIVE_API}/files/${fileId}/permissions?supportsAllDrives=true&sendNotificationEmail=true`,
-          accessToken,
-          { method: "POST", body },
-        );
-        results.push(result as Record<string, unknown>);
-      }
-      return { id: fileId, permissions: results };
-    }
-
-    case "update": {
-      const fileId = val(ctx.getParam("fileId") ?? node.parameters.fileId, itemJson);
-      if (!fileId) throw new Error("GoogleDrive: fileId is required for update");
-      const moveToTrash = ctx.getParam("moveToTrash") ?? node.parameters.moveToTrash ?? false;
-      const changeContent = ctx.getParam("changeFileContent") ?? node.parameters.changeFileContent ?? false;
-      const newFileName = val(ctx.getParam("newFileName") ?? node.parameters.newFileName ?? "", itemJson);
-
-      if (moveToTrash) {
-        await apiFetch(`${DRIVE_API}/files/${fileId}?supportsAllDrives=true`, accessToken, {
-          method: "PATCH",
-          body: { trashed: true },
-        });
-        return { id: fileId, trashed: true };
-      }
-
-      const body: Record<string, unknown> = {};
-      if (newFileName) body.name = newFileName;
-
-      let meta: Record<string, unknown> = {};
-      if (Object.keys(body).length > 0 || changeContent) {
-        if (Object.keys(body).length > 0) {
-          meta = (await apiFetch(`${DRIVE_API}/files/${fileId}?supportsAllDrives=true&fields=id,name,mimeType,parents,webViewLink`, accessToken, {
-            method: "PATCH",
-            body,
-          })) as Record<string, unknown>;
-        } else {
-          meta = await apiFetch(
-            `${DRIVE_API}/files/${fileId}?fields=id,name,mimeType,parents,webViewLink`,
-            accessToken,
-          );
-        }
-      } else {
-        meta = await apiFetch(
-          `${DRIVE_API}/files/${fileId}?fields=id,name,mimeType,parents,webViewLink`,
-          accessToken,
-        );
-      }
-
-      return meta;
-    }
-
-    case "upload": {
-      const binaryField = val(ctx.getParam("binaryField") ?? node.parameters.binaryField ?? "data", itemJson);
-      const fileName = val(ctx.getParam("fileName") ?? node.parameters.fileName ?? "", itemJson);
-      const parentId = val(ctx.getParam("parentId") ?? node.parameters.parentId ?? "", itemJson);
-
-      throw new Error("GoogleDrive upload: binary data upload not yet implemented in this build");
-    }
-
-    default:
-      throw new Error(`GoogleDrive: unknown file operation "${operation}"`);
+  const metadata: Record<string, unknown> = { name: fileName };
+  if (parentId) {
+    metadata.parents = [parentId];
   }
+
+  body_parts.push("--" + boundary);
+  body_parts.push("Content-Type: application/json; charset=UTF-8");
+  body_parts.push("");
+  body_parts.push(JSON.stringify(metadata));
+
+  body_parts.push("--" + boundary);
+  body_parts.push("Content-Type: " + mimeType);
+  body_parts.push("");
+  body_parts.push(binaryData.data);
+
+  body_parts.push("--" + boundary + "--");
+
+  const body = body_parts.join("\r\n");
+
+  const headers: Record<string, string> = {
+    Authorization: `Bearer ${token}`,
+    "Content-Type": `multipart/related; boundary=${boundary}`,
+    "Content-Length": String(new TextEncoder().encode(body).length),
+  };
+  const init: RequestInit = { method, headers, body };
+  const res = await fetch(url, init);
+  const text = await res.text();
+  let parsed: unknown = {};
+  if (text) {
+    try {
+      parsed = JSON.parse(text);
+    } catch {
+      parsed = { raw: text };
+    }
+  }
+  if (res.status < 200 || res.status >= 300) {
+    const errObj = asObj(parsed);
+    const msg =
+      (errObj.error as { message?: string } | undefined)?.message ??
+      String(errObj.message ?? `HTTP ${res.status}`);
+    throw new Error(`GoogleDrive: ${msg}`);
+  }
+  return asObj(parsed);
 }
 
-async function runFileFolderOperation(
-  ctx: ExecutionContext,
-  node: INode,
-  operation: string,
-  itemJson: Record<string, unknown>,
-): Promise<Record<string, unknown>> {
-  const accessToken = await getAccessToken(ctx);
-
-  if (operation === "search") {
-    const searchMode = String(ctx.getParam("searchMode") ?? node.parameters.searchMode ?? "name");
-    const query = val(ctx.getParam("query") ?? node.parameters.query, itemJson);
-    const whatToSearch = String(ctx.getParam("whatToSearch") ?? node.parameters.whatToSearch ?? "filesFolders");
-    const includeTrashed = ctx.getParam("includeTrashed") ?? node.parameters.includeTrashed ?? false;
-    const returnAll = ctx.getParam("returnAll") ?? node.parameters.returnAll ?? false;
-    const limit = Number(ctx.getParam("limit") ?? node.parameters.limit ?? 50);
-    const parentId = val(ctx.getParam("parentId") ?? node.parameters.parentId ?? "", itemJson);
-
-    let qParts: string[] = [];
-    if (searchMode === "name") {
-      qParts.push(`name contains '${query.replace(/'/g, "\\'")}'`);
-    } else {
-      qParts.push(query);
-    }
-    if (!includeTrashed) qParts.push("trashed = false");
-    if (whatToSearch === "files") {
-      qParts.push("mimeType != 'application/vnd.google-apps.folder'");
-    } else if (whatToSearch === "folders") {
-      qParts.push("mimeType = 'application/vnd.google-apps.folder'");
-    }
-    if (parentId) qParts.push(`'${parentId}' in parents`);
-    const q = qParts.join(" and ");
-
-    const maxResults = returnAll ? 1000 : limit;
-    let results: Record<string, unknown>[] = [];
-    let pageToken: string | undefined;
-    do {
-      let url = `${DRIVE_API}/files?q=${encodeURIComponent(q)}&pageSize=${Math.min(maxResults, 100)}&fields=files(id,name,mimeType,parents,webViewLink,trashed),nextPageToken&supportsAllDrives=true&includeItemsFromAllDrives=true`;
-      if (pageToken) url += `&pageToken=${encodeURIComponent(pageToken)}`;
-      const data = (await apiFetch(url, accessToken)) as Record<string, unknown>;
-      const files = (data.files as Array<Record<string, unknown>>) ?? [];
-      results = results.concat(files);
-      pageToken = data.nextPageToken as string | undefined;
-      if (!returnAll && results.length >= limit) break;
-    } while (pageToken);
-
-    if (!returnAll) results = results.slice(0, limit);
-    return { files: results };
+async function paginate(
+  url: string,
+  token: string,
+  params: Record<string, string>,
+  returnAll: boolean,
+  limit: number,
+): Promise<Record<string, unknown>[]> {
+  const all: Record<string, unknown>[] = [];
+  let pageToken: string | undefined;
+  const pageSize = returnAll ? 100 : Math.min(Math.max(limit, 1), 100);
+  for (;;) {
+    const qs = new URLSearchParams({ ...params, pageSize: String(pageSize) });
+    if (pageToken) qs.set("pageToken", pageToken);
+    const res = await apiRequest("GET", `${url}?${qs}`, token);
+    const obj = asObj(res.body);
+    const files = (obj.files as Record<string, unknown>[]) ?? [];
+    all.push(...files);
+    if (!returnAll && all.length >= limit) return all.slice(0, limit);
+    const next = obj.nextPageToken;
+    if (typeof next !== "string" || !next) break;
+    pageToken = next;
   }
-
-  throw new Error(`GoogleDrive: unknown fileFolder operation "${operation}"`);
-}
-
-async function runFolderOperation(
-  ctx: ExecutionContext,
-  node: INode,
-  operation: string,
-  itemJson: Record<string, unknown>,
-): Promise<Record<string, unknown>> {
-  const accessToken = await getAccessToken(ctx);
-
-  switch (operation) {
-    case "create": {
-      const folderName = val(ctx.getParam("folderName") ?? node.parameters.folderName, itemJson);
-      const parentId = val(ctx.getParam("parentId") ?? node.parameters.parentId ?? "", itemJson);
-      if (!folderName) throw new Error("GoogleDrive: folderName is required");
-
-      const body: Record<string, unknown> = {
-        name: folderName,
-        mimeType: "application/vnd.google-apps.folder",
-      };
-      if (parentId) body.parents = [parentId];
-
-      const meta = await apiFetch(`${DRIVE_API}/files`, accessToken, {
-        method: "POST",
-        body,
-      });
-      return meta as Record<string, unknown>;
-    }
-
-    case "delete": {
-      const folderId = val(ctx.getParam("folderId") ?? node.parameters.folderId, itemJson);
-      if (!folderId) throw new Error("GoogleDrive: folderId is required for delete");
-      const permanent = ctx.getParam("deletePermanently") ?? node.parameters.deletePermanently ?? false;
-      const url = permanent
-        ? `${DRIVE_API}/files/${folderId}?supportsAllDrives=true`
-        : `${DRIVE_API}/files/${folderId}?supportsAllDrives=true`;
-      await apiFetch(url, accessToken, { method: "DELETE" });
-      return { id: folderId, deleted: true, permanent };
-    }
-
-    case "share": {
-      const folderId = val(ctx.getParam("folderId") ?? node.parameters.folderId, itemJson);
-      if (!folderId) throw new Error("GoogleDrive: folderId is required for share");
-
-      const permissionsRaw = ctx.getParam("permissions") ?? node.parameters.permissions ?? {};
-      const perms = (permissionsRaw as Record<string, unknown>).permissionValues as Array<Record<string, unknown>> | undefined;
-      if (!perms || perms.length === 0) throw new Error("GoogleDrive: at least one permission is required");
-
-      const results: Record<string, unknown>[] = [];
-      for (const perm of perms) {
-        const role = String(perm.role ?? "reader");
-        const type = String(perm.type ?? "user");
-        const email = val(perm.email ?? "", itemJson) || undefined;
-        const body: Record<string, unknown> = { role, type };
-        if (email) body.emailAddress = email;
-        const result = await apiFetch(
-          `${DRIVE_API}/files/${folderId}/permissions?supportsAllDrives=true`,
-          accessToken,
-          { method: "POST", body },
-        );
-        results.push(result as Record<string, unknown>);
-      }
-      return { id: folderId, permissions: results };
-    }
-
-    default:
-      throw new Error(`GoogleDrive: unknown folder operation "${operation}"`);
-  }
-}
-
-async function runDriveOperation(
-  ctx: ExecutionContext,
-  node: INode,
-  operation: string,
-  itemJson: Record<string, unknown>,
-): Promise<Record<string, unknown>> {
-  const accessToken = await getAccessToken(ctx);
-
-  switch (operation) {
-    case "create": {
-      const name = val(ctx.getParam("driveName") ?? node.parameters.driveName, itemJson);
-      if (!name) throw new Error("GoogleDrive: drive name is required");
-
-      const meta = await apiFetch(`${DRIVE_API}/drives?requestId=${Date.now()}`, accessToken, {
-        method: "POST",
-        body: { name },
-      });
-      return meta as Record<string, unknown>;
-    }
-
-    case "delete": {
-      const driveId = val(ctx.getParam("driveId") ?? node.parameters.driveId, itemJson);
-      if (!driveId) throw new Error("GoogleDrive: driveId is required for delete");
-      await apiFetch(`${DRIVE_API}/drives/${driveId}`, accessToken, {
-        method: "DELETE",
-      });
-      return { id: driveId, deleted: true };
-    }
-
-    case "get": {
-      const driveId = val(ctx.getParam("driveId") ?? node.parameters.driveId, itemJson);
-      if (!driveId) throw new Error("GoogleDrive: driveId is required for get");
-      const meta = await apiFetch(`${DRIVE_API}/drives/${driveId}`, accessToken);
-      return meta as Record<string, unknown>;
-    }
-
-    case "getAll": {
-      const returnAll = ctx.getParam("returnAll") ?? node.parameters.returnAll ?? false;
-      const limit = Number(ctx.getParam("limit") ?? node.parameters.limit ?? 50);
-      const query = val(ctx.getParam("query") ?? node.parameters.query ?? "", itemJson);
-
-      const maxResults = returnAll ? 1000 : limit;
-      const url = `${DRIVE_API}/drives?pageSize=${Math.min(maxResults, 100)}${query ? `&q=${encodeURIComponent(query)}` : ""}&fields=drives(id,name,colorRgb,hidden,createdTime),nextPageToken`;
-      const data = (await apiFetch(url, accessToken)) as Record<string, unknown>;
-      const drives = (data.drives as Array<Record<string, unknown>>) ?? [];
-      return { drives: returnAll ? drives : drives.slice(0, limit) };
-    }
-
-    case "update": {
-      const driveId = val(ctx.getParam("driveId") ?? node.parameters.driveId, itemJson);
-      if (!driveId) throw new Error("GoogleDrive: driveId is required for update");
-      const name = val(ctx.getParam("driveName") ?? node.parameters.driveName ?? "", itemJson);
-
-      const body: Record<string, unknown> = {};
-      if (name) body.name = name;
-
-      const meta = await apiFetch(`${DRIVE_API}/drives/${driveId}`, accessToken, {
-        method: "PATCH",
-        body,
-      });
-      return meta as Record<string, unknown>;
-    }
-
-    default:
-      throw new Error(`GoogleDrive: unknown drive operation "${operation}"`);
-  }
+  return all;
 }
 
 export const googleDriveExecutor: NodeExecutor = async (ctx, node) => {
   const items = ensureItems(ctx.getInputItems(0));
   const out: INodeExecutionData[] = [];
   const resource = String(node.parameters.resource ?? ctx.getParam("resource", "file") ?? "file");
-  const operation = String(node.parameters.operation ?? ctx.getParam("operation", "create") ?? "create");
+  const operation = String(
+    node.parameters.operation ?? ctx.getParam("operation", "create") ?? "create",
+  );
   const continueOnFail = ctx.continueOnFail();
+  const token = await getAccessToken(ctx, node);
 
   for (let idx = 0; idx < items.length; idx++) {
     const item = items[idx];
     const itemJson = item.json ?? {};
     const pairedItem = item.pairedItem ?? { item: idx, input: 0 };
     try {
-      let result: Record<string, unknown>;
-      switch (resource) {
-        case "file":
-          result = await runFileOperation(ctx, node, operation, itemJson);
-          break;
-        case "fileFolder":
-          result = await runFileFolderOperation(ctx, node, operation, itemJson);
-          break;
-        case "folder":
-          result = await runFolderOperation(ctx, node, operation, itemJson);
-          break;
-        case "drive":
-          result = await runDriveOperation(ctx, node, operation, itemJson);
-          break;
-        default:
-          throw new Error(`GoogleDrive: unknown resource "${resource}"`);
-      }
-
-      if (result && result.binary) {
-        const { json, binary } = result as { json: Record<string, unknown>; binary: Record<string, unknown> };
-        out.push({ json, binary, pairedItem });
-      } else {
-        out.push({ json: result, pairedItem });
+      const results = await runOperation(ctx, node, resource, operation, itemJson, token, item);
+      for (const json of results) {
+        out.push({ json, pairedItem });
       }
     } catch (err) {
       if (!continueOnFail) throw err;
@@ -502,3 +211,707 @@ export const googleDriveExecutor: NodeExecutor = async (ctx, node) => {
 
   return [out];
 };
+
+async function runOperation(
+  ctx: ExecutionContext,
+  node: INode,
+  resource: string,
+  operation: string,
+  itemJson: Record<string, unknown>,
+  token: string,
+  item: INodeExecutionData,
+): Promise<Record<string, unknown>[]> {
+  const params = node.parameters;
+
+  if (resource === "file") {
+    return runFileOperation(ctx, node, operation, params, itemJson, token, item);
+  }
+  if (resource === "fileFolder") {
+    return runFileFolderOperation(params, operation, itemJson, token);
+  }
+  if (resource === "folder") {
+    return runFolderOperation(params, operation, itemJson, token);
+  }
+  if (resource === "drive") {
+    return runDriveOperation(params, operation, itemJson, token);
+  }
+  throw new Error(`GoogleDrive: unsupported resource "${resource}"`);
+}
+
+async function runFileOperation(
+  _ctx: ExecutionContext,
+  _node: INode,
+  operation: string,
+  params: Record<string, unknown>,
+  itemJson: Record<string, unknown>,
+  token: string,
+  item: INodeExecutionData,
+): Promise<Record<string, unknown>[]> {
+  switch (operation) {
+    case "copy":
+      return fileCopy(params, itemJson, token);
+    case "create":
+      return fileCreate(params, itemJson, token);
+    case "delete":
+      return fileDelete(params, itemJson, token);
+    case "download":
+      return fileDownload(params, itemJson, token);
+    case "move":
+      return fileMove(params, itemJson, token);
+    case "share":
+      return fileShare(params, itemJson, token);
+    case "update":
+      return fileUpdate(params, itemJson, token, item);
+    case "upload":
+      return fileUpload(params, itemJson, token, item);
+    default:
+      throw new Error(`GoogleDrive: unsupported file operation "${operation}"`);
+  }
+}
+
+async function fileCopy(
+  params: Record<string, unknown>,
+  itemJson: Record<string, unknown>,
+  token: string,
+): Promise<Record<string, unknown>[]> {
+  const fileId = String(resolveValue(params.fileId, itemJson) ?? "");
+  if (!fileId) throw new Error("GoogleDrive: fileId is required for copy");
+  const newName = String(resolveValue(params.newName, itemJson) ?? "");
+  const body: Record<string, unknown> = {};
+  if (newName) body.name = newName;
+  const copyInSameFolder = params.copyInSameFolder !== false;
+  const parent = resolveParent(params, itemJson);
+  if (!copyInSameFolder && parent) {
+    body.parents = [parent];
+  }
+  const res = await apiRequest("POST", `${DRIVE_API}/${encodeURIComponent(fileId)}/copy`, token, body);
+  const obj = asObj(res.body);
+  return [
+    {
+      id: obj.id,
+      name: obj.name,
+      mimeType: obj.mimeType,
+      parents: obj.parents,
+      webViewLink: obj.webViewLink,
+    },
+  ];
+}
+
+async function fileCreate(
+  params: Record<string, unknown>,
+  itemJson: Record<string, unknown>,
+  token: string,
+): Promise<Record<string, unknown>[]> {
+  const fileName = String(resolveValue(params.fileName, itemJson) ?? "untitled");
+  const content = String(resolveValue(params.content, itemJson) ?? "");
+  const convertToGoogleDocument = params.convertToGoogleDocument === true;
+  const parent = resolveParent(params, itemJson);
+
+  const metadata: Record<string, unknown> = { name: fileName };
+  if (parent) metadata.parents = [parent];
+  if (convertToGoogleDocument) {
+    metadata.mimeType = "application/vnd.google-apps.document";
+  }
+
+  if (convertToGoogleDocument) {
+    metadata.mimeType = "application/vnd.google-apps.document";
+  }
+
+  const body = {
+    ...metadata,
+    ...(content ? { content } : {}),
+  };
+
+  const res = await apiRequest("POST", `${DRIVE_API}`, token, body);
+  const obj = asObj(res.body);
+  return [
+    {
+      id: obj.id,
+      name: obj.name,
+      mimeType: obj.mimeType,
+      parents: obj.parents,
+      webViewLink: obj.webViewLink,
+    },
+  ];
+}
+
+async function fileDelete(
+  params: Record<string, unknown>,
+  itemJson: Record<string, unknown>,
+  token: string,
+): Promise<Record<string, unknown>[]> {
+  const fileId = String(resolveValue(params.fileId, itemJson) ?? "");
+  if (!fileId) throw new Error("GoogleDrive: fileId is required for delete");
+  const deletePermanently = params.deletePermanently === true;
+
+  if (deletePermanently) {
+    await apiRequest("DELETE", `${DRIVE_API}/${encodeURIComponent(fileId)}`, token);
+    return [{ id: fileId, deleted: true, permanent: true }];
+  }
+  await apiRequest(
+    "PATCH",
+    `${DRIVE_API}/${encodeURIComponent(fileId)}`,
+    token,
+    { trashed: true },
+  );
+  return [{ id: fileId, deleted: true, permanent: false, trashed: true }];
+}
+
+async function fileDownload(
+  params: Record<string, unknown>,
+  itemJson: Record<string, unknown>,
+  token: string,
+): Promise<Record<string, unknown>[]> {
+  const fileId = String(resolveValue(params.fileId, itemJson) ?? "");
+  if (!fileId) throw new Error("GoogleDrive: fileId is required for download");
+  const outputField = String(resolveValue(params.outputField, itemJson) ?? "data");
+
+  let url = `${DRIVE_API}/${encodeURIComponent(fileId)}`;
+  const convertTo = String(resolveValue(params.convertTo, itemJson) ?? "");
+  if (convertTo) {
+    url += `/export?mimeType=${encodeURIComponent(convertTo)}`;
+  } else {
+    url += "?alt=media";
+  }
+
+  const res = await fetch(url, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`GoogleDrive: download failed (HTTP ${res.status}): ${text}`);
+  }
+  const arrayBuffer = await res.arrayBuffer();
+  const base64 = Buffer.from(arrayBuffer).toString("base64");
+
+  const metaRes = await apiRequest(
+    "GET",
+    `${DRIVE_API}/${encodeURIComponent(fileId)}?fields=id,name,mimeType,webViewLink,parents`,
+    token,
+  );
+  const meta = asObj(metaRes.body);
+
+  const out: Record<string, unknown> = {
+    id: meta.id,
+    name: meta.name,
+    mimeType: meta.mimeType,
+    parents: meta.parents,
+    webViewLink: meta.webViewLink,
+  };
+  (out as Record<string, unknown>).binary = {
+    [outputField]: {
+      data: base64,
+      mimeType: convertTo || String(meta.mimeType ?? "application/octet-stream"),
+      fileName: String(meta.name ?? "download"),
+    },
+  };
+  return [out];
+}
+
+async function fileMove(
+  params: Record<string, unknown>,
+  itemJson: Record<string, unknown>,
+  token: string,
+): Promise<Record<string, unknown>[]> {
+  const fileId = String(resolveValue(params.fileId, itemJson) ?? "");
+  if (!fileId) throw new Error("GoogleDrive: fileId is required for move");
+  const parentId = resolveParent(params, itemJson);
+  if (!parentId) throw new Error("GoogleDrive: parentId is required for move");
+
+  const metaRes = await apiRequest(
+    "GET",
+    `${DRIVE_API}/${encodeURIComponent(fileId)}?fields=parents`,
+    token,
+  );
+  const meta = asObj(metaRes.body);
+  const currentParents = (meta.parents as string[]) ?? [];
+
+  const removeParents = currentParents.join(",");
+  const addParents = parentId;
+
+  const res = await apiRequest(
+    "PATCH",
+    `${DRIVE_API}/${encodeURIComponent(fileId)}?addParents=${encodeURIComponent(addParents)}&removeParents=${encodeURIComponent(removeParents)}&fields=id,name,mimeType,parents,webViewLink`,
+    token,
+  );
+  const obj = asObj(res.body);
+  return [
+    {
+      id: obj.id,
+      name: obj.name,
+      mimeType: obj.mimeType,
+      parents: obj.parents,
+      webViewLink: obj.webViewLink,
+    },
+  ];
+}
+
+async function fileShare(
+  params: Record<string, unknown>,
+  itemJson: Record<string, unknown>,
+  token: string,
+): Promise<Record<string, unknown>[]> {
+  const fileId = String(resolveValue(params.fileId, itemJson) ?? "");
+  if (!fileId) throw new Error("GoogleDrive: fileId is required for share");
+  const permissions = resolvePermissions(params.permissions, itemJson);
+  if (permissions.length === 0) throw new Error("GoogleDrive: permissions is required for share");
+
+  const results: Record<string, unknown>[] = [];
+  for (const perm of permissions) {
+    const body: Record<string, unknown> = {
+      role: perm.role ?? "reader",
+      type: perm.type ?? "user",
+    };
+    if (perm.email) body.emailAddress = String(perm.email);
+    if (perm.domain) body.domain = String(perm.domain);
+    const res = await apiRequest(
+      "POST",
+      `${DRIVE_API}/${encodeURIComponent(fileId)}/permissions`,
+      token,
+      body,
+    );
+    const obj = asObj(res.body);
+    results.push({
+      id: obj.id,
+      role: obj.role,
+      type: obj.type,
+      emailAddress: obj.emailAddress,
+      domain: obj.domain,
+    });
+  }
+  return results;
+}
+
+async function fileUpdate(
+  params: Record<string, unknown>,
+  itemJson: Record<string, unknown>,
+  token: string,
+  item: INodeExecutionData,
+): Promise<Record<string, unknown>[]> {
+  const fileId = String(resolveValue(params.fileId, itemJson) ?? "");
+  if (!fileId) throw new Error("GoogleDrive: fileId is required for update");
+
+  const moveToTrash = params.moveToTrash === true;
+  if (moveToTrash) {
+    await apiRequest(
+      "PATCH",
+      `${DRIVE_API}/${encodeURIComponent(fileId)}`,
+      token,
+      { trashed: true },
+    );
+    return [{ id: fileId, trashed: true }];
+  }
+
+  const body: Record<string, unknown> = {};
+  const newFileName = String(resolveValue(params.newFileName, itemJson) ?? "");
+  if (newFileName) body.name = newFileName;
+
+  const changeFileContent = params.changeFileContent === true;
+  if (changeFileContent) {
+    const binaryField = String(resolveValue(params.binaryField, itemJson) ?? "data");
+    const binary = item.binary?.[binaryField];
+    if (!binary) throw new Error(`GoogleDrive: binary field "${binaryField}" not found on input item`);
+    const boundary = "openflow_boundary_" + Date.now();
+    const mimeType = binary.mimeType || "application/octet-stream";
+    const bodyParts: string[] = [];
+
+    bodyParts.push("--" + boundary);
+    bodyParts.push("Content-Type: application/json; charset=UTF-8");
+    bodyParts.push("");
+    bodyParts.push(JSON.stringify(body));
+
+    bodyParts.push("--" + boundary);
+    bodyParts.push("Content-Type: " + mimeType);
+    bodyParts.push("");
+    bodyParts.push(binary.data);
+
+    bodyParts.push("--" + boundary + "--");
+
+    const uploadBody = bodyParts.join("\r\n");
+    const headers: Record<string, string> = {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": `multipart/related; boundary=${boundary}`,
+      "Content-Length": String(new TextEncoder().encode(uploadBody).length),
+    };
+    const init: RequestInit = { method: "PATCH", headers, body: uploadBody };
+    const res = await fetch(
+      `${UPLOAD_API}/${encodeURIComponent(fileId)}?uploadType=multipart`,
+      init,
+    );
+    const text = await res.text();
+    let parsed: unknown = {};
+    if (text) {
+      try {
+        parsed = JSON.parse(text);
+      } catch {
+        parsed = { raw: text };
+      }
+    }
+    if (res.status < 200 || res.status >= 300) {
+      const errObj = asObj(parsed);
+      const msg =
+        (errObj.error as { message?: string } | undefined)?.message ??
+        String(errObj.message ?? `HTTP ${res.status}`);
+      throw new Error(`GoogleDrive: ${msg}`);
+    }
+    const obj = asObj(parsed);
+    return [
+      {
+        id: obj.id,
+        name: obj.name,
+        mimeType: obj.mimeType,
+        parents: obj.parents,
+        webViewLink: obj.webViewLink,
+      },
+    ];
+  }
+
+  const res = await apiRequest(
+    "PATCH",
+    `${DRIVE_API}/${encodeURIComponent(fileId)}?fields=id,name,mimeType,parents,webViewLink`,
+    token,
+    body,
+  );
+  const obj = asObj(res.body);
+  return [
+    {
+      id: obj.id,
+      name: obj.name,
+      mimeType: obj.mimeType,
+      parents: obj.parents,
+      webViewLink: obj.webViewLink,
+    },
+  ];
+}
+
+async function fileUpload(
+  params: Record<string, unknown>,
+  _itemJson: Record<string, unknown>,
+  token: string,
+  item: INodeExecutionData,
+): Promise<Record<string, unknown>[]> {
+  const binaryField = String(resolveValue(params.binaryField, _itemJson) ?? "data");
+  const binary = item.binary?.[binaryField];
+  if (!binary) throw new Error(`GoogleDrive: binary field "${binaryField}" not found on input item`);
+  const fileName = String(resolveValue(params.fileName, _itemJson) ?? binary.fileName ?? "untitled");
+  const parent = resolveParent(params, _itemJson);
+  const qs = "?uploadType=multipart&fields=id,name,mimeType,parents,webViewLink";
+  const obj = await uploadBinary("POST", `${UPLOAD_API}${qs}`, token, fileName, binary, parent);
+  return [
+    {
+      id: obj.id,
+      name: obj.name,
+      mimeType: obj.mimeType,
+      parents: obj.parents,
+      webViewLink: obj.webViewLink,
+    },
+  ];
+}
+
+// ── fileFolder ──────────────────────────────────────────────────
+
+async function runFileFolderOperation(
+  params: Record<string, unknown>,
+  operation: string,
+  itemJson: Record<string, unknown>,
+  token: string,
+): Promise<Record<string, unknown>[]> {
+  if (operation !== "search") {
+    throw new Error(`GoogleDrive: unsupported fileFolder operation "${operation}"`);
+  }
+  return fileFolderSearch(params, itemJson, token);
+}
+
+async function fileFolderSearch(
+  params: Record<string, unknown>,
+  itemJson: Record<string, unknown>,
+  token: string,
+): Promise<Record<string, unknown>[]> {
+  const searchMode = String(resolveValue(params.searchMode, itemJson) ?? "name");
+  const query = String(resolveValue(params.query, itemJson) ?? "");
+  const returnAll = params.returnAll === true;
+  const limit = Number(params.limit ?? 50);
+  const whatToSearch = String(resolveValue(params.whatToSearch, itemJson) ?? "filesFolders");
+  const includeTrashed = params.includeTrashed === true;
+  const parent = resolveParent(params, itemJson);
+
+  const qParts: string[] = [];
+  if (searchMode === "name") {
+    qParts.push(`name contains '${query.replace(/'/g, "\\'")}'`);
+  } else {
+    qParts.push(query);
+  }
+  if (whatToSearch === "files") {
+    qParts.push("mimeType != 'application/vnd.google-apps.folder'");
+  } else if (whatToSearch === "folders") {
+    qParts.push("mimeType = 'application/vnd.google-apps.folder'");
+  }
+  if (!includeTrashed) {
+    qParts.push("trashed = false");
+  }
+  if (parent) {
+    qParts.push(`'${parent}' in parents`);
+  }
+
+  const q = qParts.join(" and ");
+  const params_qs: Record<string, string> = { q };
+  const results = await paginate(
+    `${DRIVE_API}`,
+    token,
+    params_qs,
+    returnAll,
+    limit,
+  );
+  return results.map((f) => ({
+    id: f.id,
+    name: f.name,
+    mimeType: f.mimeType,
+    parents: f.parents,
+    webViewLink: f.webViewLink,
+    trashed: f.trashed,
+    modifiedTime: f.modifiedTime,
+    size: f.size,
+  }));
+}
+
+// ── folder ──────────────────────────────────────────────────────
+
+async function runFolderOperation(
+  params: Record<string, unknown>,
+  operation: string,
+  itemJson: Record<string, unknown>,
+  token: string,
+): Promise<Record<string, unknown>[]> {
+  switch (operation) {
+    case "create":
+      return folderCreate(params, itemJson, token);
+    case "delete":
+      return folderDelete(params, itemJson, token);
+    case "share":
+      return folderShare(params, itemJson, token);
+    default:
+      throw new Error(`GoogleDrive: unsupported folder operation "${operation}"`);
+  }
+}
+
+async function folderCreate(
+  params: Record<string, unknown>,
+  itemJson: Record<string, unknown>,
+  token: string,
+): Promise<Record<string, unknown>[]> {
+  const folderName = String(resolveValue(params.folderName, itemJson) ?? "");
+  if (!folderName) throw new Error("GoogleDrive: folderName is required for folder create");
+  const parent = resolveParent(params, itemJson);
+  const metadata: Record<string, unknown> = {
+    name: folderName,
+    mimeType: "application/vnd.google-apps.folder",
+  };
+  if (parent) metadata.parents = [parent];
+  const res = await apiRequest("POST", DRIVE_API, token, metadata);
+  const obj = asObj(res.body);
+  return [
+    {
+      id: obj.id,
+      name: obj.name,
+      mimeType: obj.mimeType,
+      parents: obj.parents,
+    },
+  ];
+}
+
+async function folderDelete(
+  params: Record<string, unknown>,
+  itemJson: Record<string, unknown>,
+  token: string,
+): Promise<Record<string, unknown>[]> {
+  const folderId = String(resolveValue(params.folderId, itemJson) ?? "");
+  if (!folderId) throw new Error("GoogleDrive: folderId is required for folder delete");
+  const deletePermanently = params.deletePermanently === true;
+  if (deletePermanently) {
+    await apiRequest("DELETE", `${DRIVE_API}/${encodeURIComponent(folderId)}`, token);
+    return [{ id: folderId, deleted: true, permanent: true }];
+  }
+  await apiRequest(
+    "PATCH",
+    `${DRIVE_API}/${encodeURIComponent(folderId)}`,
+    token,
+    { trashed: true },
+  );
+  return [{ id: folderId, deleted: true, permanent: false, trashed: true }];
+}
+
+async function folderShare(
+  params: Record<string, unknown>,
+  itemJson: Record<string, unknown>,
+  token: string,
+): Promise<Record<string, unknown>[]> {
+  const folderId = String(resolveValue(params.folderId, itemJson) ?? "");
+  if (!folderId) throw new Error("GoogleDrive: folderId is required for folder share");
+  const permissions = resolvePermissions(params.permissions, itemJson);
+  if (permissions.length === 0) throw new Error("GoogleDrive: permissions is required for folder share");
+
+  const results: Record<string, unknown>[] = [];
+  for (const perm of permissions) {
+    const body: Record<string, unknown> = {
+      role: perm.role ?? "reader",
+      type: perm.type ?? "user",
+    };
+    if (perm.email) body.emailAddress = String(perm.email);
+    if (perm.domain) body.domain = String(perm.domain);
+    const res = await apiRequest(
+      "POST",
+      `${DRIVE_API}/${encodeURIComponent(folderId)}/permissions`,
+      token,
+      body,
+    );
+    const obj = asObj(res.body);
+    results.push({
+      id: obj.id,
+      role: obj.role,
+      type: obj.type,
+      emailAddress: obj.emailAddress,
+      domain: obj.domain,
+    });
+  }
+  return results;
+}
+
+// ── drive ───────────────────────────────────────────────────────
+
+async function runDriveOperation(
+  params: Record<string, unknown>,
+  operation: string,
+  itemJson: Record<string, unknown>,
+  token: string,
+): Promise<Record<string, unknown>[]> {
+  switch (operation) {
+    case "create":
+      return driveCreate(params, itemJson, token);
+    case "delete":
+      return driveDelete(params, itemJson, token);
+    case "get":
+      return driveGet(params, itemJson, token);
+    case "getAll":
+      return driveGetAll(params, itemJson, token);
+    case "update":
+      return driveUpdate(params, itemJson, token);
+    default:
+      throw new Error(`GoogleDrive: unsupported drive operation "${operation}"`);
+  }
+}
+
+async function driveCreate(
+  params: Record<string, unknown>,
+  itemJson: Record<string, unknown>,
+  token: string,
+): Promise<Record<string, unknown>[]> {
+  const name = String(
+    resolveValue(params.driveName ?? params.name, itemJson) ?? "",
+  );
+  if (!name) throw new Error("GoogleDrive: name is required for drive create");
+  const body: Record<string, unknown> = { name };
+  if (params.restrictions) body.restrictions = params.restrictions;
+  if (params.capabilities) body.capabilities = params.capabilities;
+  if (params.color) body.colorRgb = String(params.color);
+  if (params.hidden !== undefined) body.hidden = params.hidden;
+
+  const res = await apiRequest("POST", DRIVE_DRIVE_API + "?useDomainAdminAccess=false", token, body);
+  const obj = asObj(res.body);
+  return [{ id: obj.id, name: obj.name, kind: obj.kind }];
+}
+
+async function driveDelete(
+  params: Record<string, unknown>,
+  itemJson: Record<string, unknown>,
+  token: string,
+): Promise<Record<string, unknown>[]> {
+  const driveId = String(resolveValue(params.driveId, itemJson) ?? "");
+  if (!driveId) throw new Error("GoogleDrive: driveId is required for drive delete");
+  await apiRequest("DELETE", `${DRIVE_DRIVE_API}/${encodeURIComponent(driveId)}`, token);
+  return [{ id: driveId, deleted: true }];
+}
+
+async function driveGet(
+  params: Record<string, unknown>,
+  itemJson: Record<string, unknown>,
+  token: string,
+): Promise<Record<string, unknown>[]> {
+  const driveId = String(resolveValue(params.driveId, itemJson) ?? "");
+  if (!driveId) throw new Error("GoogleDrive: driveId is required for drive get");
+  const res = await apiRequest(
+    "GET",
+    `${DRIVE_DRIVE_API}/${encodeURIComponent(driveId)}?useDomainAdminAccess=false`,
+    token,
+  );
+  const obj = asObj(res.body);
+  return [
+    {
+      id: obj.id,
+      name: obj.name,
+      kind: obj.kind,
+      createdTime: obj.createdTime,
+      restrictions: obj.restrictions,
+      capabilities: obj.capabilities,
+    },
+  ];
+}
+
+async function driveGetAll(
+  params: Record<string, unknown>,
+  itemJson: Record<string, unknown>,
+  token: string,
+): Promise<Record<string, unknown>[]> {
+  const returnAll = params.returnAll === true;
+  const limit = Number(params.limit ?? 50);
+  const query = String(resolveValue(params.query, itemJson) ?? "");
+  const qsParams: Record<string, string> = {
+    useDomainAdminAccess: "false",
+  };
+  if (query) qsParams.q = query;
+
+  const all: Record<string, unknown>[] = [];
+  let pageToken: string | undefined;
+  const pageSize = returnAll ? 100 : Math.min(Math.max(limit, 1), 100);
+  for (;;) {
+    const qs = new URLSearchParams({ ...qsParams, pageSize: String(pageSize) });
+    if (pageToken) qs.set("pageToken", pageToken);
+    const res = await apiRequest("GET", `${DRIVE_DRIVE_API}?${qs}`, token);
+    const obj = asObj(res.body);
+    const drives = (obj.drives as Record<string, unknown>[]) ?? [];
+    all.push(...drives.map((d) => ({ id: d.id, name: d.name, kind: d.kind })));
+    if (!returnAll && all.length >= limit) return all.slice(0, limit);
+    const next = obj.nextPageToken;
+    if (typeof next !== "string" || !next) break;
+    pageToken = next;
+  }
+  return all;
+}
+
+async function driveUpdate(
+  params: Record<string, unknown>,
+  itemJson: Record<string, unknown>,
+  token: string,
+): Promise<Record<string, unknown>[]> {
+  const driveId = String(resolveValue(params.driveId, itemJson) ?? "");
+  if (!driveId) throw new Error("GoogleDrive: driveId is required for drive update");
+  const body: Record<string, unknown> = {};
+  const name = resolveValue(params.driveName ?? params.name, itemJson);
+  if (name && typeof name === "string") body.name = name;
+  if (params.color) body.colorRgb = String(params.color);
+  if (params.restrictions) body.restrictions = params.restrictions;
+  const res = await apiRequest(
+    "PATCH",
+    `${DRIVE_DRIVE_API}/${encodeURIComponent(driveId)}?useDomainAdminAccess=false`,
+    token,
+    body,
+  );
+  const obj = asObj(res.body);
+  return [
+    {
+      id: obj.id,
+      name: obj.name,
+      kind: obj.kind,
+      restrictions: obj.restrictions,
+    },
+  ];
+}

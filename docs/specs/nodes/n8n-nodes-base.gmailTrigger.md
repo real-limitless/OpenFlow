@@ -9,7 +9,7 @@ status: specced
 
 # Gmail Trigger
 
-Polling trigger that starts a workflow when new email arrives in a connected Gmail mailbox. On each scheduled poll it asks the Gmail API for messages that match the configured filters, emits one workflow item per new message, and remembers what it has already seen so a given message is not re-emitted on later polls.
+Polling trigger that starts a workflow on the single supported event, **Message Received**, which fires for new messages in a connected Gmail mailbox at the configured **Poll Time**. On each scheduled poll it asks the Gmail API for messages matching the active filters, emits one workflow item per new message, and keeps enough per-message state that a message already emitted in an earlier cycle is not re-emitted.
 
 ## Sources
 
@@ -34,7 +34,7 @@ Polling trigger that starts a workflow when new email arrives in a connected Gma
 
 ### Credential: `gmailOAuth2`
 
-Google OAuth2 credential scoped to Gmail (scope string includes `mail.google.com`, `gmail.modify`, `gmail.labels`, `gmail.compose`, and Gmail add-on scopes). OAuth2 is the recommended and most reliable method. A Google Service Account credential is technically supported for Gmail only with domain-wide delegation enabled, which Google discourages and which behaves inconsistently; n8n recommends OAuth2 for Gmail.
+Google OAuth2 credential scoped to Gmail. OAuth2 is the recommended and most reliable method (the Google credentials page directs Gmail to the single-service OAuth2 flow and to enabling the Gmail API under *APIs & Services → Library*). A Google Service Account credential is technically usable for Gmail only with domain-wide delegation enabled, which must also include the Gmail API; n8n recommends OAuth2 for Gmail.
 
 ## Parameters
 
@@ -47,13 +47,13 @@ Google OAuth2 credential scoped to Gmail (scope string includes `mail.google.com
 | pollTimes.dayOfMonth | number | — | per mode | Every Month | Day of the month to poll, `0`–`31` |
 | pollTimes.value | number | — | per mode | Every X | Interval magnitude |
 | pollTimes.unit | select | `minutes` | per mode | Every X | Interval unit: minutes or hours |
-| pollTimes.cronExpression | string | — | per mode | Custom | Cron expression; the optional leading seconds field is supported (`30 8 4 * * *` fires daily at 04:08:30) |
-| simplify | boolean | `true` | yes | — | Emit a simplified per-message object (message ID, labels, and headers such as From, To, CC, BCC, Subject) instead of the raw Gmail message payload |
-| maxEmailsPerPoll | number | `10` | no | — | Maximum messages fetched per poll cycle (max `50`). Matching messages beyond the limit are queued and fetched on subsequent polls |
-| filters.includeSpamAndTrash | boolean | `false` | no | — | Whether messages in Spam and Trash folders should also trigger |
-| filters.labelIds | multi-select | `[]` | no | — | Only trigger on messages carrying the selected label(s); selectable names resolve to Gmail label IDs |
+| pollTimes.cronExpression | string | — | per mode | Custom | Six-field cron expression (`second minute hour dayOfMonth month dayOfWeek`); the leading seconds field is optional — `30 8 4 * * *` fires daily at 04:08:30, `8 4 * * *` daily at 04:08 |
+| simplify | boolean | `true` | no | — | Emit a simplified per-message object (message IDs, labels, and email headers such as From, To, CC, BCC, Subject) instead of the raw Gmail message resource |
+| maxEmailsPerPoll | number | `10` | no | — | Maximum messages fetched per poll cycle (max `50`). Matching messages beyond the limit are queued and fetched on subsequent polls until drained |
+| filters.includeSpamAndTrash | boolean | `false` | no | — | Whether messages in the Spam and Trash folders should also trigger |
+| filters.labelIds | multi-select | `[]` | no | — | Only trigger on messages carrying the selected label(s); the dropdown populates from the credential, and label names resolve to Gmail label IDs (expressions may supply IDs directly) |
 | filters.search | string | `""` | no | — | Gmail search-query syntax (e.g. `from:`) applied as an additional filter |
-| filters.readStatus | select | `unreadOnly` | no | — | Unread and read, Unread only, or Read only |
+| filters.readStatus | select | `unreadOnly` | no | — | Unread and read emails, Unread emails only (default), or Read emails only |
 | filters.sender | string | `""` | no | — | Email address or partial sender name; only messages from that sender trigger |
 
 ## Runtime behavior
@@ -65,15 +65,16 @@ None. This is a trigger node; it is activated by the workflow runtime and produc
 ### Poll lifecycle
 
 1. **Activation:** the node opens a Gmail API session using the configured Google credential and starts a scheduler that fires on the schedule derived from `pollTimes`. Invalid or impossible schedules surface an activation error.
-2. **Each poll tick:** the node queries the Gmail API for messages matching all active filters, limited to `maxEmailsPerPoll`. It filters out messages it has already emitted in previous cycles and emits one item per newly seen message.
-3. **Queue draining:** when more messages match than the configured `maxEmailsPerPoll`, only that many are emitted this cycle; the remainder stays queued and is fetched in later cycles until drained.
-4. **Deactivation:** the scheduler stops and the API session is closed.
+2. **Each poll tick — discovery:** the node queries the Gmail API (`messages.list`) for all messages matching the active filters. The Gmail API's documented query parameters are the contract here: `labelIds` (one or more — the selected labels from `filters.labelIds`), `q` (the combined Gmail search expression built from `filters.search`, read status, and sender), `includeSpamAndTrash` (mirrors `filters.includeSpamAndTrash`), `maxResults`, and `pageToken`. Discovery must not be capped at the emission limit: it must use a raised `maxResults` and/or follow `nextPageToken` pagination until either no further pages exist or a safe discovery cap is reached, so that overflow beyond `maxEmailsPerPoll` is actually discovered.
+3. **Each poll tick — emission:** the node merges the discovered message IDs with any IDs still queued from previous cycles, drops IDs already emitted in earlier cycles (deduplication), emits at most `maxEmailsPerPoll` items this cycle, and stores the unused matching IDs in the queue.
+4. **Queue draining:** leftover queued IDs are re-considered on subsequent polls and emitted until drained; because each poll re-discovers the current match set, newly arrived messages are picked up alongside the queued remainder.
+5. **Deactivation:** the scheduler stops and the API session is closed.
 
 ### Output
 
 One item per new matching message, on output `main`.
 
-**Simplified mode (`simplify: true`, default):** each item carries the message identity and its key envelope headers:
+**Simplified mode (`simplify: true`, default):** each item carries the message identity and its envelope headers, including the documented set (message IDs, labels, From, To, CC, BCC, Subject):
 
 ```json
 {
@@ -118,10 +119,11 @@ All parameter fields accept expression strings.
 }
 ```
 
-**Expect** output[0] contains exactly one item with fields:
+**Expect** output[0] contains exactly one item with the message identity, its `labelIds`, and envelope headers:
 ```json
 {
   "id": "<gmail message id>",
+  "threadId": "<gmail thread id>",
   "labelIds": ["INBOX", "UNREAD"],
   "subject": "Project update",
   "from": "Ada Lovelace <ada@example.com>",
@@ -149,13 +151,13 @@ Running the same poll again with no new mail in the mailbox **expects** zero ite
 }
 ```
 
-**Given** the mailbox contains an unread message and a read message. **Expect** output[0] emits only the read message.
+**Given** the mailbox contains an unread message and a read message. **Expect** output[0] emits only the read message. The same fixture with `readStatus: "unreadOnly"` emits only the unread message.
 
 ### Test: max emails per poll queues overflow
 
 **Parameters:** same as the simplified test with `"maxEmailsPerPoll": 10` and a mailbox containing 25 new matching unread messages.
 
-**Expect** the first poll emits 10 items; subsequent polls continue emitting the queued remainder until all 25 have been emitted exactly once across cycles.
+**Expect** the first poll emits 10 items; subsequent polls continue emitting the queued remainder until all 25 have been emitted exactly once across cycles, with no duplicates between cycles.
 
 ### Test: sender and label filtering
 
@@ -169,7 +171,7 @@ Running the same poll again with no new mail in the mailbox **expects** zero ite
 }
 ```
 
-**Given** an unread message from `ada@example.com` labeled `Label_1`, and an unread message from another sender without the label. **Expect** output[0] contains exactly one item (the first message).
+**Given** an unread message from `ada@example.com` labeled `Label_1`, and an unread message from another sender without the label. **Expect** output[0] contains exactly one item (the first message); a mailbox with only a spam-folder message **expects** zero items with `includeSpamAndTrash: false`.
 
 ## Gaps / confidence
 
@@ -177,14 +179,14 @@ Running the same poll again with no new mail in the mailbox **expects** zero ite
 |-------|----------------------|-------|
 | Type string, category, node version | documented | Confirmed from corpus package metadata (`n8n-nodes-base.gmailTrigger`, v1.0, Communication) |
 | Event ("Message Received") and polling model | documented | Docs: triggers for new messages at the selected Poll Time |
-| Poll mode options and schedule fields | documented | Public poll-mode-options page enumerates all modes and their fields |
+| Poll mode options and schedule fields | documented | Public poll-mode-options page enumerates all modes and their fields, including optional cron seconds |
 | Simplify output semantics | documented | Docs: simplified returns message IDs, labels, and headers incl. From, To, CC, BCC, Subject |
 | Max Emails per Poll default/max and queuing | documented | Docs: default 10, max 50, overflow queued to next poll |
 | Filters (labels, search, read status, sender, spam/trash) | documented | Public node-parameters page lists each filter's purpose |
 | Gmail search syntax reuse | documented | Docs link to Gmail refine-search help (`from:` style queries) |
 | Credential (OAuth2, service account caveat) | documented | Google credentials page; `gmailOAuth2` scope string confirmed from corpus metadata |
 | 401 / scope troubleshooting | documented | Common-issues page: enable Gmail API, domain-wide delegation |
-| Exact field names of the simplified output | inferred | Docs describe semantics (ID, labels, From/To/CC/BCC/Subject); concrete key names are a clean-room abstraction |
+| Exact key names of the simplified output | inferred | Docs describe semantics (ID, labels, From/To/CC/BCC/Subject); concrete key names are a clean-room abstraction |
 | Raw output shape | inferred | Gmail API message resource; `raw` base64 payload implied by API contract |
 | "New message" deduplication mechanism | inferred | Docs specify new-message triggering; cross-cycle state tracking is a clean-room abstraction |
 | Poll API surface (users.messages.list with query) | inferred | Consistent with Gmail API and documented search syntax |
@@ -195,4 +197,4 @@ Running the same poll again with no new mail in the mailbox **expects** zero ite
 - **Definition group:** `triggers`
 - **Executor file:** `src/lib/engine/executors/gmail-trigger.ts`
 - **SDK:** `defineNode` + native `ExecutionContext` only
-- **Notes:** Polling trigger. The executor must schedule polls from `pollTimes`, authenticate with the `gmailOAuth2` Google credential, query the Gmail API for matching messages, apply per-cycle deduplication (persisted between cycles so a message is emitted once), enforce `maxEmailsPerPoll` with overflow queuing, and shape the output per the `simplify` flag. Requires a Gmail API client and access to the credential scopes.
+- **Notes:** Polling trigger. The executor must schedule polls from `pollTimes`, authenticate with the `gmailOAuth2` Google credential, query the Gmail API for matching messages (applying `includeSpamAndTrash` on the list call), apply per-cycle deduplication (persisted between cycles so a message is emitted once), enforce `maxEmailsPerPoll` with overflow queuing, and shape the output per the `simplify` flag. Requires a Gmail API client and access to the credential scopes.

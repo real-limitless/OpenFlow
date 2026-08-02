@@ -1022,6 +1022,311 @@ export const gotify: INodeTypeDescription = {
   ],
 };
 
+const REDDIT_DOCS = "https://docs.n8n.io/integrations/builtin/app-nodes/n8n-nodes-base.reddit/";
+
+export const reddit: INodeTypeDescription = {
+  name: "n8n-nodes-base.reddit",
+  displayName: "Reddit",
+  category: "Communication",
+  group: ["communication"],
+  version: 1,
+  description: "Automates Reddit via its public OAuth2 data API: reading and searching posts, comments, subreddits, users, and profiles, and writing posts and comments.",
+  defaults: { name: "Reddit" },
+  inputs: ["main"],
+  outputs: ["main"],
+  icon: "MessageCircle",
+  credentials: [{ name: "redditOAuth2Api", required: true }],
+  sources: [REDDIT_DOCS, "https://www.reddit.com/dev/api/"],
+  properties: [
+    {
+      displayName: "Resource",
+      name: "resource",
+      type: "options",
+      default: "Post",
+      required: true,
+      noDataExpression: true,
+      options: [
+        { name: "Post", value: "Post" },
+        { name: "Post Comment", value: "Post Comment" },
+        { name: "Profile", value: "Profile" },
+        { name: "Subreddit", value: "Subreddit" },
+        { name: "User", value: "User" },
+      ],
+    },
+    {
+      displayName: "Operation",
+      name: "operation",
+      type: "options",
+      default: "getAll",
+      required: true,
+      noDataExpression: true,
+      displayOptions: { show: { resource: ["Post"] } },
+      options: [
+        { name: "Submit", value: "submit" },
+        { name: "Delete", value: "delete" },
+        { name: "Get", value: "get" },
+        { name: "Get All", value: "getAll" },
+        { name: "Search", value: "search" },
+      ],
+    },
+    {
+      displayName: "Operation",
+      name: "operation",
+      type: "options",
+      default: "create",
+      required: true,
+      noDataExpression: true,
+      displayOptions: { show: { resource: ["Post Comment"] } },
+      options: [
+        { name: "Create", value: "create" },
+        { name: "Get All", value: "getAll" },
+        { name: "Remove", value: "remove" },
+        { name: "Reply", value: "reply" },
+      ],
+    },
+    {
+      displayName: "Operation",
+      name: "operation",
+      type: "options",
+      default: "get",
+      required: true,
+      noDataExpression: true,
+      displayOptions: { show: { resource: ["Profile"] } },
+      options: [
+        { name: "Get", value: "get" },
+      ],
+    },
+    {
+      displayName: "Operation",
+      name: "operation",
+      type: "options",
+      default: "get",
+      required: true,
+      noDataExpression: true,
+      displayOptions: { show: { resource: ["Subreddit"] } },
+      options: [
+        { name: "Get", value: "get" },
+        { name: "Get All", value: "getAll" },
+      ],
+    },
+    {
+      displayName: "Operation",
+      name: "operation",
+      type: "options",
+      default: "get",
+      required: true,
+      noDataExpression: true,
+      displayOptions: { show: { resource: ["User"] } },
+      options: [
+        { name: "Get", value: "get" },
+      ],
+    },
+    {
+      displayName: "Subreddit",
+      name: "subreddit",
+      type: "string",
+      default: "",
+      required: false,
+      displayOptions: {
+        show: {
+          resource: ["Post", "Subreddit"],
+        },
+      },
+      placeholder: "test",
+    },
+    {
+      displayName: "Post ID",
+      name: "postId",
+      type: "string",
+      default: "",
+      required: false,
+      displayOptions: {
+        show: {
+          resource: ["Post"],
+          operation: ["delete", "get"],
+        },
+      },
+    },
+    {
+      displayName: "Post ID",
+      name: "postId",
+      type: "string",
+      default: "",
+      required: false,
+      displayOptions: {
+        show: {
+          resource: ["Post Comment"],
+          operation: ["create", "getAll"],
+        },
+      },
+    },
+    {
+      displayName: "Comment ID",
+      name: "commentId",
+      type: "string",
+      default: "",
+      required: false,
+      displayOptions: {
+        show: {
+          resource: ["Post Comment"],
+          operation: ["remove", "reply"],
+        },
+      },
+    },
+    {
+      displayName: "Title",
+      name: "title",
+      type: "string",
+      default: "",
+      required: false,
+      displayOptions: {
+        show: {
+          resource: ["Post"],
+          operation: ["submit"],
+        },
+      },
+    },
+    {
+      displayName: "Post Text",
+      name: "postText",
+      type: "string",
+      default: "",
+      required: false,
+      displayOptions: {
+        show: {
+          resource: ["Post"],
+          operation: ["submit"],
+        },
+      },
+    },
+    {
+      displayName: "Post URL",
+      name: "postUrl",
+      type: "string",
+      default: "",
+      required: false,
+      displayOptions: {
+        show: {
+          resource: ["Post"],
+          operation: ["submit"],
+        },
+      },
+    },
+    {
+      displayName: "Flair ID",
+      name: "flairId",
+      type: "string",
+      default: "",
+      required: false,
+      displayOptions: {
+        show: {
+          resource: ["Post"],
+          operation: ["submit"],
+        },
+      },
+    },
+    {
+      displayName: "NSFW",
+      name: "nsfw",
+      type: "boolean",
+      default: false,
+      displayOptions: {
+        show: {
+          resource: ["Post"],
+          operation: ["submit"],
+        },
+      },
+    },
+    {
+      displayName: "Spoiler",
+      name: "spoiler",
+      type: "boolean",
+      default: false,
+      displayOptions: {
+        show: {
+          resource: ["Post"],
+          operation: ["submit"],
+        },
+      },
+    },
+    {
+      displayName: "Query",
+      name: "query",
+      type: "string",
+      default: "",
+      required: false,
+      displayOptions: {
+        show: {
+          resource: ["Post"],
+          operation: ["search"],
+        },
+      },
+    },
+    {
+      displayName: "Sort",
+      name: "sort",
+      type: "options",
+      default: "hot",
+      displayOptions: {
+        show: {
+          resource: ["Post"],
+          operation: ["getAll", "search"],
+        },
+      },
+      options: [
+        { name: "Hot", value: "hot" },
+        { name: "New", value: "new" },
+        { name: "Top", value: "top" },
+        { name: "Rising", value: "rising" },
+        { name: "Controversial", value: "controversial" },
+        { name: "Relevance", value: "relevance" },
+      ],
+    },
+    {
+      displayName: "Limit",
+      name: "limit",
+      type: "number",
+      default: 25,
+      required: false,
+      typeOptions: { minValue: 1, maxValue: 100 },
+      displayOptions: {
+        show: {
+          resource: ["Post", "Subreddit"],
+          operation: ["getAll", "search"],
+        },
+      },
+    },
+    {
+      displayName: "User Identifier",
+      name: "userIdentifier",
+      type: "string",
+      default: "",
+      required: false,
+      displayOptions: {
+        show: {
+          resource: ["User"],
+          operation: ["get"],
+        },
+      },
+    },
+    {
+      displayName: "Options",
+      name: "options",
+      type: "collection",
+      default: {},
+      placeholder: "Add option",
+      options: [
+        {
+          displayName: "Additional Fields",
+          name: "additionalFields",
+          type: "string",
+          default: "",
+        },
+      ],
+    },
+  ],
+};
+
 const AMQP_DOCS = "https://docs.n8n.io/integrations/builtin/app-nodes/n8n-nodes-base.amqp/";
 
 export const amqp: INodeTypeDescription = {
@@ -1162,6 +1467,697 @@ export const telegramTrigger: INodeTypeDescription = {
           type: "string",
           default: "",
           description: "Comma-separated user IDs; only updates originating from these users are emitted",
+        },
+      ],
+    },
+  ],
+};
+
+const MICROSOFT_OUTLOOK_DOCS =
+  "https://docs.n8n.io/integrations/builtin/app-nodes/n8n-nodes-base.microsoftoutlook/";
+
+export const microsoftOutlook: INodeTypeDescription = {
+  name: "n8n-nodes-base.microsoftOutlook",
+  displayName: "Microsoft Outlook",
+  category: "Communication",
+  group: ["communication"],
+  version: 2,
+  description: "Read, create, and manage emails, calendars, contacts, and folders via Microsoft Graph API.",
+  defaults: { name: "Microsoft Outlook" },
+  inputs: ["main"],
+  outputs: ["main"],
+  icon: "Mail",
+  credentials: [
+    { name: "microsoftOutlookOAuth2Api" },
+    { name: "microsoftOAuth2Api" },
+    { name: "microsoftEntraServicePrincipal" },
+  ],
+  sources: [MICROSOFT_OUTLOOK_DOCS, "https://learn.microsoft.com/en-us/graph/api/resources/mail-api-overview"],
+  properties: [
+    {
+      displayName: "Resource",
+      name: "resource",
+      type: "options",
+      default: "message",
+      required: true,
+      noDataExpression: true,
+      options: [
+        { name: "Calendar", value: "calendar" },
+        { name: "Contact", value: "contact" },
+        { name: "Draft", value: "draft" },
+        { name: "Event", value: "event" },
+        { name: "Folder", value: "folder" },
+        { name: "Folder Message", value: "folderMessage" },
+        { name: "Message", value: "message" },
+        { name: "Message Attachment", value: "messageAttachment" },
+      ],
+    },
+    {
+      displayName: "Operation",
+      name: "operation",
+      type: "options",
+      default: "getAll",
+      required: true,
+      noDataExpression: true,
+      displayOptions: { show: { resource: ["calendar"] } },
+      options: [
+        { name: "Create", value: "create" },
+        { name: "Delete", value: "delete" },
+        { name: "Get", value: "get" },
+        { name: "Get Many", value: "getAll" },
+        { name: "Update", value: "update" },
+      ],
+    },
+    {
+      displayName: "Operation",
+      name: "operation",
+      type: "options",
+      default: "getAll",
+      required: true,
+      noDataExpression: true,
+      displayOptions: { show: { resource: ["contact"] } },
+      options: [
+        { name: "Create", value: "create" },
+        { name: "Delete", value: "delete" },
+        { name: "Get", value: "get" },
+        { name: "Get Many", value: "getAll" },
+        { name: "Update", value: "update" },
+      ],
+    },
+    {
+      displayName: "Operation",
+      name: "operation",
+      type: "options",
+      default: "create",
+      required: true,
+      noDataExpression: true,
+      displayOptions: { show: { resource: ["draft"] } },
+      options: [
+        { name: "Create", value: "create" },
+        { name: "Delete", value: "delete" },
+        { name: "Get", value: "get" },
+        { name: "Send", value: "send" },
+        { name: "Update", value: "update" },
+      ],
+    },
+    {
+      displayName: "Operation",
+      name: "operation",
+      type: "options",
+      default: "getAll",
+      required: true,
+      noDataExpression: true,
+      displayOptions: { show: { resource: ["event"] } },
+      options: [
+        { name: "Create", value: "create" },
+        { name: "Delete", value: "delete" },
+        { name: "Get", value: "get" },
+        { name: "Get Many", value: "getAll" },
+        { name: "Update", value: "update" },
+      ],
+    },
+    {
+      displayName: "Operation",
+      name: "operation",
+      type: "options",
+      default: "getAll",
+      required: true,
+      noDataExpression: true,
+      displayOptions: { show: { resource: ["folder"] } },
+      options: [
+        { name: "Create", value: "create" },
+        { name: "Delete", value: "delete" },
+        { name: "Get", value: "get" },
+        { name: "Get Many", value: "getAll" },
+        { name: "Update", value: "update" },
+      ],
+    },
+    {
+      displayName: "Operation",
+      name: "operation",
+      type: "options",
+      default: "getAll",
+      required: true,
+      noDataExpression: true,
+      displayOptions: { show: { resource: ["folderMessage"] } },
+      options: [
+        { name: "Get Many", value: "getAll" },
+      ],
+    },
+    {
+      displayName: "Operation",
+      name: "operation",
+      type: "options",
+      default: "getAll",
+      required: true,
+      noDataExpression: true,
+      displayOptions: { show: { resource: ["message"] } },
+      options: [
+        { name: "Delete", value: "delete" },
+        { name: "Get", value: "get" },
+        { name: "Get Many", value: "getAll" },
+        { name: "Move", value: "move" },
+        { name: "Reply", value: "reply" },
+        { name: "Send", value: "send" },
+        { name: "Send and Wait", value: "sendAndWait" },
+        { name: "Update", value: "update" },
+      ],
+    },
+    {
+      displayName: "Operation",
+      name: "operation",
+      type: "options",
+      default: "getAll",
+      required: true,
+      noDataExpression: true,
+      displayOptions: { show: { resource: ["messageAttachment"] } },
+      options: [
+        { name: "Add", value: "add" },
+        { name: "Download", value: "download" },
+        { name: "Get", value: "get" },
+        { name: "Get Many", value: "getAll" },
+      ],
+    },
+    {
+      displayName: "Message ID",
+      name: "messageId",
+      type: "string",
+      default: "",
+      required: true,
+      displayOptions: {
+        show: {
+          resource: ["message", "draft", "messageAttachment"],
+          operation: ["delete", "get", "move", "reply", "send", "update", "add", "download", "get", "getAll"],
+        },
+      },
+    },
+    {
+      displayName: "Folder ID",
+      name: "folderId",
+      type: "string",
+      default: "",
+      displayOptions: {
+        show: { resource: ["folder", "folderMessage"], operation: ["get", "delete", "update", "getAll", "create"] },
+      },
+    },
+    {
+      displayName: "To Recipients",
+      name: "toRecipients",
+      type: "string",
+      default: "",
+      displayOptions: {
+        show: { resource: ["message", "draft"], operation: ["send", "create", "sendAndWait", "reply"] },
+      },
+    },
+    {
+      displayName: "CC Recipients",
+      name: "ccRecipients",
+      type: "string",
+      default: "",
+      displayOptions: {
+        show: { resource: ["message", "draft"], operation: ["send", "create", "sendAndWait", "reply"] },
+      },
+    },
+    {
+      displayName: "BCC Recipients",
+      name: "bccRecipients",
+      type: "string",
+      default: "",
+      displayOptions: {
+        show: { resource: ["message", "draft"], operation: ["send", "create"] },
+      },
+    },
+    {
+      displayName: "Subject",
+      name: "subject",
+      type: "string",
+      default: "",
+      displayOptions: {
+        show: { resource: ["message", "draft", "event"], operation: ["send", "create", "update", "sendAndWait", "reply"] },
+      },
+    },
+    {
+      displayName: "Body Content",
+      name: "bodyContent",
+      type: "string",
+      default: "",
+      typeOptions: { rows: 4 },
+      displayOptions: {
+        show: { resource: ["message", "draft"], operation: ["send", "create", "update", "sendAndWait", "reply"] },
+      },
+    },
+    {
+      displayName: "Body Type",
+      name: "bodyType",
+      type: "options",
+      default: "text",
+      displayOptions: {
+        show: { resource: ["message", "draft"], operation: ["send", "create", "update", "sendAndWait"] },
+      },
+      options: [
+        { name: "Text", value: "text" },
+        { name: "HTML", value: "html" },
+      ],
+    },
+    {
+      displayName: "Destination Folder ID",
+      name: "destinationFolderId",
+      type: "string",
+      default: "",
+      required: true,
+      displayOptions: {
+        show: { resource: ["message"], operation: ["move"] },
+      },
+    },
+    {
+      displayName: "Response Type",
+      name: "responseType",
+      type: "options",
+      default: "approval",
+      displayOptions: {
+        show: { resource: ["message"], operation: ["sendAndWait"] },
+      },
+      options: [
+        { name: "Approval", value: "approval" },
+        { name: "Free Text", value: "freeText" },
+        { name: "Custom Form", value: "customForm" },
+      ],
+    },
+    {
+      displayName: "Limit Wait Time",
+      name: "limitWaitTime",
+      type: "boolean",
+      default: false,
+      displayOptions: {
+        show: { resource: ["message"], operation: ["sendAndWait"] },
+      },
+    },
+    {
+      displayName: "Wait Time",
+      name: "waitTime",
+      type: "string",
+      default: "2h",
+      displayOptions: {
+        show: { resource: ["message"], operation: ["sendAndWait"], limitWaitTime: [true] },
+      },
+    },
+    {
+      displayName: "Attachment ID",
+      name: "attachmentId",
+      type: "string",
+      default: "",
+      displayOptions: {
+        show: { resource: ["messageAttachment"], operation: ["download", "get"] },
+      },
+    },
+    {
+      displayName: "Binary Property",
+      name: "binaryProperty",
+      type: "string",
+      default: "data",
+      displayOptions: {
+        show: { resource: ["messageAttachment"], operation: ["add"] },
+      },
+    },
+    {
+      displayName: "Calendar ID",
+      name: "calendarId",
+      type: "string",
+      default: "",
+      displayOptions: {
+        show: { resource: ["calendar", "event"], operation: ["get", "delete", "update", "getAll", "create"] },
+      },
+    },
+    {
+      displayName: "Contact ID",
+      name: "contactId",
+      type: "string",
+      default: "",
+      displayOptions: {
+        show: { resource: ["contact"], operation: ["get", "delete", "update"] },
+      },
+    },
+    {
+      displayName: "Event ID",
+      name: "eventId",
+      type: "string",
+      default: "",
+      displayOptions: {
+        show: { resource: ["event"], operation: ["get", "delete", "update"] },
+      },
+    },
+    {
+      displayName: "Start DateTime",
+      name: "startDateTime",
+      type: "string",
+      default: "",
+      displayOptions: {
+        show: { resource: ["event"], operation: ["create", "update"] },
+      },
+    },
+    {
+      displayName: "End DateTime",
+      name: "endDateTime",
+      type: "string",
+      default: "",
+      displayOptions: {
+        show: { resource: ["event"], operation: ["create", "update"] },
+      },
+    },
+    {
+      displayName: "Given Name",
+      name: "givenName",
+      type: "string",
+      default: "",
+      displayOptions: {
+        show: { resource: ["contact"], operation: ["create", "update"] },
+      },
+    },
+    {
+      displayName: "Surname",
+      name: "surname",
+      type: "string",
+      default: "",
+      displayOptions: {
+        show: { resource: ["contact"], operation: ["create", "update"] },
+      },
+    },
+    {
+      displayName: "Email Addresses",
+      name: "emailAddresses",
+      type: "string",
+      default: "",
+      displayOptions: {
+        show: { resource: ["contact"], operation: ["create", "update"] },
+      },
+    },
+    {
+      displayName: "Return All",
+      name: "returnAll",
+      type: "boolean",
+      default: false,
+      displayOptions: {
+        show: { operation: ["getAll"] },
+      },
+    },
+    {
+      displayName: "Limit",
+      name: "limit",
+      type: "number",
+      default: 50,
+      typeOptions: { minValue: 1, maxValue: 1000 },
+      displayOptions: {
+        show: { operation: ["getAll"], returnAll: [false] },
+      },
+    },
+    {
+      displayName: "Options",
+      name: "options",
+      type: "collection",
+      default: {},
+      options: [
+        {
+          displayName: "Append n8n Attribution",
+          name: "appendAttribution",
+          type: "boolean",
+          default: true,
+        },
+        {
+          displayName: "Approve Button Label",
+          name: "approveButtonLabel",
+          type: "string",
+          default: "Approve",
+        },
+        {
+          displayName: "Disapprove Button Label",
+          name: "disapproveButtonLabel",
+          type: "string",
+          default: "Disapprove",
+        },
+      ],
+    },
+  ],
+};
+
+const MICROSOFT_TEAMS_DOCS =
+  "https://docs.n8n.io/integrations/builtin/app-nodes/n8n-nodes-base.microsoftteams/";
+
+export const microsoftTeams: INodeTypeDescription = {
+  name: "n8n-nodes-base.microsoftTeams",
+  displayName: "Microsoft Teams",
+  category: "Communication",
+  group: ["communication"],
+  version: 2,
+  description: "Manage channels, messages, and Planner tasks via Microsoft Graph Teams API",
+  defaults: { name: "Microsoft Teams" },
+  inputs: ["main"],
+  outputs: ["main"],
+  icon: "MessageSquare",
+  credentials: [
+    { name: "microsoftTeamsOAuth2Api", required: false },
+    { name: "microsoftOAuth2Api", required: false },
+    { name: "microsoftEntraServicePrincipalApi", required: false },
+  ],
+  sources: [MICROSOFT_TEAMS_DOCS, "https://learn.microsoft.com/en-us/graph/api/resources/teams-api-overview"],
+  properties: [
+    {
+      displayName: "Resource",
+      name: "resource",
+      type: "options",
+      default: "channel",
+      required: true,
+      noDataExpression: true,
+      options: [
+        { name: "Channel", value: "channel" },
+        { name: "Channel Message", value: "channelMessage" },
+        { name: "Chat Message", value: "chatMessage" },
+        { name: "Task", value: "task" },
+      ],
+    },
+    {
+      displayName: "Operation",
+      name: "operation",
+      type: "options",
+      default: "getAll",
+      required: true,
+      noDataExpression: true,
+      displayOptions: { show: { resource: ["channel"] } },
+      options: [
+        { name: "Create", value: "create" },
+        { name: "Delete", value: "delete" },
+        { name: "Get", value: "get" },
+        { name: "Get Many", value: "getAll" },
+        { name: "Update", value: "update" },
+      ],
+    },
+    {
+      displayName: "Operation",
+      name: "operation",
+      type: "options",
+      default: "create",
+      required: true,
+      noDataExpression: true,
+      displayOptions: { show: { resource: ["channelMessage"] } },
+      options: [
+        { name: "Create", value: "create" },
+        { name: "Get Many", value: "getAll" },
+      ],
+    },
+    {
+      displayName: "Operation",
+      name: "operation",
+      type: "options",
+      default: "create",
+      required: true,
+      noDataExpression: true,
+      displayOptions: { show: { resource: ["chatMessage"] } },
+      options: [
+        { name: "Create", value: "create" },
+        { name: "Get", value: "get" },
+        { name: "Get Many", value: "getAll" },
+        { name: "Send and Wait", value: "sendAndWait" },
+      ],
+    },
+    {
+      displayName: "Operation",
+      name: "operation",
+      type: "options",
+      default: "getAll",
+      required: true,
+      noDataExpression: true,
+      displayOptions: { show: { resource: ["task"] } },
+      options: [
+        { name: "Create", value: "create" },
+        { name: "Delete", value: "delete" },
+        { name: "Get", value: "get" },
+        { name: "Get Many", value: "getAll" },
+        { name: "Update", value: "update" },
+      ],
+    },
+    {
+      displayName: "Team ID",
+      name: "teamId",
+      type: "string",
+      default: "",
+      required: true,
+      displayOptions: {
+        show: { resource: ["channel", "channelMessage", "task"] },
+      },
+      placeholder: "team-123",
+    },
+    {
+      displayName: "Channel ID",
+      name: "channelId",
+      type: "string",
+      default: "",
+      required: true,
+      displayOptions: {
+        show: { resource: ["channel", "channelMessage"], operation: ["create", "delete", "get", "update", "getAll"] },
+      },
+      placeholder: "channel-456",
+    },
+    {
+      displayName: "Chat ID",
+      name: "chatId",
+      type: "string",
+      default: "",
+      required: true,
+      displayOptions: {
+        show: { resource: ["chatMessage"] },
+      },
+      placeholder: "chat-789",
+    },
+    {
+      displayName: "Message ID",
+      name: "messageId",
+      type: "string",
+      default: "",
+      required: true,
+      displayOptions: {
+        show: { resource: ["chatMessage"], operation: ["get"] },
+      },
+    },
+    {
+      displayName: "Message Text",
+      name: "messageText",
+      type: "string",
+      default: "",
+      required: true,
+      displayOptions: {
+        show: { resource: ["channelMessage", "chatMessage"], operation: ["create"] },
+      },
+      typeOptions: { rows: 4 },
+    },
+    {
+      displayName: "Message Type",
+      name: "messageType",
+      type: "options",
+      default: "text",
+      displayOptions: {
+        show: { resource: ["channelMessage", "chatMessage"], operation: ["create"] },
+      },
+      options: [
+        { name: "Text", value: "text" },
+        { name: "HTML", value: "html" },
+      ],
+    },
+    {
+      displayName: "Task Title",
+      name: "taskTitle",
+      type: "string",
+      default: "",
+      required: true,
+      displayOptions: {
+        show: { resource: ["task"], operation: ["create", "update"] },
+      },
+    },
+    {
+      displayName: "Task ID",
+      name: "taskId",
+      type: "string",
+      default: "",
+      required: true,
+      displayOptions: {
+        show: { resource: ["task"], operation: ["delete", "get", "update"] },
+      },
+    },
+    {
+      displayName: "Due Date Time",
+      name: "dueDateTime",
+      type: "string",
+      default: "",
+      displayOptions: {
+        show: { resource: ["task"], operation: ["create", "update"] },
+      },
+    },
+    {
+      displayName: "Return All",
+      name: "returnAll",
+      type: "boolean",
+      default: false,
+      displayOptions: {
+        show: { operation: ["getAll"] },
+      },
+    },
+    {
+      displayName: "Limit",
+      name: "limit",
+      type: "number",
+      default: 50,
+      typeOptions: { minValue: 1, maxValue: 1000 },
+      displayOptions: {
+        show: { operation: ["getAll"], returnAll: [false] },
+      },
+    },
+    {
+      displayName: "Response Type",
+      name: "responseType",
+      type: "options",
+      default: "approval",
+      displayOptions: {
+        show: { resource: ["chatMessage"], operation: ["sendAndWait"] },
+      },
+      options: [
+        { name: "Approval", value: "approval" },
+        { name: "Free Text", value: "freeText" },
+        { name: "Custom Form", value: "customForm" },
+      ],
+    },
+    {
+      displayName: "Limit Wait Time",
+      name: "limitWaitTime",
+      type: "boolean",
+      default: false,
+      displayOptions: {
+        show: { resource: ["chatMessage"], operation: ["sendAndWait"] },
+      },
+    },
+    {
+      displayName: "Append n8n Attribution",
+      name: "appendAttribution",
+      type: "boolean",
+      default: true,
+      displayOptions: {
+        show: { resource: ["chatMessage"], operation: ["sendAndWait"] },
+      },
+    },
+    {
+      displayName: "Options",
+      name: "options",
+      type: "collection",
+      default: {},
+      options: [
+        {
+          displayName: "Approve Button Label",
+          name: "approveButtonLabel",
+          type: "string",
+          default: "Approve",
+        },
+        {
+          displayName: "Disapprove Button Label",
+          name: "disapproveButtonLabel",
+          type: "string",
+          default: "Disapprove",
         },
       ],
     },
