@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { buildAdjacency, resolveStartNodes, topologicalSort } from "../graph";
+import { createExecutionPlan } from "../runner";
 import type { IWorkflow } from "../../workflow/types";
 
 function makeWorkflow(overrides: Partial<IWorkflow> = {}): IWorkflow {
@@ -85,8 +86,36 @@ describe("Engine Graph", () => {
       ],
     });
 
+    // The disabled trigger is skipped, so this falls back to the first
+    // *enabled* node. It used to return "Trigger" because the fallback picked
+    // nodes[0] without checking `disabled` — starting a run on a disabled node.
     const starts = resolveStartNodes(workflow);
-    expect(starts).toEqual(["Trigger"]);
+    expect(starts).toEqual(["Set"]);
+  });
+
+  it("keeps AI sub-nodes in the run set when filtering by reachability", () => {
+    // Sub-nodes point *into* their parent over a non-main channel, so walking
+    // forward from the trigger never reaches them. Filtering the plan to the
+    // reachable set used to drop them, and the agent then failed with
+    // "A Chat Model sub-node must be connected".
+    const workflow = makeWorkflow({
+      nodes: [
+        { id: "1", name: "Start", type: "n8n-nodes-base.manualTrigger", typeVersion: 1, position: [0, 0], parameters: {} },
+        { id: "2", name: "Agent", type: "@n8n/n8n-nodes-langchain.agent", typeVersion: 1, position: [200, 0], parameters: {} },
+        { id: "3", name: "Model", type: "@n8n/n8n-nodes-langchain.lmChatOpenAi", typeVersion: 1, position: [200, -100], parameters: {} },
+        { id: "4", name: "Orphan", type: "n8n-nodes-base.set", typeVersion: 1, position: [400, 200], parameters: {} },
+      ],
+      connections: {
+        Start: { main: [[{ node: "Agent", type: "main", index: 0 }]] },
+        Model: { ai_languageModel: [[{ node: "Agent", type: "ai_languageModel", index: 0 }]] },
+      },
+    });
+
+    const plan = createExecutionPlan(workflow, "Start");
+    expect(plan.runOrder).toContain("Model");
+    expect(plan.runOrder.indexOf("Model")).toBeLessThan(plan.runOrder.indexOf("Agent"));
+    // Unrelated nodes are still excluded — this is not a "run everything" escape hatch.
+    expect(plan.runOrder).not.toContain("Orphan");
   });
 
   it("topological sort orders nodes correctly", () => {

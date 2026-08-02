@@ -146,6 +146,32 @@ export function nodesReachableFrom(
   return visited;
 }
 
+/**
+ * Grow `reachable` to include the sub-nodes the reachable nodes depend on.
+ *
+ * Sub-nodes (a chat model, a tool, a memory) attach to their parent over a
+ * non-`main` channel and point *into* it, so a forward walk from the trigger
+ * never lands on them — an agent would run with no model attached. They are
+ * dependencies, not downstream steps, so pull them in from the other end.
+ *
+ * Transitive on purpose: a tool may have its own model hanging off it.
+ */
+export function addSubNodeDependencies(
+  incoming: Map<string, IncomingEdge[]>,
+  reachable: Set<string>,
+): Set<string> {
+  const queue = [...reachable];
+  while (queue.length > 0) {
+    const n = queue.shift()!;
+    for (const edge of incoming.get(n) ?? []) {
+      if (edge.channel === "main" || reachable.has(edge.source)) continue;
+      reachable.add(edge.source);
+      queue.push(edge.source);
+    }
+  }
+  return reachable;
+}
+
 /** Restrict adjacency to a set of nodes (edges only when both ends are in the set). */
 export function filterAdjacency(
   adjacency: Map<string, string[]>,

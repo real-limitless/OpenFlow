@@ -3,6 +3,7 @@ import type { ExecutionPlan, ExecutionRunData, NodeExecutor } from "./types";
 import type { CredentialResolver } from "./credentials";
 import type { DataTableAccess } from "@/lib/data-tables/access";
 import {
+  addSubNodeDependencies,
   buildAdjacency,
   buildIncoming,
   filterAdjacency,
@@ -25,6 +26,7 @@ export function createExecutionPlan(
       : new Set(workflow.nodes.map((n) => n.name));
   // Isolated start with no outgoing edges still runs
   for (const s of startNodes) reachable.add(s);
+  addSubNodeDependencies(buildIncoming(workflow.connections), reachable);
   const adjacency = filterAdjacency(fullAdjacency, reachable);
   // Ensure every reachable node appears even with zero edges
   for (const name of reachable) {
