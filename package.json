@@ -24,6 +24,7 @@
     "docker:logs": "docker compose logs -f --tail=100",
     "docker:prod": "docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d",
     "lint": "eslint .",
+    "typecheck": "tsc --noEmit",
     "format": "prettier --write .",
     "test": "vitest run",
     "test:batch": "bash scripts/factory/test-batch.sh",
