@@ -1,4 +1,5 @@
-import type { NodeExecutor, INodeExecutionData, ExecutionContext, INode, IBinaryData } from "@/sdk";
+import type { NodeExecutor, INodeExecutionData, ExecutionContext, INode } from "@/sdk";
+import type { IBinaryData } from "@/lib/workflow/types";
 import { ensureItems } from "@/sdk";
 
 const WEBDAV_BASE = "/remote.php/dav/files";
