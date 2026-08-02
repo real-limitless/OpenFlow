@@ -23,6 +23,12 @@ const accentText: Record<string, string> = {
   placeholder: "text-[var(--placeholder)] bg-[var(--placeholder)]/12",
 };
 
+/**
+ * Only the core building blocks start expanded. With 24 categories the domain
+ * groups have to open collapsed or the palette is unusable on first render.
+ * Typed as Record<NodeCategory, …> so a newly added category must be given a
+ * default here rather than silently defaulting to closed.
+ */
 const DEFAULT_OPEN: Record<NodeCategory, boolean> = {
   Triggers: true,
   Actions: true,
@@ -30,6 +36,24 @@ const DEFAULT_OPEN: Record<NodeCategory, boolean> = {
   Transform: false,
   Helpers: false,
   Canvas: true,
+  AI: false,
+  "AI Tool": false,
+  Communication: false,
+  "Data & Storage": false,
+  Database: false,
+  Development: false,
+  Files: false,
+  Productivity: false,
+  Marketing: false,
+  Sales: false,
+  CRM: false,
+  "Finance & Accounting": false,
+  Payments: false,
+  Analytics: false,
+  App: false,
+  Core: false,
+  Utility: false,
+  Miscellaneous: false,
 };
 
 export function NodePalette({ onAdd }: Props) {

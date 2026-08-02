@@ -65,6 +65,12 @@ function isOptionList(options: INodeProperties["options"]): options is INodeProp
 
 export function ParameterField({ prop, value, values, onChange, onValuesChange, context }: FieldProps) {
   switch (prop.type) {
+    // Carried on the node and exported, but never shown. Must be handled
+    // explicitly: the `default` branch below renders unknown types as a text
+    // input, which would surface these as editable fields.
+    case "hidden":
+      return null;
+
     case "notice":
       return (
         <p className="rounded-md border border-border/70 bg-surface/60 px-3 py-2 text-[12px] leading-snug text-muted-foreground">

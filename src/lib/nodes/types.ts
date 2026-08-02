@@ -19,7 +19,11 @@ export type NodePropertyType =
   | "resourceMapper"
   | "workflowSelect"
   | "notice"
-  | "color";
+  | "color"
+  /** Carried on the node but never rendered — see ParameterField's `hidden` case. */
+  | "hidden"
+  | "credentials"
+  | "assignmentCollection";
 
 export interface IDisplayOptions {
   show?: Record<string, Array<string | number | boolean>>;
@@ -30,6 +34,8 @@ export interface INodePropertyOption {
   name: string;
   value: string | number | boolean;
   description?: string;
+  /** Verb shown in the actions list, e.g. "Convert to CSV". */
+  action?: string;
 }
 
 export interface INodePropertyCollectionEntry {
@@ -62,15 +68,51 @@ export interface INodeProperties {
   };
 }
 
-export type NodeGroup = "trigger" | "input" | "output" | "transform" | "organization";
+export type NodeGroup =
+  | "trigger"
+  | "input"
+  | "output"
+  | "transform"
+  | "organization"
+  | "integration"
+  | "communication"
+  | "storage"
+  | "marketing"
+  | "data"
+  | "app"
+  | "ai";
 
+/**
+ * Palette grouping key. Every value here must also appear in NODE_CATEGORIES
+ * (registry.ts) — that array is what NodePalette iterates to build its groups,
+ * so a category missing from it renders no group and its nodes become
+ * unreachable in the palette, search included.
+ */
 export type NodeCategory =
   | "Triggers"
   | "Actions"
   | "Flow"
   | "Transform"
   | "Helpers"
-  | "Canvas";
+  | "Canvas"
+  | "AI"
+  | "AI Tool"
+  | "Communication"
+  | "Data & Storage"
+  | "Database"
+  | "Development"
+  | "Productivity"
+  | "Files"
+  | "Marketing"
+  | "Sales"
+  | "CRM"
+  | "Finance & Accounting"
+  | "Payments"
+  | "Analytics"
+  | "App"
+  | "Core"
+  | "Utility"
+  | "Miscellaneous";
 
 export interface INodeTypeDescription {
   /** Fully-qualified type key, matching the public workflow JSON type string. */

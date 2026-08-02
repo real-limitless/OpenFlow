@@ -6,9 +6,9 @@ import {
   registerDescription,
 } from "@/lib/engine/node-runtime";
 import * as definitions from "./definitions";
-import { manualTrigger, formTrigger } from "./definitions/triggers";
-import { code, stickyNote, openAi } from "./definitions/core";
-import { xml } from "./definitions/transform";
+import { manualTrigger, formTrigger, googleSheetsTrigger } from "./definitions/triggers";
+import { code, stickyNote } from "./definitions/core";
+import { xml, openAiApp } from "./definitions/transform";
 import { form } from "./definitions/helpers";
 
 /**
@@ -30,13 +30,17 @@ const ALIAS_PAIRS: Array<[string, string]> = [
   ["table", formTrigger.name],
   ["submit", formTrigger.name],
   ["post", formTrigger.name],
-  ["n8n-nodes-base.openAi", openAi.name],
+  ["ChatGPT", openAiApp.name],
+  ["DallE", openAiApp.name],
   ["_Form", form.name],
   ["form", form.name],
   ["page", form.name],
   ["step", form.name],
   ["stage", form.name],
   ["multi", form.name],
+  ["CSV", googleSheetsTrigger.name],
+  ["Spreadsheet", googleSheetsTrigger.name],
+  ["GS", googleSheetsTrigger.name],
 ];
 
 let descriptionsSeeded = false;
@@ -58,12 +62,38 @@ if (!descriptionsSeeded) {
 /** @deprecated prefer registerDescription from node-runtime */
 const aliases: Record<string, string> = Object.fromEntries(ALIAS_PAIRS);
 
+/**
+ * Palette groups, in display order. NodePalette renders exactly this list, so
+ * every NodeCategory must appear here — one that is missing silently hides all
+ * of its nodes, including from search.
+ *
+ * Ordered by how often a category is reached: the core building blocks first,
+ * then the app/domain groups alphabetically, then the catch-alls.
+ */
 export const NODE_CATEGORIES: NodeCategory[] = [
   "Triggers",
   "Actions",
   "Flow",
   "Transform",
   "Helpers",
+  "AI",
+  "AI Tool",
+  "Communication",
+  "Data & Storage",
+  "Database",
+  "Development",
+  "Files",
+  "Productivity",
+  "Marketing",
+  "Sales",
+  "CRM",
+  "Finance & Accounting",
+  "Payments",
+  "Analytics",
+  "App",
+  "Core",
+  "Utility",
+  "Miscellaneous",
   "Canvas",
 ];
 
