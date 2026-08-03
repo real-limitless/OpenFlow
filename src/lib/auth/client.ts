@@ -17,35 +17,56 @@ export async function fetchAuthStatus(): Promise<{
   user: AuthUser | null;
   authDisabled: boolean;
 }> {
-  let authDisabled = false;
-  try {
-    const ready = await fetch("/health/ready");
-    if (ready.ok) {
-      const body = (await ready.json()) as { auth?: string };
-      authDisabled = body.auth === "disabled";
-    }
-  } catch {
-    /* ignore */
-  }
-
   try {
     const res = await fetch("/api/v1/auth/me", {
       credentials: "include",
       headers: projectHeaders(),
     });
     if (res.ok) {
-      const user = (await res.json()) as AuthUser;
-      return { user, authDisabled };
+      const body = (await res.json()) as
+        | AuthUser
+        | { user?: AuthUser | null; authDisabled?: boolean; id?: string; email?: string };
+
+      // New shape: { user, authDisabled }
+      if (body && typeof body === "object" && "user" in body) {
+        const wrapped = body as { user?: AuthUser | null; authDisabled?: boolean };
+        return {
+          user: wrapped.user ?? null,
+          authDisabled: Boolean(wrapped.authDisabled),
+        };
+      }
+
+      // Legacy shape: bare user object (older servers)
+      if (body && typeof body === "object" && "id" in body && "email" in body) {
+        return {
+          user: body as AuthUser,
+          authDisabled: false,
+        };
+      }
+    }
+
+    // Legacy 401 = logged out
+    if (res.status === 401) {
+      return { user: null, authDisabled: false };
     }
   } catch {
     /* ignore */
   }
 
-  if (authDisabled) {
-    return {
-      user: { id: "local", email: "local@local", role: "owner" },
-      authDisabled: true,
-    };
+  // Fallback: probe readiness for AUTH_DISABLED when /me is unavailable
+  try {
+    const ready = await fetch("/health/ready");
+    if (ready.ok) {
+      const body = (await ready.json()) as { auth?: string };
+      if (body.auth === "disabled") {
+        return {
+          user: { id: "local", email: "local@local", role: "owner" },
+          authDisabled: true,
+        };
+      }
+    }
+  } catch {
+    /* ignore */
   }
 
   return { user: null, authDisabled: false };

@@ -161,7 +161,8 @@ describe("E0 Gate: auth ownership isolation", () => {
       headers: { Cookie: `session=${token}` },
     });
     expect(me.status).toBe(200);
-    const body = await me.json();
-    expect(body.id).toBe(userB.id);
+    const body = (await me.json()) as { user?: { id: string }; id?: string };
+    // Prefer wrapped shape; fall back to legacy bare user
+    expect(body.user?.id ?? body.id).toBe(userB.id);
   });
 });

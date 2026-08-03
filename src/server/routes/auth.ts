@@ -1,6 +1,7 @@
 import type { Hono } from "hono";
 import { getCookie, setCookie, deleteCookie } from "hono/cookie";
 import bcrypt from "bcryptjs";
+import { config } from "../../config";
 import { prisma } from "../db";
 import type { AppEnv } from "../middleware/auth";
 import {
@@ -9,6 +10,7 @@ import {
   destroySession,
   getSessionUserId,
 } from "../services/sessions";
+import { ensureUser, LOCAL_USER_ID } from "../services/users";
 
 export { getSessionUserId } from "../services/sessions";
 
@@ -87,10 +89,24 @@ export default function authRoute(app: Hono<AppEnv>) {
   });
 
   app.get("/api/v1/auth/me", async (c) => {
+    // Always 200 so SPA session probes don't spam the browser console with 401.
+    // Shape: { user: AuthUser | null, authDisabled: boolean }
+    if (config.auth.disabled) {
+      await ensureUser(LOCAL_USER_ID);
+      const user = await prisma.user.findUnique({
+        where: { id: LOCAL_USER_ID },
+        select: { id: true, email: true, role: true },
+      });
+      return c.json({
+        user: user ?? { id: LOCAL_USER_ID, email: "local@local", role: "owner" },
+        authDisabled: true,
+      });
+    }
+
     const token = getCookie(c, "session");
     const userId = await getSessionUserId(token);
     if (!userId) {
-      return c.json({ error: "Not authenticated" }, 401);
+      return c.json({ user: null, authDisabled: false });
     }
 
     const user = await prisma.user.findUnique({
@@ -98,9 +114,9 @@ export default function authRoute(app: Hono<AppEnv>) {
       select: { id: true, email: true, role: true },
     });
     if (!user) {
-      return c.json({ error: "User not found" }, 401);
+      return c.json({ user: null, authDisabled: false });
     }
 
-    return c.json(user);
+    return c.json({ user, authDisabled: false });
   });
 }
