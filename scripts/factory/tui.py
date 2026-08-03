@@ -1180,7 +1180,7 @@ def draw(stdscr: Any, state: AppState) -> None:
     if state.show_help:
         help_lines = [
             "FACTORY:  S start  C resume-queue  X stop-all  m GLOBAL  b batch",
-            "JOB:      y continue-last-stage  L bypass-impl-lock+continue",
+            "JOB:      y continue (validate-fail→IMPL)  L bypass-impl-lock+continue",
             "          Shift+L steal lock (kill holder) + continue",
             "          r full-retry (keeps failure history)  n run-now  k kill",
             "          M job-models  H failure-history",
@@ -1670,7 +1670,13 @@ def do_kill_selected(state: AppState) -> None:
 
 
 def do_continue_selected(state: AppState, *, no_lock: bool = False) -> None:
-    """Resume stuck/failed job from last stage only (no full SPEC re-trial)."""
+    """Resume stuck/failed job (no full SPEC re-trial).
+
+    node_ctl infer_continue_stage:
+      - validate fail/partial → IMPLEMENT (apply fix_hints), then re-validate
+      - interrupted mid-flight → resume that stage
+      - implement/spec fail → that stage
+    """
     sel = selected_pipe(state)
     if not sel:
         return
@@ -1686,7 +1692,15 @@ def do_continue_selected(state: AppState, *, no_lock: bool = False) -> None:
     try:
         node_ctl_bg(args)
         lock_s = " bypass-lock" if no_lock else ""
-        state.message = f"Continue{lock_s} sent: {sel.type} (bg)…"
+        # Surface where continue will land so y after validate-fail is obvious
+        hint = ""
+        fs = (sel.failed_stage or "").lower()
+        if sel.stage in ("partial", "fail") and fs.startswith("validate"):
+            hint = " → IMPLEMENT (then validate)"
+        elif sel.stage == "interrupted" and fs.startswith("validate"):
+            # mid-run resume keeps validate when lastStage was validate*
+            hint = " → resume (impl if failed validate)"
+        state.message = f"Continue{lock_s} sent: {sel.type}{hint} (bg)…"
     except Exception as e:
         state.message = f"continue error: {e}"
 

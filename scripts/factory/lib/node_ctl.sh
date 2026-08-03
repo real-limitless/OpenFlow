@@ -240,6 +240,15 @@ PY
 }
 
 # Infer resume stage from status.json
+#
+# Rules:
+# - Interrupted mid-flight → resume the stage that was cut off (lastStage).
+# - Terminal fail/partial after VALIDATE → IMPLEMENT so fix_hints are applied,
+#   then the same one-shot cycle re-runs gates + LLM validate.
+# - Terminal fail at SPEC/IMPLEMENT → that stage.
+# Never re-enter VALIDATE alone after a completed validate fail: the LLM
+# already said fail and left IMPLEMENT hints; re-validating without code
+# changes just burns another VAL turn (spotify/gotify class of stuck jobs).
 infer_continue_stage() {
   local sp stage last failed spec
   sp="$(status_path "$TYPE")"
@@ -249,15 +258,27 @@ infer_continue_stage() {
     last=$(read_json_field "$sp" lastStage)
     failed=$(read_json_field "$sp" failedStage)
   fi
-  [[ "$stage" == "interrupted" && -n "$last" ]] && stage="$last"
-  # Prefer explicit failedStage from gates
+
+  # Mid-run kill: resume wherever the worker was actually running.
+  if [[ "$stage" == "interrupted" ]]; then
+    case "${last:-}" in
+      validate-gates|validate-llm|validate) echo validate; return ;;
+      implement|implement-wait|implement-waitout) echo implement; return ;;
+      spec|spec-corpus) echo spec; return ;;
+      # lastStage may be fail/partial after kill-on-continue; fall through
+    esac
+  fi
+
+  # Completed failure: restart at the stage that can fix the miss.
   if [[ -n "$failed" && "$failed" != "None" ]]; then
     case "$failed" in
       spec) echo spec; return ;;
       implement) echo implement; return ;;
-      validate*) echo validate; return ;;
+      # validate_gates / validate_fail → implement (apply hints / fix artifacts)
+      validate*) echo implement; return ;;
     esac
   fi
+
   spec="docs/specs/nodes/${TYPE}.md"
   case "$stage" in
     validate-gates|validate-llm) echo validate ;;

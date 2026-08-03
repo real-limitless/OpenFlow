@@ -1090,8 +1090,9 @@ PY
     echo "[factory] --once: stopping after single cycle attempt"
     break
   fi
-  # next full cycle restarts at SPEC
-  STAGE_CURSOR="spec"
+  # LLM / soft validate fail: next cycle re-runs IMPLEMENT with fix_hints
+  # (do not restart SPEC — validator already left implement-oriented hints).
+  STAGE_CURSOR="implement"
   cycle=$((cycle + 1))
 done
 
