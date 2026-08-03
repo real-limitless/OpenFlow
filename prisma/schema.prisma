@@ -357,3 +357,38 @@ model DataTableRow {
   @@index([tableId, position])
   @@map("data_table_rows")
 }
+
+// ─── Public workflow templates (marketplace) ────────────
+
+/// Community templates synced from scraped public n8n.io workflows.
+model WorkflowTemplate {
+  id             String   @id
+  externalId     Int      @unique
+  name           String
+  description    String?  @db.Text
+  imageUrl       String?
+  views          Int      @default(0)
+  recentViews    Int      @default(0)
+  nodeCount      Int      @default(0)
+  /// JSON string[] of n8n node type names
+  nodeTypes      String   @default("[]")
+  /// JSON string[] category names
+  categories     String   @default("[]")
+  authorName     String?
+  authorUsername String?
+  authorAvatar   String?
+  /// Full workflow graph JSON (nodes + connections + …)
+  workflowJson   String   @db.Text
+  metaJson       String?  @db.Text
+  sourceUrl      String?
+  readyToDemo    Boolean  @default(false)
+  publishedAt    DateTime?
+  syncedAt       DateTime @default(now())
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([views])
+  @@index([name])
+  @@index([syncedAt])
+  @@map("workflow_templates")
+}

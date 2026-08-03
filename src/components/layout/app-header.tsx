@@ -86,7 +86,7 @@ export function AppHeader({ compact, actions, hideNav }: Props) {
   const onLogout = async () => {
     await logout();
     toast.success("Signed out");
-    navigate({ to: "/login" });
+    navigate({ to: "/login", search: {} });
   };
 
   const navCls = (path: string) =>
@@ -155,6 +155,9 @@ export function AppHeader({ compact, actions, hideNav }: Props) {
           <Link to="/" className={navCls("/")}>
             Workflows
           </Link>
+          <Link to="/templates" search={{}} className={navCls("/templates")}>
+            Templates
+          </Link>
           <Link to="/shared" className={navCls("/shared")}>
             Shared
           </Link>
@@ -196,7 +199,7 @@ export function AppHeader({ compact, actions, hideNav }: Props) {
         )}
         {!authDisabled && !user && (
           <Button variant="outline" size="sm" className="h-8 text-[12px]" asChild>
-            <Link to="/login">Sign in</Link>
+            <Link to="/login" search={{}}>Sign in</Link>
           </Button>
         )}
         <Button variant="ghost" size="icon" className="size-8 md:hidden" asChild aria-label="Settings">
@@ -213,6 +216,11 @@ export function AppHeader({ compact, actions, hideNav }: Props) {
 export function AppNavIcons() {
   return (
     <div className="flex flex-wrap gap-1">
+      <Button variant="ghost" size="sm" className="h-8 text-[12px]" asChild>
+        <Link to="/templates" search={{}}>
+          Templates
+        </Link>
+      </Button>
       <Button variant="ghost" size="sm" className="h-8 text-[12px]" asChild>
         <Link to="/projects">
           <FolderKanban className="mr-1 size-3.5" /> Projects

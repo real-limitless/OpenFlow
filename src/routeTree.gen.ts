@@ -17,6 +17,7 @@ import { Route as ProjectsRouteImport } from './routes/projects'
 import { Route as RegisterRouteImport } from './routes/register'
 import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as SharedRouteImport } from './routes/shared'
+import { Route as TemplatesRouteImport } from './routes/templates'
 import { Route as VariablesRouteImport } from './routes/variables'
 import { Route as DataTablesIdRouteImport } from './routes/data-tables_.$id'
 import { Route as DocsCompatibilityRouteImport } from './routes/docs.compatibility'
@@ -25,6 +26,7 @@ import { Route as SettingsApiKeysRouteImport } from './routes/settings.api-keys'
 import { Route as SettingsEnvironmentsRouteImport } from './routes/settings.environments'
 import { Route as SettingsLogsRouteImport } from './routes/settings.logs'
 import { Route as SettingsSecretProvidersRouteImport } from './routes/settings.secret-providers'
+import { Route as TemplatesIdRouteImport } from './routes/templates_.$id'
 import { Route as WorkflowIdRouteImport } from './routes/workflow.$id'
 
 const IndexRoute = IndexRouteImport.update({
@@ -67,6 +69,11 @@ const SharedRoute = SharedRouteImport.update({
   path: '/shared',
   getParentRoute: () => rootRouteImport,
 } as any)
+const TemplatesRoute = TemplatesRouteImport.update({
+  id: '/templates',
+  path: '/templates',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const VariablesRoute = VariablesRouteImport.update({
   id: '/variables',
   path: '/variables',
@@ -107,6 +114,11 @@ const SettingsSecretProvidersRoute = SettingsSecretProvidersRouteImport.update({
   path: '/secret-providers',
   getParentRoute: () => SettingsRoute,
 } as any)
+const TemplatesIdRoute = TemplatesIdRouteImport.update({
+  id: '/templates_/$id',
+  path: '/templates/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const WorkflowIdRoute = WorkflowIdRouteImport.update({
   id: '/workflow/$id',
   path: '/workflow/$id',
@@ -122,6 +134,7 @@ export interface FileRoutesByFullPath {
   '/register': typeof RegisterRoute
   '/settings': typeof SettingsRouteWithChildren
   '/shared': typeof SharedRoute
+  '/templates': typeof TemplatesRoute
   '/variables': typeof VariablesRoute
   '/data-tables/$id': typeof DataTablesIdRoute
   '/docs/compatibility': typeof DocsCompatibilityRoute
@@ -130,6 +143,7 @@ export interface FileRoutesByFullPath {
   '/settings/environments': typeof SettingsEnvironmentsRoute
   '/settings/logs': typeof SettingsLogsRoute
   '/settings/secret-providers': typeof SettingsSecretProvidersRoute
+  '/templates/$id': typeof TemplatesIdRoute
   '/workflow/$id': typeof WorkflowIdRoute
 }
 export interface FileRoutesByTo {
@@ -141,6 +155,7 @@ export interface FileRoutesByTo {
   '/register': typeof RegisterRoute
   '/settings': typeof SettingsRouteWithChildren
   '/shared': typeof SharedRoute
+  '/templates': typeof TemplatesRoute
   '/variables': typeof VariablesRoute
   '/data-tables/$id': typeof DataTablesIdRoute
   '/docs/compatibility': typeof DocsCompatibilityRoute
@@ -149,6 +164,7 @@ export interface FileRoutesByTo {
   '/settings/environments': typeof SettingsEnvironmentsRoute
   '/settings/logs': typeof SettingsLogsRoute
   '/settings/secret-providers': typeof SettingsSecretProvidersRoute
+  '/templates/$id': typeof TemplatesIdRoute
   '/workflow/$id': typeof WorkflowIdRoute
 }
 export interface FileRoutesById {
@@ -161,6 +177,7 @@ export interface FileRoutesById {
   '/register': typeof RegisterRoute
   '/settings': typeof SettingsRouteWithChildren
   '/shared': typeof SharedRoute
+  '/templates': typeof TemplatesRoute
   '/variables': typeof VariablesRoute
   '/data-tables_/$id': typeof DataTablesIdRoute
   '/docs/compatibility': typeof DocsCompatibilityRoute
@@ -169,6 +186,7 @@ export interface FileRoutesById {
   '/settings/environments': typeof SettingsEnvironmentsRoute
   '/settings/logs': typeof SettingsLogsRoute
   '/settings/secret-providers': typeof SettingsSecretProvidersRoute
+  '/templates_/$id': typeof TemplatesIdRoute
   '/workflow/$id': typeof WorkflowIdRoute
 }
 export interface FileRouteTypes {
@@ -182,6 +200,7 @@ export interface FileRouteTypes {
     | '/register'
     | '/settings'
     | '/shared'
+    | '/templates'
     | '/variables'
     | '/data-tables/$id'
     | '/docs/compatibility'
@@ -190,6 +209,7 @@ export interface FileRouteTypes {
     | '/settings/environments'
     | '/settings/logs'
     | '/settings/secret-providers'
+    | '/templates/$id'
     | '/workflow/$id'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -201,6 +221,7 @@ export interface FileRouteTypes {
     | '/register'
     | '/settings'
     | '/shared'
+    | '/templates'
     | '/variables'
     | '/data-tables/$id'
     | '/docs/compatibility'
@@ -209,6 +230,7 @@ export interface FileRouteTypes {
     | '/settings/environments'
     | '/settings/logs'
     | '/settings/secret-providers'
+    | '/templates/$id'
     | '/workflow/$id'
   id:
     | '__root__'
@@ -220,6 +242,7 @@ export interface FileRouteTypes {
     | '/register'
     | '/settings'
     | '/shared'
+    | '/templates'
     | '/variables'
     | '/data-tables_/$id'
     | '/docs/compatibility'
@@ -228,6 +251,7 @@ export interface FileRouteTypes {
     | '/settings/environments'
     | '/settings/logs'
     | '/settings/secret-providers'
+    | '/templates_/$id'
     | '/workflow/$id'
   fileRoutesById: FileRoutesById
 }
@@ -240,9 +264,11 @@ export interface RootRouteChildren {
   RegisterRoute: typeof RegisterRoute
   SettingsRoute: typeof SettingsRouteWithChildren
   SharedRoute: typeof SharedRoute
+  TemplatesRoute: typeof TemplatesRoute
   VariablesRoute: typeof VariablesRoute
   DataTablesIdRoute: typeof DataTablesIdRoute
   DocsCompatibilityRoute: typeof DocsCompatibilityRoute
+  TemplatesIdRoute: typeof TemplatesIdRoute
   WorkflowIdRoute: typeof WorkflowIdRoute
 }
 
@@ -304,6 +330,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SharedRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/templates': {
+      id: '/templates'
+      path: '/templates'
+      fullPath: '/templates'
+      preLoaderRoute: typeof TemplatesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/variables': {
       id: '/variables'
       path: '/variables'
@@ -360,6 +393,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SettingsSecretProvidersRouteImport
       parentRoute: typeof SettingsRoute
     }
+    '/templates_/$id': {
+      id: '/templates_/$id'
+      path: '/templates/$id'
+      fullPath: '/templates/$id'
+      preLoaderRoute: typeof TemplatesIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/workflow/$id': {
       id: '/workflow/$id'
       path: '/workflow/$id'
@@ -409,9 +449,11 @@ const rootRouteChildren: RootRouteChildren = {
   RegisterRoute: RegisterRoute,
   SettingsRoute: SettingsRouteWithChildren,
   SharedRoute: SharedRoute,
+  TemplatesRoute: TemplatesRoute,
   VariablesRoute: VariablesRoute,
   DataTablesIdRoute: DataTablesIdRoute,
   DocsCompatibilityRoute: DocsCompatibilityRoute,
+  TemplatesIdRoute: TemplatesIdRoute,
   WorkflowIdRoute: WorkflowIdRoute,
 }
 export const routeTree = rootRouteImport

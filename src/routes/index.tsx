@@ -1,6 +1,6 @@
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
-import { FileJson, Plus, Share2, Sparkles, Trash2, Upload } from "lucide-react";
+import { FileJson, Plus, Share2, Sparkles, Store, Trash2, Upload } from "lucide-react";
 import { toast } from "sonner";
 import {
   getRepository,
@@ -141,6 +141,11 @@ function WorkflowList() {
         />
         <Button variant="outline" onClick={() => fileInput.current?.click()}>
           <Upload className="mr-1 size-4" /> Import JSON
+        </Button>
+        <Button variant="outline" asChild>
+          <Link to="/templates" search={{}}>
+            <Store className="mr-1 size-4" /> Browse templates
+          </Link>
         </Button>
         <Button
           variant="outline"

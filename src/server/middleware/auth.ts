@@ -11,6 +11,17 @@ export type AppEnv = { Variables: { userId: string } };
 
 const EXEMPT_PATHS = ["/health", "/api/v1/auth", "/webhook", "/form"];
 
+/** Public template marketplace reads (import still requires auth). */
+function isPublicTemplateGet(method: string, path: string): boolean {
+  if (method !== "GET") return false;
+  if (path === "/api/v1/templates" || path === "/api/v1/templates/facets") return true;
+  // /api/v1/templates/:id or /api/v1/templates/:id/workflow
+  const m = path.match(/^\/api\/v1\/templates\/([^/]+)(?:\/workflow)?$/);
+  if (!m) return false;
+  // reject reserved words that aren't ids if any appear later
+  return m[1] !== "import";
+}
+
 function hashApiKey(rawKey: string): string {
   return createHash("sha256").update(rawKey).digest("hex");
 }
@@ -49,6 +60,13 @@ export async function authMiddleware(c: Context<AppEnv>, next: Next) {
 
   const path = new URL(c.req.url).pathname;
   if (EXEMPT_PATHS.some((ep) => path === ep || path.startsWith(ep + "/"))) {
+    return next();
+  }
+  if (isPublicTemplateGet(c.req.method, path)) {
+    // Optional session: attach userId when present so clients can stay logged in
+    const token = getCookie(c, "session");
+    const sessionUser = await getSessionUserId(token);
+    if (sessionUser) c.set("userId", sessionUser);
     return next();
   }
 

@@ -71,7 +71,7 @@ function RegisterPage() {
         </Button>
         <p className="text-center text-[13px] text-muted-foreground">
           Already have an account?{" "}
-          <Link to="/login" className="text-primary hover:underline">
+          <Link to="/login" search={{}} className="text-primary hover:underline">
             Sign in
           </Link>
         </p>

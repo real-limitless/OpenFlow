@@ -104,5 +104,6 @@ docs/
 6. **Dogfood:** `npm run test:dogfood` · fixtures in `workflows/dogfood/` · `docs/dogfood.md`
 7. **Factory:** `npm run factory:batch -- 05` · see `scripts/factory/README.md`
 8. **Scrape → factory gaps:** `npm run factory:gaps` then `npm run factory:import-scraped -- enqueue --top 50`
+9. **Template marketplace:** `npm run templates:sync` then open `/templates`
 
 See `docs/clean-room.md` and `docs/sdk/OVERVIEW.md`.
