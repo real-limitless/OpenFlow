@@ -1190,6 +1190,113 @@ export const itemLists: INodeTypeDescription = {
   ],
 };
 
+export const toolWikipedia: INodeTypeDescription = {
+  name: "@n8n/n8n-nodes-langchain.toolWikipedia",
+  displayName: "Wikipedia",
+  category: "AI Tool",
+  group: ["transform"],
+  version: 1,
+  description: "Searches Wikipedia and returns article summaries.",
+  defaults: { name: "Wikipedia" },
+  inputs: [],
+  outputs: ["ai_tool"],
+  outputNames: ["Tool"],
+  icon: "BookOpen",
+  properties: [],
+};
+
+export const apiTemplateIo: INodeTypeDescription = {
+  name: "n8n-nodes-base.apiTemplateIo",
+  displayName: "APITemplate.io",
+  category: "Transform",
+  group: ["transform"],
+  version: 1,
+  description: "Generates images and PDFs from templates via APITemplate.io",
+  defaults: { name: "APITemplate.io" },
+  inputs: ["main"],
+  outputs: ["main"],
+  icon: "FileImage",
+  credentials: [{ name: "apiTemplateIoApi", required: true }],
+  properties: [
+    {
+      displayName: "Resource",
+      name: "resource",
+      type: "options",
+      default: "account",
+      noDataExpression: true,
+      options: [
+        { name: "Account", value: "account" },
+        { name: "Image", value: "image" },
+        { name: "PDF", value: "pdf" },
+      ],
+    },
+    {
+      displayName: "Operation",
+      name: "operation",
+      type: "options",
+      default: "get",
+      noDataExpression: true,
+      displayOptions: { show: { resource: ["account"] } },
+      options: [{ name: "Get", value: "get" }],
+    },
+    {
+      displayName: "Operation",
+      name: "operation",
+      type: "options",
+      default: "create",
+      noDataExpression: true,
+      displayOptions: { show: { resource: ["image", "pdf"] } },
+      options: [{ name: "Create", value: "create" }],
+    },
+    {
+      displayName: "Template ID",
+      name: "templateId",
+      type: "string",
+      default: "",
+      required: true,
+      displayOptions: { show: { resource: ["image", "pdf"] } },
+      description: "The ID of the APITemplate.io template to render",
+    },
+    {
+      displayName: "Data",
+      name: "data",
+      type: "json",
+      default: "{}",
+      displayOptions: { show: { resource: ["image", "pdf"] } },
+      description: "JSON object with template variable substitutions",
+      typeOptions: { alwaysOpenEditNode: true },
+    },
+    {
+      displayName: "Options",
+      name: "options",
+      type: "collection",
+      default: {},
+      displayOptions: { show: { resource: ["image", "pdf"] } },
+      options: [
+        {
+          displayName: "Expiration (minutes)",
+          name: "expiration",
+          type: "number",
+          default: 0,
+          description: "Minutes until the generated file URL expires",
+        },
+        {
+          displayName: "Output Format",
+          name: "outputFormat",
+          type: "options",
+          default: "pdf",
+          displayOptions: { show: { "/resource": ["pdf"] } },
+          options: [
+            { name: "PDF", value: "pdf" },
+            { name: "HTML", value: "html" },
+          ],
+          description: "Output format for PDF renders",
+        },
+      ],
+    },
+  ],
+};
+
 export const dateTime: INodeTypeDescription = {
   name: "n8n-nodes-base.dateTime",
   displayName: "Date & Time",
@@ -2116,6 +2223,285 @@ export const dataTable: INodeTypeDescription = {
           default: false,
           description: "When on, merge each table row onto the corresponding input item by index.",
         },
+      ],
+    },
+  ],
+};
+
+export const dataTableTool: INodeTypeDescription = {
+  name: "n8n-nodes-base.dataTableTool",
+  displayName: "Data Table Tool",
+  category: "AI Tool",
+  group: ["transform"],
+  version: 1,
+  description:
+    "AI-agent-accessible node to create, query, and manage data tables and their rows.",
+  defaults: { name: "Data Table Tool" },
+  inputs: ["main"],
+  outputs: ["main"],
+  icon: "Table",
+  sources: [
+    "https://docs.n8n.io/integrations/builtin/core-nodes/n8n-nodes-base.datatable.md",
+  ],
+  properties: [
+    {
+      displayName: "Resource",
+      name: "resource",
+      type: "options",
+      default: "table",
+      noDataExpression: true,
+      options: [
+        { name: "Table", value: "table" },
+        { name: "Row", value: "row" },
+      ],
+    },
+    {
+      displayName: "Operation",
+      name: "operation",
+      type: "options",
+      default: "create",
+      noDataExpression: true,
+      required: true,
+      displayOptions: { show: { resource: ["table"] } },
+      options: [
+        { name: "Create", value: "create" },
+        { name: "Delete", value: "delete" },
+        { name: "Get Many", value: "getMany" },
+        { name: "Update", value: "update" },
+      ],
+    },
+    {
+      displayName: "Operation",
+      name: "operation",
+      type: "options",
+      default: "insert",
+      noDataExpression: true,
+      required: true,
+      displayOptions: { show: { resource: ["row"] } },
+      options: [
+        { name: "Delete", value: "delete" },
+        { name: "Get", value: "get" },
+        { name: "Insert", value: "insert" },
+        { name: "Row Exists", value: "rowExists" },
+        { name: "Row Not Exists", value: "rowNotExists" },
+        { name: "Update", value: "update" },
+        { name: "Upsert", value: "upsert" },
+      ],
+    },
+    {
+      displayName: "Data Table",
+      name: "dataTableId",
+      type: "resourceLocator",
+      default: { mode: "list", value: "" },
+      required: true,
+      displayOptions: {
+        show: { resource: ["table"], operation: ["delete", "getMany", "update"] },
+      },
+      typeOptions: { resource: "dataTable" },
+    },
+    {
+      displayName: "Data Table",
+      name: "dataTableId",
+      type: "resourceLocator",
+      default: { mode: "list", value: "" },
+      required: true,
+      displayOptions: { show: { resource: ["row"] } },
+      typeOptions: { resource: "dataTable" },
+    },
+    {
+      displayName: "Table Name",
+      name: "name",
+      type: "string",
+      default: "",
+      required: true,
+      displayOptions: { show: { resource: ["table"], operation: ["create"] } },
+    },
+    {
+      displayName: "Columns",
+      name: "columns",
+      type: "fixedCollection",
+      default: {},
+      required: true,
+      displayOptions: { show: { resource: ["table"], operation: ["create"] } },
+      typeOptions: { multipleValues: true },
+      options: [
+        {
+          name: "columnValues",
+          displayName: "Column",
+          values: [
+            { displayName: "Name", name: "name", type: "string", default: "" },
+            {
+              displayName: "Type",
+              name: "type",
+              type: "options",
+              default: "String",
+              options: [
+                { name: "Boolean", value: "Boolean" },
+                { name: "Date", value: "Date" },
+                { name: "Number", value: "Number" },
+                { name: "String", value: "String" },
+              ],
+            },
+          ],
+        },
+      ],
+    },
+    {
+      displayName: "Reuse Existing",
+      name: "reuseExisting",
+      type: "boolean",
+      default: false,
+      displayOptions: { show: { resource: ["table"], operation: ["create"] } },
+    },
+    {
+      displayName: "New Name",
+      name: "newName",
+      type: "string",
+      default: "",
+      required: true,
+      displayOptions: { show: { resource: ["table"], operation: ["update"] } },
+    },
+    {
+      displayName: "Match Type",
+      name: "matchType",
+      type: "options",
+      default: "anyCondition",
+      noDataExpression: true,
+      displayOptions: { show: { resource: ["row"] } },
+      options: [
+        { name: "Any Condition", value: "anyCondition" },
+        { name: "All Conditions", value: "allConditions" },
+      ],
+    },
+    {
+      displayName: "Conditions",
+      name: "conditions",
+      type: "fixedCollection",
+      default: {},
+      typeOptions: { multipleValues: true },
+      displayOptions: { show: { resource: ["row"] } },
+      options: [
+        {
+          name: "conditionValues",
+          displayName: "Condition",
+          values: [
+            { displayName: "Key Name", name: "keyName", type: "string", default: "" },
+            {
+              displayName: "Condition",
+              name: "condition",
+              type: "options",
+              default: "eq",
+              options: [
+                { name: "Equal", value: "eq" },
+                { name: "Not Equal", value: "neq" },
+                { name: "Greater Than", value: "gt" },
+                { name: "Greater Than or Equal", value: "gte" },
+                { name: "Less Than", value: "lt" },
+                { name: "Less Than or Equal", value: "lte" },
+                { name: "Is Empty", value: "isEmpty" },
+                { name: "Is Not Empty", value: "isNotEmpty" },
+              ],
+            },
+            { displayName: "Key Value", name: "keyValue", type: "string", default: "" },
+          ],
+        },
+      ],
+    },
+    {
+      displayName: "Mapping Mode",
+      name: "mappingMode",
+      type: "options",
+      default: "defineBelow",
+      noDataExpression: true,
+      displayOptions: {
+        show: { resource: ["row"], operation: ["insert", "update", "upsert"] },
+      },
+      options: [
+        { name: "Define Below", value: "defineBelow" },
+        { name: "Auto Map from Input", value: "autoMap" },
+      ],
+    },
+    {
+      displayName: "Columns",
+      name: "columns",
+      type: "json",
+      default: "{}",
+      displayOptions: {
+        show: {
+          resource: ["row"],
+          operation: ["insert", "update", "upsert"],
+          mappingMode: ["defineBelow"],
+        },
+      },
+    },
+    {
+      displayName: "Options",
+      name: "options",
+      type: "collection",
+      default: {},
+      displayOptions: { show: { resource: ["table"], operation: ["getMany"] } },
+      options: [
+        { displayName: "Return All", name: "returnAll", type: "boolean", default: false },
+        { displayName: "Limit", name: "limit", type: "number", default: 50 },
+        { displayName: "Filter by Name", name: "filterByName", type: "string", default: "" },
+        { displayName: "Sort Field", name: "sortField", type: "string", default: "" },
+        {
+          displayName: "Sort Direction",
+          name: "sortDirection",
+          type: "options",
+          default: "ASC",
+          options: [
+            { name: "Ascending", value: "ASC" },
+            { name: "Descending", value: "DESC" },
+          ],
+        },
+      ],
+    },
+    {
+      displayName: "Options",
+      name: "options",
+      type: "collection",
+      default: {},
+      displayOptions: { show: { resource: ["row"], operation: ["get"] } },
+      options: [
+        { displayName: "Return All", name: "returnAll", type: "boolean", default: false },
+        { displayName: "Limit", name: "limit", type: "number", default: 50 },
+        { displayName: "Order By", name: "orderBy", type: "boolean", default: false },
+        { displayName: "Order By Column", name: "orderByColumn", type: "string", default: "createdAt" },
+        {
+          displayName: "Order By Direction",
+          name: "orderByDirection",
+          type: "options",
+          default: "DESC",
+          options: [
+            { name: "Ascending", value: "ASC" },
+            { name: "Descending", value: "DESC" },
+          ],
+        },
+      ],
+    },
+    {
+      displayName: "Options",
+      name: "options",
+      type: "collection",
+      default: {},
+      displayOptions: {
+        show: { resource: ["row"], operation: ["insert"] },
+      },
+      options: [
+        { displayName: "Optimize Bulk", name: "optimizeBulk", type: "boolean", default: false },
+      ],
+    },
+    {
+      displayName: "Options",
+      name: "options",
+      type: "collection",
+      default: {},
+      displayOptions: {
+        show: { resource: ["row"], operation: ["delete", "update", "upsert"] },
+      },
+      options: [
+        { displayName: "Dry Run", name: "dryRun", type: "boolean", default: false },
       ],
     },
   ],
@@ -3382,6 +3768,142 @@ export const jwt: INodeTypeDescription = {
             { name: "RS512", value: "RS512" },
           ],
           description: "Algorithm for sign/verify; overrides the credential's algorithm.",
+        },
+      ],
+    },
+  ],
+};
+
+export const htmlExtract: INodeTypeDescription = {
+  name: "n8n-nodes-base.htmlExtract",
+  displayName: "HTML Extract",
+  category: "Transform",
+  group: ["transform"],
+  version: 1,
+  description: "Extracts data from HTML using CSS selectors.",
+  defaults: { name: "HTML Extract" },
+  inputs: ["main"],
+  outputs: ["main"],
+  icon: "Code",
+  sources: ["https://docs.n8n.io/integrations/builtin/core-nodes/n8n-nodes-base.html/"],
+  properties: [
+    {
+      displayName: "Source Data",
+      name: "sourceData",
+      type: "options",
+      default: "JSON",
+      noDataExpression: true,
+      options: [
+        { name: "JSON", value: "JSON" },
+        { name: "Binary", value: "Binary" },
+      ],
+      description: "Where the HTML source comes from.",
+    },
+    {
+      displayName: "JSON Property",
+      name: "jsonProperty",
+      type: "string",
+      default: "",
+      required: true,
+      displayOptions: { show: { sourceData: ["JSON"] } },
+      description: "Name of the input JSON property containing HTML (string or array of strings).",
+    },
+    {
+      displayName: "Input Binary Field",
+      name: "inputBinaryField",
+      type: "string",
+      default: "",
+      required: true,
+      displayOptions: { show: { sourceData: ["Binary"] } },
+      description: "Name of the input binary field containing the HTML file.",
+    },
+    {
+      displayName: "Extraction Values",
+      name: "extractionValues",
+      type: "fixedCollection",
+      default: { values: [{ key: "", cssSelector: "", returnValue: "Text", returnArray: false }] },
+      typeOptions: { multipleValues: true },
+      options: [
+        {
+          name: "values",
+          displayName: "Value",
+          values: [
+            {
+              displayName: "Key",
+              name: "key",
+              type: "string",
+              default: "",
+              required: true,
+              description: "Key to save the extracted value under in the output.",
+            },
+            {
+              displayName: "CSS Selector",
+              name: "cssSelector",
+              type: "string",
+              default: "",
+              required: true,
+              description: "CSS selector to search for.",
+            },
+            {
+              displayName: "Return Value",
+              name: "returnValue",
+              type: "options",
+              default: "Text",
+              noDataExpression: true,
+              options: [
+                { name: "Attribute", value: "Attribute" },
+                { name: "HTML", value: "HTML" },
+                { name: "Text", value: "Text" },
+                { name: "Value", value: "Value" },
+              ],
+              description: "Type of content to extract per matched element.",
+            },
+            {
+              displayName: "Attribute",
+              name: "attribute",
+              type: "string",
+              default: "",
+              displayOptions: { show: { returnValue: ["Attribute"] } },
+              description: "Name of the attribute whose value to return (e.g. href, class).",
+            },
+            {
+              displayName: "Skip Selectors",
+              name: "skipSelectors",
+              type: "string",
+              default: "",
+              displayOptions: { show: { returnValue: ["Text"] } },
+              description: "Comma-separated CSS selectors whose text content should be excluded.",
+            },
+            {
+              displayName: "Return Array",
+              name: "returnArray",
+              type: "boolean",
+              default: false,
+              description: "When on, always return an array even for a single match.",
+            },
+          ],
+        },
+      ],
+    },
+    {
+      displayName: "Options",
+      name: "options",
+      type: "collection",
+      default: {},
+      options: [
+        {
+          displayName: "Trim Values",
+          name: "trimValues",
+          type: "boolean",
+          default: false,
+          description: "Remove leading/trailing whitespace and newlines from each extracted value.",
+        },
+        {
+          displayName: "Clean Up Text",
+          name: "cleanUpText",
+          type: "boolean",
+          default: false,
+          description: "Collapse consecutive whitespace into single space and strip leading/trailing whitespace and newlines.",
         },
       ],
     },
@@ -9278,6 +9800,1438 @@ export const airtableTool: INodeTypeDescription = {
           ],
         },
       ],
+    },
+  ],
+};
+
+const AIRTOP_DOCS = "https://docs.n8n.io/integrations/builtin/app-nodes/n8n-nodes-base.airtop/";
+
+const SESSION_IDS_PARAMS = {
+  sessionId: { name: "sessionId", displayName: "Session ID", type: "string", default: "={{ $json[\"sessionId\"] }}", required: true, description: "Airtop session identifier" } as const,
+  windowId: { name: "windowId", displayName: "Window ID", type: "string", default: "={{ $json[\"windowId\"] }}", description: "Airtop window identifier" } as const,
+};
+
+const SESSION_MODE_PARAMS = [
+  { displayName: "Session Mode", name: "sessionMode", type: "options", default: "existing", options: [{ name: "New", value: "new" }, { name: "Existing", value: "existing" }] },
+  { displayName: "Session ID", name: "sessionId", type: "string", default: "={{ $json[\"sessionId\"] }}", displayOptions: { show: { sessionMode: ["existing"] } }, description: "Airtop session identifier" },
+  { displayName: "Window ID", name: "windowId", type: "string", default: "={{ $json[\"windowId\"] }}", displayOptions: { show: { sessionMode: ["existing"] } }, description: "Airtop window identifier" },
+  { displayName: "URL", name: "url", type: "string", displayOptions: { show: { sessionMode: ["new"] } }, description: "Initial URL to load" },
+  { displayName: "Profile Name", name: "profileName", type: "string", displayOptions: { show: { sessionMode: ["new"] } }, description: "Airtop profile name for persistent state" },
+  { displayName: "Auto Terminate Session", name: "autoTerminateSession", type: "boolean", default: true, displayOptions: { show: { sessionMode: ["new"] } } },
+];
+
+export const airtop: INodeTypeDescription = {
+  name: "n8n-nodes-base.airtop",
+  displayName: "Airtop",
+  category: "Transform",
+  group: ["transform"],
+  version: [1, 1.1],
+  defaultVersion: 1.1,
+  description: "Automate browser interactions, extract data, and manage sessions with Airtop.",
+  defaults: { name: "Airtop" },
+  inputs: ["main"],
+  outputs: ["main"],
+  icon: "Globe",
+  credentials: [{ name: "airtopApi", required: true }],
+  sources: [AIRTOP_DOCS],
+  properties: [
+    { displayName: "Resource", name: "resource", type: "options", default: "session", noDataExpression: true, options: [
+      { name: "Agent", value: "agent" }, { name: "Extraction", value: "extraction" }, { name: "File", value: "file" },
+      { name: "Interaction", value: "interaction" }, { name: "Session", value: "session" }, { name: "Window", value: "window" },
+    ]},
+
+    { displayName: "Operation", name: "operation", type: "options", default: "create", noDataExpression: true, displayOptions: { show: { resource: ["session"] } }, options: [
+      { name: "Create", value: "create" }, { name: "Save Profile on Termination", value: "save" },
+      { name: "Terminate", value: "terminate" }, { name: "Wait for Download", value: "waitForDownload" },
+    ]},
+
+    { displayName: "Operation", name: "operation", type: "options", default: "create", noDataExpression: true, displayOptions: { show: { resource: ["window"] } }, options: [
+      { name: "Close", value: "close" }, { name: "Create", value: "create" }, { name: "Get Live View", value: "getLiveView" },
+      { name: "List Windows", value: "list" }, { name: "Load URL", value: "load" }, { name: "Take Screenshot", value: "takeScreenshot" },
+    ]},
+
+    { displayName: "Operation", name: "operation", type: "options", default: "query", noDataExpression: true, displayOptions: { show: { resource: ["extraction"] } }, options: [
+      { name: "Query Page", value: "query" }, { name: "Query Page with Pagination", value: "getPaginated" }, { name: "Smart Scrape", value: "scrape" },
+    ]},
+
+    { displayName: "Operation", name: "operation", type: "options", default: "click", noDataExpression: true, displayOptions: { show: { resource: ["interaction"] } }, options: [
+      { name: "Click an Element", value: "click" }, { name: "Fill Form", value: "fill" },
+      { name: "Hover on an Element", value: "hover" }, { name: "Scroll", value: "scroll" }, { name: "Type", value: "type" },
+    ]},
+
+    { displayName: "Operation", name: "operation", type: "options", default: "upload", noDataExpression: true, displayOptions: { show: { resource: ["file"] } }, options: [
+      { name: "Delete", value: "delete" }, { name: "Get", value: "get" }, { name: "Get Many", value: "getMany" },
+      { name: "Load", value: "load" }, { name: "Upload", value: "upload" },
+    ]},
+
+    { displayName: "Operation", name: "operation", type: "options", default: "run", noDataExpression: true, displayOptions: { show: { resource: ["agent"] } }, options: [
+      { name: "Run Agent", value: "run" },
+    ]},
+
+    {
+      displayName: "Session ID", name: "sessionId", type: "string", default: "={{ $json[\"sessionId\"] }}",
+      displayOptions: { show: { resource: ["session"], operation: ["save", "terminate", "waitForDownload"] } },
+      required: true, description: "Airtop session identifier",
+    },
+    {
+      displayName: "Profile Name", name: "profileName", type: "string",
+      displayOptions: { show: { resource: ["session"], operation: ["create", "save"] } },
+      description: "Airtop profile name",
+    },
+    {
+      displayName: "Save Profile on Termination", name: "saveProfileOnTermination", type: "boolean", default: false,
+      displayOptions: { show: { resource: ["session"], operation: ["create"] } },
+    },
+    {
+      displayName: "Record", name: "record", type: "boolean", default: false,
+      displayOptions: { show: { resource: ["session"], operation: ["create"] } },
+    },
+    {
+      displayName: "Timeout (minutes)", name: "timeoutMinutes", type: "number", default: 10,
+      displayOptions: { show: { resource: ["session"], operation: ["create"] } },
+    },
+    {
+      displayName: "Proxy", name: "proxy", type: "options", default: "none",
+      displayOptions: { show: { resource: ["session"], operation: ["create"] } },
+      options: [
+        { name: "None", value: "none" },
+        { name: "Integrated", value: "integrated" },
+        { name: "Proxy URL", value: "proxyUrl" },
+      ],
+    },
+    {
+      displayName: "Proxy URL", name: "proxyUrl", type: "string",
+      displayOptions: { show: { resource: ["session"], operation: ["create"], proxy: ["proxyUrl"] } },
+    },
+    {
+      displayName: "Additional Fields", name: "additionalFields", type: "collection", placeholder: "Add Field",
+      displayOptions: { show: { resource: ["session"], operation: ["create"] } },
+      default: {}, options: [
+        { displayName: "Solve Captcha", name: "solveCaptcha", type: "boolean", default: false },
+        { displayName: "Extension IDs", name: "extensionIds", type: "string", description: "Comma-separated Chrome Web Store extension IDs" },
+      ],
+    },
+    {
+      displayName: "Proxy Config", name: "proxyConfig", type: "collection", placeholder: "Add Config",
+      displayOptions: { show: { resource: ["session"], operation: ["create"], proxy: ["integrated"] } },
+      default: {}, options: [
+        { displayName: "Country", name: "country", type: "string", default: "US" },
+        { displayName: "Sticky", name: "sticky", type: "boolean", default: true },
+      ],
+    },
+    {
+      displayName: "Timeout (seconds)", name: "timeout", type: "number", default: 30,
+      displayOptions: { show: { resource: ["session"], operation: ["waitForDownload"] } },
+    },
+
+    {
+      displayName: "Session ID", name: "sessionId", type: "string", default: "={{ $json[\"sessionId\"] }}",
+      displayOptions: { show: { resource: ["window"], operation: ["create", "load", "close", "list", "getLiveView", "takeScreenshot"] } },
+      required: true, description: "Airtop session identifier",
+    },
+    {
+      displayName: "Window ID", name: "windowId", type: "string", default: "={{ $json[\"windowId\"] }}",
+      displayOptions: { show: { resource: ["window"], operation: ["load", "close", "getLiveView", "takeScreenshot"] } },
+      required: true, description: "Airtop window identifier",
+    },
+    {
+      displayName: "URL", name: "url", type: "string",
+      displayOptions: { show: { resource: ["window"], operation: ["create", "load"] } },
+      description: "URL to navigate to",
+    },
+    {
+      displayName: "Get Live View", name: "getLiveView", type: "boolean", default: false,
+      displayOptions: { show: { resource: ["window"], operation: ["create"] } },
+    },
+    {
+      displayName: "Include Navigation Bar", name: "includeNavigationBar", type: "boolean", default: false,
+      displayOptions: { show: { resource: ["window"], operation: ["create", "getLiveView"] } },
+    },
+    {
+      displayName: "Screen Resolution", name: "screenResolution", type: "string",
+      displayOptions: { show: { resource: ["window"], operation: ["create", "getLiveView"] } },
+      description: "Force window size, e.g. 1920x1080",
+    },
+    {
+      displayName: "Disable Resize", name: "disableResize", type: "boolean", default: false,
+      displayOptions: { show: { resource: ["window"], operation: ["create", "getLiveView"] } },
+    },
+    {
+      displayName: "Output Image as Binary", name: "outputImageAsBinary", type: "boolean", default: false,
+      displayOptions: { show: { resource: ["window"], operation: ["takeScreenshot"] } },
+    },
+    {
+      displayName: "Additional Fields", name: "additionalFields", type: "collection", placeholder: "Add Field",
+      displayOptions: { show: { resource: ["window"], operation: ["create", "load"] } },
+      default: {}, options: [
+        { displayName: "Wait Until", name: "waitUntil", type: "options", default: "load", options: [
+          { name: "Load", value: "load" }, { name: "DOM Content Loaded", value: "domContentLoaded" }, { name: "Complete", value: "complete" }, { name: "No Wait", value: "noWait" },
+        ]},
+      ],
+    },
+    {
+      displayName: "Additional Fields", name: "additionalFields", type: "collection", placeholder: "Add Field",
+      displayOptions: { show: { resource: ["window"], operation: ["getLiveView"] } },
+      default: {}, options: [
+        { displayName: "Include Navigation Bar", name: "includeNavigationBar", type: "boolean", default: false },
+        { displayName: "Screen Resolution", name: "screenResolution", type: "string" },
+        { displayName: "Disable Resize", name: "disableResize", type: "boolean", default: false },
+      ],
+    },
+
+    ...SESSION_MODE_PARAMS.map(p => ({ ...p, displayOptions: { show: { ...p.displayOptions?.show ?? {}, resource: ["extraction"] } } })),
+
+    {
+      displayName: "Prompt", name: "prompt", type: "string", typeOptions: { rows: 4 }, required: true,
+      displayOptions: { show: { resource: ["extraction"], operation: ["query", "getPaginated"] } },
+      description: "Extraction prompt",
+    },
+    {
+      displayName: "Additional Fields", name: "additionalFields", type: "collection", placeholder: "Add Field",
+      displayOptions: { show: { resource: ["extraction"], operation: ["query"] } },
+      default: {}, options: [
+        { displayName: "Output Schema", name: "outputSchema", type: "json" },
+        { displayName: "Parse JSON Output", name: "parseJsonOutput", type: "boolean", default: true },
+        { displayName: "Include Visual Analysis", name: "includeVisualAnalysis", type: "boolean", default: false },
+      ],
+    },
+    {
+      displayName: "Additional Fields", name: "additionalFields", type: "collection", placeholder: "Add Field",
+      displayOptions: { show: { resource: ["extraction"], operation: ["getPaginated"] } },
+      default: {}, options: [
+        { displayName: "Output Schema", name: "outputSchema", type: "json" },
+        { displayName: "Parse JSON Output", name: "parseJsonOutput", type: "boolean", default: true },
+        { displayName: "Interaction Mode", name: "interactionMode", type: "options", default: "auto", options: [
+          { name: "Auto", value: "auto" }, { name: "Accurate", value: "accurate" }, { name: "Cost Efficient", value: "cost-efficient" },
+        ]},
+        { displayName: "Pagination Mode", name: "paginationMode", type: "options", default: "auto", options: [
+          { name: "Auto", value: "auto" }, { name: "Paginated", value: "paginated" }, { name: "Infinite Scroll", value: "infinite-scroll" },
+        ]},
+      ],
+    },
+    {
+      displayName: "Additional Fields", name: "additionalFields", type: "collection", placeholder: "Add Field",
+      displayOptions: { show: { resource: ["extraction"], operation: ["scrape"] } },
+      default: {}, options: [
+        { displayName: "Include Visual Analysis", name: "includeVisualAnalysis", type: "boolean", default: false },
+      ],
+    },
+
+    {
+      displayName: "Session ID", name: "sessionId", type: "string", default: "={{ $json[\"sessionId\"] }}",
+      displayOptions: { show: { resource: ["interaction"] } }, required: true,
+    },
+    {
+      displayName: "Window ID", name: "windowId", type: "string", default: "={{ $json[\"windowId\"] }}",
+      displayOptions: { show: { resource: ["interaction"] } }, required: true,
+    },
+    {
+      displayName: "Element Description", name: "elementDescription", type: "string", required: true,
+      displayOptions: { show: { resource: ["interaction"], operation: ["click", "hover", "type"] } },
+      description: "Natural language element description",
+    },
+    {
+      displayName: "Click Type", name: "clickType", type: "options", default: "click",
+      displayOptions: { show: { resource: ["interaction"], operation: ["click"] } },
+      options: [
+        { name: "Click", value: "click" }, { name: "Double Click", value: "doubleClick" }, { name: "Right Click", value: "rightClick" },
+      ],
+    },
+    {
+      displayName: "Form Data", name: "formData", type: "string", typeOptions: { rows: 4 }, required: true,
+      displayOptions: { show: { resource: ["interaction"], operation: ["fill"] } },
+      description: "Natural language form data to fill",
+    },
+    {
+      displayName: "Text", name: "text", type: "string", required: true,
+      displayOptions: { show: { resource: ["interaction"], operation: ["type"] } },
+    },
+    {
+      displayName: "Press Enter Key", name: "pressEnterKey", type: "boolean", default: false,
+      displayOptions: { show: { resource: ["interaction"], operation: ["type"] } },
+    },
+    {
+      displayName: "Scrolling Mode", name: "scrollingMode", type: "options", default: "automatic",
+      displayOptions: { show: { resource: ["interaction"], operation: ["scroll"] } },
+      options: [
+        { name: "Automatic", value: "automatic" }, { name: "Manual", value: "manual" },
+      ],
+    },
+    {
+      displayName: "Scroll to Element", name: "scrollToElement", type: "string",
+      displayOptions: { show: { resource: ["interaction"], operation: ["scroll"], scrollingMode: ["automatic"] } },
+      description: "Element description to scroll to",
+    },
+    {
+      displayName: "Scroll to Edge", name: "scrollToEdge", type: "fixedCollection", typeOptions: { multipleValues: false },
+      displayOptions: { show: { resource: ["interaction"], operation: ["scroll"], scrollingMode: ["manual"] } },
+      default: {}, options: [
+        { displayName: "Edge Values", name: "edgeValues", values: [
+          { displayName: "Y Axis", name: "yAxis", type: "options", default: "", options: [
+            { name: "Top", value: "top" }, { name: "Bottom", value: "bottom" }, { name: "None", value: "" },
+          ]},
+          { displayName: "X Axis", name: "xAxis", type: "options", default: "", options: [
+            { name: "Left", value: "left" }, { name: "Right", value: "right" }, { name: "None", value: "" },
+          ]},
+        ]},
+      ],
+    },
+    {
+      displayName: "Scroll By", name: "scrollBy", type: "fixedCollection", typeOptions: { multipleValues: false },
+      displayOptions: { show: { resource: ["interaction"], operation: ["scroll"], scrollingMode: ["manual"] } },
+      default: {}, options: [
+        { displayName: "Scroll Values", name: "scrollValues", values: [
+          { displayName: "Y Axis", name: "yAxis", type: "string", description: "Vertical pixels or percentage" },
+          { displayName: "X Axis", name: "xAxis", type: "string", description: "Horizontal pixels or percentage" },
+        ]},
+      ],
+    },
+    {
+      displayName: "Scroll Within", name: "scrollWithin", type: "string",
+      displayOptions: { show: { resource: ["interaction"], operation: ["scroll"], scrollingMode: ["manual"] } },
+      description: "Element to scroll within",
+    },
+    {
+      displayName: "Additional Fields", name: "additionalFields", type: "collection", placeholder: "Add Field",
+      displayOptions: { show: { resource: ["interaction"], operation: ["click", "hover", "scroll", "type"] } },
+      default: {}, options: [
+        { displayName: "Visual Scope", name: "visualScope", type: "options", default: "auto", options: [
+          { name: "Auto", value: "auto" }, { name: "Viewport", value: "viewport" }, { name: "Page", value: "page" }, { name: "Scan", value: "scan" },
+        ]},
+        { displayName: "Wait for Navigation", name: "waitForNavigation", type: "options", default: "load", options: [
+          { name: "Load", value: "load" }, { name: "DOM Content Loaded", value: "domcontentloaded" },
+          { name: "Network Idle 0", value: "networkidle0" }, { name: "Network Idle 2", value: "networkidle2" },
+        ]},
+      ],
+    },
+
+    {
+      displayName: "Session ID", name: "sessionId", type: "string", default: "={{ $json[\"sessionId\"] }}",
+      displayOptions: { show: { resource: ["file"], operation: ["upload", "load"] } }, required: true,
+    },
+    {
+      displayName: "Window ID", name: "windowId", type: "string", default: "={{ $json[\"windowId\"] }}",
+      displayOptions: { show: { resource: ["file"], operation: ["upload", "load"] } }, required: true,
+    },
+    {
+      displayName: "File Name", name: "fileName", type: "string", required: true,
+      displayOptions: { show: { resource: ["file"], operation: ["upload"] } },
+      description: "Unique name per session",
+    },
+    {
+      displayName: "File Type", name: "fileType", type: "options", default: "customer_upload",
+      displayOptions: { show: { resource: ["file"], operation: ["upload"] } },
+      options: [
+        { name: "Browser Download", value: "browser_download" }, { name: "Screenshot", value: "screenshot" },
+        { name: "Video", value: "video" }, { name: "Customer Upload", value: "customer_upload" },
+      ],
+    },
+    {
+      displayName: "Source", name: "source", type: "options", default: "url",
+      displayOptions: { show: { resource: ["file"], operation: ["upload"] } },
+      options: [{ name: "URL", value: "url" }, { name: "Binary", value: "binary" }],
+    },
+    {
+      displayName: "URL", name: "url", type: "string",
+      displayOptions: { show: { resource: ["file"], operation: ["upload"], source: ["url"] } },
+    },
+    {
+      displayName: "Binary Property", name: "binaryPropertyName", type: "string", default: "data",
+      displayOptions: { show: { resource: ["file"], operation: ["upload"], source: ["binary"] } },
+    },
+    {
+      displayName: "Trigger File Input", name: "triggerFileInputParameter", type: "boolean", default: true,
+      displayOptions: { show: { resource: ["file"], operation: ["upload"] } },
+    },
+    {
+      displayName: "Element Description", name: "elementDescription", type: "string",
+      displayOptions: { show: { resource: ["file"], operation: ["upload"], triggerFileInputParameter: [true] } },
+    },
+    {
+      displayName: "Include Hidden Elements", name: "includeHiddenElements", type: "boolean", default: true,
+      displayOptions: { show: { resource: ["file"], operation: ["upload", "load"] } },
+    },
+    {
+      displayName: "File ID", name: "fileId", type: "string", required: true,
+      displayOptions: { show: { resource: ["file"], operation: ["load", "get", "delete"] } },
+    },
+    {
+      displayName: "Output Binary File", name: "outputBinaryFile", type: "boolean", default: false,
+      displayOptions: { show: { resource: ["file"], operation: ["get"] } },
+    },
+    {
+      displayName: "Return All", name: "returnAll", type: "boolean", default: false,
+      displayOptions: { show: { resource: ["file"], operation: ["getMany"] } },
+    },
+    {
+      displayName: "Limit", name: "limit", type: "number", default: 10,
+      displayOptions: { show: { resource: ["file"], operation: ["getMany"], returnAll: [false] } },
+    },
+    {
+      displayName: "Session IDs", name: "sessionIds", type: "string",
+      displayOptions: { show: { resource: ["file"], operation: ["getMany"] } },
+      description: "Comma-separated session IDs",
+    },
+    {
+      displayName: "Output Single Item", name: "outputSingleItem", type: "boolean", default: true,
+      displayOptions: { show: { resource: ["file"], operation: ["getMany"] } },
+    },
+    {
+      displayName: "Element Description", name: "elementDescription", type: "string",
+      displayOptions: { show: { resource: ["file"], operation: ["load"] } },
+    },
+
+    {
+      displayName: "Session ID", name: "sessionId", type: "string", default: "={{ $json[\"sessionId\"] }}",
+      displayOptions: { show: { resource: ["agent"], operation: ["run"] } }, required: true,
+    },
+    {
+      displayName: "Window ID", name: "windowId", type: "string", default: "={{ $json[\"windowId\"] }}",
+      displayOptions: { show: { resource: ["agent"], operation: ["run"] } }, required: true,
+    },
+    {
+      displayName: "Agent ID", name: "agentId", type: "string", required: true,
+      displayOptions: { show: { resource: ["agent"], operation: ["run"] } },
+      description: "Airtop agent identifier",
+    },
+    {
+      displayName: "Agent Parameters", name: "agentParameters", type: "json",
+      displayOptions: { show: { resource: ["agent"], operation: ["run"] } },
+      description: "JSON parameters for agent",
+    },
+    {
+      displayName: "Await Execution", name: "awaitExecution", type: "boolean", default: true,
+      displayOptions: { show: { resource: ["agent"], operation: ["run"] } },
+    },
+    {
+      displayName: "Timeout (seconds)", name: "timeout", type: "number", default: 600,
+      displayOptions: { show: { resource: ["agent"], operation: ["run"] } },
+    },
+  ],
+};
+
+const LANGCHAIN = "https://docs.n8n.io/integrations/builtin/cluster-nodes/";
+
+export const sentimentAnalysis: INodeTypeDescription = {
+  name: "@n8n/n8n-nodes-langchain.sentimentAnalysis",
+  displayName: "Sentiment Analysis",
+  category: "Transform",
+  group: ["transform"],
+  version: [1, 1.1],
+  defaultVersion: 1.1,
+  description: "Analyzes text sentiment using a language model.",
+  defaults: { name: "Sentiment Analysis" },
+  inputs: ["main"],
+  outputs: ["main"],
+  icon: "Smile",
+  sources: [`${LANGCHAIN}root-nodes/n8n-nodes-langchain.sentimentanalysis/`],
+  properties: [
+    {
+      displayName: "Input Text",
+      name: "inputText",
+      type: "string",
+      default: "={{ $json.text }}",
+      required: true,
+      description: "Expression referencing the text field to analyze.",
+    },
+    {
+      displayName: "Options",
+      name: "options",
+      type: "collection",
+      default: {},
+      options: [
+        {
+          displayName: "Categories",
+          name: "categories",
+          type: "string",
+          default: "Positive, Neutral, Negative",
+          description: "Comma-separated list of sentiment categories for classification.",
+        },
+        {
+          displayName: "System Prompt Template",
+          name: "systemPromptTemplate",
+          type: "string",
+          default: "",
+          description: "Custom system prompt template. Use {categories} placeholder.",
+        },
+        {
+          displayName: "Include Detailed Results",
+          name: "includeDetailedResults",
+          type: "boolean",
+          default: false,
+          description: "When enabled, output includes strength and confidence scores.",
+        },
+        {
+          displayName: "Enable Auto-Fixing",
+          name: "enableAutoFixing",
+          type: "boolean",
+          default: true,
+          description: "When enabled, retry LLM call with schema error context on parse failure.",
+        },
+        {
+          displayName: "Batch Size",
+          name: "batching.batchSize",
+          type: "number",
+          default: 5,
+          description: "Max items to process in parallel.",
+        },
+        {
+          displayName: "Delay Between Batches (ms)",
+          name: "batching.delayBetweenBatches",
+          type: "number",
+          default: 0,
+          description: "Delay between batches for rate limiting.",
+        },
+      ],
+    },
+  ],
+};
+
+export const postgresTool: INodeTypeDescription = {
+  name: "n8n-nodes-base.postgresTool",
+  displayName: "Postgres Tool",
+  category: "Data & Storage",
+  group: ["transform"],
+  version: 2.6,
+  description: "Execute SQL queries, insert, update, upsert, select, or delete PostgreSQL data via AI Tool.",
+  defaults: { name: "Postgres Tool" },
+  inputs: ["main"],
+  outputs: ["main"],
+  icon: "Database",
+  credentials: [{ name: "postgres", required: true, testedBy: "postgresConnectionTest" }],
+  usableAsTool: true,
+  sources: [
+    "https://docs.n8n.io/integrations/builtin/app-nodes/n8n-nodes-base.postgres/",
+    "https://docs.n8n.io/integrations/builtin/credentials/postgres/",
+  ],
+  properties: [
+    {
+      displayName: "Operation",
+      name: "operation",
+      type: "options",
+      default: "insert",
+      noDataExpression: true,
+      options: [
+        { name: "Execute Query", value: "executeQuery", description: "Run a raw SQL query" },
+        { name: "Insert", value: "insert", description: "Insert rows into a table" },
+        { name: "Update", value: "update", description: "Update rows in a table" },
+        { name: "Upsert", value: "upsert", description: "Insert or update rows" },
+        { name: "Select", value: "select", description: "Select rows from a table" },
+        { name: "Delete Table", value: "deleteTable", description: "Delete or truncate a table" },
+      ],
+    },
+    {
+      displayName: "Schema",
+      name: "schema",
+      type: "resourceLocator",
+      default: { mode: "list", value: "public" },
+      required: true,
+      displayOptions: { hide: { operation: ["executeQuery"] } },
+      description: "Schema containing the target table",
+    },
+    {
+      displayName: "Table",
+      name: "table",
+      type: "resourceLocator",
+      default: { mode: "list", value: "" },
+      required: true,
+      displayOptions: { hide: { operation: ["executeQuery"] } },
+      description: "Table to operate on",
+    },
+    {
+      displayName: "Query",
+      name: "query",
+      type: "string",
+      default: "",
+      required: true,
+      displayOptions: { show: { operation: ["executeQuery"] } },
+      description: "SQL query with $1, $2... parameter placeholders",
+      typeOptions: { rows: 5, editor: "sqlEditor" },
+    },
+    {
+      displayName: "Mapping Mode",
+      name: "mappingMode",
+      type: "options",
+      default: "defineBelow",
+      noDataExpression: true,
+      displayOptions: { show: { operation: ["insert", "update", "upsert"] } },
+      options: [
+        { name: "Define Below", value: "defineBelow" },
+        { name: "Auto-Map Input Data", value: "autoMapInputData" },
+      ],
+    },
+    {
+      displayName: "Columns",
+      name: "columns",
+      type: "fixedCollection",
+      default: {},
+      typeOptions: { multipleValues: true },
+      displayOptions: {
+        show: { operation: ["insert", "update", "upsert"], mappingMode: ["defineBelow"] },
+      },
+      options: [
+        {
+          name: "values",
+          displayName: "Column",
+          values: [
+            {
+              displayName: "Column Name",
+              name: "column",
+              type: "string",
+              default: "",
+              placeholder: "id:int",
+              description: "Column name with optional type hint (e.g., id:int)",
+            },
+            {
+              displayName: "Value",
+              name: "value",
+              type: "string",
+              default: "",
+              description: "Column value or expression",
+            },
+          ],
+        },
+      ],
+    },
+    {
+      displayName: "Update Key",
+      name: "updateKey",
+      type: "string",
+      default: "id",
+      displayOptions: { show: { operation: ["update", "upsert"] } },
+      description: "Comma-separated key columns for matching rows",
+    },
+    {
+      displayName: "Return All",
+      name: "returnAll",
+      type: "boolean",
+      default: false,
+      displayOptions: { show: { operation: ["select"] } },
+      description: "Return all matching rows",
+    },
+    {
+      displayName: "Limit",
+      name: "limit",
+      type: "number",
+      default: 50,
+      displayOptions: { show: { operation: ["select"], returnAll: [false] } },
+      description: "Max rows to return",
+    },
+    {
+      displayName: "Where",
+      name: "where",
+      type: "fixedCollection",
+      default: {},
+      typeOptions: { multipleValues: true },
+      displayOptions: { show: { operation: ["select"] } },
+      options: [
+        {
+          name: "values",
+          displayName: "Condition",
+          values: [
+            { displayName: "Column", name: "column", type: "string", default: "" },
+            {
+              displayName: "Condition",
+              name: "condition",
+              type: "options",
+              default: "equal",
+              options: [
+                { name: "Equal", value: "equal" },
+                { name: "Not Equal", value: "notEqual" },
+                { name: "Greater Than", value: ">" },
+                { name: "Less Than", value: "<" },
+                { name: "Greater or Equal", value: ">=" },
+                { name: "Less or Equal", value: "<=" },
+                { name: "Is Null", value: "IS NULL" },
+                { name: "Is Not Null", value: "IS NOT NULL" },
+              ],
+            },
+            { displayName: "Value", name: "value", type: "string", default: "" },
+          ],
+        },
+      ],
+    },
+    {
+      displayName: "Combine Conditions",
+      name: "combineConditions",
+      type: "options",
+      default: "AND",
+      noDataExpression: true,
+      displayOptions: { show: { operation: ["select"] } },
+      options: [
+        { name: "AND", value: "AND" },
+        { name: "OR", value: "OR" },
+      ],
+    },
+    {
+      displayName: "Sort",
+      name: "sort",
+      type: "fixedCollection",
+      default: {},
+      typeOptions: { multipleValues: true },
+      displayOptions: { show: { operation: ["select"] } },
+      options: [
+        {
+          name: "values",
+          displayName: "Sort Field",
+          values: [
+            { displayName: "Column", name: "column", type: "string", default: "" },
+            {
+              displayName: "Direction",
+              name: "direction",
+              type: "options",
+              default: "ASC",
+              options: [
+                { name: "ASC", value: "ASC" },
+                { name: "DESC", value: "DESC" },
+              ],
+            },
+          ],
+        },
+      ],
+    },
+    {
+      displayName: "Delete Command",
+      name: "deleteCommand",
+      type: "options",
+      default: "truncate",
+      displayOptions: { show: { operation: ["deleteTable"] } },
+      options: [
+        { name: "Truncate", value: "truncate" },
+        { name: "Delete", value: "delete" },
+        { name: "Drop", value: "drop" },
+      ],
+    },
+    {
+      displayName: "Restart Sequences",
+      name: "restartSequences",
+      type: "boolean",
+      default: false,
+      displayOptions: { show: { operation: ["deleteTable"], deleteCommand: ["truncate"] } },
+      description: "Reset auto-increment columns",
+    },
+    {
+      displayName: "Where",
+      name: "where",
+      type: "fixedCollection",
+      default: {},
+      typeOptions: { multipleValues: true },
+      displayOptions: { show: { operation: ["deleteTable"], deleteCommand: ["delete"] } },
+      options: [
+        {
+          name: "values",
+          displayName: "Condition",
+          values: [
+            { displayName: "Column", name: "column", type: "string", default: "" },
+            {
+              displayName: "Condition",
+              name: "condition",
+              type: "options",
+              default: "equal",
+              options: [
+                { name: "Equal", value: "equal" },
+                { name: "Not Equal", value: "notEqual" },
+                { name: "Greater Than", value: ">" },
+                { name: "Less Than", value: "<" },
+                { name: "Greater or Equal", value: ">=" },
+                { name: "Less or Equal", value: "<=" },
+                { name: "Is Null", value: "IS NULL" },
+                { name: "Is Not Null", value: "IS NOT NULL" },
+              ],
+            },
+            { displayName: "Value", name: "value", type: "string", default: "" },
+          ],
+        },
+      ],
+    },
+    {
+      displayName: "Combine Conditions",
+      name: "combineConditions",
+      type: "options",
+      default: "AND",
+      noDataExpression: true,
+      displayOptions: { show: { operation: ["deleteTable"], deleteCommand: ["delete"] } },
+      options: [
+        { name: "AND", value: "AND" },
+        { name: "OR", value: "OR" },
+      ],
+    },
+    {
+      displayName: "Options",
+      name: "options",
+      type: "collection",
+      default: {},
+      options: [
+        {
+          displayName: "Connection Timeout",
+          name: "connectionTimeout",
+          type: "number",
+          default: 30,
+          description: "Seconds for DB connection",
+        },
+        {
+          displayName: "Delay Closing Idle Connection",
+          name: "delayClosingIdleConnection",
+          type: "number",
+          default: 0,
+          description: "Seconds before idle connection close",
+        },
+        {
+          displayName: "Query Batching",
+          name: "queryBatching",
+          type: "options",
+          default: "single",
+          noDataExpression: true,
+          options: [
+            { name: "Single", value: "single" },
+            { name: "Independently", value: "independently" },
+            { name: "Transaction", value: "transaction" },
+          ],
+        },
+        {
+          displayName: "Query Parameters",
+          name: "queryParameters",
+          type: "string",
+          default: "",
+          displayOptions: { show: { operation: ["executeQuery"] } },
+          description: "Comma-separated values for $1, $2...",
+        },
+        {
+          displayName: "Output Columns",
+          name: "outputColumns",
+          type: "string",
+          default: "",
+          description: "Columns to return (comma-separated)",
+        },
+        {
+          displayName: "Large Numbers Output",
+          name: "largeNumbersOutput",
+          type: "options",
+          default: "text",
+          options: [
+            { name: "Numbers", value: "numbers" },
+            { name: "Text", value: "text" },
+          ],
+          description: "How to handle NUMERIC/BIGINT values",
+        },
+        {
+          displayName: "Skip on Conflict",
+          name: "skipOnConflict",
+          type: "boolean",
+          default: false,
+          displayOptions: { show: { operation: ["insert"] } },
+          description: "Skip row on unique constraint violation",
+        },
+        {
+          displayName: "Replace Empty Strings",
+          name: "replaceEmptyStrings",
+          type: "boolean",
+          default: false,
+          description: "Convert empty strings to NULL",
+        },
+        {
+          displayName: "Cascade",
+          name: "cascade",
+          type: "boolean",
+          default: false,
+          displayOptions: { show: { operation: ["deleteTable"], deleteCommand: ["truncate", "drop"] } },
+          description: "Drop dependent objects",
+        },
+      ],
+    },
+  ],
+};
+
+export const textSplitterCharacterTextSplitter: INodeTypeDescription = {
+  name: "@n8n/n8n-nodes-langchain.textSplitterCharacterTextSplitter",
+  displayName: "Character Text Splitter",
+  category: "Transform",
+  group: ["transform"],
+  version: 1,
+  description: "Splits text into chunks by a character separator.",
+  defaults: { name: "Character Text Splitter" },
+  inputs: [],
+  outputs: ["ai_textSplitter"],
+  outputNames: ["Text Splitter"],
+  icon: "SeparatorHorizontal",
+  properties: [
+    {
+      displayName: "Separator",
+      name: "separator",
+      type: "string",
+      default: "",
+      description: "Character(s) used to split the document. Empty string splits by individual characters.",
+    },
+    {
+      displayName: "Chunk Size",
+      name: "chunkSize",
+      type: "number",
+      default: 1000,
+      typeOptions: { minValue: 1 },
+      description: "Maximum number of characters per chunk.",
+    },
+    {
+      displayName: "Chunk Overlap",
+      name: "chunkOverlap",
+      type: "number",
+      default: 0,
+      typeOptions: { minValue: 0 },
+      description: "Number of characters shared between consecutive chunks to preserve context.",
+    },
+  ],
+};
+
+export const textSplitterTokenSplitter: INodeTypeDescription = {
+  name: "@n8n/n8n-nodes-langchain.textSplitterTokenSplitter",
+  displayName: "Token Splitter",
+  category: "Transform",
+  group: ["transform"],
+  version: 1,
+  description:
+    "Splits text into chunks by token count using BPE encoding. Converts input to tokens, groups them, and decodes each group back to text.",
+  defaults: { name: "Token Splitter" },
+  inputs: [],
+  outputs: ["ai_textSplitter"],
+  outputNames: ["Text Splitter"],
+  icon: "SeparatorHorizontal",
+  sources: [
+    "https://docs.n8n.io/integrations/builtin/cluster-nodes/sub-nodes/n8n-nodes-langchain.textsplittertokensplitter/",
+  ],
+  properties: [
+    {
+      displayName: "Chunk Size",
+      name: "chunkSize",
+      type: "number",
+      default: 1000,
+      typeOptions: { minValue: 1 },
+      description: "Maximum number of tokens per chunk.",
+    },
+    {
+      displayName: "Chunk Overlap",
+      name: "chunkOverlap",
+      type: "number",
+      default: 0,
+      typeOptions: { minValue: 0 },
+      description: "Number of tokens shared between consecutive chunks to preserve context.",
+    },
+  ],
+};
+
+const SPOTIFY_API = "https://developer.spotify.com/documentation/web-api";
+const SPOTIFY_DOCS = "https://docs.n8n.io/integrations/builtin/app-nodes/n8n-nodes-base.spotify";
+
+export const spotify: INodeTypeDescription = {
+  name: "n8n-nodes-base.spotify",
+  displayName: "Spotify",
+  category: "Input",
+  group: ["input"],
+  version: 1,
+  description: "Consume the Spotify Web API (albums, artists, library, player, playlists, tracks).",
+  defaults: { name: "Spotify" },
+  inputs: ["main"],
+  outputs: ["main"],
+  icon: "Spotify",
+  credentials: [{ name: "spotifyOAuth2Api", required: true }],
+  sources: [SPOTIFY_DOCS, SPOTIFY_API],
+  properties: [
+    {
+      displayName: "Resource",
+      name: "resource",
+      type: "options",
+      default: "player",
+      noDataExpression: true,
+      options: [
+        { name: "Album", value: "album" },
+        { name: "Artist", value: "artist" },
+        { name: "Library", value: "library" },
+        { name: "My Data", value: "myData" },
+        { name: "Player", value: "player" },
+        { name: "Playlist", value: "playlist" },
+        { name: "Track", value: "track" },
+      ],
+    },
+    {
+      displayName: "Operation",
+      name: "operation",
+      type: "options",
+      default: "addSongToQueue",
+      noDataExpression: true,
+      displayOptions: { show: { resource: ["player"] } },
+      options: [
+        { name: "Add Song to Queue", value: "addSongToQueue" },
+        { name: "Currently Playing", value: "currentlyPlaying" },
+        { name: "Next Song", value: "nextSong" },
+        { name: "Pause", value: "pause" },
+        { name: "Previous Song", value: "previousSong" },
+        { name: "Recently Played", value: "recentlyPlayed" },
+        { name: "Resume", value: "resume" },
+        { name: "Set Volume", value: "volume" },
+        { name: "Start Music", value: "startMusic" },
+      ],
+    },
+    {
+      displayName: "Operation",
+      name: "operation",
+      type: "options",
+      default: "get",
+      noDataExpression: true,
+      displayOptions: { show: { resource: ["album"] } },
+      options: [
+        { name: "Get", value: "get" },
+        { name: "Get New Releases", value: "getNewReleases" },
+        { name: "Get Tracks", value: "getTracks" },
+        { name: "Search", value: "search" },
+      ],
+    },
+    {
+      displayName: "Operation",
+      name: "operation",
+      type: "options",
+      default: "get",
+      noDataExpression: true,
+      displayOptions: { show: { resource: ["artist"] } },
+      options: [
+        { name: "Get", value: "get" },
+        { name: "Get Albums", value: "getAlbums" },
+        { name: "Get Related Artists", value: "getRelatedArtists" },
+        { name: "Get Top Tracks", value: "getTopTracks" },
+        { name: "Search", value: "search" },
+      ],
+    },
+    {
+      displayName: "Operation",
+      name: "operation",
+      type: "options",
+      default: "getLikedTracks",
+      noDataExpression: true,
+      displayOptions: { show: { resource: ["library"] } },
+      options: [
+        { name: "Get Liked Tracks", value: "getLikedTracks" },
+      ],
+    },
+    {
+      displayName: "Operation",
+      name: "operation",
+      type: "options",
+      default: "getFollowingArtists",
+      noDataExpression: true,
+      displayOptions: { show: { resource: ["myData"] } },
+      options: [
+        { name: "Get Following Artists", value: "getFollowingArtists" },
+      ],
+    },
+    {
+      displayName: "Operation",
+      name: "operation",
+      type: "options",
+      default: "get",
+      noDataExpression: true,
+      displayOptions: { show: { resource: ["playlist"] } },
+      options: [
+        { name: "Add an Item", value: "add" },
+        { name: "Create a Playlist", value: "create" },
+        { name: "Get", value: "get" },
+        { name: "Get User's Playlists", value: "getUserPlaylists" },
+        { name: "Get Tracks", value: "getTracks" },
+        { name: "Remove an Item", value: "delete" },
+        { name: "Search", value: "search" },
+      ],
+    },
+    {
+      displayName: "Operation",
+      name: "operation",
+      type: "options",
+      default: "get",
+      noDataExpression: true,
+      displayOptions: { show: { resource: ["track"] } },
+      options: [
+        { name: "Get", value: "get" },
+        { name: "Get Audio Features", value: "getAudioFeatures" },
+        { name: "Search", value: "search" },
+      ],
+    },
+    {
+      displayName: "Album / Artist / Playlist ID",
+      name: "id",
+      type: "string",
+      default: "",
+      required: true,
+      displayOptions: {
+        show: {
+          resource: ["album", "artist", "playlist", "track", "player"],
+          operation: [
+            "get", "getTracks", "getAlbums", "getRelatedArtists", "getTopTracks",
+            "add", "delete", "getAudioFeatures",
+            "addSongToQueue", "startMusic",
+          ],
+        },
+      },
+      description: "Spotify URI or Spotify ID",
+    },
+    {
+      displayName: "Query",
+      name: "query",
+      type: "string",
+      default: "",
+      required: true,
+      displayOptions: {
+        show: { resource: ["album", "artist", "playlist", "track"], operation: ["search"] },
+      },
+      description: "Free-text keyword for search",
+    },
+    {
+      displayName: "Name",
+      name: "name",
+      type: "string",
+      default: "",
+      required: true,
+      displayOptions: {
+        show: { resource: ["playlist"], operation: ["create"] },
+      },
+      description: "Name of new playlist",
+    },
+    {
+      displayName: "Track URI or ID",
+      name: "trackID",
+      type: "string",
+      default: "",
+      required: true,
+      displayOptions: {
+        show: { resource: ["playlist"], operation: ["add", "delete"] },
+      },
+      description: "Track URI or ID to add or remove",
+    },
+    {
+      displayName: "Volume (%)",
+      name: "volumePercent",
+      type: "number",
+      default: 50,
+      required: true,
+      displayOptions: {
+        show: { resource: ["player"], operation: ["volume"] },
+      },
+      typeOptions: { minValue: 0, maxValue: 100 },
+      description: "Volume value 0–100",
+    },
+    {
+      displayName: "Country",
+      name: "country",
+      type: "string",
+      default: "US",
+      required: true,
+      displayOptions: {
+        show: { resource: ["artist"], operation: ["getTopTracks"] },
+      },
+      description: "Country code (ISO 3166-1 alpha-2)",
+    },
+    {
+      displayName: "Return All",
+      name: "returnAll",
+      type: "boolean",
+      default: false,
+      description: "When false, obey limit",
+      displayOptions: {
+        show: { resource: ["album", "artist", "playlist", "track"], operation: ["search"] },
+      },
+    },
+    {
+      displayName: "Limit",
+      name: "limit",
+      type: "number",
+      default: 50,
+      displayOptions: {
+        show: { resource: ["album", "artist", "playlist", "track"], operation: ["search"] },
+        hide: { returnAll: [true] },
+      },
+      typeOptions: { minValue: 1 },
+      description: "Max items per page",
+    },
+    {
+      displayName: "Additional Fields",
+      name: "additionalFields",
+      type: "collection",
+      default: {},
+      placeholder: "Add Field",
+      displayOptions: {
+        show: { resource: ["playlist"], operation: ["create", "add"] },
+      },
+      options: [
+        {
+          displayName: "Description",
+          name: "description",
+          type: "string",
+          default: "",
+          description: "Playlist description",
+        },
+        {
+          displayName: "Public",
+          name: "public",
+          type: "boolean",
+          default: true,
+          description: "Whether the playlist is publicly accessible",
+        },
+        {
+          displayName: "Position",
+          name: "position",
+          type: "number",
+          default: 0,
+          description: "Insertion position for the added track",
+        },
+      ],
+    },
+    {
+      displayName: "Filters",
+      name: "filters",
+      type: "collection",
+      default: {},
+      placeholder: "Add Filter",
+      displayOptions: {
+        show: {
+          resource: ["album"],
+          operation: ["getNewReleases", "search"],
+        },
+      },
+      options: [
+        {
+          displayName: "Country",
+          name: "country",
+          type: "options",
+          default: "US",
+          description: "Country code",
+          options: [
+            { name: "US", value: "US" },
+            { name: "GB", value: "GB" },
+            { name: "DE", value: "DE" },
+            { name: "JP", value: "JP" },
+          ],
+        },
+        {
+          displayName: "Market",
+          name: "market",
+          type: "options",
+          default: "",
+          description: "ISO 3166-1 alpha-2 country code for market filter",
+          options: [
+            { name: "None", value: "" },
+            { name: "US", value: "US" },
+            { name: "GB", value: "GB" },
+            { name: "DE", value: "DE" },
+            { name: "JP", value: "JP" },
+          ],
+        },
+      ],
+    },
+  ],
+};
+
+const SUPABASE_DOCS = "https://docs.n8n.io/integrations/builtin/app-nodes/n8n-nodes-base.supabase/";
+
+export const supabaseTool: INodeTypeDescription = {
+  name: "n8n-nodes-base.supabaseTool",
+  displayName: "Supabase Tool",
+  category: "Data & Storage",
+  group: ["transform"],
+  version: 1,
+  description: "Read, create, update, and delete data from Supabase",
+  defaults: { name: "Supabase" },
+  inputs: ["main"],
+  outputs: ["main"],
+  icon: "Database",
+  credentials: [{ name: "supabaseApi", required: true }],
+  sources: [SUPABASE_DOCS],
+  properties: [
+    {
+      displayName: "Resource",
+      name: "resource",
+      type: "options",
+      default: "row",
+      noDataExpression: true,
+      options: [{ name: "Row", value: "row" }],
+    },
+    {
+      displayName: "Operation",
+      name: "operation",
+      type: "options",
+      default: "create",
+      noDataExpression: true,
+      displayOptions: { show: { resource: ["row"] } },
+      options: [
+        { name: "Create", value: "create" },
+        { name: "Delete", value: "delete" },
+        { name: "Get", value: "get" },
+        { name: "Get All", value: "getAll" },
+        { name: "Update", value: "update" },
+      ],
+    },
+    {
+      displayName: "Table Name",
+      name: "tableId",
+      type: "string",
+      default: "",
+      required: true,
+      displayOptions: { show: { resource: ["row"] } },
+    },
+    {
+      displayName: "Use Custom Schema",
+      name: "useCustomSchema",
+      type: "boolean",
+      default: false,
+      noDataExpression: true,
+    },
+    {
+      displayName: "Schema",
+      name: "schema",
+      type: "string",
+      default: "public",
+      displayOptions: { show: { useCustomSchema: [true] } },
+    },
+    {
+      displayName: "Data to Send",
+      name: "dataToSend",
+      type: "options",
+      default: "defineBelow",
+      displayOptions: { show: { resource: ["row"], operation: ["create", "update"] } },
+      options: [
+        { name: "Auto-Map Input Data", value: "autoMapInputData" },
+        { name: "Define Below", value: "defineBelow" },
+      ],
+    },
+    {
+      displayName: "Inputs to Ignore",
+      name: "inputsToIgnore",
+      type: "string",
+      default: "",
+      displayOptions: { show: { resource: ["row"], operation: ["create", "update"], dataToSend: ["autoMapInputData"] } },
+    },
+    {
+      displayName: "Fields",
+      name: "fieldsUi",
+      type: "fixedCollection",
+      default: {},
+      typeOptions: { multipleValues: true },
+      displayOptions: { show: { resource: ["row"], operation: ["create", "update"], dataToSend: ["defineBelow"] } },
+      options: [
+        {
+          name: "fieldValues",
+          displayName: "Field",
+          values: [
+            { displayName: "Column Name", name: "fieldId", type: "string", default: "" },
+            { displayName: "Value", name: "fieldValue", type: "string", default: "" },
+          ],
+        },
+      ],
+    },
+    {
+      displayName: "Return All",
+      name: "returnAll",
+      type: "boolean",
+      default: false,
+      noDataExpression: true,
+      displayOptions: { show: { resource: ["row"], operation: ["getAll"] } },
+    },
+    {
+      displayName: "Limit",
+      name: "limit",
+      type: "number",
+      default: 50,
+      typeOptions: { minValue: 1 },
+      displayOptions: { show: { resource: ["row"], operation: ["getAll"], returnAll: [false] } },
+    },
+    {
+      displayName: "Filter Type",
+      name: "filterType",
+      type: "options",
+      default: "none",
+      displayOptions: { show: { resource: ["row"], operation: ["getAll"] } },
+      options: [
+        { name: "None", value: "none" },
+        { name: "Manual", value: "manual" },
+        { name: "String", value: "string" },
+      ],
+    },
+    {
+      displayName: "Filter Type",
+      name: "filterType",
+      type: "options",
+      default: "manual",
+      displayOptions: { show: { resource: ["row"], operation: ["update", "delete"] } },
+      options: [
+        { name: "Manual", value: "manual" },
+        { name: "String", value: "string" },
+      ],
+    },
+    {
+      displayName: "Match Type",
+      name: "matchType",
+      type: "options",
+      default: "anyFilter",
+      displayOptions: { show: { resource: ["row"], operation: ["getAll", "update", "delete"], filterType: ["manual"] } },
+      options: [
+        { name: "Any Filter (OR)", value: "anyFilter" },
+        { name: "All Filters (AND)", value: "allFilters" },
+      ],
+    },
+    {
+      displayName: "Filters",
+      name: "filters",
+      type: "fixedCollection",
+      default: {},
+      typeOptions: { multipleValues: true },
+      displayOptions: { show: { resource: ["row"], operation: ["get"], filterType: ["manual"] } },
+      options: [
+        {
+          name: "conditions",
+          displayName: "Condition",
+          values: [
+            { displayName: "Field Name", name: "keyName", type: "string", default: "" },
+            { displayName: "Value", name: "keyValue", type: "string", default: "" },
+          ],
+        },
+      ],
+    },
+    {
+      displayName: "Filters",
+      name: "filters",
+      type: "fixedCollection",
+      default: {},
+      typeOptions: { multipleValues: true },
+      displayOptions: { show: { resource: ["row"], operation: ["getAll", "update", "delete"], filterType: ["manual"] } },
+      options: [
+        {
+          name: "conditions",
+          displayName: "Condition",
+          values: [
+            { displayName: "Field Name", name: "keyName", type: "string", default: "" },
+            {
+              displayName: "Condition",
+              name: "condition",
+              type: "options",
+              default: "eq",
+              options: [
+                { name: "Equals", value: "eq" },
+                { name: "Not Equals", value: "neq" },
+                { name: "Greater Than", value: "gt" },
+                { name: "Greater Than or Equal", value: "gte" },
+                { name: "Less Than", value: "lt" },
+                { name: "Less Than or Equal", value: "lte" },
+                { name: "LIKE", value: "like" },
+                { name: "ILIKE", value: "ilike" },
+                { name: "Is", value: "is" },
+                { name: "Full-Text", value: "fullText" },
+              ],
+            },
+            { displayName: "Value", name: "keyValue", type: "string", default: "" },
+          ],
+        },
+      ],
+    },
+    {
+      displayName: "Filter String",
+      name: "filterString",
+      type: "string",
+      default: "",
+      placeholder: "name=eq.jhon",
+      displayOptions: { show: { resource: ["row"], operation: ["getAll", "update", "delete"], filterType: ["string"] } },
     },
   ],
 };

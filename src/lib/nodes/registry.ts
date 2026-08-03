@@ -6,7 +6,7 @@ import {
   registerDescription,
 } from "@/lib/engine/node-runtime";
 import * as definitions from "./definitions";
-import { manualTrigger, formTrigger, googleSheetsTrigger } from "./definitions/triggers";
+import { manualTrigger, formTrigger, googleSheetsTrigger, typeformTrigger } from "./definitions/triggers";
 import { code, stickyNote } from "./definitions/core";
 import { xml, openAiApp } from "./definitions/transform";
 import { form } from "./definitions/helpers";
@@ -41,6 +41,7 @@ const ALIAS_PAIRS: Array<[string, string]> = [
   ["CSV", googleSheetsTrigger.name],
   ["Spreadsheet", googleSheetsTrigger.name],
   ["GS", googleSheetsTrigger.name],
+  ["Form", typeformTrigger.name],
 ];
 
 let descriptionsSeeded = false;

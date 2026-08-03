@@ -607,6 +607,11 @@ export const BUILTIN_EXECUTOR_MODULES: Array<{
     exportName: "embeddingsCohereExecutor",
   },
   {
+    type: "@n8n/n8n-nodes-langchain.anthropic",
+    modulePath: "./executors/n8n-nodes-langchain.anthropic",
+    exportName: "anthropicExecutor",
+  },
+  {
     type: "@n8n/n8n-nodes-langchain.embeddingsGoogleGemini",
     modulePath: "./executors/embeddings-google-gemini",
     exportName: "embeddingsGoogleGeminiExecutor",
@@ -627,6 +632,16 @@ export const BUILTIN_EXECUTOR_MODULES: Array<{
     exportName: "notionExecutor",
   },
   {
+    type: "n8n-nodes-base.notionTool",
+    modulePath: "./executors/n8n-nodes-base.notionTool",
+    exportName: "notionToolExecutor",
+  },
+  {
+    type: "n8n-nodes-base.googleDriveTool",
+    modulePath: "./executors/n8n-nodes-base.googleDriveTool",
+    exportName: "googleDriveToolExecutor",
+  },
+  {
     type: "n8n-nodes-base.whatsApp",
     modulePath: "./executors/n8n-nodes-base.whatsApp",
     exportName: "whatsAppExecutor",
@@ -635,6 +650,11 @@ export const BUILTIN_EXECUTOR_MODULES: Array<{
     type: "n8n-nodes-base.telegram",
     modulePath: "./executors/telegram",
     exportName: "telegramExecutor",
+  },
+  {
+    type: "n8n-nodes-base.telegramTool",
+    modulePath: "./executors/n8n-nodes-base.telegramTool",
+    exportName: "telegramToolExecutor",
   },
   {
     type: "n8n-nodes-base.webflow",
@@ -720,6 +740,11 @@ export const BUILTIN_EXECUTOR_MODULES: Array<{
     type: "n8n-nodes-base.supabase",
     modulePath: "./executors/supabase",
     exportName: "supabaseExecutor",
+  },
+  {
+    type: "n8n-nodes-base.supabaseTool",
+    modulePath: "./executors/SupabaseTool",
+    exportName: "supabaseToolExecutor",
   },
   {
     type: "n8n-nodes-base.facebookGraphApi",
@@ -1247,6 +1272,11 @@ export const BUILTIN_EXECUTOR_MODULES: Array<{
     exportName: "toolSearXngExecutor",
   },
   {
+    type: "@n8n/n8n-nodes-langchain.toolWikipedia",
+    modulePath: "./executors/toolWikipedia",
+    exportName: "toolWikipediaExecutor",
+  },
+  {
     type: "@n8n/n8n-nodes-langchain.toolWolframAlpha",
     modulePath: "./executors/tool-wolfram-alpha",
     exportName: "toolWolframAlphaExecutor",
@@ -1392,9 +1422,19 @@ export const BUILTIN_EXECUTOR_MODULES: Array<{
     exportName: "vectorStoreQdrantExecutor",
   },
   {
+    type: "@n8n/n8n-nodes-langchain.vectorStorePGVector",
+    modulePath: "./executors/vectorStorePGVector",
+    exportName: "vectorStorePGVectorExecutor",
+  },
+  {
     type: "@n8n/n8n-nodes-langchain.memoryPostgresChat",
     modulePath: "./executors/memory-postgres-chat",
     exportName: "memoryPostgresChatExecutor",
+  },
+  {
+    type: "@n8n/n8n-nodes-langchain.memoryRedisChat",
+    modulePath: "./executors/memory-redis-chat",
+    exportName: "memoryRedisChatExecutor",
   },
   {
     type: "@n8n/n8n-nodes-langchain.toolHttpRequest",
@@ -1440,6 +1480,161 @@ export const BUILTIN_EXECUTOR_MODULES: Array<{
     type: "n8n-nodes-base.airtableTool",
     modulePath: "./executors/n8n-nodes-base.airtableTool",
     exportName: "airtableToolExecutor",
+  },
+  {
+    type: "n8n-nodes-base.airtop",
+    modulePath: "./executors/n8n-nodes-base.airtop",
+    exportName: "airtopExecutor",
+  },
+  {
+    type: "n8n-nodes-base.shopifyTrigger",
+    modulePath: "./executors/n8n-nodes-base.shopifyTrigger",
+    exportName: "shopifyTriggerExecutor",
+  },
+  {
+    type: "@n8n/n8n-nodes-langchain.sentimentAnalysis",
+    modulePath: "./executors/sentimentAnalysis",
+    exportName: "sentimentAnalysisExecutor",
+  },
+  {
+    type: "@n8n/n8n-nodes-langchain.chat",
+    modulePath: "./executors/n8n-nodes-langchain.chat",
+    exportName: "n8nNodesLangchainChatExecutor",
+  },
+  {
+    type: "n8n-nodes-base.postgresTool",
+    modulePath: "./executors/PostgresTool",
+    exportName: "postgresToolExecutor",
+  },
+  {
+    type: "n8n-nodes-base.typeformTrigger",
+    modulePath: "./executors/n8n-nodes-base.typeformTrigger",
+    exportName: "typeformTriggerExecutor",
+  },
+  {
+    type: "n8n-nodes-base.slackTool",
+    modulePath: "./executors/n8n-nodes-base.slackTool",
+    exportName: "slackToolExecutor",
+  },
+  {
+    type: "@n8n/n8n-nodes-langchain.rerankerCohere",
+    modulePath: "./executors/reranker-cohere",
+    exportName: "rerankerCohereExecutor",
+  },
+  {
+    type: "n8n-nodes-base.airtableTrigger",
+    modulePath: "./executors/n8n-nodes-base.airtableTrigger",
+    exportName: "airtableTriggerExecutor",
+  },
+  {
+    type: "@n8n/n8n-nodes-langchain.textSplitterCharacterTextSplitter",
+    modulePath: "./executors/textSplitterCharacterTextSplitter",
+    exportName: "textSplitterCharacterTextSplitterExecutor",
+  },
+  {
+    type: "n8n-nodes-base.googleCalendarTrigger",
+    modulePath: "./executors/google-calendar-trigger",
+    exportName: "googleCalendarTriggerExecutor",
+  },
+  {
+    type: "n8n-nodes-base.dataTableTool",
+    modulePath: "./executors/n8n-nodes-base.dataTableTool",
+    exportName: "dataTableToolExecutor",
+  },
+  {
+    type: "n8n-nodes-base.hunter",
+    modulePath: "./executors/n8n-nodes-base.hunter",
+    exportName: "hunterExecutor",
+  },
+  {
+    type: "n8n-nodes-base.notionTrigger",
+    modulePath: "./executors/n8n-nodes-base.notionTrigger",
+    exportName: "notionTriggerExecutor",
+  },
+  {
+    type: "n8n-nodes-base.calendlyTrigger",
+    modulePath: "./executors/n8n-nodes-base.calendlyTrigger",
+    exportName: "calendlyTriggerExecutor",
+  },
+  {
+    type: "@n8n/n8n-nodes-langchain.textSplitterTokenSplitter",
+    modulePath: "./executors/textSplitterTokenSplitter",
+    exportName: "textSplitterTokenSplitterExecutor",
+  },
+  {
+    type: "@n8n/n8n-nodes-langchain.lmOllama",
+    modulePath: "./executors/lm-ollama",
+    exportName: "lmOllamaExecutor",
+  },
+  {
+    type: "n8n-nodes-base.microsoftOutlookTrigger",
+    modulePath: "./executors/microsoft-outlook-trigger",
+    exportName: "microsoftOutlookTriggerExecutor",
+  },
+  {
+    type: "n8n-nodes-base.openWeatherMap",
+    modulePath: "./executors/n8n-nodes-base.openWeatherMap",
+    exportName: "openWeatherMapExecutor",
+  },
+  {
+    type: "n8n-nodes-base.htmlExtract",
+    modulePath: "./executors/htmlExtract",
+    exportName: "htmlExtractExecutor",
+  },
+  {
+    type: "@n8n/n8n-nodes-langchain.lmChatXAiGrok",
+    modulePath: "./executors/lm-chat-xai-grok",
+    exportName: "lmChatXAiGrokExecutor",
+  },
+  {
+    type: "@n8n/n8n-nodes-langchain.embeddingsOllama",
+    modulePath: "./executors/embeddings-ollama",
+    exportName: "embeddingsOllamaExecutor",
+  },
+  {
+    type: "n8n-nodes-base.spotify",
+    modulePath: "./executors/spotify",
+    exportName: "spotifyExecutor",
+  },
+  {
+    type: "n8n-nodes-base.wooCommerceTrigger",
+    modulePath: "./executors/n8n-nodes-base.wooCommerceTrigger",
+    exportName: "wooCommerceTriggerExecutor",
+  },
+  {
+    type: "n8n-nodes-base.clearbit",
+    modulePath: "./executors/n8n-nodes-base.clearbit",
+    exportName: "clearbitExecutor",
+  },
+  {
+    type: "n8n-nodes-base.deepL",
+    modulePath: "./executors/deepL",
+    exportName: "deepLExecutor",
+  },
+  {
+    type: "n8n-nodes-base.zoom",
+    modulePath: "./executors/n8n-nodes-base.zoom",
+    exportName: "zoomExecutor",
+  },
+  {
+    type: "n8n-nodes-base.twilioTrigger",
+    modulePath: "./executors/n8n-nodes-base.twilioTrigger",
+    exportName: "twilioTriggerExecutor",
+  },
+  {
+    type: "n8n-nodes-base.apiTemplateIo",
+    modulePath: "./executors/ApiTemplateIoExecutor",
+    exportName: "apiTemplateIoExecutor",
+  },
+  {
+    type: "n8n-nodes-base.jinaAi",
+    modulePath: "./executors/n8n-nodes-base.jinaAi",
+    exportName: "jinaAiExecutor",
+  },
+  {
+    type: "n8n-nodes-base.mistralAi",
+    modulePath: "./executors/n8n-nodes-base.mistralAi",
+    exportName: "mistralAiExecutor",
   },
 ];
 

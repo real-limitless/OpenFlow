@@ -6,14 +6,14 @@ import { evaluateExpression } from "../../expressions/evaluate";
 // Minimal HTML parser + CSS selector engine
 // ---------------------------------------------------------------------------
 
-interface HtmlElement {
+export interface HtmlElement {
   tag: string;
   attributes: Record<string, string>;
   children: HtmlNode[];
   parentNode: HtmlElement | null;
 }
 
-interface HtmlTextNode {
+export interface HtmlTextNode {
   type: "text";
   text: string;
   parentNode: HtmlElement | null;
@@ -62,7 +62,7 @@ function parseAttributes(attrStr: string): Record<string, string> {
   return attrs;
 }
 
-function parseHtml(html: string): HtmlElement {
+export function parseHtml(html: string): HtmlElement {
   const root: HtmlElement = {
     tag: "#document",
     attributes: {},
@@ -196,7 +196,7 @@ function queryDescendants(root: HtmlElement, compounds: CompoundSelector[]): Htm
   return matched;
 }
 
-function querySelectorAll(root: HtmlElement, selector: string): HtmlElement[] {
+export function querySelectorAll(root: HtmlElement, selector: string): HtmlElement[] {
   const groups = selector
     .split(",")
     .map((s) => s.trim())
@@ -220,7 +220,7 @@ function querySelectorAll(root: HtmlElement, selector: string): HtmlElement[] {
 
 // --- Extraction helpers ---
 
-function getTextContent(element: HtmlElement, skipSelectors: string): string {
+export function getTextContent(element: HtmlElement, skipSelectors: string): string {
   const skipSet = skipSelectors
     ? new Set(querySelectorAll(element, skipSelectors))
     : new Set<HtmlElement>();
@@ -241,7 +241,7 @@ function getTextContent(element: HtmlElement, skipSelectors: string): string {
   return decodeEntities(text);
 }
 
-function getInnerHTML(element: HtmlElement): string {
+export function getInnerHTML(element: HtmlElement): string {
   let html = "";
   for (const child of element.children) {
     if ("type" in child && child.type === "text") {
@@ -261,18 +261,18 @@ function serializeElement(element: HtmlElement): string {
   return `<${element.tag}${attrs}>${getInnerHTML(element)}</${element.tag}>`;
 }
 
-function getElementValue(element: HtmlElement): string | undefined {
+export function getElementValue(element: HtmlElement): string | undefined {
   if (element.tag === "textarea") return getTextContent(element, "");
   return element.attributes["value"];
 }
 
 // --- Text cleanup ---
 
-function trimValue(s: string): string {
+export function trimValue(s: string): string {
   return s.replace(/^[\s\n]+|[\s\n]+$/g, "");
 }
 
-function cleanUpTextFn(s: string): string {
+export function cleanUpTextFn(s: string): string {
   return s
     .replace(/^[\s\n]+|[\s\n]+$/g, "")
     .replace(/[\n\r]/g, " ")

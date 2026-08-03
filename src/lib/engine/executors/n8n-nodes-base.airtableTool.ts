@@ -4,6 +4,23 @@ import { ensureItems } from "@/sdk";
 const API_BASE = "https://api.airtable.com/v0";
 const META_BASE = "https://api.airtable.com/v0/meta";
 
+function resolveValue(raw: unknown, itemJson: Record<string, unknown>): unknown {
+  if (typeof raw !== "string") return raw;
+  if (raw.startsWith("=") || /\{\{[\s\S]*?\}\}/.test(raw)) {
+    return itemJson[raw.replace(/^={{?\s*/, "").replace(/\s*}}?$/, "").trim()];
+  }
+  return raw;
+}
+
+function resolveResourceLocator(raw: unknown, itemJson: Record<string, unknown>): string {
+  const resolved = resolveValue(raw, itemJson);
+  if (typeof resolved === "string") return resolved;
+  if (resolved && typeof resolved === "object" && "value" in resolved) {
+    return String((resolved as Record<string, unknown>).value ?? "");
+  }
+  return String(resolved ?? "");
+}
+
 function asObj(body: unknown): Record<string, unknown> {
   if (body && typeof body === "object" && !Array.isArray(body)) {
     return body as Record<string, unknown>;
@@ -59,12 +76,9 @@ async function airtableRequest(
 }
 
 async function authHeaders(ctx: ExecutionContext, authentication: string): Promise<Record<string, string>> {
-  const credName =
-    authentication === "airtableOAuth2Api" ? "airtableOAuth2Api" : "airtableTokenApi";
+  const credName = authentication === "airtableOAuth2Api" ? "airtableOAuth2Api" : "airtableTokenApi";
   const cred = await ctx.getCredential(credName);
-  const token = cred
-    ? String(cred.accessToken ?? cred.apiKey ?? cred.token ?? "")
-    : "";
+  const token = cred ? String(cred.accessToken ?? cred.apiKey ?? cred.token ?? "") : "";
   if (!token) {
     throw new Error(`Airtable: ${credName} credential is not configured`);
   }
@@ -83,17 +97,9 @@ function getOptions(node: INode): Record<string, unknown> {
   return {};
 }
 
-function buildFields(
-  node: INode,
-  itemJson: Record<string, unknown>,
-  opts?: { stripId?: boolean },
-): Record<string, unknown> {
+function buildFields(node: INode, itemJson: Record<string, unknown>): Record<string, unknown> {
   const columns = node.parameters.columns as
-    | {
-        mappingMode?: string;
-        value?: Record<string, unknown> | null;
-        matchingColumns?: string[];
-      }
+    | { mappingMode?: string; value?: Record<string, unknown> | null; matchingColumns?: string[] }
     | undefined;
   const mode = columns?.mappingMode ?? "defineBelow";
   const options = getOptions(node);
@@ -108,24 +114,19 @@ function buildFields(
       }
     }
   } else if (columns?.value && typeof columns.value === "object") {
-    for (const [k, v] of Object.entries(columns.value)) {
-      fields[k] = v;
+    const valArr = Array.isArray(columns.value) ? columns.value : [];
+    for (const entry of valArr) {
+      const e = entry as Record<string, unknown>;
+      const name = String(e.fieldName ?? "");
+      const rawValue = e.fieldValue;
+      if (name) {
+        fields[name] = resolveValue(rawValue, itemJson);
+      }
     }
   }
 
-  if (opts?.stripId !== false) {
-    delete fields.id;
-  }
+  delete fields.id;
   return fields;
-}
-
-function resolveResourceLocator(raw: unknown, itemJson: Record<string, unknown>): string {
-  if (typeof raw === "string") return raw;
-  if (raw && typeof raw === "object" && "value" in raw) {
-    const v = (raw as Record<string, unknown>).value;
-    return String(v ?? "");
-  }
-  return String(raw ?? "");
 }
 
 function encodeQuery(params: Record<string, string | string[] | undefined>): string {
@@ -168,6 +169,68 @@ async function recordCreate(
   return obj;
 }
 
+async function recordGet(
+  node: INode,
+  itemJson: Record<string, unknown>,
+  headers: Record<string, string>,
+): Promise<Record<string, unknown>> {
+  const base = resolveResourceLocator(node.parameters.base, itemJson);
+  const table = resolveResourceLocator(node.parameters.table, itemJson);
+  const id = String(resolveValue(node.parameters.id, itemJson) ?? "");
+  if (!base || !table) throw new Error("Airtable: base and table are required");
+  if (!id) throw new Error("Airtable: id is required");
+
+  const url = `${API_BASE}/${encodeURIComponent(base)}/${encodeURIComponent(table)}/${encodeURIComponent(id)}`;
+  const res = await airtableRequest("GET", url, headers);
+  if (res.status < 200 || res.status >= 300) throw processAirtableError(res.body, res.status, id);
+  return asObj(res.body);
+}
+
+async function recordSearch(
+  node: INode,
+  itemJson: Record<string, unknown>,
+  headers: Record<string, string>,
+): Promise<Record<string, unknown>[]> {
+  const base = resolveResourceLocator(node.parameters.base, itemJson);
+  const table = resolveResourceLocator(node.parameters.table, itemJson);
+  if (!base || !table) throw new Error("Airtable: base and table are required");
+
+  const returnAll = node.parameters.returnAll !== false;
+  const limit = Math.min(Number(node.parameters.limit ?? 100), 100);
+  const filterByFormula = String(resolveValue(node.parameters.filterByFormula, itemJson) ?? "");
+  const options = getOptions(node);
+
+  const basePath = `${API_BASE}/${encodeURIComponent(base)}/${encodeURIComponent(table)}`;
+  const all: Record<string, unknown>[] = [];
+  let offset: string | undefined;
+
+  for (;;) {
+    const params: Record<string, string | string[] | undefined> = {};
+    if (filterByFormula) params.filterByFormula = filterByFormula;
+    if (!returnAll) {
+      params.maxRecords = String(limit);
+      params.pageSize = String(Math.min(limit, 100));
+    } else {
+      params.pageSize = "100";
+    }
+    if (offset) params.offset = offset;
+
+    const qs = encodeQuery(params);
+    const res = await airtableRequest("GET", `${basePath}${qs}`, headers);
+    if (res.status < 200 || res.status >= 300) throw processAirtableError(res.body, res.status);
+
+    const obj = asObj(res.body);
+    const records = Array.isArray(obj.records) ? (obj.records as Record<string, unknown>[]) : [];
+    all.push(...records);
+
+    if (!returnAll) break;
+    offset = typeof obj.offset === "string" ? obj.offset : undefined;
+    if (!offset) break;
+  }
+
+  return all;
+}
+
 async function recordUpsert(
   node: INode,
   itemJson: Record<string, unknown>,
@@ -184,16 +247,9 @@ async function recordUpsert(
   const options = getOptions(node);
   const typecast = options.typecast === true;
 
-  const fieldsWithId = buildFields(node, itemJson, { stripId: false });
-  const recordId =
-    typeof fieldsWithId.id === "string"
-      ? fieldsWithId.id
-      : matchingColumns.includes("id") && typeof itemJson.id === "string"
-        ? itemJson.id
-        : "";
+  const fieldsWithId = buildFields(node, itemJson);
+  const recordId = typeof itemJson.id === "string" ? itemJson.id : "";
   const fields = { ...fieldsWithId };
-  delete fields.id;
-
   const url = `${API_BASE}/${encodeURIComponent(base)}/${encodeURIComponent(table)}`;
 
   if (recordId) {
@@ -230,7 +286,7 @@ async function recordDelete(
 ): Promise<Record<string, unknown>> {
   const base = resolveResourceLocator(node.parameters.base, itemJson);
   const table = resolveResourceLocator(node.parameters.table, itemJson);
-  const id = String(node.parameters.id ?? "");
+  const id = String(resolveValue(node.parameters.id, itemJson) ?? "");
   if (!base || !table) throw new Error("Airtable: base and table are required");
   if (!id) throw new Error("Airtable: id is required");
 
@@ -240,128 +296,40 @@ async function recordDelete(
   return asObj(res.body);
 }
 
-async function recordGet(
+async function recordUpdate(
   node: INode,
   itemJson: Record<string, unknown>,
   headers: Record<string, string>,
 ): Promise<Record<string, unknown>> {
   const base = resolveResourceLocator(node.parameters.base, itemJson);
   const table = resolveResourceLocator(node.parameters.table, itemJson);
-  const id = String(node.parameters.id ?? "");
   if (!base || !table) throw new Error("Airtable: base and table are required");
-  if (!id) throw new Error("Airtable: id is required");
 
-  const url = `${API_BASE}/${encodeURIComponent(base)}/${encodeURIComponent(table)}/${encodeURIComponent(id)}`;
-  const res = await airtableRequest("GET", url, headers);
-  if (res.status < 200 || res.status >= 300) throw processAirtableError(res.body, res.status, id);
+  const fieldsWithId = buildFields(node, itemJson);
+  const recordId = typeof itemJson.id === "string" ? itemJson.id : String(resolveValue(node.parameters.id, itemJson) ?? "");
+  const fields = { ...fieldsWithId };
+  const url = `${API_BASE}/${encodeURIComponent(base)}/${encodeURIComponent(table)}`;
+
+  if (!recordId) throw new Error("Airtable: record id is required for update");
+
+  const options = getOptions(node);
+  const typecast = options.typecast === true;
+  const body: Record<string, unknown> = { records: [{ id: recordId, fields }] };
+  if (typecast) body.typecast = true;
+  const res = await airtableRequest("PATCH", url, headers, body);
+  if (res.status < 200 || res.status >= 300) {
+    throw processAirtableError(res.body, res.status, recordId);
+  }
   return asObj(res.body);
 }
 
-async function recordSearch(
-  node: INode,
-  itemJson: Record<string, unknown>,
-  headers: Record<string, string>,
-): Promise<Record<string, unknown>[]> {
-  const base = resolveResourceLocator(node.parameters.base, itemJson);
-  const table = resolveResourceLocator(node.parameters.table, itemJson);
-  if (!base || !table) throw new Error("Airtable: base and table are required");
-
-  const returnAll = node.parameters.returnAll === true;
-  const limit = Math.min(Number(node.parameters.limit ?? 100), 100);
-  const filterByFormula = String(node.parameters.filterByFormula ?? "");
-  const options = getOptions(node);
-
-  const sort = node.parameters.sort as
-    | { property?: Array<{ field?: string; direction?: string }> }
-    | undefined;
-  const sortProps = sort?.property ?? [];
-
-  const view =
-    resolveResourceLocator(options.view ?? node.parameters.view, itemJson) || undefined;
-
-  let fieldsParam: string[] | undefined;
-  const fieldsOpt = options.fields;
-  if (Array.isArray(fieldsOpt)) {
-    fieldsParam = fieldsOpt.map(String);
-  }
-
-  const basePath = `${API_BASE}/${encodeURIComponent(base)}/${encodeURIComponent(table)}`;
-  const all: Record<string, unknown>[] = [];
-  let offset: string | undefined;
-
-  for (;;) {
-    const params: Record<string, string | string[] | undefined> = {};
-    if (filterByFormula) params.filterByFormula = filterByFormula;
-    if (view) params.view = view;
-    if (fieldsParam?.length) {
-      for (let i = 0; i < fieldsParam.length; i++) {
-        params[`fields[${i}]`] = fieldsParam[i];
-      }
-    }
-    for (let i = 0; i < sortProps.length; i++) {
-      const s = sortProps[i];
-      if (!s?.field) continue;
-      params[`sort[${i}][field]`] = String(s.field);
-      params[`sort[${i}][direction]`] = s.direction === "desc" ? "desc" : "asc";
-    }
-    if (!returnAll) {
-      params.maxRecords = String(limit);
-      params.pageSize = String(Math.min(limit, 100));
-    } else {
-      params.pageSize = "100";
-    }
-    if (offset) params.offset = offset;
-
-    const qs = encodeQuery(params);
-    const res = await airtableRequest("GET", `${basePath}${qs}`, headers);
-    if (res.status < 200 || res.status >= 300) throw processAirtableError(res.body, res.status);
-
-    const obj = asObj(res.body);
-    const records = Array.isArray(obj.records)
-      ? (obj.records as Record<string, unknown>[])
-      : [];
-    all.push(...records);
-
-    if (!returnAll) break;
-    offset = typeof obj.offset === "string" ? obj.offset : undefined;
-    if (!offset) break;
-  }
-
-  return all;
-}
-
 async function baseGetMany(
-  node: INode,
-  itemJson: Record<string, unknown>,
   headers: Record<string, string>,
 ): Promise<Record<string, unknown>[]> {
-  const returnAll = node.parameters.returnAll === true;
-  const limit = Math.min(Number(node.parameters.limit ?? 100), 100);
-  const options = getOptions(node);
-  const permissionLevels = Array.isArray(options.permissionLevel)
-    ? (options.permissionLevel as string[])
-    : undefined;
-
-  const all: Record<string, unknown>[] = [];
-  let offset: string | undefined;
-
-  for (;;) {
-    const qs = encodeQuery({ offset });
-    const res = await airtableRequest("GET", `${META_BASE}/bases${qs}`, headers);
-    if (res.status < 200 || res.status >= 300) throw processAirtableError(res.body, res.status);
-    const obj = asObj(res.body);
-    const bases = Array.isArray(obj.bases) ? (obj.bases as Record<string, unknown>[]) : [];
-    all.push(...bases);
-    offset = typeof obj.offset === "string" ? obj.offset : undefined;
-    if (!returnAll || !offset) break;
-  }
-
-  let filtered = all;
-  if (permissionLevels?.length) {
-    filtered = all.filter((b) => permissionLevels.includes(String(b.permissionLevel ?? "")));
-  }
-  if (!returnAll) return filtered.slice(0, limit);
-  return filtered;
+  const res = await airtableRequest("GET", `${META_BASE}/bases`, headers);
+  if (res.status < 200 || res.status >= 300) throw processAirtableError(res.body, res.status);
+  const obj = asObj(res.body);
+  return Array.isArray(obj.bases) ? (obj.bases as Record<string, unknown>[]) : [];
 }
 
 async function baseGetSchema(
@@ -389,7 +357,7 @@ async function runOperation(
   headers: Record<string, string>,
 ): Promise<Record<string, unknown>[]> {
   if (resource === "base") {
-    if (operation === "getMany") return baseGetMany(node, itemJson, headers);
+    if (operation === "getMany") return baseGetMany(headers);
     if (operation === "getSchema") return baseGetSchema(node, itemJson, headers);
     throw new Error(`Airtable: unsupported base operation "${operation}"`);
   }
@@ -417,40 +385,11 @@ async function runOperation(
   }
 }
 
-async function recordUpdate(
-  node: INode,
-  itemJson: Record<string, unknown>,
-  headers: Record<string, string>,
-): Promise<Record<string, unknown>> {
-  const base = resolveResourceLocator(node.parameters.base, itemJson);
-  const table = resolveResourceLocator(node.parameters.table, itemJson);
-  if (!base || !table) throw new Error("Airtable: base and table are required");
-
-  const fields = buildFields(node, itemJson);
-  const options = getOptions(node);
-  const typecast = options.typecast === true;
-  const recordId = String(node.parameters.id ?? "");
-
-  if (!recordId) throw new Error("Airtable: record id is required for update");
-
-  const url = `${API_BASE}/${encodeURIComponent(base)}/${encodeURIComponent(table)}`;
-  const body: Record<string, unknown> = { records: [{ id: recordId, fields }] };
-  if (typecast) body.typecast = true;
-
-  const res = await airtableRequest("PATCH", url, headers, body);
-  if (res.status < 200 || res.status >= 300) {
-    throw processAirtableError(res.body, res.status, recordId);
-  }
-  return asObj(res.body);
-}
-
 export const airtableToolExecutor: NodeExecutor = async (ctx, node) => {
   const items = ensureItems(ctx.getInputItems(0));
   const out: INodeExecutionData[] = [];
   const resource = String(node.parameters.resource ?? "record");
-  const operation = String(
-    node.parameters.operation ?? (resource === "base" ? "getMany" : "get"),
-  );
+  const operation = String(node.parameters.operation ?? (resource === "base" ? "getMany" : "get"));
   const authentication = String(node.parameters.authentication ?? "airtableTokenApi");
   const continueOnFail = ctx.continueOnFail();
   const headers = await authHeaders(ctx, authentication);
@@ -467,11 +406,7 @@ export const airtableToolExecutor: NodeExecutor = async (ctx, node) => {
     } catch (err) {
       if (!continueOnFail) throw err;
       const message = err instanceof Error ? err.message : String(err);
-      if (operation === "delete" || operation === "get") {
-        out.push({ json: { error: message }, pairedItem });
-      } else {
-        out.push({ json: { message, error: message }, pairedItem });
-      }
+      out.push({ json: { error: message }, pairedItem });
     }
   }
 

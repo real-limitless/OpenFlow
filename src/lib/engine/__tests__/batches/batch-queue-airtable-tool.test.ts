@@ -126,7 +126,7 @@ describe("batch-queue airtableTool — n8n-nodes-base.airtableTool", () => {
     expect(hasExecutor(TYPE)).toBe(true);
     expect(getExecutor(TYPE)).toBeDefined();
     expect(getNodeType(TYPE).placeholder).not.toBe(true);
-    expect(getNodeType(TYPE).displayName).toBe("Airtable (AI Tool)");
+    expect(getNodeType(TYPE).displayName).toBe("Airtable");
   });
 
   it("record.create — creates record with auto-mapped fields", async () => {

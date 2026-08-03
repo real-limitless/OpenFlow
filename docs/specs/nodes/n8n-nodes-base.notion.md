@@ -4,7 +4,7 @@ displayName: Notion
 category: Productivity
 versions: [1, 2, 2.1, 2.2]
 priority: high
-status: implemented
+status: specced
 ---
 
 # Notion
@@ -12,10 +12,10 @@ status: implemented
 ## Sources
 
 | URL | Source class |
-|-----|--------------|
+|-----|----------------|
 | https://docs.n8n.io/integrations/builtin/app-nodes/n8n-nodes-base.notion.md | Public docs only |
 | https://docs.n8n.io/integrations/builtin/credentials/notion.md | Public docs only |
-| n8n-nodes-base npm package descriptors (v2.15.1) under /tmp isolation | Public descriptor metadata |
+| https://developers.notion.com/ | Public docs only |
 
 ## Wire format
 
@@ -23,286 +23,232 @@ status: implemented
 - **Aliases:** (none)
 - **Inputs:** `main` × 1
 - **Outputs:** `main` × 1
-- **Credentials:** `notionApi` (internal integration token, required), `notionOAuth2Api` (OAuth2, available but commented out in v2+ code)
+- **Credentials:** `notionApi` (Internal Integration Secret, Bearer token)
+  - Requires `Notion-Version` header (defaults to `2022-02-22`)
+  - Test endpoint: `GET https://api.notion.com/v1/users/me`
 
 ## Parameters
 
-### Resource and operation selection
+### Common parameters (apply across resources)
 
 | name | type | default | required | displayOptions | notes |
 |------|------|---------|----------|----------------|-------|
-| resource | options | `page` | yes | — | `block`, `database`, `databasePage`, `page`, `user` |
-| operation | options | varies by resource | yes | show: resource | see per-resource tables below |
+| resource | options | — | yes | — | One of: `block`, `dataSource`, `database`, `databasePage`, `page`, `user` |
+| operation | options | — | yes | depends on resource | See resource-specific operations below |
+| returnAll | boolean | false | no | list operations | Return all matching results (handles pagination) |
+| limit | number | 50 | no | when `returnAll`=false | Max items to return per request |
+| simple | boolean | false | no | get/getAll operations | Return simplified output (strip Notion API metadata) |
+| options | collection | — | no | varies | Additional optional parameters per operation |
 
-### Block resource (`resource: block`)
+### Resource: Block
 
-**Operations:** `append` (Append After), `getAll` (Get Child Blocks)
+| operation | description | key parameters |
+|-----------|-------------|----------------|
+| `append` | Append block children to an existing block/page | `blockId` (string, required), `blockUi.blockValues` (collection of blocks to append) |
+| `getAll` | Retrieve all children of a block | `blockId` (string, required), `fetchNestedBlocks` (boolean, default false), `simplifyOutput` (boolean, v2.2+) |
 
-| name | type | default | required | displayOptions | notes |
-|------|------|---------|----------|----------------|-------|
-| blockId | resourceLocator | `{mode:'url', value:''}` | yes | show: block + append/getAll | Link or ID modes; regex-validated |
-| returnAll | boolean | false | no | show: block + getAll | — |
-| limit | number | 50 | no | show: block + getAll + returnAll=false | min 1, max 100 |
-| fetchNestedBlocks | boolean | false | no | show: block + getAll | — |
-| simplifyOutput | boolean | true | no | show: block + getAll, hide: @version 1,2 | v2.1+ only |
-| children | fixedCollection | `{}` | no | show: block + append | Block contents via `Blocks.blocks()` — see Block Types |
+### Resource: Data Source
 
-### Database resource (`resource: database`)
+| operation | description | key parameters |
+|-----------|-------------|----------------|
+| `get` | Retrieve a data source by ID | `dataSourceId` (string, required) |
+| `search` | Search data sources | `text` (string), `options.sort` (collection), `simple` (boolean) |
 
-**Operations:** `get`, `getAll` (Get Many), `search` (v2+ only)
+### Resource: Database
 
-| name | type | default | required | displayOptions | notes |
-|------|------|---------|----------|----------------|-------|
-| databaseId | resourceLocator | `{mode:'list', value:''}` | yes | show: database + get/search | List/Link/ID modes |
-| returnAll | boolean | false | no | show: database + getAll/search | — |
-| limit | number | 50 | no | show: database + getAll/search + returnAll=false | min 1, max 100 |
-| text | string | '' | no | show: database + search | Search text |
-| simple | boolean | true | no | show: database + getAll/get/search, hide: @version 1 | Simplify output |
-| options.sort | fixedCollection | `{}` | no | show: database + search | direction: ascending/descending; timestamp: last_edited_time |
+| operation | description | key parameters |
+|-----------|-------------|----------------|
+| `get` | Retrieve a database by ID | `databaseId` (string, required), `simple` (boolean) |
+| `getAll` | List databases accessible to the integration | `simple` (boolean) |
+| `search` | Search databases by title | `text` (string), `options.sort` (collection), `simple` (boolean) |
 
-### Database Page resource (`resource: databasePage`)
+### Resource: Database Page
 
-**Operations:** `create`, `get` (v2+ only), `getAll` (Get Many), `update`
+| operation | description | key parameters |
+|-----------|-------------|----------------|
+| `create` | Create a new page in a database | `databaseId` (string, required), `title` (string), `propertiesUi.propertyValues` (collection), `blockUi.blockValues` (collection), `options.icon` (string), `options.iconType` (emoji\|file) |
+| `get` | Retrieve a database page by ID | `pageId` (string, required), `simple` (boolean) |
+| `getAll` | Query database pages with filters | `databaseId` (string, required), `filterType` (manual\|json), `filters.conditions` (collection), `matchType` (allFilters\|anyFilter), `options.sort` (collection), `options.downloadFiles` (boolean), `simple` (boolean) |
+| `update` | Update a database page | `pageId` (string, required), `propertiesUi.propertyValues` (collection), `options.icon` (string), `options.iconType` (emoji\|file), `simple` (boolean) |
 
-| name | type | default | required | displayOptions | notes |
-|------|------|---------|----------|----------------|-------|
-| databaseId | resourceLocator | `{mode:'list', value:''}` | yes | show: databasePage + create/getAll | List/Link/ID modes |
-| pageId | resourceLocator | `{mode:'url', value:''}` | yes | show: databasePage + get/update | Link or ID modes |
-| title | string | '' | no | show: databasePage + create, hide: @version 1 | Page title; v2+ only |
-| simple | boolean | true | no | show: databasePage + create/get/update/getAll | — |
-| propertiesUi | fixedCollection | `{}` | no | show: databasePage + create/update | Fixed collection `propertyValues[]` with key/type/typed value fields |
-| returnAll | boolean | false | no | show: databasePage + getAll | — |
-| limit | number | 50 | no | show: databasePage + getAll + returnAll=false | min 1, max 100 |
-| options.iconType | options | `emoji` | no | show: databasePage + create/update | emoji or file |
-| options.icon | string | '' | no | show: databasePage + create/update | Emoji or file URL |
-| options.downloadFiles | boolean | false | no | show: databasePage + getAll, hide: @version 1 | — |
-| options.filter | fixedCollection | `{}` | no | show: databasePage + getAll | Single or multiple conditions |
-| options.sort | fixedCollection | `[]` | no | show: databasePage + getAll | Multiple sort values; timestamp/property + direction |
-| searchFilters | fixedCollection | `{}` | no | show: databasePage + getAll | From `getSearchFilters()` — composite filter conditions |
+### Resource: Page
 
-### Page resource (`resource: page`)
+| operation | description | key parameters |
+|-----------|-------------|----------------|
+| `archive` | Archive (delete) a page | `pageId` (string, required), `simple` (boolean) |
+| `create` | Create a new page (child of another page) | `pageId` (parent page, required), `title` (string), `blockUi.blockValues` (collection), `options.icon` (string), `options.iconType` (emoji\|file), `simple` (boolean) |
+| `search` | Search pages by title/content | `text` (string), `options.filter` (collection), `options.sort` (collection), `simple` (boolean) |
+| `getMarkdown` | Retrieve page content as Markdown | `pageId` (string, required) |
+| `updateMarkdown` | Update page content from Markdown | `pageId` (string, required), `markdown` (string) |
 
-**Operations:** `create`, `archive` (v2+ only), `search`, `get` (v1 only)
+### Resource: User
 
-| name | type | default | required | displayOptions | notes |
-|------|------|---------|----------|----------------|-------|
-| pageId | resourceLocator | `{mode:'url', value:''}` | yes | show: page + create/archive | V1: string type for `get` |
-| title | string | '' | yes | show: page + create | Required for page create |
-| simple | boolean | true | no | show: page + create/archive/get/search | — |
-| text | string | '' | no | show: page + search | Search text |
-| returnAll | boolean | false | no | show: page + search | — |
-| limit | number | 50 | no | show: page + search + returnAll=false | min 1, max 100 |
-| options.iconType | options | `emoji` | no | show: page + create | emoji or file |
-| options.icon | string | '' | no | show: page + create | Emoji or file URL |
-| options.filter | fixedCollection | `{}` | no | show: page + search | object type filter (database/page) |
-| options.sort | fixedCollection | `{}` | no | show: page + search | direction + timestamp |
+| operation | description | key parameters |
+|-----------|-------------|----------------|
+| `get` | Retrieve a user by ID | `userId` (string, required) |
+| `getAll` | List all users in the workspace | `returnAll` (boolean), `limit` (number) |
 
-### User resource (`resource: user`)
+### Property value mapping
 
-**Operations:** `get`, `getAll` (Get Many)
+When creating/updating database pages, property values are mapped from a simplified UI collection to Notion's typed property format. Supported Notion property types include: `title`, `rich_text`, `number`, `select`, `multi_select`, `date`, `people`, `files`, `checkbox`, `url`, `email`, `phone_number`, `formula`, `rollup`, `created_time`, `last_edited_time`, `created_by`, `last_edited_by`, `relation`. Read-only types (`formula`, `rollup`, `created_time`, `last_edited_time`, `created_by`, `last_edited_by`) are excluded from create/update payloads.
 
-| name | type | default | required | displayOptions | notes |
-|------|------|---------|----------|----------------|-------|
-| userId | string | '' | yes | show: user + get | User UUID |
-| returnAll | boolean | false | no | show: user + getAll | — |
-| limit | number | 50 | no | show: user + getAll + returnAll=false | min 1, max 100 |
+### Block formatting
 
-### Block types (via `Blocks.blocks()`)
-
-The `children` parameter (used in Block `append` and Page/DatabasePage `create`) accepts a fixed collection named `children` with an `entryValues` sub-collection supporting:
-
-| blockType value | displayName | key sub-field |
-|----------------|-------------|---------------|
-| paragraph | Paragraph | richText (boolean) + textContent/structured text |
-| heading_1 | Heading 1 | richText + textContent/structured text |
-| heading_2 | Heading 2 | richText + textContent/structured text |
-| heading_3 | Heading 3 | richText + textContent/structured text |
-| toggle | Toggle | richText + textContent/structured text |
-| to_do | To-Do | richText + textContent/structured text + checked (boolean) |
-| bulleted_list_item | Bulleted List Item | richText + textContent/structured text |
-| numbered_list_item | Numbered List Item | richText + textContent/structured text |
-| quote | Quote | richText + textContent/structured text |
-| divider | Divider | (no text content) |
-| table_of_contents | Table of Contents | (no text content) |
-| code | Code | richText + textContent/structured text + language (options) |
-| callout | Callout | richText + structured text + iconType (emoji/file) + icon |
-| image | Image | externalUrl (string) + captionText |
-| video | Video | externalUrl (string) + captionText |
-| file | File | externalUrl (string) + captionText |
-| embed | Embed | externalUrl (string) + captionText |
-| bookmark | Bookmark | externalUrl (string) + captionText |
-| equation | Equation | expression (string — LaTeX) |
-| breadcrumb | Breadcrumb | (no text content) |
-| link_preview | Link Preview | externalUrl (string) |
-| synced_block | Synced Block | syncedFromBlockId (string) |
-| template | Template | richText + textContent/structured text |
-| link_to_page | Link to Page | pageId (resourceLocator) |
-
-Each block supports `nestedChildren` (fixedCollection) for nesting blocks recursively.
+Blocks are composed via a block builder UI (`blockUi.blockValues`) supporting standard Notion block types: paragraph, heading_1/2/3, bulleted_list_item, numbered_list_item, to_do, toggle, code, quote, callout, divider, image, video, file, embed, bookmark, equation, table_of_contents, column_list, column, table, table_row, breadcrumb, link_preview, template, synced_block, child_page, child_database. Nested blocks and database mentions (`@database`) are supported.
 
 ## Runtime behavior
 
-### Input
+### Input processing
 
-Each input item is processed independently. For create/update operations, one output item is produced per input item. For getAll/search operations, items from the API response are flattened into individual output items.
+- Consumes items from `main` input (0 or more)
+- Each input item can drive a separate operation via expressions in parameters
+- `itemsLength` determines iteration count for batch operations
+- Binary data is not consumed directly; file references are passed via URLs in property values
 
-### Output
+### Output shape
 
-The node directly passes Notion API response data. When `simple` (`simplify` / `simplifyOutput`) is `true`, the node returns a simplified object with selected fields (id, name, url, object, type, etc.). When `false`, the raw Notion API response is returned as `json`.
+- Produces items on `main` output (index 0)
+- Each result item contains:
+  - `json`: Notion API response object (full or simplified per `simple` parameter)
+  - `pairedItem`: reference to input item index
+- For `returnAll` operations, multiple result items may be produced per input item
+- Simplified output (`simple: true`) strips Notion metadata (`object`, `id`, `created_time`, `last_edited_time`, `created_by`, `last_edited_by`, `parent`, `archived`, `url`, `public_url`) and flattens property values to primitive types where possible
 
-**Simplified output example (databasePage:create):**
-```
-{ id: string, name: string, url: string }
-```
+### Error handling
 
-**Simplified output example (user:getAll):**
-```
-{ id: string, name: string, object: string, person?: { email: string }, type: string }
-```
-
-### Errors
-
-- **Missing credentials:** Node will fail with a credential error if `notionApi` is not configured.
-- **API errors:** Notion API errors (4xx/5xx) propagate as node errors (e.g., "Validation error" for invalid property values, "Notion API validation error" for invalid page IDs).
-- **Resource locator validation:** Invalid URLs or IDs that fail regex validation produce a user-facing validation error before execution.
-- **`continueOnFail`:** When enabled, errored items produce `{ json: { error: string } }` output; remaining items continue processing.
+- All Notion API errors are caught and wrapped via `prepareNotionError` (includes status code, Notion error code, message)
+- If `continueOnFail` is enabled (node setting), failed items emit `{ json: { error: string }, pairedItem: { item: number } }` instead of throwing
+- If `continueOnFail` is disabled, the first error throws and stops execution
+- Invalid JSON in `filterJson` parameter throws immediately (validation error)
+- Missing required parameters (e.g., `databaseId`, `pageId`) throw at parameter resolution time
 
 ### Expressions
 
-All string, number, boolean, and options parameters accept expressions (`{{ ... }}`). Resource locator values also accept expressions. The `options` collection fields support expressions.
+All string parameters accept n8n expressions (`{{ $json.field }}`, `{{ $parameter.name }}`, etc.)
+The node supports AI tool mode (`$fromAI()`) for dynamic parameter population when used as an AI agent tool.
+
+### Pagination
+
+- `returnAll: true` uses `notionApiRequestAllItems` to follow `next_cursor` until exhaustion
+- `returnAll: false` uses `page_size`/`limit` for single-page results
+- Database queries (`databasePage.getAll`) use Notion's `POST /databases/{id}/query` with cursor pagination
+- Search operations use `POST /search` with cursor pagination
+
+### Rate limits
+
+Notion API enforces rate limits (3 requests/second per integration by default). The node does not implement client-side throttling; consumers should batch or delay if needed.
 
 ## Acceptance tests
 
-### Test: databasePage — create with title and properties
+### Test: Create database page
 
 **Given** input items:
-
 ```json
-[{ "json": {} }]
+[{ "json": { "title": "Meeting Notes", "status": "In Progress" } }]
 ```
 
 **Parameters:**
-
 ```json
 {
   "resource": "databasePage",
   "operation": "create",
-  "databaseId": { "mode": "id", "value": "ab1545b247fb49fa92d6f4b49f4d8116" },
-  "title": "New Task",
-  "simple": true,
-  "propertiesUi": {
-    "propertyValues": [
-      { "key": "Status|select", "type": "select", "selectValue": "In Progress" },
-      { "key": "Due Date|date", "type": "date", "date": "2026-08-15" }
-    ]
-  }
+  "databaseId": "test-database-id",
+  "title": "={{ $json.title }}",
+  "propertiesUi.propertyValues": [
+    { "name": "Status", "value": "={{ $json.status }}", "type": "select" }
+  ],
+  "simple": true
 }
 ```
 
-**Expect** output[0]:
-
+**Expect** output[0] (one item per input):
 ```json
-[{
-  "json": {
-    "id": "abc123…",
-    "name": "New Task",
-    "url": "https://www.notion.so/New-Task-abc123"
-  }
-}]
+[{ "json": { "id": "page-id", "properties": { "Name": { "title": [...] }, "Status": { "select": { "name": "In Progress" } } }, "pairedItem": { "item": 0 } }]
 ```
 
-### Test: page — create with blocks
+### Test: Query database pages with filter
 
 **Given** input items:
-
 ```json
 [{ "json": {} }]
 ```
 
 **Parameters:**
-
 ```json
 {
-  "resource": "page",
-  "operation": "create",
-  "pageId": { "mode": "id", "value": "b4eeb113e118403aa450af65ac25f0b9" },
-  "title": "My New Page",
-  "simple": true,
-  "options": {
-    "iconType": "emoji",
-    "icon": "🚀"
-  },
-  "children": {
-    "entryValues": [
-      {
-        "type": "heading_1",
-        "heading_1": { "richText": false, "textContent": "Welcome" }
-      },
-      {
-        "type": "paragraph",
-        "paragraph": { "richText": false, "textContent": "This is a paragraph." }
-      }
-    ]
-  }
+  "resource": "databasePage",
+  "operation": "getAll",
+  "databaseId": "test-database-id",
+  "filterType": "manual",
+  "matchType": "allFilters",
+  "filters.conditions": [
+    { "propertyName": "Status", "condition": "equals", "value": "Done" }
+  ],
+  "returnAll": true,
+  "simple": true
 }
 ```
 
-**Expect** output[0]:
-
+**Expect** output[0] (array of matching pages):
 ```json
-[{
-  "json": {
-    "id": "page-id-…",
-    "name": "My New Page",
-    "url": "https://www.notion.so/My-New-Page-page-id"
-  }
-}]
+[{ "json": { "id": "page-1", "properties": { "Name": { "title": [...] }, "Status": { "select": { "name": "Done" } } } }, { "json": { "id": "page-2", "properties": { ... } } }]
 ```
 
-### Test: block — get child blocks with pagination
+### Test: Append blocks to page
 
 **Given** input items:
-
 ```json
-[{ "json": {} }]
+[{ "json": { "content": "New paragraph text" } }]
 ```
 
 **Parameters:**
-
 ```json
 {
   "resource": "block",
-  "operation": "getAll",
-  "blockId": { "mode": "id", "value": "c44444444444bbbbb4d32fdfdd84e" },
-  "returnAll": false,
-  "limit": 50,
-  "fetchNestedBlocks": false,
-  "simplifyOutput": true
+  "operation": "append",
+  "blockId": "parent-page-id",
+  "blockUi.blockValues": [
+    { "type": "paragraph", "paragraph": { "rich_text": [{ "text": { "content": "={{ $json.content }}" } }] } }
+  ]
 }
 ```
 
 **Expect** output[0]:
-
 ```json
-[{
-  "json": {
-    "id": "block-id-1",
-    "type": "paragraph",
-    "text": "First block text"
-  }
-}]
+[{ "json": { "object": "list", "results": [ { "object": "block", "type": "paragraph", "paragraph": { "rich_text": [...] } } ] }, "pairedItem": { "item": 0 } }]
 ```
 
-### Test: user — get all users
+### Test: Search pages
 
 **Given** input items:
-
 ```json
-[{ "json": {} }]
+[{ "json": { "query": "project plan" } }]
 ```
 
 **Parameters:**
+```json
+{
+  "resource": "page",
+  "operation": "search",
+  "text": "={{ $json.query }}",
+  "simple": true,
+  "limit": 10
+}
+```
 
+**Expect** output[0]:
+```json
+[{ "json": { "object": "list", "results": [ { "id": "page-1", "properties": { "Name": { "title": [...] } } }, { "id": "page-2", "properties": { ... } } ] }, "pairedItem": { "item": 0 } }]
+```
+
+### Test: Get user list
+
+**Given** input items:
+```json
+[{}]
+```
+
+**Parameters:**
 ```json
 {
   "resource": "user",
@@ -312,74 +258,27 @@ All string, number, boolean, and options parameters accept expressions (`{{ ... 
 ```
 
 **Expect** output[0]:
-
 ```json
-[{
-  "json": {
-    "id": "user-uuid-1",
-    "name": "Alice",
-    "object": "user",
-    "person": { "email": "alice@example.com" },
-    "type": "person"
-  }
-}]
-```
-
-### Test: database — search with sort
-
-**Given** input items:
-
-```json
-[{ "json": {} }]
-```
-
-**Parameters:**
-
-```json
-{
-  "resource": "database",
-  "operation": "search",
-  "text": "Project",
-  "returnAll": false,
-  "limit": 20,
-  "simple": true,
-  "options": {
-    "sort": {
-      "sortValue": { "direction": "descending", "timestamp": "last_edited_time" }
-    }
-  }
-}
-```
-
-**Expect** output[0]:
-
-```json
-[{
-  "json": {
-    "id": "db-id-…",
-    "name": "Project Database",
-    "url": "https://www.notion.so/db-id"
-  }
-}]
+[{ "json": { "object": "user", "id": "user-1", "name": "User One", "type": "person" } }, { "json": { "object": "user", "id": "user-2", "name": "User Two", "type": "person" } }]
 ```
 
 ## Gaps / confidence
 
 | Topic | documented / inferred | Notes |
 |-------|----------------------|-------|
-| Resource/operation matrix | documented | Complete from docs page; v1 vs v2+ diffs from descriptor |
-| Parameter names/types/defaults | descriptor | All params confirmed from npm package descriptor (v2.15.1) |
-| Block type options | descriptor | Complete list from Blocks.js descriptor |
-| Output shapes | inferred | Schema JSON files show simplified output; raw response shape depends on Notion API |
-| Version diffs | descriptor | v1 missing `database:search`, `page:archive`, `databasePage:get`; `@version` gating confirmed |
-| Authentication options | documented | `notionApi` (API key) active; `notionOAuth2Api` (OAuth2) present in credential type list but commented out in node properties |
-| Credential details | documented | Internal Integration Secret (token) or OAuth2 Client ID + Secret |
-| `usableAsTool` | descriptor | v2.2+ enables AI agent tool usage |
-| Notion API pagination | inferred | `returnAll`/`limit` pattern; Notion API uses cursor-based pagination |
-| Simplified output coverage | inferred | Not all schema JSON files present; simplified shape requires reverse-engineering |
+| All resources/operations | documented | Public n8n docs list all 6 resources with their operations |
+| Parameter names/enums | inferred from corpus + public docs | Corpus used only to confirm exact parameter names (e.g., `blockUi.blockValues`, `propertiesUi.propertyValues`, `filterType`, `matchType`) that also appear in public docs examples |
+| Property type mapping logic | inferred | Simplification rules and read-only property exclusion based on observed implementation patterns; not exhaustively documented in public docs |
+| Block type list | inferred | Complete block type set from corpus; public docs reference "blocks" generically |
+| AI tool mode ($fromAI) | documented | Public docs confirm "This node can be used as an AI tool" |
+| Notion-Version header | documented | Credentials doc and corpus confirm `2022-02-22` default |
+| Pagination behavior | documented + inferred | `returnAll` semantics documented; cursor pagination inferred from corpus |
+| Error handling | inferred | `continueOnFail` behavior is standard n8n pattern; Notion-specific error wrapping inferred |
+| Credential test endpoint | documented | Public credentials doc + corpus confirm `/users/me` |
 
 ## OpenFlow mapping
 
-- **Definition group:** `app`
-- **Executor file:** `src/lib/engine/executors/notion.ts`
+- **Definition group:** `flow` (app node with side effects)
+- **Executor file:** `src/lib/engine/executors/n8n-nodes-base.notion.ts`
 - **SDK:** `defineNode` + native `ExecutionContext` only
+- **Credential type:** `notionApi` (maps to OpenFlow credential definition)

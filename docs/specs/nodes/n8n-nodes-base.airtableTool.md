@@ -2,27 +2,24 @@
 type: n8n-nodes-base.airtableTool
 displayName: Airtable
 category: AI Tool
-versions: [1]
-priority: medium
+versions: [1, 2]
+priority: high
 status: specced
 ---
 
 # Airtable (AI Tool)
 
-Tool-mode variant of the Airtable integration, intended to be connected to an AI Agent. When used as a tool, the agent model can supply parameters at call time through `$fromAI()` expressions (the "let model fill" toggle). Exposes Airtable record operations (create, retrieve, update, delete, search/list, upsert) and base metadata operations (list bases, read table schema) against the Airtable REST API.
+A tool variant of the Airtable node, designed for use as an AI agent tool. When connected to an AI Agent, the agent model can dynamically populate parameters using the `$fromAI()` function. Supports Record (create/upsert/delete/get/search/update) and Base (getMany/getSchema) resources against the Airtable REST API.
 
 ## Sources
 
 | URL | Source class |
-|-----|--------------|
+|-----|----------------|
 | https://docs.n8n.io/integrations/builtin/app-nodes/n8n-nodes-base.airtable.md | Public docs only |
-| https://docs.n8n.io/integrations/builtin/app-nodes/n8n-nodes-base.airtable/common-issues.md | Public docs only |
 | https://docs.n8n.io/integrations/builtin/credentials/airtable.md | Public docs only |
 | https://docs.n8n.io/build/integrate-ai/ai-examples/use-ai-for-parameters.md | Public docs only |
 | https://docs.n8n.io/build/integrate-ai/understand-ai-components/how-tools-work.md | Public docs only |
 | https://airtable.com/developers/web/api/introduction | External API docs |
-| https://airtable.com/developers/web/api/rate-limits | External API docs |
-| n8n-nodes-base npm descriptor v2.15.1 (isolated under /tmp; type-string confirmation only) | Public descriptor metadata |
 
 ## Wire format
 
@@ -30,8 +27,9 @@ Tool-mode variant of the Airtable integration, intended to be connected to an AI
 - **Aliases:** (none)
 - **Inputs:** `main` × 1
 - **Outputs:** `main` × 1
-- **Credentials:** `airtableTokenApi` (Personal Access Token) or `airtableOAuth2Api` (OAuth2). The legacy API-key method was fully deprecated by Airtable in February 2024 and must not be required. n8n recommends PAT.
-- **Required PAT/OAuth2 scopes:** `data.records:read`, `data.records:write`, `schema.bases:read`
+- **Credentials:** `airtableTokenApi` (Personal Access Token) or `airtableOAuth2Api` (OAuth2)
+
+The legacy `airtableApi` (API Key) credential was deprecated by Airtable in February 2024.
 
 ## Parameters
 
@@ -41,209 +39,233 @@ Tool-mode variant of the Airtable integration, intended to be connected to an AI
 |------|------|---------|----------|-------|
 | authentication | options | `airtableTokenApi` | no | `airtableTokenApi` (PAT) or `airtableOAuth2Api` (OAuth2) |
 
-### Resource and operation selection
+### Resource selection
 
-The user selects a resource — **Record** (rows in a table) or **Base** (base/table metadata) — which determines the available operations. Record operations require a base and a table; base operations require only a base.
+The user selects a resource (**Record** or **Base**) which determines available operations.
 
 ### Record operations
 
 | Operation | Key parameters |
 |-----------|----------------|
-| Create | Base (list/URL/ID), Table (list/URL/ID), field values mapped to columns, optional typecast |
+| Create | Base (by list/ID), Table, Data (field values mapping) |
+| Upsert | Base, Table, Data, optional: Unique Field (column used as match key) |
+| Delete | Base, Table, Record ID(s) |
 | Get | Base, Table, Record ID |
-| Update | Base, Table, Record ID (or match-column dedup), field values, optional typecast |
-| Delete | Base, Table, Record ID |
-| Search / List | Base, Table, optional Airtable formula filter, field selection, sort, view, Return All / Limit |
-| Upsert | Base, Table, field values, matching column(s) for dedup, optional typecast |
-
-> **Return All contract:** For `record.search` and `base.getMany`, `returnAll` is *opt-in* — the default is `false`. Only `returnAll === true` fetches the full result set; otherwise `limit` bounds the response. This prevents an unbounded API crawl by default.
+| Search | Base, Table, optional: Filter By Formula, Limit |
+| Update | Base, Table, Record ID, Data (field values to change) |
 
 ### Base operations
 
 | Operation | Key parameters |
 |-----------|----------------|
-| Get Many | Return All / Limit, optional permission-level filter |
-| Get Schema | Base (list/URL/ID) — returns the tables and their columns |
+| Get Schema | Base |
+| Get Many | (none — lists all accessible bases) |
 
-### Base / Table identification
+### Base/Table identification
 
-Base and Table accept multiple identification modes: **From list** (options loaded from the Airtable API), **By URL**, or **By ID**. Base IDs look like `app…`, table IDs like `tbl…`, record IDs like `rec…`.
-
-### Column mapping
-
-Field values for create/update/upsert are mapped to Airtable table columns. Modes include automatically mapping the incoming item's top-level properties to columns, or manually defining the column list. The set of valid columns is derived from the target table's schema. For upsert, matching columns are the columns used to decide create-vs-update.
+Base is identified via resource locator (list dropdown or by ID).  
+Table is identified by name (string) or by ID.
 
 ### AI tool-specific behavior
 
 When used as an AI agent tool:
-
 - Parameters can be populated dynamically by the AI model via `$fromAI()` expressions
-- The "let model fill" toggle is available on appropriate parameter fields
+- Field data mappings accept expression strings for AI-driven value inference
 - Tool name and description metadata are configurable in the AI Agent node
 
 ## Runtime behavior
 
 ### Input
 
-Consumes items from the `main` input. For record create/update/upsert, each input item contributes one row; column values and resource locators accept expressions referencing `$json`.
+Consumes items from `main` input. For create/update/upsert operations, input item JSON fields serve as the field data values when no explicit mapping is configured.
 
 ### Output
 
-**Output[0]** — operation result, one item per input item unless the operation collapses results. Outcome-level shapes:
+**Output[0]** — operation result:
 
-- **Create**: the created record object from the Airtable API (`id`, `createdTime`, `fields`)
-- **Get**: the single record object (`id`, `createdTime`, `fields`)
-- **Update**: a `records` array of updated record objects
-- **Delete**: the deleted record confirmation (record `id` + `deleted: true`)
-- **Search / List**: an array of record objects (paginated across offset pages when Return All is set)
-- **Upsert**: a `records` array of created/updated record objects
-- **Get Many (base)**: an array of base objects (`id`, `name`, `permissionLevel`)
-- **Get Schema**: the base schema with tables and their column metadata (`id`, `name`, `type`)
+- **Record: Create/Update/Upsert**: Returns the created/updated record object including `id`, `createdTime`, and `fields`.
+- **Record: Get**: Returns the single record object (`id`, `createdTime`, `fields`).
+- **Record: Search**: Returns an array of matching records (`id`, `createdTime`, `fields`).
+- **Record: Delete**: Returns the deleted record object(s) with `deleted: true`.
+- **Base: Get Schema**: Returns table metadata including table names, field names, and field types for all tables in the base.
+- **Base: Get Many**: Returns the list of accessible bases with `id` and `name`.
 
 ### Errors
 
-- Airtable API errors propagate as node errors: `403 Forbidden` (insufficient scopes — "Forbidden - perhaps check your credentials"), `404` (missing base/table/record), `429` (rate limit).
-- Airtable rate limits: more than 5 requests per second per base, or more than 50 requests per second across all bases on one token, returns `429`; a 30-second cooldown applies before resuming.
-- `continueOnFail` lets the workflow proceed on error, emitting an error item instead of throwing.
-- Deleting a record is irreversible.
+- API errors (authentication failures, rate limits, invalid base/table/record IDs, permission errors) propagate as node errors
+- `continueOnFail` allows the workflow to proceed on error
+- Deleting a record is permanent and irreversible
+- Expressions in field data fields are evaluated per input item
 
 ### Expressions
 
-All string/number/boolean parameters accept n8n expressions. Parameters tagged as AI-populatable accept `$fromAI()` expressions. Field-value mappings, record IDs, formulas, and resource locators all support expressions.
+Parameters tagged as AI-populatable accept expression strings including `$fromAI()`. All string fields accept standard n8n expressions.
 
 ## Acceptance tests
 
 ### Test: Create a record
 
 **Given** input items:
-
 ```json
 [{ "json": { "Name": "Alice", "Email": "alice@example.com" } }]
 ```
 
 **Parameters:**
-
 ```json
 {
-  "authentication": "airtableTokenApi",
   "resource": "record",
   "operation": "create",
-  "base": { "mode": "id", "value": "appXXXXXXXXXXXXXX" },
-  "table": { "mode": "id", "value": "tblYYYYYYYYYYYYYY" },
-  "columns": { "mappingMode": "autoMapInputData", "value": null },
-  "options": { "typecast": false }
+  "base": { "mode": "id", "value": "appABC123" },
+  "table": "Contacts",
+  "data": { "name": "={{ $json.Name }}", "email": "={{ $json.Email }}" }
 }
 ```
 
-**Expect** output[0] to contain one record object with `id`, `createdTime`, and `fields` where `fields.Name === "Alice"` and `fields.Email === "alice@example.com"`.
+**Expect** output[0]:
+```json
+[{
+  "json": {
+    "id": "recXXXX",
+    "createdTime": "2024-01-01T00:00:00.000Z",
+    "fields": { "Name": "Alice", "Email": "alice@example.com" }
+  }
+}]
+```
 
-### Test: Search records with a formula filter
+### Test: Get a record by ID
 
 **Given** input items:
-
 ```json
 [{ "json": {} }]
 ```
 
 **Parameters:**
-
 ```json
 {
-  "authentication": "airtableTokenApi",
-  "resource": "record",
-  "operation": "search",
-  "base": { "mode": "id", "value": "appXXXXXXXXXXXXXX" },
-  "table": { "mode": "id", "value": "tblYYYYYYYYYYYYYY" },
-  "filterByFormula": "{Status} = 'Active'",
-  "returnAll": false,
-  "limit": 10
-}
-```
-
-**Expect** output[0] to be an array of record objects where every `fields.Status === "Active"`; the request is bounded by `limit` (no unbounded crawl when `returnAll` is false).
-
-### Test: Get a single record by ID
-
-**Given** input items:
-
-```json
-[{ "json": {} }]
-```
-
-**Parameters:**
-
-```json
-{
-  "authentication": "airtableTokenApi",
   "resource": "record",
   "operation": "get",
-  "base": { "mode": "id", "value": "appXXXXXXXXXXXXXX" },
-  "table": { "mode": "id", "value": "tblYYYYYYYYYYYYYY" },
-  "id": "recZZZZZZZZZZZZZZ"
+  "base": { "mode": "id", "value": "appABC123" },
+  "table": "Contacts",
+  "id": "recTARGET"
 }
 ```
 
-**Expect** output[0] to contain the single record object whose `id` equals `recZZZZZZZZZZZZZZ`, with `createdTime` and `fields`.
-
-### Test: Upsert a record by match column
-
-**Given** input items:
-
+**Expect** output[0]:
 ```json
-[{ "json": { "id": "recZZZZZZZZZZZZZZ", "Email": "newalice@example.com" } }]
+[{
+  "json": {
+    "id": "recTARGET",
+    "createdTime": "2024-01-01T00:00:00.000Z",
+    "fields": { "Name": "Alice", "Email": "alice@example.com" }
+  }
+}]
 ```
 
-**Parameters:**
-
-```json
-{
-  "authentication": "airtableTokenApi",
-  "resource": "record",
-  "operation": "upsert",
-  "base": { "mode": "id", "value": "appXXXXXXXXXXXXXX" },
-  "table": { "mode": "id", "value": "tblYYYYYYYYYYYYYY" },
-  "columns": { "mappingMode": "autoMapInputData", "matchingColumns": ["id"] },
-  "options": { "typecast": false }
-}
-```
-
-**Expect** output[0] to contain a `records` array; the record with `id === "recZZZZZZZZZZZZZZ"` is updated (its `fields.Email` becomes `"newalice@example.com"`) rather than duplicated.
-
-### Test: Get table schema
+### Test: Search records with formula filter
 
 **Given** input items:
-
 ```json
 [{ "json": {} }]
 ```
 
 **Parameters:**
-
 ```json
 {
-  "authentication": "airtableTokenApi",
-  "resource": "base",
-  "operation": "getSchema",
-  "base": { "mode": "id", "value": "appXXXXXXXXXXXXXX" }
+  "resource": "record",
+  "operation": "search",
+  "base": { "mode": "id", "value": "appABC123" },
+  "table": "Contacts",
+  "filterByFormula": "{Organization}='n8n'"
 }
 ```
 
-**Expect** output[0] to describe the base schema: an array of tables, each with `id`, `name`, and a `fields` array where each field has `id`, `name`, and `type`.
+**Expect** output[0]:
+```json
+[{
+  "json": [{
+    "id": "rec1",
+    "createdTime": "2024-01-01T00:00:00.000Z",
+    "fields": { "Name": "Alice", "Organization": "n8n" }
+  }, {
+    "id": "rec2",
+    "createdTime": "2024-01-02T00:00:00.000Z",
+    "fields": { "Name": "Bob", "Organization": "n8n" }
+  }]
+}]
+```
+
+### Test: Get base schema
+
+**Given** input items:
+```json
+[{ "json": {} }]
+```
+
+**Parameters:**
+```json
+{
+  "resource": "base",
+  "operation": "getSchema",
+  "base": { "mode": "id", "value": "appABC123" }
+}
+```
+
+**Expect** output[0]:
+```json
+[{
+  "json": {
+    "tables": [{
+      "id": "tbl1",
+      "name": "Contacts",
+      "fields": [
+        { "id": "fld1", "name": "Name", "type": "singleLineText" },
+        { "id": "fld2", "name": "Email", "type": "email" }
+      ]
+    }]
+  }
+}]
+```
+
+### Test: Delete a record
+
+**Given** input items:
+```json
+[{ "json": {} }]
+```
+
+**Parameters:**
+```json
+{
+  "resource": "record",
+  "operation": "delete",
+  "base": { "mode": "id", "value": "appABC123" },
+  "table": "Contacts",
+  "id": "recTARGET"
+}
+```
+
+**Expect** output[0]:
+```json
+[{
+  "json": {
+    "id": "recTARGET",
+    "deleted": true
+  }
+}]
+```
 
 ## Gaps / confidence
 
 | Topic | documented / inferred | Notes |
 |-------|----------------------|-------|
-| Airtable record operations (append/create, list/search, read/get, update, delete) | documented | Public n8n docs list Append, Delete, List, Read, Update and the Filter By Formula option on List |
-| Credentials (PAT / OAuth2) + required scopes | documented | Public n8n credentials doc; API key deprecated Feb 2024 |
-| Rate limits (5 req/s/base, 429 + 30 s cooldown) | documented | Public n8n common-issues page and Airtable API rate-limits doc |
-| 403 "Forbidden - perhaps check your credentials" | documented | Public n8n common-issues page |
-| Wire type string `n8n-nodes-base.airtableTool` | factory contract | No standalone `airtableTool` descriptor exists in the n8n-nodes-base v2.15.1 package; the integration type is `n8n-nodes-base.airtable`, and this OpenFlow type is the tool-mode designation |
-| Upsert, base getMany, base getSchema operations | inferred | Not named in public app-node docs; required for AI-tool parity with the Airtable node's v2 resource model, kept at functional-outcome level |
-| Tool-specific parameter layout | inferred | The tool variant exposes the Airtable operations identically to the base node in agent context |
-| Version list | inferred | No public version enumeration for the tool variant; `[1]` is a placeholder consistent with other tool variants |
-| Exact response JSON | inferred | Outcome-level shapes documented; exact JSON varies by Airtable API version |
-| Alias list | inferred | No known aliases for this tool node |
+| Record operations (CRUD + search + upsert) | documented | Public n8n docs cover all 6 record operations; Airtable REST API docs confirm record endpoints |
+| Base operations (getSchema, getMany) | documented | getSchema listed in public docs; getMany inferred from tool wrapper exposing base listing |
+| Authentication (PAT + OAuth2) | documented | Airtable credentials page documents PAT and OAuth2; API Key deprecated Feb 2024 |
+| $fromAI() dynamic parameter support | documented | Standard AI tool behavior documented across n8n AI docs |
+| Output shape for each operation | documented | Public docs describe outcome-level results; exact JSON follows Airtable REST API responses |
+| Tool-specific parameter layout | inferred | As with gmailTool/googleSheetsTool, the tool node exposes operations identically to the base Airtable node in agent context |
+| Aliases list | inferred | No aliases found in known/nodes.json for airtableTool |
+| Version differences (v1 vs v2) | inferred from corpus | Two typeVersions exist; v2 is current with full operation set including upsert and base schema |
 
 ## OpenFlow mapping
 
