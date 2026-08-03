@@ -26,10 +26,11 @@ export function NodeIcon({ name, className }: { name: string; className?: string
   return <Comp className={className} />;
 }
 
-export function accentFor(group: string[], placeholder?: boolean) {
+export function accentFor(group?: string[] | null, placeholder?: boolean) {
   if (placeholder) return "placeholder";
-  if (group.includes("trigger")) return "trigger";
-  if (group.includes("transform")) return "logic";
+  const g = Array.isArray(group) ? group : [];
+  if (g.includes("trigger")) return "trigger";
+  if (g.includes("transform")) return "logic";
   return "action";
 }
 
@@ -68,9 +69,10 @@ function BaseNodeInner({ data, selected, id }: NodeProps<OpenFlowNode>) {
   const { description, inputs, outputs } = handlesFor(node, workflow.connections);
   const inputHandleIds = channelHandleIds(inputs);
   const outputHandleIds = channelHandleIds(outputs);
-  const accent = accentFor(description.group, description.placeholder);
-  const styles = accentStyles[accent];
-  const isTrigger = description.group.includes("trigger");
+  const group = Array.isArray(description.group) ? description.group : [];
+  const accent = accentFor(group, description.placeholder);
+  const styles = accentStyles[accent] ?? accentStyles.action!;
+  const isTrigger = group.includes("trigger");
   const isRunning = exec === "running";
   const isSuccess = exec === "success";
   const isError = exec === "error";

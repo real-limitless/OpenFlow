@@ -1,5 +1,8 @@
 import type { INodeTypeDescription } from "../types";
 
+const DEEPL_DOCS = "https://docs.n8n.io/integrations/builtin/app-nodes/n8n-nodes-base.deepl/";
+const DEEPL_CRED_DOCS = "https://docs.n8n.io/integrations/builtin/credentials/deepl/";
+
 const PAYPAL_DOCS = "https://docs.n8n.io/integrations/builtin/app-nodes/n8n-nodes-base.paypal/";
 const PAYPAL_CRED_DOCS = "https://docs.n8n.io/integrations/builtin/credentials/paypal";
 
@@ -97,6 +100,7 @@ export const quickbooks: INodeTypeDescription = {
   name: "n8n-nodes-base.quickbooks",
   displayName: "QuickBooks Online",
   category: "Finance & Accounting",
+  group: ["output"],
   version: 1,
   description: "Create, update, get, and delete QuickBooks Online entities (invoices, customers, bills, etc.).",
   defaults: { name: "QuickBooks Online" },
@@ -1049,6 +1053,197 @@ export const perplexity: INodeTypeDescription = {
       type: "number",
       default: 10000,
       description: "Request timeout in milliseconds",
+    },
+  ],
+};
+
+const WEATHER_DOCS = "https://docs.n8n.io/integrations/builtin/app-nodes/n8n-nodes-base.openweathermap.md";
+const WEATHER_CRED_DOCS = "https://docs.n8n.io/integrations/builtin/credentials/openweathermap.md";
+
+export const openWeatherMap: INodeTypeDescription = {
+  name: "n8n-nodes-base.openWeatherMap",
+  displayName: "OpenWeatherMap",
+  category: "Miscellaneous",
+  group: ["output"],
+  version: 1,
+  description: "Retrieve current weather and 5-day / 3-hour forecasts from OpenWeatherMap.",
+  defaults: { name: "OpenWeatherMap" },
+  inputs: ["main"],
+  outputs: ["main"],
+  icon: "Cloud",
+  credentials: [{ name: "openWeatherMapApi", required: true }],
+  sources: [WEATHER_DOCS, WEATHER_CRED_DOCS],
+  properties: [
+    {
+      displayName: "Operation",
+      name: "operation",
+      type: "options",
+      default: "currentWeather",
+      required: true,
+      noDataExpression: true,
+      options: [
+        { name: "Current Weather", value: "currentWeather" },
+        { name: "Forecast", value: "forecast" },
+      ],
+    },
+    {
+      displayName: "Location Type",
+      name: "locationType",
+      type: "options",
+      default: "coordinates",
+      required: true,
+      noDataExpression: true,
+      options: [
+        { name: "Coordinates", value: "coordinates" },
+        { name: "City Name", value: "cityName" },
+      ],
+    },
+    {
+      displayName: "Latitude",
+      name: "latitude",
+      type: "number",
+      default: "",
+      required: true,
+      displayOptions: { show: { locationType: ["coordinates"] } },
+      description: "Latitude of the location",
+    },
+    {
+      displayName: "Longitude",
+      name: "longitude",
+      type: "number",
+      default: "",
+      required: true,
+      displayOptions: { show: { locationType: ["coordinates"] } },
+      description: "Longitude of the location",
+    },
+    {
+      displayName: "City Name",
+      name: "cityName",
+      type: "string",
+      default: "",
+      required: true,
+      displayOptions: { show: { locationType: ["cityName"] } },
+      placeholder: "London,GB",
+      description: "City name, optionally with country code (e.g. London,GB)",
+    },
+    {
+      displayName: "Units",
+      name: "units",
+      type: "options",
+      default: "standard",
+      options: [
+        { name: "Standard (Kelvin, m/s)", value: "standard" },
+        { name: "Metric (Celsius, m/s)", value: "metric" },
+        { name: "Imperial (Fahrenheit, miles/h)", value: "imperial" },
+      ],
+    },
+    {
+      displayName: "Language",
+      name: "language",
+      type: "string",
+      default: "en",
+      placeholder: "en",
+      description: "Language code for city name and weather description localization (e.g. fr, de, ja)",
+    },
+  ],
+};
+
+export const deepL: INodeTypeDescription = {
+  name: "n8n-nodes-base.deepL",
+  displayName: "DeepL",
+  category: "Utility",
+  group: ["transform"],
+  version: 1,
+  description: "Translates text using DeepL's neural machine translation engine.",
+  defaults: { name: "DeepL" },
+  inputs: ["main"],
+  outputs: ["main"],
+  icon: "Globe",
+  credentials: [{ name: "deepLApi", required: true }],
+  sources: [DEEPL_DOCS, DEEPL_CRED_DOCS],
+  properties: [
+    {
+      displayName: "Resource",
+      name: "resource",
+      type: "options",
+      default: "language",
+      noDataExpression: true,
+      required: true,
+      options: [{ name: "Language", value: "language" }],
+    },
+    {
+      displayName: "Operation",
+      name: "operation",
+      type: "options",
+      default: "translate",
+      noDataExpression: true,
+      required: true,
+      options: [{ name: "Translate", value: "translate" }],
+    },
+    {
+      displayName: "Text",
+      name: "text",
+      type: "string",
+      default: "",
+      required: true,
+      description: "The UTF-8 text to translate",
+    },
+    {
+      displayName: "Translate To",
+      name: "translateTo",
+      type: "string",
+      default: "",
+      required: true,
+      placeholder: "DE",
+      description: "Target language code (e.g. DE, FR, JA)",
+    },
+    {
+      displayName: "Additional Fields",
+      name: "additionalFields",
+      type: "collection",
+      default: {},
+      placeholder: "Add Field",
+      options: [
+        {
+          displayName: "Source Language",
+          name: "sourceLang",
+          type: "string",
+          default: "",
+          description: "Source language code. If omitted, DeepL auto-detects.",
+        },
+        {
+          displayName: "Split Sentences",
+          name: "splitSentences",
+          type: "options",
+          default: "1",
+          options: [
+            { name: "No Splitting", value: "0" },
+            { name: "Split on Punctuation and Newlines", value: "1" },
+            { name: "Split on Punctuation Only", value: "nonewlines" },
+          ],
+        },
+        {
+          displayName: "Preserve Formatting",
+          name: "preserveFormatting",
+          type: "options",
+          default: "0",
+          options: [
+            { name: "Disabled", value: "0" },
+            { name: "Enabled", value: "1" },
+          ],
+        },
+        {
+          displayName: "Formality",
+          name: "formality",
+          type: "options",
+          default: "default",
+          options: [
+            { name: "Default", value: "default" },
+            { name: "More (Formal)", value: "more" },
+            { name: "Less (Informal)", value: "less" },
+          ],
+        },
+      ],
     },
   ],
 };

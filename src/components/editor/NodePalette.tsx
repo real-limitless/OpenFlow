@@ -62,14 +62,19 @@ export function NodePalette({ onAdd }: Props) {
 
   const grouped = useMemo(() => {
     const q = query.trim().toLowerCase();
-    const matches = allNodeTypes().filter(
-      (d) =>
-        !q ||
-        d.displayName.toLowerCase().includes(q) ||
-        d.description.toLowerCase().includes(q) ||
-        d.name.toLowerCase().includes(q) ||
-        d.category.toLowerCase().includes(q),
-    );
+    const matches = allNodeTypes().filter((d) => {
+      if (!q) return true;
+      const hay = [
+        d.displayName,
+        d.description,
+        d.name,
+        d.category,
+      ]
+        .filter((s): s is string => typeof s === "string")
+        .join("\n")
+        .toLowerCase();
+      return hay.includes(q);
+    });
     return NODE_CATEGORIES.map((category) => ({
       category,
       items: matches.filter((d) => d.category === category),
