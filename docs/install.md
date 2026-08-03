@@ -1,12 +1,14 @@
 # Install & run
 
+New to the project? Start with [onboarding.md](onboarding.md) (guided TUI wizard) or the [README](../README.md). This page is the full install / production reference.
+
 ## Paths
 
 | Goal | Command |
 | --- | --- |
 | Try OpenFlow | `docker compose up -d` → http://localhost:3000 |
 | Install without cloning | `curl -fsSL …/scripts/install.sh \| bash` |
-| Contribute / develop | `npm run setup && npm run dev` |
+| Contribute / develop | `npm run tui` (Install wizard) or `npm run setup && npm run dev` |
 | Production-ish | `docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d` |
 
 ## Docker (recommended)
@@ -112,7 +114,9 @@ docker compose up -d db redis
 npm run dev
 ```
 
-Interactive menu: `npm run tui`.
+Interactive menu + multi-step install: `npm run tui` (see [onboarding.md](onboarding.md)).
+
+Secret hygiene before you publish a branch: `bash scripts/check-no-secrets.sh` · [SECURITY.md](../SECURITY.md).
 
 ## Production checklist
 
