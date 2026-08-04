@@ -61,3 +61,10 @@ scripts/scrape-n8n-workflows/.jobs/
 
 # Local DB backups
 backups/
+
+# Local build / test scratch caches
+.tmp/
+.tmp-vitest/
+
+# graphify knowledge-graph output (regenerable, local only)
+graphify-out/
