@@ -23,6 +23,28 @@ log() { echo "$*" | tee -a "$LOG"; }
 pass() { log "OK  $*"; ok=$((ok + 1)); }
 bad() { log "FAIL $*"; fail=$((fail + 1)); }
 
+# vitest output goes to $LOG, but only this script's stdout is captured into the
+# cycle's gate.log, which is the sole thing distilled into fix_hints.txt. So a
+# test failure reached IMPLEMENT as the bare line "vitest on referencing files
+# failed" -- nothing about which assertion broke. The agent would then re-verify
+# wiring, find it correct, conclude "no changes needed", and the node would fail
+# the identical gate every cycle. Echo the failing assertions so the hint is
+# actionable.
+emit_test_failures() {
+  local detail
+  detail=$(
+    sed -E "s/$(printf '\033')\[[0-9;]*[a-zA-Z]//g" "$LOG" 2>/dev/null \
+      | grep -E '^[[:space:]]*×|^[[:space:]]*(AssertionError|Error|TypeError|ReferenceError|SyntaxError):|^[[:space:]]*❯[[:space:]].*\.tsx?:[0-9]+|^[[:space:]]*(Test Files|Tests)[[:space:]]' \
+      | sed -E 's/^[[:space:]]+//' \
+      | awk '!seen[$0]++' \
+      | head -30
+  ) || true
+  [[ -n "$detail" ]] || return 0
+  while IFS= read -r line; do
+    log "TESTFAIL $line"
+  done <<<"$detail"
+}
+
 log "=== validate_node $TYPE batch=${BATCH:-?} ==="
 log "repo=$ROOT"
 log "time=$(date -Iseconds)"
@@ -43,9 +65,13 @@ fi
 SUFFIX="${TYPE##*.}"
 # camelCase to kebab rough
 KEBAB=$(echo "$SUFFIX" | sed -E 's/([a-z0-9])([A-Z])/\1-\2/g' | tr '[:upper:]' '[:lower:]')
+# Third convention: the fully-qualified type as the filename, with the @n8n/
+# scope prefix dropped on disk (see node-runtime.ts modulePath entries).
+BARE="${TYPE#@n8n/}"
 EXEC_CANDIDATES=(
   "src/lib/engine/executors/${KEBAB}.ts"
   "src/lib/engine/executors/${SUFFIX}.ts"
+  "src/lib/engine/executors/${BARE}.ts"
 )
 FOUND_EXEC=""
 for f in "${EXEC_CANDIDATES[@]}"; do
@@ -87,6 +113,23 @@ else
 fi
 
 # 4. Runtime registration via ESM .mts (tsx -e is CJS; breaks top-level await)
+#
+# register-builtins.ts is generated from BUILTIN_EXECUTOR_MODULES and is what the
+# check below imports, but nothing in the factory pipeline runs the generator --
+# it is wired into `npm run build` only. A job that correctly added its entry to
+# node-runtime.ts would still report `hasExecutor false` whenever the generated
+# file happened to be stale, so regenerate first. This is deterministic and reads
+# node-runtime.ts as its only input, so it cannot mask a missing manifest entry.
+# Retry once: these gates run unlocked, so a concurrent IMPLEMENT agent may be
+# mid-write to node-runtime.ts, leaving the manifest parser with a truncated
+# array. A genuine parser bug still fails both attempts.
+if node "$ROOT/scripts/generate-executor-register.mjs" >>"$LOG" 2>&1 \
+  || { sleep 3; node "$ROOT/scripts/generate-executor-register.mjs" >>"$LOG" 2>&1; }; then
+  pass "register-builtins.ts in sync with BUILTIN_EXECUTOR_MODULES"
+else
+  bad "register-builtins.ts generation failed (see log)"
+fi
+
 REG_TS_ROOT="$ROOT/scripts/factory/.jobs/tmp/reg-check-${SAFE_TYPE}.mts"
 mkdir -p "$(dirname "$REG_TS_ROOT")"
 # Write checker next to src/ so relative imports resolve under tsx ESM
@@ -132,6 +175,7 @@ if [[ -n "$TEST_HITS" ]]; then
       pass "test:batch $BATCH green"
     else
       bad "test:batch $BATCH failed"
+      emit_test_failures
     fi
   else
     # run matching test files
@@ -139,6 +183,7 @@ if [[ -n "$TEST_HITS" ]]; then
       pass "vitest on referencing files green"
     else
       bad "vitest on referencing files failed"
+      emit_test_failures
     fi
   fi
 else
