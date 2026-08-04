@@ -13,9 +13,9 @@ status: specced
 
 | URL | Source class |
 |-----|----------------|
-| https://docs.n8n.io/integrations/builtin/app-nodes/n8n-nodes-base.mistralai.md | Public docs only |
-| https://docs.n8n.io/integrations/builtin/credentials/mistral.md | Public docs only |
-| https://docs.mistral.ai/api/ | Public docs only |
+| https://docs.n8n.io/integrations/builtin/app-nodes/n8n-nodes-base.mistralai/ | Public docs only |
+| https://docs.n8n.io/integrations/builtin/credentials/mistral/ | Public docs only |
+| https://docs.mistral.ai/api/endpoint/ocr | Public docs only |
 
 ## Wire format
 
@@ -23,66 +23,92 @@ status: specced
 - **Aliases:** (none)
 - **Inputs:** `main` × 1
 - **Outputs:** `main` × 1
-- **Credentials:** `mistralCloudApi` (API key from Mistral La Plateforme; paid/billing-enabled account required)
+- **Credentials:** `mistralCloudApi` (API key)
 
 ## Parameters
 
 | name | type | default | required | displayOptions | notes |
 |------|------|---------|----------|----------------|-------|
-| resource | fixed string | `document` | ✓ | — | Single resource: Document |
-| operation | fixed string | `extractText` | ✓ | — | Single operation: Extract Text |
-| model | string \| expression | `mistral-ocr-latest` | ✗ | — | Mistral OCR model to use |
-| documentType | enum: `document_url`, `image_url` | — | ✗ | — | Whether the input is a document or an image |
-| inputType | enum: `binary`, `url` | `binary` | ✗ | — | How the document is supplied |
-| binaryProperty | string \| expression | — | ✗ | show: `{inputType: ["binary"]}` | Name of the binary property holding the file |
-| url | string \| expression | — | ✗ | show: `{inputType: ["url"]}` | URL of the document to process |
-| options.batch | boolean | — | ✗ | — | Enable batch processing for multiple documents in one API call |
-| options.batchSize | number | — | ✗ | — | Max documents per batch when batch processing is enabled |
-| options.deleteFiles | boolean | — | ✗ | — | Delete files from Mistral Cloud after batch processing completes |
+| resource | string | `document` | yes | — | Only resource: `document` |
+| operation | string | `extractText` | yes | — | Only operation: `extractText` |
+| model | string | `mistral-ocr-latest` | no | — | OCR model identifier; currently requires `mistral-ocr-latest` |
+| documentType | string | `document` | no | — | `document` or `image` — the kind of file being processed; maps to the OCR API document type key |
+| inputType | string | `binary` | no | — | `binary` or `url` |
+| inputBinaryField | string | `data` | no | `{ inputType: ["binary"] }` | Input binary field name when using binary input; max 50 MB, max 1000 pages |
+| url | string | — | no | `{ inputType: ["url"] }` | URL of document or image to process when using URL input |
+| options.batch | boolean | false | no | — | Enable batch processing — group multiple documents into one API call |
+| options.batchSize | number | 50 | no | `{ options.batch: [true] }` | Maximum documents per batch request |
+| options.deleteFiles | boolean | true | no | `{ options.batch: [true] }` | Whether to delete uploaded files from Mistral Cloud after batch processing completes; defaults to true when batch is enabled |
 
 ## Runtime behavior
 
 ### Input
 
-Consumes incoming items. Each item may carry:
-- A binary file (when `inputType` is `binary`) stored under the `binaryProperty` field.
-- A URL string (when `inputType` is `url`).
-
-When batch processing is enabled, the node collects documents from all incoming items before making a single API call.
+Each input item may carry:
+- **Binary data** (when `inputType=binary`): the document file in the binary field named by `inputBinaryField`.
+- **A URL string** (when `inputType=url`): a resolvable HTTP/HTTPS URL pointing to the document or image.
 
 ### Output
 
-Each input item produces one output item. The output item retains all original JSON properties from the input and adds an extracted OCR text field under the node's output namespace. The exact response shape mirrors the Mistral OCR API response for the processed document/image.
+For each input item, the node calls the Mistral `POST /v1/ocr` endpoint and produces one output item containing the API response:
 
-When the API call fails for an individual document (e.g. invalid URL, unsupported format), the behavior depends on `continueOnFail`:
-- If `continueOnFail` is `false` (default), the node throws and halts execution.
-- If `continueOnFail` is `true`, the failed item is passed through with an `error` property instead of the OCR result.
+```json
+{
+  "json": {
+    "model": "<model-id>",
+    "pages": [
+      {
+        "index": 0,
+        "markdown": "...",
+        "images": [
+          { "id": "...", "top_left_x": 0, "top_left_y": 0, "bottom_right_x": 0, "bottom_right_y": 0, "image_base64": "..." }
+        ],
+        "dimensions": { "dpi": 200, "height": 2200, "width": 1700 }
+      }
+    ],
+    "usage_info": { "pages_processed": 1, "doc_size_bytes": null }
+  }
+}
+```
+
+All response keys use snake_case as returned by the Mistral OCR API (e.g. `usage_info`, `pages_processed`, `doc_size_bytes`).
+
+### API contract — document payload
+
+When building the OCR request body, the `document` object must use the correct type key matching the document kind:
+
+- `documentType = document` → `{ "type": "document_url", "document_url": "..." }`
+- `documentType = image` → `{ "type": "image_url", "image_url": "..." }`
+
+These are the exact keys the Mistral `/v1/ocr` endpoint expects — not camelCase variants.
+
+### Batch processing flow
+
+When **batch processing** is enabled (options.batch = true), the node:
+
+1. Groups incoming items into batches of up to `batchSize` documents per API call.
+2. For binary input items, uploads each file to the Mistral Files API (`POST /v1/files` with `purpose=ocr`) and tracks the returned file IDs.
+3. Constructs OCR requests that reference the uploaded file IDs (using the signed URL or inline file reference).
+4. After all batch pages are collected and distributed back to output items, sends `DELETE /v1/files/{id}` for each uploaded file if `deleteFiles` is true (defaults to true when batch is enabled).
 
 ### Errors
 
-- Missing binary data when `inputType` is `binary` and no binary property matches → throw.
-- Invalid or unreachable URL when `inputType` is `url` → throw (or pass through on `continueOnFail`).
-- Mistral API errors (auth, rate-limit, unsupported content) → throw (or pass through on `continueOnFail`).
+- Network or API errors (bad URL, unreachable host, auth failure) throw an exception that follows the standard `continueOnFail` behavior: if enabled, the node emits an error item instead of halting.
+- Documents exceeding the 50 MB or 1000-page limit produce an error for that item.
+- Empty responses (no pages returned) produce an item with a `pages` array of length 0.
 
 ### Expressions
 
-All parameter values accept expression strings.
+All string and number parameters accept expression strings (e.g. `{{ $json.url }}` for the URL parameter).
 
 ## Acceptance tests
 
-### Test: extract text from binary document
+### Test: extract text from a binary document
 
 **Given** input items:
 
 ```json
-[
-  {
-    "json": { "fileRef": "invoice" },
-    "binary": {
-      "data": { "mimeType": "application/pdf", "data": "JVBERi0..." }
-    }
-  }
-]
+[{ "json": {}, "binary": { "file": { "data": "<base64-pdf-content>", "mimeType": "application/pdf" } } }]
 ```
 
 **Parameters:**
@@ -91,34 +117,19 @@ All parameter values accept expression strings.
 {
   "resource": "document",
   "operation": "extractText",
-  "model": "mistral-ocr-latest",
   "inputType": "binary",
-  "binaryProperty": "data"
+  "inputBinaryField": "file"
 }
 ```
 
-**Expect** output[0]:
+**Expect** output[0] to contain a `pages` array where each entry has at least `index`, `markdown`, and `dimensions` fields.
 
-```json
-[
-  {
-    "json": {
-      "fileRef": "invoice",
-      "extractedText": "..."
-    },
-    "binary": {
-      "data": { "mimeType": "application/pdf", "data": "JVBERi0..." }
-    }
-  }
-]
-```
-
-### Test: extract text from URL
+### Test: extract text from a URL
 
 **Given** input items:
 
 ```json
-[{ "json": {} }]
+[{ "json": { "url": "https://arxiv.org/pdf/2201.04234" } }]
 ```
 
 **Parameters:**
@@ -127,32 +138,21 @@ All parameter values accept expression strings.
 {
   "resource": "document",
   "operation": "extractText",
-  "model": "mistral-ocr-latest",
   "inputType": "url",
-  "url": "https://example.com/invoice.pdf"
+  "url": "={{ $json.url }}"
 }
 ```
 
-**Expect** output[0]:
+**Expect** output[0] to contain a `pages` array with markdown content extracted from the PDF.
 
-```json
-[
-  {
-    "json": {
-      "extractedText": "..."
-    }
-  }
-]
-```
-
-### Test: batch processing with delete
+### Test: batch processing with deleteFiles
 
 **Given** input items:
 
 ```json
 [
-  { "json": { "id": 1 }, "binary": { "doc": { "mimeType": "application/pdf", "data": "..." } } },
-  { "json": { "id": 2 }, "binary": { "doc": { "mimeType": "application/pdf", "data": "..." } } }
+  { "json": {}, "binary": { "file1": { "data": "<base64>" } } },
+  { "json": {}, "binary": { "file1": { "data": "<base64>" } } }
 ]
 ```
 
@@ -162,25 +162,20 @@ All parameter values accept expression strings.
 {
   "resource": "document",
   "operation": "extractText",
-  "model": "mistral-ocr-latest",
   "inputType": "binary",
-  "binaryProperty": "doc",
-  "options": {
-    "batch": true,
-    "batchSize": 5,
-    "deleteFiles": true
-  }
+  "inputBinaryField": "file1",
+  "options": { "batch": true, "batchSize": 50, "deleteFiles": true }
 }
 ```
 
-**Expect** output[0] and output[1] each contain their respective `id` plus `extractedText`.
+**Expect** both output items to contain OCR results, and files to be deleted after processing.
 
 ### Test: continueOnFail with bad URL
 
-**Given** input items:
+**Given** input item with an unresolvable URL:
 
 ```json
-[{ "json": {} }]
+[{ "json": { "url": "https://nonexistent.example/document.pdf" } }]
 ```
 
 **Parameters:**
@@ -189,25 +184,22 @@ All parameter values accept expression strings.
 {
   "resource": "document",
   "operation": "extractText",
-  "model": "mistral-ocr-latest",
   "inputType": "url",
-  "url": "https://invalid.example/nonexistent.pdf",
-  "continueOnFail": true
+  "url": "={{ $json.url }}",
+  "options": { "continueOnFail": true }
 }
 ```
 
-**Expect** output[0] to contain an `error` property describing the failure and the original input data passed through.
+**Expect** output[0] to be an error item (not a throw).
 
 ## Gaps / confidence
 
 | Topic | documented / inferred | Notes |
 |-------|----------------------|-------|
-| Resource/operation set | documented | Public n8n docs specify Document + Extract Text only |
-| Model parameter | documented | Fixed to `mistral-ocr-latest` per docs |
-| Input types (binary vs URL) | documented | Confirmed in public n8n docs and corpus schema |
-| Batch processing options | documented | batch, batchSize, deleteFiles all in public docs |
-| Exact output shape under `extractedText` | inferred | Depends on Mistral OCR API response; not documented by n8n |
-| Error handling details | inferred | Follows standard n8n `continueOnFail` pattern |
+| Exact OCR API response shape | Public docs (Mistral API) | Shape confirmed via Mistral OCR API reference |
+| Binary upload mechanism | Inferred | Must upload binary to Mistral Files API or use base64 inline; exact mechanism left to implementation |
+| Credential type | Public docs | `mistralCloudApi` with API key |
+| Batch processing upload flow | Inferred | Documents likely uploaded via Files API then referenced by ID; exact flow left to implementation |
 
 ## OpenFlow mapping
 
