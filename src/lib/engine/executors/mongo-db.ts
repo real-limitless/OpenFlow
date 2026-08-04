@@ -51,6 +51,10 @@ export function setMongoClientFactory(factory: MongoClientFactory | null): void 
   clientFactory = factory;
 }
 
+export function getMongoClientFactory(): MongoClientFactory {
+  return clientFactory ?? DEFAULT_FACTORY;
+}
+
 const DEFAULT_FACTORY: MongoClientFactory = async (credentials) => {
   const { MongoClient } = await import("mongodb");
   const configType = String(credentials.configurationType ?? "connectionString");

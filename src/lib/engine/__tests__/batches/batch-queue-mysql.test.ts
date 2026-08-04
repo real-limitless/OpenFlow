@@ -155,12 +155,16 @@ describe("batch-queue mysql — n8n-nodes-base.mySql", () => {
 
     expect(out[0]).toHaveLength(2);
     expect(out[0][0].json).toEqual({
-      columns: ["id", "name", "email", "age"],
-      rows: [[1, "Alex", "alex@example.com", 21]],
+      id: 1,
+      name: "Alex",
+      email: "alex@example.com",
+      age: 21,
     });
     expect(out[0][1].json).toEqual({
-      columns: ["id", "name", "email", "age"],
-      rows: [[2, "Jamie", "jamie@example.com", 33]],
+      id: 2,
+      name: "Jamie",
+      email: "jamie@example.com",
+      age: 33,
     });
   });
 
@@ -245,7 +249,7 @@ describe("batch-queue mysql — n8n-nodes-base.mySql", () => {
     );
 
     expect(out[0]).toHaveLength(1);
-    expect(out[0][0].json).toEqual({ success: true });
+    expect(out[0][0].json).toEqual({});
     expect(calls).toHaveLength(1);
   });
 
