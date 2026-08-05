@@ -4,10 +4,22 @@
 
 | Goal | Command |
 | --- | --- |
-| Try OpenFlow | `docker compose up -d` → http://localhost:3000 |
+| Try OpenFlow | `docker compose up -d` → http://localhost:3000 → **Run sample workflow** |
 | Install without cloning | `curl -fsSL …/scripts/install.sh \| bash` |
+| Install with auth (owner setup) | `…/install.sh \| bash -s -- --prod` |
 | Contribute / develop | `npm run setup && npm run dev` |
 | Production-ish | `docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d` |
+
+## First-run experience
+
+After the stack is healthy:
+
+1. Open the UI (default **http://localhost:3000**).
+2. **Try-out** (`AUTH_DISABLED=true`, default): no login. On the home page use **Run sample workflow**, then **Execute** for a zero-credential success.
+3. **Production / auth on** (`AUTH_DISABLED=false`, `--prod`, or prod compose overlay): if no users exist, the UI redirects to **`/setup`** to create the **instance owner**. That account gets the global `owner` role (secret providers, admin gates). Further registers are `member` unless promoted.
+4. Dismiss the welcome checklist anytime; it is stored in browser `localStorage` (`openflow:onboarding.v1`).
+
+Product readiness (not infra): `GET /api/v1/setup/status` → `{ authDisabled, hasUsers, needsOwner }`.
 
 ## Docker (recommended)
 
@@ -56,6 +68,19 @@ curl -fsSL https://raw.githubusercontent.com/real-limitless/OpenFlow/main/script
 - Writes `~/openflow/docker-compose.yml` and `.env`
 - Image default: `ghcr.io/real-limitless/openflow:latest` (override with `OPENFLOW_IMAGE`)
 - Home dir override: `OPENFLOW_HOME=/opt/openflow bash install.sh`
+- Polls `http://127.0.0.1:$PORT/health/ready` (default 90s), prints next steps, opens a browser when possible
+
+| Flag | Meaning |
+| --- | --- |
+| `--prod` | New `.env` gets `AUTH_DISABLED=false` (owner setup on first open) |
+| `--port N` | Host port (default 3000) |
+| `--home PATH` | Install directory |
+| `--no-open` | Do not open a browser |
+| `--skip-wait` | Skip readiness poll |
+
+```sh
+bash install.sh --prod --port 3001 --no-open
+```
 
 Until GHCR packages are published for the repo, pull may fail — use `docker compose up -d --build` from a clone instead.
 

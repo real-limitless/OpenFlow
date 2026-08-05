@@ -41,6 +41,8 @@ Open **http://localhost:3000**
 
 First boot builds the image, starts Postgres + Redis + API, runs migrations, and generates a credentials key if you did not set one.
 
+**First-run in the UI:** on the home page choose **Run sample workflow**, then **Execute** — the sample hits a public API and needs no credentials.
+
 ```sh
 # logs
 docker compose logs -f api
@@ -57,7 +59,12 @@ When the GHCR image is published for your fork:
 curl -fsSL https://raw.githubusercontent.com/real-limitless/OpenFlow/main/scripts/install.sh | bash
 ```
 
-Installs under `~/openflow` by default (`OPENFLOW_HOME` to override).
+Installs under `~/openflow` by default (`OPENFLOW_HOME` to override). Waits for `/health/ready`, prints next steps, and opens a browser when possible.
+
+```sh
+# production-ish (auth on → create owner on first open)
+curl -fsSL …/scripts/install.sh | bash -s -- --prod
+```
 
 ### Production overlay
 
@@ -66,7 +73,7 @@ Installs under `~/openflow` by default (`OPENFLOW_HOME` to override).
 docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
 ```
 
-Turns auth on by default, disables hot-reload, binds DB/Redis to localhost only. Put TLS (Caddy/nginx/Traefik) in front before exposing to the internet. See [docs/install.md](docs/install.md).
+Turns auth on by default, disables hot-reload, binds DB/Redis to localhost only. First open redirects to **Create instance owner**. Put TLS (Caddy/nginx/Traefik) in front before exposing to the internet. See [docs/install.md](docs/install.md).
 
 ---
 

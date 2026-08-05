@@ -78,6 +78,10 @@ function LoginPage() {
           <Link to="/register" className="text-primary hover:underline">
             Register
           </Link>
+          {" · "}
+          <Link to="/setup" className="text-primary hover:underline">
+            First-time setup
+          </Link>
         </p>
       </form>
     </div>
