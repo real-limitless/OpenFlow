@@ -16,6 +16,11 @@ import { ExecuteTriggerButton } from "@/components/editor/ExecuteTriggerButton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { ExecutionRunData } from "@/lib/engine/types";
 import type { IWorkflow } from "@/lib/workflow/types";
+import {
+  consumeOnboardingBanner,
+  loadOnboardingState,
+  patchOnboardingState,
+} from "@/lib/onboarding/state";
 
 export const Route = createFileRoute("/workflow/$id")({
   head: () => ({
@@ -40,6 +45,7 @@ export const Route = createFileRoute("/workflow/$id")({
 
 function EditorPage() {
   const { id } = Route.useParams();
+  const [showOnboardingBanner, setShowOnboardingBanner] = useState(false);
   const load = useWorkflowStore((s) => s.load);
   const applyRemote = useWorkflowStore((s) => s.applyRemote);
   const selectNode = useWorkflowStore((s) => s.selectNode);
@@ -54,6 +60,24 @@ function EditorPage() {
   const eventSourceRef = useRef<EventSource | null>(null);
 
   const bumpHistory = () => setHistoryKey((k) => k + 1);
+
+  useEffect(() => {
+    if (consumeOnboardingBanner()) {
+      setShowOnboardingBanner(true);
+    }
+  }, [id]);
+
+  const markFirstRunSuccess = () => {
+    const ob = loadOnboardingState();
+    if (ob.dismissed || ob.firstRunSuccess) return;
+    // Only celebrate the sample / coached first-run path, not every execute
+    if (!ob.sampleCreated && !showOnboardingBanner) return;
+    patchOnboardingState({ firstRunSuccess: true, sampleCreated: true });
+    toast.success("First run complete", {
+      description: "You’re set — keep editing or start a new workflow from home.",
+    });
+    setShowOnboardingBanner(false);
+  };
 
   const handleExecute = async (startNode?: string) => {
     setIsExecuting(true);
@@ -98,6 +122,8 @@ function EditorPage() {
             toast.error("Execution failed", {
               description: "One or more nodes errored. See Execution data for details.",
             });
+          } else {
+            markFirstRunSuccess();
           }
           setIsExecuting(false);
           bumpHistory();
@@ -224,6 +250,21 @@ function EditorPage() {
           />
         }
       />
+      {showOnboardingBanner && status === "ready" && (
+        <div className="flex shrink-0 flex-wrap items-center justify-between gap-2 border-b border-primary/30 bg-primary/10 px-4 py-2 text-[13px]">
+          <p className="text-foreground">
+            <span className="font-medium">First run:</span> click{" "}
+            <strong>Execute</strong> to run this sample (public GitHub API, no credentials).
+          </p>
+          <button
+            type="button"
+            className="text-[12px] text-muted-foreground hover:text-foreground"
+            onClick={() => setShowOnboardingBanner(false)}
+          >
+            Dismiss
+          </button>
+        </div>
+      )}
       <div className="flex min-h-0 flex-1">
         <NodePalette
           onAdd={(type) =>

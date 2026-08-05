@@ -71,6 +71,19 @@ if [[ "$NO_LOCK" -eq 1 ]]; then
   IMPL_LOCK=0
 fi
 
+# A silently-absent flock(1) made acquire_impl_lock return success having locked
+# nothing, so concurrent agents wrote the same shared files believing they were
+# serialised. Refuse the run instead of pretending to be safe.
+if [[ "$IMPL_LOCK" == "1" || "$IMPL_LOCK" == "true" ]]; then
+  if ! command -v flock >/dev/null 2>&1; then
+    echo "[factory] FATAL: implLock is enabled but flock(1) is not installed." >&2
+    echo "[factory] Install util-linux, or run unlocked on purpose with either:" >&2
+    echo "[factory]   run_node_pipeline.sh --no-lock ..." >&2
+    echo "[factory]   python3 scripts/factory/lib/resolve_models.py settings-set --impl-lock off" >&2
+    exit 3
+  fi
+fi
+
 SAFE="${TYPE//\//_}"
 JOB_ROOT="$ROOT/scripts/factory/.jobs/nodes/${SAFE}"
 mkdir -p "$JOB_ROOT"
@@ -137,6 +150,7 @@ for name in os.listdir("/proc"):
 PY
   fi
   release_impl_lock 2>/dev/null || true
+  release_val_lock 2>/dev/null || true
   rm -f "$JOB_ROOT/pipeline.pid" "$JOB_ROOT/opencode.pid" 2>/dev/null || true
 }
 
@@ -430,8 +444,11 @@ acquire_impl_lock() {
   # Returns: 0=got lock, 1=waitout (re-queue), 2=interrupted (give up)
   mkdir -p "$(dirname "$LOCK")"
   exec 9>"$LOCK"
+  # Startup already refused the run if flock was missing; if it vanished
+  # mid-run, give up rather than silently proceeding unlocked.
   if ! command -v flock >/dev/null 2>&1; then
-    return 0
+    echo "[factory] FATAL: flock(1) unavailable mid-run — refusing unlocked IMPLEMENT" >&2
+    return 2
   fi
   local holder=""
   [[ -f "$LOCK_META" ]] && holder=$(cut -d' ' -f1 "$LOCK_META" 2>/dev/null || true)
@@ -556,9 +573,15 @@ PY
 }
 
 release_impl_lock() {
+  # Only clear the holder file if we own it. LOCK_META is "<type> <pid> <ts>",
+  # so compare the fields directly: the previous grep pair could not do this
+  # reliably -- " $ $$ " was a literal '$' that matches nothing LOCK_META ever
+  # contains, and "^$TYPE $$" interpolated the type into a regex where the dots
+  # are wildcards.
   if [[ -f "$LOCK_META" ]]; then
-    # only clear if we own it
-    if grep -q " $ $$ " "$LOCK_META" 2>/dev/null || grep -q "^$TYPE $$" "$LOCK_META" 2>/dev/null; then
+    local meta_type="" meta_pid=""
+    read -r meta_type meta_pid _ <"$LOCK_META" 2>/dev/null || true
+    if [[ "$meta_type" == "$TYPE" && "$meta_pid" == "$$" ]]; then
       rm -f "$LOCK_META"
     fi
   fi
@@ -566,6 +589,47 @@ release_impl_lock() {
   if command -v flock >/dev/null 2>&1; then
     flock -u 9 2>/dev/null || true
   fi
+}
+
+# Files every job appends to. Only IMPLEMENT may touch them.
+SHARED_FILES=(
+  "src/lib/engine/node-runtime.ts"
+  "src/lib/engine/executors/index.ts"
+  "src/lib/nodes/definitions/index.ts"
+  "src/lib/nodes/registry.ts"
+  "docs/specs/catalog.json"
+)
+
+fingerprint_shared() {
+  local f
+  for f in "${SHARED_FILES[@]}"; do
+    if [[ -f "$f" ]]; then
+      sha256sum "$f" 2>/dev/null || echo "unhashed $f"
+    fi
+  done
+  return 0
+}
+
+acquire_val_lock() {
+  # VALIDATE runs a full opencode agent with the same write access as
+  # IMPLEMENT, so it must not overlap another job's IMPLEMENT: both edit the
+  # shared registration files and only IMPLEMENT held the lock. Plain blocking
+  # wait on fd 8 -- no waitout/re-queue, because this job has already paid for
+  # SPEC and IMPLEMENT and must not be restarted from scratch.
+  [[ "$IMPL_LOCK" == "1" || "$IMPL_LOCK" == "true" ]] || return 0
+  exec 8>"$LOCK"
+  local wait_s=$((TIMEOUT_IMPL + 300))
+  if ! flock -w "$wait_s" -x 8; then
+    echo "[factory] $TYPE VAL could not acquire impl.lock after ${wait_s}s" >&2
+    return 1
+  fi
+  return 0
+}
+
+release_val_lock() {
+  [[ "$IMPL_LOCK" == "1" || "$IMPL_LOCK" == "true" ]] || return 0
+  flock -u 8 2>/dev/null || true
+  return 0
 }
 
 python3 "$ROOT/scripts/factory/lib/run_state.py" mark "$TYPE" --bucket active 2>/dev/null || true
@@ -985,7 +1049,10 @@ PY
     # Extract real FAIL lines into hints (not "see gate.log")
     {
       echo "Deterministic gates failed before VAL LLM."
-      grep -E '^(FAIL |REASON |PRIMARY |=== summary)' "$CYCLE_DIR/gate.log" 2>/dev/null | head -40 || true
+      # TESTFAIL lines carry the actual failing assertions from validate_node.sh.
+      # They must reach the agent: a bare "vitest failed" hint tells it nothing
+      # to change, so it re-checks wiring and reports "no changes needed".
+      grep -E '^(FAIL |REASON |PRIMARY |TESTFAIL |=== summary)' "$CYCLE_DIR/gate.log" 2>/dev/null | head -60 || true
     } >"$FIX_HINTS_FILE"
     record_failure "validate" "validate_gates" "$CYCLE_DIR/gate.log" "" "validate gates failed"
     echo "$VERDICT" >"$CYCLE_DIR/verdict.txt"
@@ -1025,13 +1092,29 @@ PY
     echo "Reply with ONE JSON object only, e.g. {\"type\":\"$TYPE\",\"verdict\":\"pass\",\"reasons\":[\"...\"],\"fix_hints\":[]}"
   } >>"$CYCLE_DIR/03-validate.prompt.md"
 
+  VAL_MUTATED=0
   set +e
-  run_opencode "$MODEL_VAL" "factory VAL $TYPE c$cycle" \
-    "$CYCLE_DIR/03-validate.prompt.md" \
-    "Return a single JSON object with verdict pass or fail for $TYPE. Then stop." \
-    "$CYCLE_DIR/03-validate.out.log" \
-    "$TIMEOUT_VAL"
-  VAL_OC_RC=$?
+  if ! acquire_val_lock; then
+    echo "[factory] $TYPE skipping VAL LLM this cycle (lock timeout)" \
+      | tee -a "$CYCLE_DIR/03-validate.out.log"
+    VAL_OC_RC=124
+  else
+    VAL_SHARED_BEFORE="$(fingerprint_shared)"
+    run_opencode "$MODEL_VAL" "factory VAL $TYPE c$cycle" \
+      "$CYCLE_DIR/03-validate.prompt.md" \
+      "Return a single JSON object with verdict pass or fail for $TYPE. Do not edit any file. Then stop." \
+      "$CYCLE_DIR/03-validate.out.log" \
+      "$TIMEOUT_VAL"
+    VAL_OC_RC=$?
+    # We held the lock for the whole run, so no IMPLEMENT agent could have been
+    # writing concurrently: any change here is the validator's own.
+    if [[ "$(fingerprint_shared)" != "$VAL_SHARED_BEFORE" ]]; then
+      VAL_MUTATED=1
+      echo "[factory] $TYPE VAL MUTATED SHARED FILES — verdict forced to fail" \
+        | tee -a "$CYCLE_DIR/03-validate.out.log" >&2
+    fi
+    release_val_lock
+  fi
   set -e
 
   if [[ "$DRY_RUN" -eq 1 ]]; then
@@ -1056,6 +1139,15 @@ $HINTS"
         fi
       fi
     fi
+  fi
+
+  # Overrides everything above, including the mute-validator promotion: a
+  # validator that edited the registration files it was judging has invalidated
+  # its own verdict, and its edits bypassed the IMPLEMENT gate entirely.
+  if [[ "${VAL_MUTATED:-0}" == "1" ]]; then
+    VERDICT="fail"
+    HINTS="VALIDATE agent modified shared registration files. Its edits skipped the IMPLEMENT gate and are not trusted. Re-run IMPLEMENT, then check node-runtime.ts, definitions/index.ts and catalog.json for entries this job did not intend.
+$HINTS"
   fi
 
   echo "$HINTS" >"$FIX_HINTS_FILE"

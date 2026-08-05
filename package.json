@@ -39,7 +39,8 @@
     "factory:import-scraped": "python3 scripts/factory/lib/import_scraped_nodes.py",
     "templates:sync": "npx tsx scripts/templates/sync-from-scraped.ts",
     "tui": "bash scripts/tui.sh",
-    "generate:executors": "node scripts/generate-executor-register.mjs"
+    "generate:executors": "node scripts/generate-executor-register.mjs",
+    "screenshots": "node scripts/capture-screenshots.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
@@ -142,6 +143,7 @@
     "eslint-plugin-react-refresh": "^0.4.20",
     "globals": "^15.15.0",
     "nitro": "3.0.260603-beta",
+    "playwright": "^1.51.0",
     "prettier": "^3.7.3",
     "prisma": "^7.9.1",
     "typescript": "^5.8.3",

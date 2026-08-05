@@ -251,16 +251,6 @@ function projectColumns(
   return out;
 }
 
-function resultToColumnsRows(result: MySqlQueryResult): {
-  columns: string[];
-  rows: unknown[][];
-} {
-  const columns =
-    result.fields?.map((f) => f.name) ?? (result.rows[0] ? Object.keys(result.rows[0]) : []);
-  const rows = result.rows.map((r) => columns.map((c) => r[c]));
-  return { columns, rows };
-}
-
 /** Apply $N:name identifier substitution; convert $N value placeholders to `?`. */
 function prepareQuery(
   query: string,
@@ -417,13 +407,18 @@ async function executeQuery(
     const replacements = parseQueryReplacement(queryReplacementRaw, item.json, index);
     const { sql, params } = prepareQuery(query, replacements);
     const result = await client.query(sql, params);
-    const shaped = resultToColumnsRows(result);
-    return [
-      {
-        json: shaped as unknown as Record<string, unknown>,
-        pairedItem: item.pairedItem ?? { item: index, input: 0 },
-      },
-    ];
+    if (result.rows.length === 0) {
+      return [
+        {
+          json: {},
+          pairedItem: item.pairedItem ?? { item: index, input: 0 },
+        },
+      ];
+    }
+    return result.rows.map((row) => ({
+      json: row,
+      pairedItem: item.pairedItem ?? { item: index, input: 0 },
+    }));
   };
 
   if (batching === "single") {
@@ -689,17 +684,25 @@ async function runDeleteTable(
 
       if (deleteCommand === "drop") {
         await client.query(`DROP TABLE ${qt}`);
+        out.push({
+          json: {},
+          pairedItem: item.pairedItem ?? { item: index, input: 0 },
+        });
       } else if (deleteCommand === "delete") {
         const combine = String(ctx.getParam("combineConditions", "AND") ?? "AND");
         const where = buildWhere(ctx.getParam("where"), combine, item.json);
-        await client.query(`DELETE FROM ${qt}${where.sql}`, where.params);
+        const result = await client.query(`DELETE FROM ${qt}${where.sql}`, where.params);
+        out.push({
+          json: { affectedRows: result.affectedRows ?? 0 },
+          pairedItem: item.pairedItem ?? { item: index, input: 0 },
+        });
       } else {
         await client.query(`TRUNCATE TABLE ${qt}`);
+        out.push({
+          json: {},
+          pairedItem: item.pairedItem ?? { item: index, input: 0 },
+        });
       }
-      out.push({
-        json: { success: true },
-        pairedItem: item.pairedItem ?? { item: index, input: 0 },
-      });
     } catch (err) {
       if (continueOnFail) {
         out.push({

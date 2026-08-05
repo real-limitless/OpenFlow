@@ -9,7 +9,7 @@ import { config } from "../../config";
 
 export type AppEnv = { Variables: { userId: string } };
 
-const EXEMPT_PATHS = ["/health", "/api/v1/auth", "/webhook", "/form"];
+const EXEMPT_PATHS = ["/health", "/api/v1/auth", "/api/v1/setup", "/webhook", "/form"];
 
 /** Public template marketplace reads (import still requires auth). */
 function isPublicTemplateGet(method: string, path: string): boolean {

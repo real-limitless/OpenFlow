@@ -89,3 +89,9 @@ graphify-out/
 .claude/
 .cursor/
 .grok/
+# Local build / test scratch caches
+.tmp/
+.tmp-vitest/
+
+# graphify knowledge-graph output (regenerable, local only)
+graphify-out/

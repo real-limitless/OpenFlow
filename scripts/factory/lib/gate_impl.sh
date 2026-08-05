@@ -38,10 +38,16 @@ fi
 
 SUFFIX="${TYPE##*.}"
 KEBAB=$(echo "$SUFFIX" | sed -E 's/([a-z0-9])([A-Z])/\1-\2/g' | tr '[:upper:]' '[:lower:]')
+# Third convention: the fully-qualified type as the filename. node-runtime.ts
+# already points at these (e.g. ./executors/n8n-nodes-base.trelloTool), and the
+# @n8n/ scope prefix is dropped on disk. Omitting them here failed jobs that had
+# in fact written a complete executor.
+BARE="${TYPE#@n8n/}"
 FOUND_EXEC=""
 for f in \
   "src/lib/engine/executors/${KEBAB}.ts" \
-  "src/lib/engine/executors/${SUFFIX}.ts"; do
+  "src/lib/engine/executors/${SUFFIX}.ts" \
+  "src/lib/engine/executors/${BARE}.ts"; do
   if [[ -f "$f" ]]; then FOUND_EXEC="$f"; break; fi
 done
 if [[ -z "$FOUND_EXEC" ]]; then

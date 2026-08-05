@@ -107,6 +107,24 @@ export async function logout(): Promise<void> {
   });
 }
 
+export type SetupStatus = {
+  authDisabled: boolean;
+  hasUsers: boolean;
+  needsOwner: boolean;
+};
+
+export async function fetchSetupStatus(): Promise<SetupStatus> {
+  try {
+    const res = await fetch("/api/v1/setup/status", { credentials: "include" });
+    if (res.ok) {
+      return (await res.json()) as SetupStatus;
+    }
+  } catch {
+    /* ignore */
+  }
+  return { authDisabled: false, hasUsers: true, needsOwner: false };
+}
+
 /** Authenticated fetch with project/env headers + cookies. */
 export async function apiFetch(input: string, init?: RequestInit): Promise<Response> {
   const headers = new Headers(projectHeaders(init?.headers));

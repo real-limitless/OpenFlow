@@ -12,9 +12,9 @@ import {
   Table2,
   Undo2,
   Upload,
-  Workflow as WorkflowIcon,
 } from "lucide-react";
 import { toast } from "sonner";
+import { OpenFlowLogo } from "@/components/brand/openflow-logo";
 import { useWorkflowStore } from "@/store/workflow-store";
 import { parseWorkflowJson, serializeWorkflow } from "@/lib/workflow/schema";
 import { autoLayout } from "@/lib/workflow/layout";
@@ -111,7 +111,7 @@ export function EditorTopBar({ actions }: { actions?: React.ReactNode }) {
   return (
     <header className="flex h-14 shrink-0 items-center gap-2 border-b border-border bg-sidebar px-3">
       <Link to="/" className="flex items-center gap-2 pr-2 text-primary" aria-label="All workflows">
-        <WorkflowIcon className="size-5" />
+        <OpenFlowLogo className="size-5" withPlate />
         <span className="hidden font-mono text-[13px] font-semibold tracking-tight text-foreground sm:inline">
           OpenFlow
         </span>

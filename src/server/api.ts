@@ -7,6 +7,7 @@ import credentialsRoute from "./routes/credentials";
 import dataTablesRoute from "./routes/data-tables";
 import executionsRoute from "./routes/executions";
 import healthRoute from "./routes/health";
+import setupRoute from "./routes/setup";
 import schedulesRoute, { initializeSchedules } from "./routes/schedules";
 import webhooksRoute from "./routes/webhooks";
 import workflowsRoute from "./routes/workflows";
@@ -38,6 +39,7 @@ const app = new Hono<AppEnv>();
 app.use("*", authMiddleware);
 
 healthRoute(app);
+setupRoute(app);
 authRoute(app);
 apiKeysRoute(app);
 projectsRoute(app);

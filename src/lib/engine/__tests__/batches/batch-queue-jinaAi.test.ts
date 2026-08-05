@@ -99,7 +99,8 @@ afterEach(() => {
 describe("batch-queue jinaAi — n8n-nodes-base.jinaAi", () => {
   it("is registered as executor + description", () => {
     expect(hasExecutor(TYPE)).toBe(true);
-    expect(getNodeType(TYPE).displayName).toBe("Jina AI");
+    const desc = getNodeType(TYPE);
+    expect(desc.displayName).toBe("Jina AI");
   });
 
   it("resolves the same executor under the canonical type string", () => {
@@ -108,86 +109,97 @@ describe("batch-queue jinaAi — n8n-nodes-base.jinaAi", () => {
     expect(getExecutor("nodes-base.jinaAi")).toBe(canonical);
   });
 
-  it("reader-read-basic — returns content for a URL", async () => {
-    const fakeContent = "# Example Domain\n\nThis domain is for use in illustrative examples.";
+  it("reader-read-basic — returns simplified data array", async () => {
+    const fakeData = [
+      { content: "Example content", url: "https://example.com/", title: "Example", description: "A test page" },
+    ];
     installFetch({
-      "https://r.jina.ai/https%3A%2F%2Fexample.com": fakeContent,
+      "https://r.jina.ai/https%3A%2F%2Fexample.com": { code: 200, status: 20000, data: fakeData },
     });
     const out = await runNode({
       resource: "reader",
       operation: "read",
       url: "https://example.com",
+      simplify: true,
     });
     expect(out).toHaveLength(1);
     expect(out[0]).toHaveLength(1);
-    expect(out[0][0].json).toHaveProperty("content");
-    expect(String(out[0][0].json.content)).toContain("Example");
+    const json = out[0][0].json as Record<string, unknown>;
+    expect(json).toHaveProperty("data");
+    expect(Array.isArray(json.data)).toBe(true);
   });
 
-  it("reader-search-json — returns results array", async () => {
-    const fakeResults = {
-      data: [
-        { url: "https://example.com/ai", title: "AI News", content: "Latest AI developments..." },
-      ],
-    };
+  it("reader-read-full-response — passthrough full envelope when simplify=false", async () => {
+    const fakeResponse = { code: 200, status: 20000, data: [{ content: "Full content" }] };
     installFetch({
-      "https://s.jina.ai": fakeResults,
-    });
-    const out = await runNode({
-      resource: "reader",
-      operation: "search",
-      query: "latest AI news",
-      responseFormat: "json",
-      topK: 3,
-    });
-    expect(out).toHaveLength(1);
-    expect(out[0]).toHaveLength(1);
-    const json = out[0][0].json;
-    expect(json).toHaveProperty("results");
-    expect(Array.isArray(json.results)).toBe(true);
-    if (Array.isArray(json.results)) {
-      expect(json.results.length).toBeGreaterThanOrEqual(1);
-    }
-  });
-
-  it("reader-read-with-options — expression URL resolved from item", async () => {
-    const fakeContent = "# Artificial Intelligence\n\nAI is a broad field.";
-    installFetch({
-      "https://r.jina.ai/https%3A%2F%2Fen.wikipedia.org%2Fwiki%2FArtificial_intelligence": fakeContent,
+      "https://r.jina.ai/https%3A%2F%2Fexample.com": fakeResponse,
     });
     const out = await runNode({
       resource: "reader",
       operation: "read",
-      url: "={{ $json.pageUrl }}",
-      engine: "browser",
-      responseFormat: "json",
-      noCache: true,
-    }, [{ pageUrl: "https://en.wikipedia.org/wiki/Artificial_intelligence" }]);
+      url: "https://example.com",
+      simplify: false,
+    });
     expect(out).toHaveLength(1);
     expect(out[0]).toHaveLength(1);
-    const json = out[0][0].json;
-    expect(json).toHaveProperty("content");
-    expect(String(json.content)).toContain("AI");
+    const json = out[0][0].json as Record<string, unknown>;
+    expect(json).toHaveProperty("code");
+    expect(json).toHaveProperty("data");
   });
 
-  it("research-deep-research — returns report content", async () => {
-    const fakeReport = "# Fusion Energy Report\n\nRecent breakthroughs in fusion...";
+  it("reader-search — returns search results", async () => {
+    const fakeData = [
+      { url: "https://jina.ai/embeddings", title: "Jina AI Embeddings", content: "..." },
+    ];
     installFetch({
-      "https://deepsearch.jina.ai": fakeReport,
+      "https://s.jina.ai/?q=Jina%20AI%20embeddings": { code: 200, status: 20000, data: fakeData },
+    });
+    const out = await runNode({
+      resource: "reader",
+      operation: "search",
+      searchQuery: "Jina AI embeddings",
+      siteFilter: "jina.ai",
+      simplify: true,
+    });
+    expect(out).toHaveLength(1);
+    expect(out[0]).toHaveLength(1);
+    const json = out[0][0].json as Record<string, unknown>;
+    expect(json).toHaveProperty("data");
+    expect(Array.isArray(json.data)).toBe(true);
+  });
+
+  it("research-deep-research — returns simplified report with content", async () => {
+    const fakeResponse = {
+      id: "chatcmpl-123",
+      choices: [
+        {
+          index: 0,
+          message: { role: "assistant", content: "# Embedding Models\n\nRecent advances..." },
+          annotations: [{ url: "https://arxiv.org/abs/2401.12345" }],
+        },
+      ],
+      usage: { prompt_tokens: 50, completion_tokens: 200, total_tokens: 250 },
+    };
+    installFetch({
+      "https://deepsearch.jina.ai/v1/chat/completions": fakeResponse,
     });
     const out = await runNode({
       resource: "research",
       operation: "deepResearch",
-      topic: "Latest developments in fusion energy",
-      responseFormat: "markdown",
+      researchQuery: "What are the latest advances in embedding models?",
+      maxReturnedSources: 5,
+      simplify: true,
     });
     expect(out).toHaveLength(1);
     expect(out[0]).toHaveLength(1);
-    expect(out[0][0].json).toHaveProperty("content");
-    expect(String(out[0][0].json.content)).toContain("Fusion");
+    const json = out[0][0].json as Record<string, unknown>;
+    expect(json).toHaveProperty("content");
+    expect(String(json.content)).toContain("Embedding");
+    expect(json).toHaveProperty("annotations");
+    expect(json).toHaveProperty("usage");
   });
 
-  it("error-on-empty-url — throws NodeOperationError", async () => {
+  it("error-on-empty-url — throws descriptive error", async () => {
     installFetch({});
     await expect(
       runNode({

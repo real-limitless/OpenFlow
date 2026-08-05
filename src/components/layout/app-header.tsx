@@ -8,10 +8,10 @@ import {
   Settings,
   Share2,
   Table2,
-  Workflow as WorkflowIcon,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { OpenFlowLogo } from "@/components/brand/openflow-logo";
 import {
   fetchProjects,
   getSelectedProjectId,
@@ -99,7 +99,7 @@ export function AppHeader({ compact, actions, hideNav }: Props) {
       }`}
     >
       <Link to="/" className="flex items-center gap-2 pr-1 text-primary" aria-label="Home">
-        <WorkflowIcon className="size-5" />
+        <OpenFlowLogo className="size-5" withPlate />
         {!compact && (
           <span className="hidden font-mono text-[13px] font-semibold tracking-tight text-foreground sm:inline">
             OpenFlow

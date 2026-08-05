@@ -15,6 +15,7 @@ import { Route as DataTablesRouteImport } from './routes/data-tables'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as ProjectsRouteImport } from './routes/projects'
 import { Route as RegisterRouteImport } from './routes/register'
+import { Route as SetupRouteImport } from './routes/setup'
 import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as SharedRouteImport } from './routes/shared'
 import { Route as TemplatesRouteImport } from './routes/templates'
@@ -57,6 +58,11 @@ const ProjectsRoute = ProjectsRouteImport.update({
 const RegisterRoute = RegisterRouteImport.update({
   id: '/register',
   path: '/register',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SetupRoute = SetupRouteImport.update({
+  id: '/setup',
+  path: '/setup',
   getParentRoute: () => rootRouteImport,
 } as any)
 const SettingsRoute = SettingsRouteImport.update({
@@ -132,6 +138,7 @@ export interface FileRoutesByFullPath {
   '/login': typeof LoginRoute
   '/projects': typeof ProjectsRouteWithChildren
   '/register': typeof RegisterRoute
+  '/setup': typeof SetupRoute
   '/settings': typeof SettingsRouteWithChildren
   '/shared': typeof SharedRoute
   '/templates': typeof TemplatesRoute
@@ -153,6 +160,7 @@ export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/projects': typeof ProjectsRouteWithChildren
   '/register': typeof RegisterRoute
+  '/setup': typeof SetupRoute
   '/settings': typeof SettingsRouteWithChildren
   '/shared': typeof SharedRoute
   '/templates': typeof TemplatesRoute
@@ -175,6 +183,7 @@ export interface FileRoutesById {
   '/login': typeof LoginRoute
   '/projects': typeof ProjectsRouteWithChildren
   '/register': typeof RegisterRoute
+  '/setup': typeof SetupRoute
   '/settings': typeof SettingsRouteWithChildren
   '/shared': typeof SharedRoute
   '/templates': typeof TemplatesRoute
@@ -198,6 +207,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/projects'
     | '/register'
+    | '/setup'
     | '/settings'
     | '/shared'
     | '/templates'
@@ -219,6 +229,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/projects'
     | '/register'
+    | '/setup'
     | '/settings'
     | '/shared'
     | '/templates'
@@ -240,6 +251,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/projects'
     | '/register'
+    | '/setup'
     | '/settings'
     | '/shared'
     | '/templates'
@@ -262,6 +274,7 @@ export interface RootRouteChildren {
   LoginRoute: typeof LoginRoute
   ProjectsRoute: typeof ProjectsRouteWithChildren
   RegisterRoute: typeof RegisterRoute
+  SetupRoute: typeof SetupRoute
   SettingsRoute: typeof SettingsRouteWithChildren
   SharedRoute: typeof SharedRoute
   TemplatesRoute: typeof TemplatesRoute
@@ -314,6 +327,13 @@ declare module '@tanstack/react-router' {
       path: '/register'
       fullPath: '/register'
       preLoaderRoute: typeof RegisterRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/setup': {
+      id: '/setup'
+      path: '/setup'
+      fullPath: '/setup'
+      preLoaderRoute: typeof SetupRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/settings': {
@@ -447,6 +467,7 @@ const rootRouteChildren: RootRouteChildren = {
   LoginRoute: LoginRoute,
   ProjectsRoute: ProjectsRouteWithChildren,
   RegisterRoute: RegisterRoute,
+  SetupRoute: SetupRoute,
   SettingsRoute: SettingsRouteWithChildren,
   SharedRoute: SharedRoute,
   TemplatesRoute: TemplatesRoute,

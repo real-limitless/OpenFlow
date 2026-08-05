@@ -3,20 +3,43 @@
 from __future__ import annotations
 
 import argparse
+import contextlib
 import json
 import sys
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from run_state import _atomic_write, _file_lock  # noqa: E402
+
 ROOT = Path(__file__).resolve().parents[3]
 CATALOG = ROOT / "docs" / "specs" / "catalog.json"
+# Sidecar lives under .jobs (gitignored) so the lock never lands in the repo.
+CATALOG_LOCK = ROOT / "scripts" / "factory" / ".jobs" / "catalog.lock"
 
 
 def load() -> dict:
-    return json.loads(CATALOG.read_text(encoding="utf-8"))
+    with _file_lock(CATALOG_LOCK, shared=True):
+        return json.loads(CATALOG.read_text(encoding="utf-8"))
 
 
 def save(data: dict) -> None:
-    CATALOG.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
+    with _file_lock(CATALOG_LOCK):
+        _atomic_write(CATALOG, json.dumps(data, indent=2) + "\n")
+
+
+@contextlib.contextmanager
+def catalog_transaction():
+    """Hold the lock across a read-modify-write of catalog.json.
+
+    Concurrent pipelines both call set-status here. Note this only serialises
+    catalog.py against itself -- IMPLEMENT agents are told to edit catalog.json
+    directly (prompts/02-implement-node.md step 5) and take no lock, so that
+    race is narrowed, not closed.
+    """
+    with _file_lock(CATALOG_LOCK):
+        data = json.loads(CATALOG.read_text(encoding="utf-8"))
+        yield data
+        _atomic_write(CATALOG, json.dumps(data, indent=2) + "\n")
 
 
 def get_batch(batch_id: str) -> dict:
@@ -37,12 +60,11 @@ def get_batch(batch_id: str) -> dict:
 
 
 def set_node_status(type_name: str, **fields: str) -> None:
-    data = load()
-    nodes = data.setdefault("nodes", {})
-    entry = nodes.setdefault(type_name, {})
-    entry.update({k: v for k, v in fields.items() if v is not None})
-    nodes[type_name] = entry
-    save(data)
+    with catalog_transaction() as data:
+        nodes = data.setdefault("nodes", {})
+        entry = nodes.setdefault(type_name, {})
+        entry.update({k: v for k, v in fields.items() if v is not None})
+        nodes[type_name] = entry
 
 
 def dedupe_queue(data: dict | None = None) -> tuple[dict, list[str]]:

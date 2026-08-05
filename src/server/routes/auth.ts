@@ -10,7 +10,8 @@ import {
   destroySession,
   getSessionUserId,
 } from "../services/sessions";
-import { ensureUser, LOCAL_USER_ID } from "../services/users";
+import { ensureUser, ensureUserWithProject, LOCAL_USER_ID } from "../services/users";
+import { countRealUsers } from "./setup";
 
 export { getSessionUserId } from "../services/sessions";
 
@@ -47,11 +48,17 @@ export default function authRoute(app: Hono<AppEnv>) {
       return c.json({ error: "Email already registered" }, 409);
     }
 
+    // First real account becomes instance owner (secret providers, admin gates).
+    const realUsers = await countRealUsers();
+    const role = realUsers === 0 ? "owner" : "member";
+
     const passwordHash = await bcrypt.hash(password, 10);
     const user = await prisma.user.create({
-      data: { email, passwordHash, role: "member" },
+      data: { email, passwordHash, role },
       select: { id: true, email: true, role: true },
     });
+
+    await ensureUserWithProject(user.id);
 
     const token = await createSession(user.id);
     setSessionCookie(c, token);

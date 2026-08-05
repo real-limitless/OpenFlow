@@ -1,14 +1,16 @@
-/** A public-shape sample workflow used for the "Start from example" action. */
+/** A public-shape sample workflow used for the "Start from example" / first-run action.
+ *  Uses Manual Trigger so Execute works immediately (no schedule wait).
+ */
 export const SAMPLE_WORKFLOW = {
   name: "Daily API digest",
   nodes: [
     {
       id: "sample-1",
-      name: "Schedule Trigger",
-      type: "n8n-nodes-base.scheduleTrigger",
-      typeVersion: 1.2,
+      name: "Manual Trigger",
+      type: "n8n-nodes-base.manualTrigger",
+      typeVersion: 1,
       position: [-160, 0],
-      parameters: { rule: { interval: [{ field: "hours", hoursInterval: 6 }] } },
+      parameters: {},
     },
     {
       id: "sample-2",
@@ -32,7 +34,13 @@ export const SAMPLE_WORKFLOW = {
       parameters: {
         combinator: "and",
         conditions: {
-          conditions: [{ leftValue: "={{ $json.stargazers_count }}", operator: "gt", rightValue: "1000" }],
+          conditions: [
+            {
+              leftValue: "={{ $json.stargazers_count }}",
+              operator: "gt",
+              rightValue: "1000",
+            },
+          ],
         },
         options: {},
       },
@@ -48,7 +56,12 @@ export const SAMPLE_WORKFLOW = {
         includeOtherFields: false,
         fields: {
           values: [
-            { name: "headline", type: "stringValue", value: "={{ $json.full_name }} has {{ $json.stargazers_count }} stars" },
+            {
+              name: "headline",
+              type: "stringValue",
+              value:
+                "={{ $json.full_name }} has {{ $json.stargazers_count }} stars",
+            },
           ],
         },
         options: {},
@@ -64,7 +77,7 @@ export const SAMPLE_WORKFLOW = {
     },
   ],
   connections: {
-    "Schedule Trigger": { main: [[{ node: "HTTP Request", type: "main", index: 0 }]] },
+    "Manual Trigger": { main: [[{ node: "HTTP Request", type: "main", index: 0 }]] },
     "HTTP Request": { main: [[{ node: "IF", type: "main", index: 0 }]] },
     IF: {
       main: [

@@ -1,3 +1,8 @@
+n8n-nodes-base.contentful: specced, docs/specs/nodes/n8n-nodes-base.contentful.md
+n8n-nodes-base.customerIoTool: specced, docs/specs/nodes/n8n-nodes-base.customerIoTool.md
+n8n-nodes-base.customerIoTrigger: specced, docs/specs/nodes/n8n-nodes-base.customerIoTrigger.md
+n8n-nodes-base.googleFirebaseCloudFirestoreTool: specced, docs/specs/nodes/n8n-nodes-base.googleFirebaseCloudFirestoreTool.md
+n8n-nodes-base.googleFirebaseRealtimeDatabase: specced, docs/specs/nodes/n8n-nodes-base.googleFirebaseRealtimeDatabase.md
 1: 1: 1: 1: 1: 1: 1: n8n-nodes-base.circleCi: specced, docs/specs/nodes/n8n-nodes-base.circleCi.md
 2: 2: 2: 2: 2: 2: 2: n8n-edges.base.circleCi: specced, docs/specs/nodes/n8n-edges.base.circleCi.md
 3: 3: 3: 3: 3: 3: 3: n8n-nodes-base.salesforce: specced, docs/specs/nodes/n8n-nodes-base.salesforce.md
@@ -6,10 +11,15 @@
 6: 6: 6: 6: 6: 6: 6: n8n-nodes-base.odoo: specced, docs/specs/nodes/n8n-nodes-base.odoo.md
 7: 7: 7: 7: 7: 7: 7: n8n-nodes-base.zoom: specced, docs/specs/nodes/n8n-nodes-base.zoom.md
 n8n-nodes-base.zendesk: specced, docs/specs/nodes/n8n-nodes-base.zendesk.md
+n8n-nodes-base.zendeskTool: specced, docs/specs/nodes/n8n-nodes-base.zendeskTool.md
+n8n-nodes-base.zendeskTrigger: specced, docs/specs/nodes/n8n-nodes-base.zendeskTrigger.md
+n8n-nodes-base.getResponse: specced, docs/specs/nodes/n8n-nodes-base.getResponse.md
+n8n-nodes-base.formIoTrigger: specced, docs/specs/nodes/n8n-nodes-base.formIoTrigger.md
 8: 8: 8: 8: 8: 8: 8: n8n-edges.base.circleCi: specced, docs/specs/nodes/n8n-edges.base.circleCi.md
 9: 9: 9: 9: 9: 9: 9: n8n-nodes-base.jenkins: implemented, docs/specs/nodes/n8n-nodes-base.jenkins.md
 10: 10: 10: 10: 10: 10: 10: n8n-edges.base.circleCi: specced, docs/specs/nodes/n8n-nodes-base.jenkins.md
 11: 11: 11: 11: 11: 11: 11: n8n-nodes-base.highLevel: specced, docs/specs/nodes/n8n-nodes-base.highLevel.md
+n8n-nodes-base.highLevelTool: specced, docs/specs/nodes/n8n-nodes-base.highLevelTool.md
 12: 12: 12: 12: 12: 12: 12: n8n-edges.base.circleCi: specced, docs/specs/nodes/n8n-nodes-base.highLevel.md
 13: 13: 13: 13: 13: 13: 13: n8n-nodes-base.pipedrive: specced, docs/specs/nodes/n8n-nodes-base.pipedrive.md
 14: 14: 14: 14: 14: 14: 14: n8n-edges.base.circleCi: specced, docs/specs/nodes/n8n-nodes-base.wooCommerce.md
@@ -25,25 +35,41 @@ n8n-nodes-base.zendesk: specced, docs/specs/nodes/n8n-nodes-base.zendesk.md
 24: 24: 24: 24: 24: 24: 24: n8n-nodes-base.shopify: specced, docs/specs/nodes/n8n-nodes-base.shopify.md
 25: 25: 25: 25: 25: 25: 25: n8n-nodes-base.stripe: specced, docs/specs/nodes/n8n-nodes-base.stripe.md
 26: 26: 26: 26: 26: 26: 26: n8n-nodes-base.pagerDuty: specced, docs/specs/nodes/n8n-nodes-base.pagerDuty.md
-27: 27: 27: 27: 27: 27: 27: n8n-nodes-base.gotify: specced, docs/specs/nodes/n8n-nodes-base.gotify.md
+27: 27: 27: 27: 27: 27: 27: n8n-nodes-base.gSuiteAdminTool: specced, docs/specs/nodes/n8n-nodes-base.gSuiteAdminTool.md
+n8n-nodes-base.gong: specced, docs/specs/nodes/n8n-nodes-base.gong.md
+n8n-nodes-base.gongTool: specced, docs/specs/nodes/n8n-nodes-base.gongTool.md
+n8n-nodes-base.grafanaTool: specced, docs/specs/nodes/n8n-nodes-base.grafanaTool.md
+n8n-nodes-base.gotify: specced, docs/specs/nodes/n8n-nodes-base.gotify.md
+n8n-nodes-base.gotifyTool: specced, docs/specs/nodes/n8n-nodes-base.gotifyTool.md
+n8n-nodes-base.goToWebinar: specced, docs/specs/nodes/n8n-nodes-base.goToWebinar.md
 28: 28: 28: 28: 28: 28: 28: n8n-nodes-base.baserow: specced, docs/specs/nodes/n8n-nodes-base.baserow.md
 29: 29: 29: 29: 29: 29: 29: n8n-nodes-base.microsoftOneDrive: specced, docs/specs/nodes/n8n-nodes-base.microsoftOneDrive.md
 30: 30: 30: 30: 30: 30: 30: n8n-nodes-base.nextCloud: specced, docs/specs/nodes/n8n-nodes-base.nextCloud.md
 31: 31: 31: 31: 31: 31: 31: n8n-nodes-base.xero: specced, docs/specs/nodes/n8n-nodes-base.xero.md
+n8n-nodes-base.awsTextract: specced, docs/specs/nodes/n8n-nodes-base.awsTextract.md
+n8n-nodes-base.awsRekognition: specced, docs/specs/nodes/n8n-nodes-base.awsRekognition.md
 n8n-nodes-base.awsS3: specced, docs/specs/nodes/n8n-nodes-base.awsS3.md
+n8n-nodes-base.awsS3Tool: specced, docs/specs/nodes/n8n-nodes-base.awsS3Tool.md
+n8n-nodes-base.awsSqs: specced, docs/specs/nodes/n8n-nodes-base.awsSqs.md
 n8n-nodes-base.awsLambda: specced, docs/specs/nodes/n8n-nodes-base.awsLambda.md
-33: 33: 33: 33: 33: 33: 33: 33: n8n-nodes-base.awsSes: specced, docs/specs/nodes/n8n-nodes-base.awsSes.md
+33: 33: 33: 33: 33: 33: 33: 33: n8n-nodes-base.awsTranscribe: specced, docs/specs/nodes/n8n-nodes-base.awsTranscribe.md
+n8n-nodes-base.awsTranscribeTool: specced, docs/specs/nodes/n8n-nodes-base.awsTranscribeTool.md
+n8n-nodes-base.awsSes: specced, docs/specs/nodes/n8n-nodes-base.awsSes.md
+n8n-nodes-base.awsSns: specced, docs/specs/nodes/n8n-nodes-base.awsSns.md
 34: 34: 34: 34: 34: 34: 34: 34: n8n-nodes-base.elasticsearch: specced, docs/specs/nodes/n8n-nodes-base.elasticsearch.md
+n8n-nodes-base.elasticSecurityTool: specced, docs/specs/nodes/n8n-nodes-base.elasticSecurityTool.md
 35: 35: 34: 34: 34: 34: 34: 34: n8n-nodes-base.mqtt: specced, docs/specs/nodes/n8n-nodes-base.mqtt.md
 36: 36: n8n-nodes-base.snowflake: specced, docs/specs/nodes/n8n-nodes-base.snowflake.md
 37: 37: 1: 1: 1: 1: 1: 1: n8n-nodes-base.rabbitmq: specced, docs/specs/nodes/n8n-nodes-base.rabbitmq.md
 38: 38: n8n-nodes-base.kafka: specced, docs/specs/nodes/n8n-nodes-base.kafka.md
 39: 39: n8n-nodes-base.amqp: specced, docs/specs/nodes/n8n-nodes-base.amqp.md
+n8n-nodes-base.amqpTrigger: specced, docs/specs/nodes/n8n-nodes-base.amqpTrigger.md
 40: 40: n8n-nodes-base.payPal: specced, docs/specs/nodes/n8n-nodes-base.payPal.md
 41: 41: n8n-nodes-base.stripeTrigger: specced, docs/specs/nodes/n8n-nodes-base.stripeTrigger.md
 42: n8n-nodes-base.redisTrigger: specced, docs/specs/nodes/n8n-nodes-base.redisTrigger.md
 n8n-nodes-base.nocoDb: specced, docs/specs/nodes/n8n-nodes-base.nocoDb.md
 43: n8n-nodes-base.dropbox: specced, docs/specs/nodes/n8n-nodes-base.dropbox.md
+n8n-nodes-base.dropboxTool: specced, docs/specs/nodes/n8n-nodes-base.dropboxTool.md
 n8n-nodes-base.twilioTrigger: specced, docs/specs/nodes/n8n-nodes-base.twilioTrigger.md
 n8n-nodes-base.postgresTrigger: specced, docs/specs/nodes/n8n-nodes-base.postgresTrigger.md
 @n8n/n8n-nodes-langchain.modelSelector: specced, docs/specs/nodes/@n8n/n8n-nodes-langchain.modelSelector.md
@@ -60,11 +86,13 @@ n8n-nodes-base.slackTool: specced, docs/specs/nodes/n8n-nodes-base.slackTool.md
 n8n-nodes-base.rssFeedReadTool: specced, docs/specs/nodes/n8n-nodes-base.rssFeedReadTool.md
 n8n-nodes-base.rssFeedReadTrigger: specced, docs/specs/nodes/n8n-nodes-base.rssFeedReadTrigger.md
 n8n-nodes-base.dateTimeTool: specced, docs/specs/nodes/n8n-nodes-base.dateTimeTool.md
+n8n-nodes-base.jiraTool: specced, docs/specs/nodes/n8n-nodes-base.jiraTool.md
 @n8n/n8n-nodes-langchain.vectorStoreMilvus: specced, docs/specs/nodes/@n8n/n8n-nodes-langchain.vectorStoreMilvus.md
 @n8n/n8n-nodes-langchain.retrieverVectorStore: specced, docs/specs/nodes/@n8n/n8n-nodes-langchain.retrieverVectorStore.md
 @n8n/n8n-nodes-langchain.memoryManager: specced, docs/specs/nodes/@n8n/n8n-nodes-langchain.memoryManager.md
 n8n-nodes-base.perplexity: specced, docs/specs/nodes/n8n-nodes-base.perplexity.md
 n8n-nodes-base.webflow: specced, docs/specs/nodes/n8n-nodes-base.webflow.md
+n8n-nodes-base.webflowTool: specced, docs/specs/nodes/n8n-nodes-base.webflowTool.md
 n8n-nodes-base.homeAssistant: specced, docs/specs/nodes/n8n-nodes-base.homeAssistant.md
 n8n-nodes-base.telegramTrigger: specced, docs/specs/nodes/n8n-nodes-base.telegramTrigger.md
 n8n-nodes-base.googleDrive: specced, docs/specs/nodes/n8n-nodes-base.googleDrive.md
@@ -75,6 +103,7 @@ n8n-nodes-base.googleSheetsTrigger: specced, docs/specs/nodes/n8n-nodes-base.goo
 n8n-nodes-base.googleCalendarTrigger: specced, docs/specs/nodes/n8n-nodes-base.googleCalendarTrigger.md
 @n8n/n8n-nodes-langchain.toolWorkflow: specced, docs/specs/nodes/@n8n/n8n-nodes-langchain.toolWorkflow.md
 @n8n/n8n-nodes-langchain.informationExtractor: specced, docs/specs/nodes/@n8n/n8n-nodes-langchain.informationExtractor.md
+@n8n/n8n-nodes-langchain.lmChatAwsBedrock: specced, docs/specs/nodes/@n8n/n8n-nodes-langchain.lmChatAwsBedrock.md
 @n8n/n8n-nodes-langchain.lmChatGroq: specced, docs/specs/nodes/@n8n/n8n-nodes-langchain.lmChatGroq.md
 @n8n/n8n-nodes-langchain.toolThink: specced, docs/specs/nodes/@n8n/n8n-nodes-langchain.toolThink.md
 @n8n/n8n-nodes-langchain.vectorStorePinecone: specced, docs/specs/nodes/@n8n/n8n-nodes-langchain.vectorStorePinecone.md
@@ -87,7 +116,9 @@ n8n-nodes-base.whatsAppTrigger: specced, docs/specs/nodes/n8n-nodes-base.whatsAp
 n8n-nodes-base.twitter: specced, docs/specs/nodes/n8n-nodes-base.twitter.md
 n8n-nodes-base.typeformTrigger: specced, docs/specs/nodes/n8n-nodes-base.typeformTrigger.md
 n8n-nodes-base.github: specced, docs/specs/nodes/n8n-nodes-base.github.md
+@n8n/n8n-nodes-langchain.vectorStoreMongoDBAtlas: specced, docs/specs/nodes/@n8n/n8n-nodes-langchain.vectorStoreMongoDBAtlas.md
 @n8n/n8n-nodes-langchain.vectorStoreSupabase: specced, docs/specs/nodes/@n8n/n8n-nodes-langchain.vectorStoreSupabase.md
+@n8n/n8n-nodes-langchain.vectorStoreSupabaseInsert: specced, docs/specs/nodes/@n8n/n8n-nodes-langchain.vectorStoreSupabaseInsert.md
 @n8n/n8n-nodes-langchain.vectorStoreQdrant: specced, docs/specs/nodes/@n8n/n8n-nodes-langchain.vectorStoreQdrant.md
 n8n-nodes-base.microsoftOutlook: specced, docs/specs/nodes/n8n-nodes-base.microsoftOutlook.md
 n8n-nodes-base.microsoftOutlookTrigger: specced, docs/specs/nodes/n8n-nodes-base.microsoftOutlookTrigger.md
@@ -100,10 +131,13 @@ n8n-nodes-base.openAi: specced, docs/specs/nodes/n8n-nodes-base.openAi.md
 @n8n/n8n-nodes-langchain.embeddingsGoogleGemini: specced, docs/specs/nodes/@n8n/n8n-nodes-langchain.embeddingsGoogleGemini.md
 n8n-nodes-base.shopifyTrigger: specced, docs/specs/nodes/n8n-nodes-base.shopifyTrigger.md
 n8n-nodes-base.slackTrigger: specced, docs/specs/nodes/n8n-nodes-base.slackTrigger.md
+n8n-nodes-base.jiraTrigger: specced, docs/specs/nodes/n8n-nodes-base.jiraTrigger.md
 n8n-nodes-base.jotFormTrigger: specced, docs/specs/nodes/n8n-nodes-base.jotFormTrigger.md
 n8n-nodes-base.reddit: specced, docs/specs/nodes/n8n-nodes-base.reddit.md
+n8n-nodes-base.redditTool: specced, docs/specs/nodes/n8n-nodes-base.redditTool.md
 @n8n/n8n-nodes-langchain.lmChatMistralCloud: specced, docs/specs/nodes/@n8n/n8n-nodes-langchain.lmChatMistralCloud.md
 n8n-nodes-base.perplexityTool: specced, docs/specs/nodes/n8n-nodes-base.perplexityTool.md
+n8n-nodes-base.netlifyTrigger: specced, docs/specs/nodes/n8n-nodes-base.netlifyTrigger.md
 n8n-nodes-base.notion: specced, docs/specs/nodes/n8n-nodes-base.notion.md
 n8n-nodes-base.airtableTool: specced, docs/specs/nodes/n8n-nodes-base.airtableTool.md
 n8n-nodes-base.wooCommerceTrigger: specced, docs/specs/nodes/n8n-nodes-base.wooCommerceTrigger.md
@@ -111,9 +145,15 @@ n8n-nodes-base.dataTableTool: specced, docs/specs/nodes/n8n-nodes-base.dataTable
 n8n-nodes-base.airtableTrigger: specced, docs/specs/nodes/n8n-nodes-base.airtableTrigger.md
 n8n-nodes-base.postgresTool: specced, docs/specs/nodes/n8n-nodes-base.postgresTool.md
 n8n-nodes-base.airtop: specced, docs/specs/nodes/n8n-nodes-base.airtop.md
+n8n-nodes-base.airtopTool: specced, docs/specs/nodes/n8n-nodes-base.airtopTool.md
 @n8n/n8n-nodes-langchain.lmChatDeepSeek: specced, docs/specs/nodes/@n8n/n8n-nodes-langchain.lmChatDeepSeek.md
 @n8n/n8n-nodes-langchain.chat: specced, docs/specs/nodes/@n8n/n8n-nodes-langchain.chat.md
+@n8n/n8n-nodes-langchain.chatHitlTool: specced, docs/specs/nodes/@n8n/n8n-nodes-langchain.chatHitlTool.md
+@n8n/n8n-nodes-langchain.manualChatTrigger: specced, docs/specs/nodes/@n8n/n8n-nodes-langchain.manualChatTrigger.md
+@n8n/n8n-nodes-langchain.mcpClient: specced, docs/specs/nodes/@n8n/n8n-nodes-langchain.mcpClient.md
+@n8n/n8n-nodes-langchain.microsoftAgent365Trigger: specced, docs/specs/nodes/@n8n/n8n-nodes-langchain.microsoftAgent365Trigger.md
 n8n-nodes-base.microsoftTeams: specced, docs/specs/nodes/n8n-nodes-base.microsoftTeams.md
+n8n-nodes-base.twitterTool: specced, docs/specs/nodes/n8n-nodes-base.twitterTool.md
 @n8n/n8n-nodes-langchain.toolWikipedia: specced, docs/specs/nodes/@n8n/n8n-nodes-langchain.toolWikipedia.md
 @n8n/n8n-nodes-langchain.anthropic: specced, docs/specs/nodes/@n8n/n8n-nodes-langchain.anthropic.md
 @n8n/n8n-nodes-langchain.rerankerCohere: specced, docs/specs/nodes/@n8n/n8n-nodes-langchain.rerankerCohere.md
@@ -122,20 +162,210 @@ n8n-nodes-base.microsoftTeams: specced, docs/specs/nodes/n8n-nodes-base.microsof
 n8n-nodes-base.hunter: specced, docs/specs/nodes/n8n-nodes-base.hunter.md
 n8n-nodes-base.calendlyTrigger: specced, docs/specs/nodes/n8n-nodes-base.calendlyTrigger.md
 n8n-nodes-base.telegramTool: specced, docs/specs/nodes/n8n-nodes-base.telegramTool.md
+n8n-nodes-base.telegramHitlTool: specced, docs/specs/nodes/n8n-nodes-base.telegramHitlTool.md
 n8n-nodes-base.notionTool: specced, docs/specs/nodes/n8n-nodes-base.notionTool.md
 n8n-nodes-base.googleDriveTool: specced, docs/specs/nodes/n8n-nodes-base.googleDriveTool.md
+n8n-nodes-base.googleDriveSearch: specced, docs/specs/nodes/n8n-nodes-base.googleDriveSearch.md
+n8n-nodes-base.microsoftOutlookTool: specced, docs/specs/nodes/n8n-nodes-base.microsoftOutlookTool.md
 n8n-nodes-base.notionTrigger: specced, docs/specs/nodes/n8n-nodes-base.notionTrigger.md
+@n8n/n8n-nodes-langchain.lmOpenAi: specced, docs/specs/nodes/@n8n/n8n-nodes-langchain.lmOpenAi.md
 @n8n/n8n-nodes-langchain.lmOllama: specced, docs/specs/nodes/@n8n/n8n-nodes-langchain.lmOllama.md
 n8n-nodes-base.openWeatherMap: specced, docs/specs/nodes/n8n-nodes-base.openWeatherMap.md
+n8n-nodes-base.openWeatherMapTool: specced, docs/specs/nodes/n8n-nodes-base.openWeatherMapTool.md
+@n8n/n8n-nodes-langchain.lmChatCohere: specced, docs/specs/nodes/@n8n/n8n-nodes-langchain.lmChatCohere.md
 @n8n/n8n-nodes-langchain.lmChatXAiGrok: specced, docs/specs/nodes/@n8n/n8n-nodes-langchain.lmChatXAiGrok.md
+@n8n/n8n-nodes-langchain.lmOpenHuggingFaceInference: specced, docs/specs/nodes/@n8n/n8n-nodes-langchain.lmOpenHuggingFaceInference.md
 @n8n/n8n-nodes-langchain.memoryRedisChat: specced, docs/specs/nodes/@n8n/n8n-nodes-langchain.memoryRedisChat.md
+@n8n/n8n-nodes-langchain.memoryMongoDbChat: specced, docs/specs/nodes/@n8n/n8n-nodes-langchain.memoryMongoDbChat.md
 @n8n/n8n-nodes-langchain.embeddingsOllama: specced, docs/specs/nodes/@n8n/n8n-nodes-langchain.embeddingsOllama.md
+@n8n/n8n-nodes-langchain.embeddingsHuggingFaceInference: specced, docs/specs/nodes/@n8n/n8n-nodes-langchain.embeddingsHuggingFaceInference.md
+@n8n/n8n-nodes-langchain.embeddingsAzureOpenAi: specced, docs/specs/nodes/@n8n/n8n-nodes-langchain.embeddingsAzureOpenAi.md
+@n8n/n8n-nodes-langchain.embeddingsMistralCloud: specced, docs/specs/nodes/@n8n/n8n-nodes-langchain.embeddingsMistralCloud.md
+n8n-nodes-base.circleCiTool: specced, docs/specs/nodes/n8n-nodes-base.circleCiTool.md
+n8n-nodes-base.copper: specced, docs/specs/nodes/n8n-nodes-base.copper.md
+n8n-nodes-base.copperTrigger: specced, docs/specs/nodes/n8n-nodes-base.copperTrigger.md
+n8n-nodes-base.cheerio: specced, docs/specs/nodes/n8n-nodes-base.cheerio.md
 n8n-nodes-base.htmlExtract: specced, docs/specs/nodes/n8n-nodes-base.htmlExtract.md
 n8n-nodes-base.spotify: specced, docs/specs/nodes/n8n-nodes-base.spotify.md
+n8n-nodes-base.spotifyTool: specced, docs/specs/nodes/n8n-nodes-base.spotifyTool.md
 n8n-nodes-base.supabaseTool: specced, docs/specs/nodes/n8n-nodes-base.supabaseTool.md
 @n8n/n8n-nodes-langchain.vectorStorePGVector: specced, docs/specs/nodes/@n8n/n8n-nodes-langchain.vectorStorePGVector.md
+n8n-nodes-base.hackerNewsTool: specced, docs/specs/nodes/n8n-nodes-base.hackerNewsTool.md
+n8n-nodes-base.hunterTool: specced, docs/specs/nodes/n8n-nodes-base.hunterTool.md
+@n8n/n8n-nodes-langchain.ollama: specced, docs/specs/nodes/@n8n/n8n-nodes-langchain.ollama.md
+@n8n/n8n-nodes-langchain.anthropic: specced, docs/specs/nodes/@n8n/n8n-nodes-langchain.anthropic.md
+n8n-nodes-base.googlePerspective: specced, docs/specs/nodes/n8n-nodes-base.googlePerspective.md
+n8n-nodes-base.googleCustomSearch: specced, docs/specs/nodes/n8n-nodes-base.googleCustomSearch.md
 n8n-nodes-base.clearbit: specced, docs/specs/nodes/n8n-nodes-base.clearbit.md
+n8n-nodes-base.clearbitTool: specced, docs/specs/nodes/n8n-nodes-base.clearbitTool.md
 n8n-nodes-base.deepL: specced, docs/specs/nodes/n8n-nodes-base.deepL.md
+n8n-nodes-base.deepLTool: specced, docs/specs/nodes/n8n-nodes-base.deepLTool.md
 n8n-nodes-base.apiTemplateIo: specced, docs/specs/nodes/n8n-nodes-base.apiTemplateIo.md
 n8n-nodes-base.jinaAi: specced, docs/specs/nodes/n8n-nodes-base.jinaAi.md
+n8n-nodes-base.jinaAiTool: specced, docs/specs/nodes/n8n-nodes-base.jinaAiTool.md
 n8n-nodes-base.mistralAi: specced, docs/specs/nodes/n8n-nodes-base.mistralAi.md
+n8n-nodes-base.phantombuster: specced, docs/specs/nodes/n8n-nodes-base.phantombuster.md
+n8n-nodes-base.mautic: specced, docs/specs/nodes/n8n-nodes-base.mautic.md
+n8n-nodes-base.pipedriveTrigger: specced, docs/specs/nodes/n8n-nodes-base.pipedriveTrigger.md
+n8n-nodes-base.serviceNow: specced, docs/specs/nodes/n8n-nodes-base.serviceNow.md
+n8n-nodes-base.uproc: specced, docs/specs/nodes/n8n-nodes-base.uproc.md
+n8n-nodes-base.calTrigger: specced, docs/specs/nodes/n8n-nodes-base.calTrigger.md
+n8n-nodes-base.dropcontact: specced, docs/specs/nodes/n8n-nodes-base.dropcontact.md
+n8n-nodes-base.dropcontactTool: specced, docs/specs/nodes/n8n-nodes-base.dropcontactTool.md
+n8n-nodes-base.hubspotTool: specced, docs/specs/nodes/n8n-nodes-base.hubspotTool.md
+n8n-nodes-base.marketstackTool: specced, docs/specs/nodes/n8n-nodes-base.marketstackTool.md
+n8n-nodes-base.githubTool: specced, docs/specs/nodes/n8n-nodes-base.githubTool.md
+n8n-nodes-base.pipedriveTool: specced, docs/specs/nodes/n8n-nodes-base.pipedriveTool.md
+n8n-nodes-base.mailerLite: specced, docs/specs/nodes/n8n-nodes-base.mailerLite.md
+n8n-nodes-base.lemlist: specced, docs/specs/nodes/n8n-nodes-base.lemlist.md
+n8n-nodes-base.lemlistTrigger: specced, docs/specs/nodes/n8n-nodes-base.lemlistTrigger.md
+n8n-nodes-base.nasa: specced, docs/specs/nodes/n8n-nodes-base.nasa.md
+n8n-nodes-base.webflowTrigger: specced, docs/specs/nodes/n8n-nodes-base.webflowTrigger.md
+@n8n/n8n-nodes-langchain.lmChatGoogleVertex: specced, docs/specs/nodes/@n8n/n8n-nodes-langchain.lmChatGoogleVertex.md
+n8n-nodes-base.clickUpTool: specced, docs/specs/nodes/n8n-nodes-base.clickUpTool.md
+n8n-nodes-base.clickUpTrigger: specced, docs/specs/nodes/n8n-nodes-base.clickUpTrigger.md
+n8n-nodes-base.dhl: specced, docs/specs/nodes/n8n-nodes-base.dhl.md
+n8n-nodes-base.dhlTool: specced, docs/specs/nodes/n8n-nodes-base.dhlTool.md
+n8n-nodes-base.discourse: specced, docs/specs/nodes/n8n-nodes-base.discourse.md
+n8n-nodes-base.discourseTool: specced, docs/specs/nodes/n8n-nodes-base.discourseTool.md
+n8n-nodes-base.discordTool: specced, docs/specs/nodes/n8n-nodes-base.discordTool.md
+n8n-nodes-base.googleSlidesTool: specced, docs/specs/nodes/n8n-nodes-base.googleSlidesTool.md
+n8n-nodes-base.googleAdsTool: specced, docs/specs/nodes/n8n-nodes-base.googleAdsTool.md
+n8n-nodes-base.googleCloudNaturalLanguage: specced, docs/specs/nodes/n8n-nodes-base.googleCloudNaturalLanguage.md
+n8n-nodes-base.googleCloudNaturalLanguageTool: specced, docs/specs/nodes/n8n-nodes-base.googleCloudNaturalLanguageTool.md
+n8n-nodes-base.googleFirebaseCloudFirestore: specced, docs/specs/nodes/n8n-nodes-base.googleFirebaseCloudFirestore.md
+n8n-nodes-base.salesforceTrigger: specced, docs/specs/nodes/n8n-nodes-base.salesforceTrigger.md
+n8n-nodes-base.slackHitlTool: specced, docs/specs/nodes/n8n-nodes-base.slackHitlTool.md
+n8n-nodes-base.zammad: specced, docs/specs/nodes/n8n-nodes-base.zammad.md
+n8n-nodes-base.todoistTool: specced, docs/specs/nodes/n8n-nodes-base.todoistTool.md
+n8n-nodes-base.asanaTrigger: specced, docs/specs/nodes/n8n-nodes-base.asanaTrigger.md
+n8n-nodes-base.asanaTool: specced, docs/specs/nodes/n8n-nodes-base.asanaTool.md
+@n8n/n8n-nodes-langchain.vectorStoreWeaviate: specced, docs/specs/nodes/@n8n/n8n-nodes-langchain.vectorStoreWeaviate.md
+@n8n/n8n-nodes-langchain.retrieverWorkflow: specced, docs/specs/nodes/@n8n/n8n-nodes-langchain.retrieverWorkflow.md
+n8n-nodes-base.uptimeRobot: specced, docs/specs/nodes/n8n-nodes-base.uptimeRobot.md
+n8n-nodes-base.mindee: specced, docs/specs/nodes/n8n-nodes-base.mindee.md
+n8n-nodes-base.stripeTool: specced, docs/specs/nodes/n8n-nodes-base.stripeTool.md
+n8n-nodes-base.egoi: specced, docs/specs/nodes/n8n-nodes-base.egoi.md
+n8n-nodes-base.egoiTool: specced, docs/specs/nodes/n8n-nodes-base.egoiTool.md
+n8n-nodes-base.bannerbear: specced, docs/specs/nodes/n8n-nodes-base.bannerbear.md
+n8n-nodes-base.bambooHr: specced, docs/specs/nodes/n8n-nodes-base.bambooHr.md
+n8n-nodes-base.awsDynamoDb: specced, docs/specs/nodes/n8n-nodes-base.awsDynamoDb.md
+n8n-nodes-base.awsCertificateManager: specced, docs/specs/nodes/n8n-nodes-base.awsCertificateManager.md
+n8n-nodes-base.awsIam: specced, docs/specs/nodes/n8n-nodes-base.awsIam.md
+n8n-nodes-base.clockify: specced, docs/specs/nodes/n8n-nodes-base.clockify.md
+n8n-nodes-base.clockifyTrigger: specced, docs/specs/nodes/n8n-nodes-base.clockifyTrigger.md
+n8n-nodes-base.emailSendTool: specced, docs/specs/nodes/n8n-nodes-base.emailSendTool.md
+n8n-nodes-base.emailSendHitlTool: implemented, docs/specs/nodes/n8n-nodes-base.emailSendHitlTool.md
+n8n-nodes-base.facebookLeadAdsTrigger: specced, docs/specs/nodes/n8n-nodes-base.facebookLeadAdsTrigger.md
+n8n-nodes-base.linearTrigger: specced, docs/specs/nodes/n8n-nodes-base.linearTrigger.md
+n8n-nodes-base.mqttTrigger: specced, docs/specs/nodes/n8n-nodes-base.mqttTrigger.md
+n8n-nodes-base.mySqlTool: specced, docs/specs/nodes/n8n-nodes-base.mySqlTool.md
+n8n-nodes-base.shopifyTool: specced, docs/specs/nodes/n8n-nodes-base.shopifyTool.md
+n8n-nodes-base.wordpressTool: specced, docs/specs/nodes/n8n-nodes-base.wordpressTool.md
+n8n-nodes-base.trelloTrigger: specced, docs/specs/nodes/n8n-nodes-base.trelloTrigger.md
+n8n-nodes-base.trelloTool: specced, docs/specs/nodes/n8n-nodes-base.trelloTool.md
+n8n-nodes-base.baserowTool: specced, docs/specs/nodes/n8n-nodes-base.baserowTool.md
+n8n-nodes-base.box: specced, docs/specs/nodes/n8n-nodes-base.box.md
+n8n-nodes-base.boxTrigger: specced, docs/specs/nodes/n8n-nodes-base.boxTrigger.md
+n8n-nodes-base.googleContactsTool: specced, docs/specs/nodes/n8n-nodes-base.googleContactsTool.md
+n8n-nodes-base.onfleet: specced, docs/specs/nodes/n8n-nodes-base.onfleet.md
+n8n-nodes-base.onfleetTrigger: specced, docs/specs/nodes/n8n-nodes-base.onfleetTrigger.md
+n8n-nodes-base.executeCommandTool: specced, docs/specs/nodes/n8n-nodes-base.executeCommandTool.md
+n8n-nodes-base.timeSaved: specced, docs/specs/nodes/n8n-nodes-base.timeSaved.md
+n8n-nodes-base.azureStorage: specced, docs/specs/nodes/n8n-nodes-base.azureStorage.md
+n8n-nodes-base.eventbriteTrigger: specced, docs/specs/nodes/n8n-nodes-base.eventbriteTrigger.md
+n8n-nodes-base.bitly: specced, docs/specs/nodes/n8n-nodes-base.bitly.md
+n8n-nodes-base.bitlyTool: specced, docs/specs/nodes/n8n-nodes-base.bitlyTool.md
+n8n-nodes-base.ghost: specced, docs/specs/nodes/n8n-nodes-base.ghost.md
+n8n-nodes-base.facebookTrigger: specced, docs/specs/nodes/n8n-nodes-base.facebookTrigger.md
+n8n-nodes-base.freshdesk: specced, docs/specs/nodes/n8n-nodes-base.freshdesk.md
+n8n-nodes-base.freshdeskTool: specced, docs/specs/nodes/n8n-nodes-base.freshdeskTool.md
+n8n-nodes-base.freshworksCrm: specced, docs/specs/nodes/n8n-nodes-base.freshworksCrm.md
+n8n-nodes-base.figmaTrigger: specced, docs/specs/nodes/n8n-nodes-base.figmaTrigger.md
+n8n-nodes-base.googleAnalyticsTool: specced, docs/specs/nodes/n8n-nodes-base.googleAnalyticsTool.md
+n8n-nodes-base.gumroadTrigger: specced, docs/specs/nodes/n8n-nodes-base.gumroadTrigger.md
+n8n-nodes-base.humanticAi: specced, docs/specs/nodes/n8n-nodes-base.humanticAi.md
+n8n-nodes-base.intercom: specced, docs/specs/nodes/n8n-nodes-base.intercom.md
+n8n-nodes-base.lingvaNex: specced, docs/specs/nodes/n8n-nodes-base.lingvaNex.md
+n8n-nodes-base.cortex: specced, docs/specs/nodes/n8n-nodes-base.cortex.md
+n8n-nodes-base.pagerDutyTool: specced, docs/specs/nodes/n8n-nodes-base.pagerDutyTool.md
+n8n-nodes-base.microsoftToDoTool: specced, docs/specs/nodes/n8n-nodes-base.microsoftToDoTool.md
+n8n-nodes-base.mailchimpTrigger: implemented, docs/specs/nodes/n8n-nodes-base.mailchimpTrigger.md
+n8n-nodes-base.mauticTrigger: specced, docs/specs/nodes/n8n-nodes-base.mauticTrigger.md
+n8n-nodes-base.medium: specced, docs/specs/nodes/n8n-nodes-base.medium.md
+n8n-nodes-base.microsoftOneDriveTrigger: specced, docs/specs/nodes/n8n-nodes-base.microsoftOneDriveTrigger.md
+n8n-nodes-base.quickbooksTool: specced, docs/specs/nodes/n8n-nodes-base.quickbooksTool.md
+n8n-nodes-base.redisTool: specced, docs/specs/nodes/n8n-nodes-base.redisTool.md
+@n8n/n8n-nodes-langchain.vectorStoreRedis: specced, docs/specs/nodes/@n8n/n8n-nodes-langchain.vectorStoreRedis.md
+n8n-nodes-base.sendInBlueTrigger: specced, docs/specs/nodes/n8n-nodes-base.sendInBlueTrigger.md
+n8n-nodes-base.raindrop: specced, docs/specs/nodes/n8n-nodes-base.raindrop.md
+n8n-nodes-base.strapi: specced, docs/specs/nodes/n8n-nodes-base.strapi.md
+n8n-nodes-base.salesforceTool: specced, docs/specs/nodes/n8n-nodes-base.salesforceTool.md
+n8n-nodes-base.urlScanIo: specced, docs/specs/nodes/n8n-nodes-base.urlScanIo.md
+n8n-nodes-base.strava: specced, docs/specs/nodes/n8n-nodes-base.strava.md
+n8n-nodes-base.theHive: specced, docs/specs/nodes/n8n-nodes-base.theHive.md
+n8n-nodes-base.theHiveProject: specced, docs/specs/nodes/n8n-nodes-base.theHiveProject.md
+n8n-nodes-base.keap: specced, docs/specs/nodes/n8n-nodes-base.keap.md
+n8n-nodes-base.activeCampaign: specced, docs/specs/nodes/n8n-nodes-base.activeCampaign.md
+n8n-nodes-base.activeCampaignTrigger: specced, docs/specs/nodes/n8n-nodes-base.activeCampaignTrigger.md
+n8n-nodes-base.crateDb: specced, docs/specs/nodes/n8n-nodes-base.crateDb.md
+n8n-nodes-base.googleBusinessProfileTrigger: specced, docs/specs/nodes/n8n-nodes-base.googleBusinessProfileTrigger.md
+n8n-nodes-base.googleBooks: specced, docs/specs/nodes/n8n-nodes-base.googleBooks.md
+n8n-nodes-base.coinGecko: specced, docs/specs/nodes/n8n-nodes-base.coinGecko.md
+n8n-nodes-base.coinGeckoTool: specced, docs/specs/nodes/n8n-nodes-base.coinGeckoTool.md
+n8n-nodes-base.filemaker: specced, docs/specs/nodes/n8n-nodes-base.filemaker.md
+n8n-nodes-base.vonage: specced, docs/specs/nodes/n8n-nodes-base.vonage.md
+n8n-nodes-base.convertKit: specced, docs/specs/nodes/n8n-nodes-base.convertKit.md
+n8n-nodes-base.convertKitTool: specced, docs/specs/nodes/n8n-nodes-base.convertKitTool.md
+n8n-nodes-base.convertKitTrigger: specced, docs/specs/nodes/n8n-nodes-base.convertKitTrigger.md
+n8n-nodes-base.linearTool: specced, docs/specs/nodes/n8n-nodes-base.linearTool.md
+n8n-nodes-base.linkedInTool: specced, docs/specs/nodes/n8n-nodes-base.linkedInTool.md
+n8n-nodes-base.mongoDbTool: specced, docs/specs/nodes/n8n-nodes-base.mongoDbTool.md
+n8n-nodes-base.nasaTool: specced, docs/specs/nodes/n8n-nodes-base.nasaTool.md
+n8n-nodes-base.oneSimpleApi: specced, docs/specs/nodes/n8n-nodes-base.oneSimpleApi.md
+n8n-nodes-base.openThesaurus: specced, docs/specs/nodes/n8n-nodes-base.openThesaurus.md
+n8n-nodes-base.nocoDbTool: specced, docs/specs/nodes/n8n-nodes-base.nocoDbTool.md
+n8n-nodes-base.rabbitmqTrigger: specced, docs/specs/nodes/n8n-nodes-base.rabbitmqTrigger.md
+n8n-nodes-base.signl4: specced, docs/specs/nodes/n8n-nodes-base.signl4.md
+n8n-nodes-base.webSearch: specced, docs/specs/nodes/n8n-nodes-base.webSearch.md
+n8n-nodes-base.whatsAppTool: specced, docs/specs/nodes/n8n-nodes-base.whatsAppTool.md
+n8n-nodes-base.zulip: implemented, docs/specs/nodes/n8n-nodes-base.zulip.md
+n8n-nodes-base.bubbleTool: specced, docs/specs/nodes/n8n-nodes-base.bubbleTool.md
+n8n-nodes-base.googleTranslate: specced, docs/specs/nodes/n8n-nodes-base.googleTranslate.md
+n8n-nodes-base.graphql: specced, docs/specs/nodes/n8n-nodes-base.graphqlTool.md
+n8n-nodes-base.googleSearchConsole: specced, docs/specs/nodes/n8n-nodes-base.googleSearchConsole.md
+@n8n/n8n-nodes-langchain.anthropicTool: specced, docs/specs/nodes/@n8n/n8n-nodes-langchain.anthropicTool.md
+@n8n/n8n-nodes-langchain.embeddingsAwsBedrock: specced, docs/specs/nodes/@n8n/n8n-nodes-langchain.embeddingsAwsBedrock.md
+@n8n/n8n-nodes-langchain.googleGeminiTool: specced, docs/specs/nodes/@n8n/n8n-nodes-langchain.googleGeminiTool.md
+@n8n/n8n-nodes-langchain.lmChatMoonshot: specced, docs/specs/nodes/@n8n/n8n-nodes-langchain.lmChatMoonshot.md
+n8n-nodes-base.Brandfetch: specced, docs/specs/nodes/n8n-nodes-base.Brandfetch.md
+n8n-nodes-base.actionNetworkTool: specced, docs/specs/nodes/n8n-nodes-base.actionNetworkTool.md
+n8n-nodes-base.acuitySchedulingTrigger: specced, docs/specs/nodes/n8n-nodes-base.acuitySchedulingTrigger.md
+n8n-nodes-base.affinity: specced, docs/specs/nodes/n8n-nodes-base.affinity.md
+n8n-nodes-base.affinityTool: specced, docs/specs/nodes/n8n-nodes-base.affinityTool.md
+n8n-nodes-base.affinityTrigger: specced, docs/specs/nodes/n8n-nodes-base.affinityTrigger.md
+n8n-nodes-base.beeminderTool: specced, docs/specs/nodes/n8n-nodes-base.beeminderTool.md
+n8n-nodes-base.autopilotTool: specced, docs/specs/nodes/n8n-nodes-base.autopilotTool.md
+n8n-nodes-base.autopilotTrigger: specced, docs/specs/nodes/n8n-nodes-base.autopilotTrigger.md
+n8n-nodes-base.automizy: specced, docs/specs/nodes/n8n-nodes-base.automizy.md
+n8n-nodes-base.agileCrm: specced, docs/specs/nodes/n8n-nodes-base.agileCrm.md
+n8n-nodes-base.awsSnsTrigger: specced, docs/specs/nodes/n8n-nodes-base.awsSnsTrigger.md
+n8n-nodes-base.bitwardenTool: specced, docs/specs/nodes/n8n-nodes-base.bitwardenTool.md
+n8n-nodes-base.chargebee: specced, docs/specs/nodes/n8n-nodes-base.chargebee.md
+n8n-nodes-base.chargebeeTrigger: specced, docs/specs/nodes/n8n-nodes-base.chargebeeTrigger.md
+n8n-nodes-base.cloudflareTool: specced, docs/specs/nodes/n8n-nodes-base.cloudflareTool.md
+n8n-nodes-base.clockifyTool: specced, docs/specs/nodes/n8n-nodes-base.clockifyTool.md
+n8n-nodes-base.codaTool: specced, docs/specs/nodes/n8n-nodes-base.codaTool.md
+n8n-nodes-base.copperTool: specced, docs/specs/nodes/n8n-nodes-base.copperTool.md
+n8n-nodes-base.cockpit: specced, docs/specs/nodes/n8n-nodes-base.cockpit.md
+n8n-nodes-base.disqus: specced, docs/specs/nodes/n8n-nodes-base.disqus.md
+n8n-nodes-base.drift: specced, docs/specs/nodes/n8n-nodes-base.drift.md
+n8n-nodes-base.driftTool: specced, docs/specs/nodes/n8n-nodes-base.driftTool.md
+n8n-nodes-base.demio: specced, docs/specs/nodes/n8n-nodes-base.demio.md
+n8n-nodes-base.elevenLabs: specced, docs/specs/nodes/n8n-nodes-base.elevenLabs.md
+n8n-nodes-base.emelia: specced, docs/specs/nodes/n8n-nodes-base.emelia.md
+n8n-nodes-base.emeliaTrigger: specced, docs/specs/nodes/n8n-nodes-base.emeliaTrigger.md
+n8n-nodes-base.flowTrigger: specced, docs/specs/nodes/n8n-nodes-base.flowTrigger.md
+n8n-nodes-base.googlePageSpeedInsights: specced, docs/specs/nodes/n8n-nodes-base.googlePageSpeedInsights.md
+n8n-nodes-base.googleCloudStorageTool: specced, docs/specs/nodes/n8n-nodes-base.googleCloudStorageTool.md
+n8n-nodes-base.googleTranslateTool: specced, docs/specs/nodes/n8n-nodes-base.googleTranslateTool.md
