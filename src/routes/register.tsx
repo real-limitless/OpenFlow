@@ -1,10 +1,10 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
-import { Workflow as WorkflowIcon } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { OpenFlowLogo } from "@/components/brand/openflow-logo";
 import { register } from "@/lib/auth/client";
 
 export const Route = createFileRoute("/register")({
@@ -35,7 +35,7 @@ function RegisterPage() {
   return (
     <div className="flex min-h-screen flex-col items-center justify-center px-4">
       <div className="mb-8 flex items-center gap-2 text-primary">
-        <WorkflowIcon className="size-6" />
+        <OpenFlowLogo className="size-7" withPlate />
         <span className="font-mono text-[15px] font-semibold text-foreground">OpenFlow</span>
       </div>
       <form
