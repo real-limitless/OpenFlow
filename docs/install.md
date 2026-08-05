@@ -5,10 +5,12 @@
 | Goal | Command |
 | --- | --- |
 | Try OpenFlow | `docker compose up -d` → http://localhost:3000 → **Run sample workflow** |
-| Install without cloning | `curl -fsSL …/scripts/install.sh \| bash` |
-| Install with auth (owner setup) | `…/install.sh \| bash -s -- --prod` |
-| Contribute / develop | `npm run setup && npm run dev` |
-| Production-ish | `docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d` |
+| One-line TUI install | `curl -fsSL …/scripts/get-openflow.sh \| bash` |
+| Non-interactive try-out | `…/get-openflow.sh \| bash -s -- --yes` |
+| Install with auth (owner setup) | `…/get-openflow.sh \| bash -s -- --yes --mode production` |
+| Build from source (no GHCR) | `…/get-openflow.sh \| bash -s -- --yes --mode build` |
+| Contribute / develop | `…/get-openflow.sh --mode develop` or `npm run setup && npm run dev` |
+| Production-ish compose overlay | `docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d` |
 
 ## First-run experience
 
@@ -59,30 +61,40 @@ docker compose up -d
 
 Compose still forces in-network `DATABASE_URL` / `REDIS_URL` to the `db` and `redis` services.
 
-## install.sh (prebuilt image)
+## get-openflow.sh (recommended one-liner)
+
+Full installer with an interactive TUI (and non-interactive flags):
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/real-limitless/OpenFlow/main/scripts/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/real-limitless/OpenFlow/main/scripts/get-openflow.sh | bash
 ```
 
-- Writes `~/openflow/docker-compose.yml` and `.env`
-- Image default: `ghcr.io/real-limitless/openflow:latest` (override with `OPENFLOW_IMAGE`)
-- Home dir override: `OPENFLOW_HOME=/opt/openflow bash install.sh`
-- Polls `http://127.0.0.1:$PORT/health/ready` (default 90s), prints next steps, opens a browser when possible
+| Mode | What it does |
+| --- | --- |
+| `tryout` (default) | Prebuilt image under `~/openflow`, `AUTH_DISABLED=true` |
+| `production` | Same stack with auth on → first open is `/setup` owner account |
+| `build` | `git clone` + `docker compose up -d --build` (when GHCR image missing) |
+| `develop` | `git clone` + `npm run setup` (Node 22+) |
 
 | Flag | Meaning |
 | --- | --- |
-| `--prod` | New `.env` gets `AUTH_DISABLED=false` (owner setup on first open) |
+| `--yes` / `-y` | Skip TUI and confirmations |
+| `--mode tryout\|production\|build\|develop` | Install path |
+| `--prod` | Shortcut for `--mode production` |
 | `--port N` | Host port (default 3000) |
-| `--home PATH` | Install directory |
+| `--home PATH` | Data / compose directory |
+| `--clone-dir PATH` | Git clone path for build/develop |
+| `--image REF` | Container image override |
 | `--no-open` | Do not open a browser |
 | `--skip-wait` | Skip readiness poll |
 
 ```sh
-bash install.sh --prod --port 3001 --no-open
+bash scripts/get-openflow.sh --yes --mode production --port 3001 --no-open
 ```
 
-Until GHCR packages are published for the repo, pull may fail — use `docker compose up -d --build` from a clone instead.
+`scripts/install.sh` is a thin wrapper: `get-openflow.sh --yes` with the same flags (kept for older docs / bookmarks).
+
+Until GHCR packages are published, use `--mode build` or `docker compose up -d --build` from a clone.
 
 ## Binary storage (S3 / MinIO)
 

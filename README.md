@@ -51,20 +51,26 @@ docker compose logs -f api
 docker compose down
 ```
 
-### One-line install (prebuilt image)
-
-When the GHCR image is published for your fork:
+### One-line install (TUI)
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/real-limitless/OpenFlow/main/scripts/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/real-limitless/OpenFlow/main/scripts/get-openflow.sh | bash
 ```
 
-Installs under `~/openflow` by default (`OPENFLOW_HOME` to override). Waits for `/health/ready`, prints next steps, and opens a browser when possible.
+Interactive menu (try-out / production / build-from-source / develop). Works under `curl | bash` by reading prompts from `/dev/tty`. Installs under `~/openflow` by default, waits for `/health/ready`, and opens a browser when ready.
 
 ```sh
-# production-ish (auth on → create owner on first open)
-curl -fsSL …/scripts/install.sh | bash -s -- --prod
+# non-interactive try-out
+curl -fsSL …/scripts/get-openflow.sh | bash -s -- --yes
+
+# production (auth on → create owner on first open)
+curl -fsSL …/scripts/get-openflow.sh | bash -s -- --yes --mode production
+
+# build from source if the GHCR image is not published yet
+curl -fsSL …/scripts/get-openflow.sh | bash -s -- --yes --mode build
 ```
+
+`scripts/install.sh` remains a thin non-interactive wrapper around `get-openflow.sh --yes`.
 
 ### Production overlay
 
