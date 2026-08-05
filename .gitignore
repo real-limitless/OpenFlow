@@ -7,6 +7,7 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
+# Dependencies & build
 node_modules
 dist
 dist-ssr
@@ -14,29 +15,50 @@ dist-ssr
 .vinxi
 .tanstack/**
 .nitro
+.vite/
 *.local
+
+# Env & secrets (keep only the example template)
 .env
+.env.*
+!.env.example
+*.pem
+*.key
+.dev.vars
+
+# App runtime data (binary store, local secrets dumps)
+data/
+.secrets/
 
 # Wrangler / Cloudflare
 .wrangler/
-.dev.vars
 
-# Editor directories and files
+# Editor / OS
 .vscode/*
 !.vscode/extensions.json
 .idea
 .DS_Store
+Thumbs.db
 *.suo
 *.ntvs*
 *.njsproj
 *.sln
 *.sw?
 
+# Generated Prisma client
 /src/generated/prisma
 
 # Local databases
 *.db
 *.db-journal
+*.sqlite
+*.sqlite3
+
+# Test / coverage
+coverage/
+.nyc_output/
+tmp/
+.tmp/
 
 # Factory job logs / prompts
 scripts/factory/.jobs/
@@ -62,6 +84,11 @@ scripts/scrape-n8n-workflows/.jobs/
 # Local DB backups
 backups/
 
+# Tooling / agent local state
+graphify-out/
+.claude/
+.cursor/
+.grok/
 # Local build / test scratch caches
 .tmp/
 .tmp-vitest/

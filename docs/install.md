@@ -1,5 +1,7 @@
 # Install & run
 
+New to the project? Start with [onboarding.md](onboarding.md) (guided TUI wizard) or the [README](../README.md). This page is the full install / production reference.
+
 ## Paths
 
 | Goal | Command |
@@ -149,7 +151,9 @@ docker compose up -d db redis
 npm run dev
 ```
 
-Interactive menu: `npm run tui`.
+Interactive menu + multi-step install: `npm run tui` (see [onboarding.md](onboarding.md)).
+
+Secret hygiene before you publish a branch: `bash scripts/check-no-secrets.sh` · [SECURITY.md](../SECURITY.md).
 
 ## Production checklist
 

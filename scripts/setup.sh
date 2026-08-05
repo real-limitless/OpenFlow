@@ -1,19 +1,16 @@
 #!/usr/bin/env bash
-# First-time local development setup.
+# First-time local development setup (non-interactive).
 #   ./scripts/setup.sh
 #   npm run setup
+#
+# For a guided multi-step install, use: npm run tui → Install wizard
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
 
-BOLD='\033[1m'
-DIM='\033[2m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-RED='\033[0;31m'
-BLUE='\033[0;34m'
-NC='\033[0m'
+# shellcheck source=lib/setup-common.sh
+source "$ROOT/scripts/lib/setup-common.sh"
 
 info()  { echo -e "${BLUE}ℹ${NC}  $*"; }
 ok()    { echo -e "${GREEN}✔${NC}  $*"; }
