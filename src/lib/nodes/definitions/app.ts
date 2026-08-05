@@ -298,6 +298,81 @@ export const payPal: INodeTypeDescription = {
   ],
 };
 
+const BRANDFETCH_DOCS = "https://docs.n8n.io/integrations/builtin/app-nodes/n8n-nodes-base.brandfetch/";
+
+export const brandfetch: INodeTypeDescription = {
+  name: "n8n-nodes-base.Brandfetch",
+  displayName: "Brandfetch",
+  category: "Utility",
+  group: ["input"],
+  version: 1,
+  description: "Fetch brand data (company info, colors, fonts, industry, logo) from Brandfetch",
+  defaults: { name: "Brandfetch" },
+  inputs: ["main"],
+  outputs: ["main"],
+  icon: "Search",
+  credentials: [{ name: "brandfetchApi", required: true }],
+  sources: [BRANDFETCH_DOCS],
+  properties: [
+    {
+      displayName: "Operation",
+      name: "operation",
+      type: "options",
+      default: "logo",
+      required: true,
+      noDataExpression: true,
+      options: [
+        { name: "Company", value: "company" },
+        { name: "Color", value: "color" },
+        { name: "Font", value: "font" },
+        { name: "Industry", value: "industry" },
+        { name: "Logo", value: "logo" },
+      ],
+    },
+    {
+      displayName: "Domain",
+      name: "domain",
+      type: "string",
+      default: "",
+      required: true,
+      placeholder: "n8n.io",
+      description: "The company domain to query. Accepts expressions.",
+    },
+    {
+      displayName: "Download Images",
+      name: "download",
+      type: "boolean",
+      default: false,
+      required: true,
+      displayOptions: { show: { operation: ["logo"] } },
+    },
+    {
+      displayName: "Image Types",
+      name: "imageTypes",
+      type: "multiOptions",
+      default: ["logo", "icon"],
+      required: true,
+      displayOptions: { show: { operation: ["logo"], download: [true] } },
+      options: [
+        { name: "Icon", value: "icon" },
+        { name: "Logo", value: "logo" },
+      ],
+    },
+    {
+      displayName: "Image Formats",
+      name: "imageFormats",
+      type: "multiOptions",
+      default: ["png"],
+      required: true,
+      displayOptions: { show: { operation: ["logo"], download: [true] } },
+      options: [
+        { name: "PNG", value: "png" },
+        { name: "SVG", value: "svg" },
+      ],
+    },
+  ],
+};
+
 const BASEROW_DOCS = "https://docs.n8n.io/integrations/builtin/app-nodes/n8n-nodes-base.baserow/";
 
 export const baserow: INodeTypeDescription = {
@@ -2486,6 +2561,399 @@ export const crateDb: INodeTypeDescription = {
           description: "Comma-separated list of properties used as query parameters bound to $1, $2, ...",
         },
       ],
+    },
+  ],
+};
+
+const AWS_DYNAMO_DB_DOCS =
+  "https://docs.n8n.io/integrations/builtin/app-nodes/n8n-nodes-base.awsdynamodb/";
+const AWS_CRED_DOCS_DYNAMO =
+  "https://docs.n8n.io/integrations/builtin/credentials/aws/";
+
+export const awsDynamoDb: INodeTypeDescription = {
+  name: "n8n-nodes-base.awsDynamoDb",
+  displayName: "AWS DynamoDB",
+  category: "Data & Storage",
+  group: ["output"],
+  version: 1,
+  description: "Read, write, scan, and delete items in AWS DynamoDB",
+  defaults: { name: "AWS DynamoDB" },
+  inputs: ["main"],
+  outputs: ["main"],
+  icon: "Database",
+  credentials: [{ name: "aws", required: true }],
+  sources: [AWS_DYNAMO_DB_DOCS, AWS_CRED_DOCS_DYNAMO],
+  properties: [
+    {
+      displayName: "Resource",
+      name: "resource",
+      type: "options",
+      default: "item",
+      required: true,
+      noDataExpression: true,
+      options: [{ name: "Item", value: "item" }],
+    },
+    {
+      displayName: "Operation",
+      name: "operation",
+      type: "options",
+      default: "upsert",
+      required: true,
+      noDataExpression: true,
+      options: [
+        { name: "Upsert (PutItem)", value: "upsert" },
+        { name: "Get", value: "get" },
+        { name: "Get All (Scan/Query)", value: "getAll" },
+        { name: "Delete", value: "delete" },
+      ],
+    },
+    {
+      displayName: "Authentication",
+      name: "authentication",
+      type: "options",
+      default: "iam",
+      noDataExpression: true,
+      options: [
+        { name: "IAM Access Key", value: "iam" },
+        { name: "Assume Role", value: "assumeRole" },
+      ],
+    },
+    {
+      displayName: "Table Name",
+      name: "tableName",
+      type: "string",
+      default: "",
+      required: true,
+      placeholder: "MyTable",
+      description: "Target DynamoDB table name or ARN",
+    },
+    {
+      displayName: "Data to Send",
+      name: "dataToSend",
+      type: "options",
+      default: "defineBelow",
+      displayOptions: { show: { operation: ["upsert"] } },
+      noDataExpression: true,
+      options: [
+        { name: "Auto-Map Input Data", value: "autoMapInputData" },
+        { name: "Define Below (Field Values)", value: "defineBelow" },
+      ],
+    },
+    {
+      displayName: "Inputs to Ignore",
+      name: "inputsToIgnore",
+      type: "string",
+      default: "",
+      displayOptions: {
+        show: { operation: ["upsert"], dataToSend: ["autoMapInputData"] },
+      },
+      placeholder: "field1,field2",
+      description: "Comma-separated field names to skip when auto-mapping",
+    },
+    {
+      displayName: "Fields",
+      name: "fieldsUi",
+      type: "fixedCollection",
+      default: {},
+      typeOptions: { multipleValues: true },
+      displayOptions: {
+        show: { operation: ["upsert"], dataToSend: ["defineBelow"] },
+      },
+      options: [
+        {
+          name: "fieldValues",
+          displayName: "Field Value",
+          values: [
+            { displayName: "Field ID", name: "fieldId", type: "string", default: "" },
+            { displayName: "Field Value", name: "fieldValue", type: "string", default: "" },
+          ],
+        },
+      ],
+    },
+    {
+      displayName: "Select",
+      name: "select",
+      type: "options",
+      default: "ALL_ATTRIBUTES",
+      displayOptions: { show: { operation: ["get", "getAll"] } },
+      noDataExpression: true,
+      options: [
+        { name: "All Attributes", value: "ALL_ATTRIBUTES" },
+        { name: "All Projected Attributes", value: "ALL_PROJECTED_ATTRIBUTES" },
+        { name: "Specific Attributes", value: "SPECIFIC_ATTRIBUTES" },
+        { name: "Count", value: "COUNT" },
+      ],
+    },
+    {
+      displayName: "Keys",
+      name: "keysUi",
+      type: "fixedCollection",
+      default: {},
+      typeOptions: { multipleValues: true },
+      displayOptions: { show: { operation: ["get", "delete"] } },
+      options: [
+        {
+          name: "keyValues",
+          displayName: "Key",
+          values: [
+            { displayName: "Key", name: "key", type: "string", default: "" },
+            {
+              displayName: "Type",
+              name: "type",
+              type: "options",
+              default: "S",
+              options: [
+                { name: "Binary (B)", value: "B" },
+                { name: "Number (N)", value: "N" },
+                { name: "String (S)", value: "S" },
+              ],
+            },
+            { displayName: "Value", name: "value", type: "string", default: "" },
+          ],
+        },
+      ],
+    },
+    {
+      displayName: "Scan",
+      name: "scan",
+      type: "boolean",
+      default: false,
+      displayOptions: { show: { operation: ["getAll"] } },
+    },
+    {
+      displayName: "Return All",
+      name: "returnAll",
+      type: "boolean",
+      default: false,
+      displayOptions: { show: { operation: ["getAll"] } },
+    },
+    {
+      displayName: "Limit",
+      name: "limit",
+      type: "number",
+      default: 50,
+      typeOptions: { minValue: 1 },
+      displayOptions: {
+        show: { operation: ["getAll"] },
+        hide: { returnAll: [true] },
+      },
+    },
+    {
+      displayName: "Key Condition Expression",
+      name: "keyConditionExpression",
+      type: "string",
+      default: "",
+      displayOptions: { show: { operation: ["getAll"], scan: [false] } },
+      placeholder: "pk = :pk AND sk > :sk",
+    },
+    {
+      displayName: "Filter Expression",
+      name: "filterExpression",
+      type: "string",
+      default: "",
+      displayOptions: { show: { operation: ["getAll"], scan: [true] } },
+    },
+    {
+      displayName: "Expression Attribute Values (EAV)",
+      name: "eavUi",
+      type: "fixedCollection",
+      default: {},
+      typeOptions: { multipleValues: true },
+      displayOptions: { show: { operation: ["getAll"] } },
+      options: [
+        {
+          name: "eavValues",
+          displayName: "EAV",
+          values: [
+            { displayName: "Attribute", name: "attribute", type: "string", default: "" },
+            {
+              displayName: "Type",
+              name: "type",
+              type: "options",
+              default: "S",
+              options: [
+                { name: "Number (N)", value: "N" },
+                { name: "String (S)", value: "S" },
+              ],
+            },
+            { displayName: "Value", name: "value", type: "string", default: "" },
+          ],
+        },
+      ],
+    },
+    {
+      displayName: "Return Values",
+      name: "returnValues",
+      type: "options",
+      default: "NONE",
+      displayOptions: { show: { operation: ["delete"] } },
+      noDataExpression: true,
+      options: [
+        { name: "None", value: "NONE" },
+        { name: "All Old", value: "ALL_OLD" },
+      ],
+    },
+    {
+      displayName: "Additional Fields",
+      name: "additionalFields",
+      type: "collection",
+      default: {},
+      displayOptions: { show: { operation: ["upsert", "get", "delete"] } },
+      options: [
+        {
+          displayName: "Condition Expression",
+          name: "conditionExpression",
+          type: "string",
+          default: "",
+          displayOptions: { show: { operation: ["upsert", "delete"] } },
+        },
+        {
+          displayName: "Projection Expression",
+          name: "projectionExpression",
+          type: "string",
+          default: "",
+          displayOptions: { show: { operation: ["get"] } },
+        },
+        {
+          displayName: "Read Type",
+          name: "readType",
+          type: "options",
+          default: "",
+          displayOptions: { show: { operation: ["get"] } },
+          options: [
+            { name: "Strongly Consistent Read", value: "stronglyConsistentRead" },
+            { name: "Eventually Consistent Read", value: "eventuallyConsistentRead" },
+          ],
+        },
+        {
+          displayName: "Expression Attribute Names (EAN)",
+          name: "eanUi",
+          type: "fixedCollection",
+          default: {},
+          typeOptions: { multipleValues: true },
+          displayOptions: { show: { operation: ["upsert", "get", "delete"] } },
+          options: [
+            {
+              name: "ean",
+              displayName: "EAN",
+              values: [
+                { displayName: "Name", name: "name", type: "string", default: "" },
+                { displayName: "Value", name: "value", type: "string", default: "" },
+              ],
+            },
+          ],
+        },
+      ],
+    },
+    {
+      displayName: "Options",
+      name: "options",
+      type: "collection",
+      default: {},
+      displayOptions: { show: { operation: ["getAll"] } },
+      options: [
+        { displayName: "Index Name", name: "indexName", type: "string", default: "" },
+        {
+          displayName: "Projection Expression",
+          name: "projectionExpression",
+          type: "string",
+          default: "",
+        },
+        {
+          displayName: "Filter Expression",
+          name: "filterExpression",
+          type: "string",
+          default: "",
+        },
+        {
+          displayName: "Expression Attribute Names (EAN)",
+          name: "eanUi",
+          type: "fixedCollection",
+          default: {},
+          typeOptions: { multipleValues: true },
+          options: [
+            {
+              name: "ean",
+              displayName: "EAN",
+              values: [
+                { displayName: "Name", name: "name", type: "string", default: "" },
+                { displayName: "Value", name: "value", type: "string", default: "" },
+              ],
+            },
+          ],
+        },
+      ],
+    },
+  ],
+};
+
+const DISQUS_DOCS = "https://docs.n8n.io/integrations/builtin/app-nodes/n8n-nodes-base.disqus/";
+const DISQUS_CRED_DOCS = "https://docs.n8n.io/integrations/builtin/credentials/disqus/";
+
+export const disqus: INodeTypeDescription = {
+  name: "n8n-nodes-base.disqus",
+  displayName: "Disqus",
+  category: "App",
+  group: ["output"],
+  version: 1,
+  description: "Access Disqus forum data — details, categories, threads, and posts",
+  defaults: { name: "Disqus" },
+  inputs: ["main"],
+  outputs: ["main"],
+  icon: "MessageCircle",
+  credential: { name: "disqusApi" },
+  sources: [DISQUS_DOCS, DISQUS_CRED_DOCS],
+  properties: [
+    {
+      displayName: "Resource",
+      name: "resource",
+      type: "options",
+      default: "forum",
+      noDataExpression: true,
+      options: [{ name: "Forum", value: "forum" }],
+    },
+    {
+      displayName: "Operation",
+      name: "operation",
+      type: "options",
+      default: "get",
+      noDataExpression: true,
+      options: [
+        { name: "Get", value: "get" },
+        { name: "Get Categories", value: "getCategories" },
+        { name: "Get Threads", value: "getThreads" },
+        { name: "Get Posts", value: "getPosts" },
+      ],
+    },
+    {
+      displayName: "Forum",
+      name: "forum",
+      type: "string",
+      default: "",
+      required: true,
+      description: "Disqus forum shortname (e.g. myforum)",
+    },
+    {
+      displayName: "Thread ID",
+      name: "threadId",
+      type: "string",
+      default: "",
+      displayOptions: { show: { operation: ["getPosts"] } },
+      description: "Identifier of the thread to list posts for",
+    },
+    {
+      displayName: "Limit",
+      name: "limit",
+      type: "number",
+      default: 0,
+      description: "Maximum results per page (0 for Disqus default)",
+    },
+    {
+      displayName: "Cursor",
+      name: "cursor",
+      type: "string",
+      default: "",
+      description: "Pagination cursor from a prior response for fetching the next page",
     },
   ],
 };

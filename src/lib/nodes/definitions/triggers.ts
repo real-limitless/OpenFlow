@@ -1,4 +1,4 @@
-import type { INodeTypeDescription } from "../types";
+import type { INodeTypeDescription, INodePropertyOption } from "../types";
 
 const DOCS = "https://docs.n8n.io/integrations/builtin/core-nodes/";
 const GUMROAD_DOCS = "https://docs.n8n.io/integrations/builtin/trigger-nodes/n8n-nodes-base.gumroadtrigger/";
@@ -1122,8 +1122,270 @@ export const mcpTrigger: INodeTypeDescription = {
   ],
 };
 
+const BOX_TRIGGER_DOCS =
+  "https://docs.n8n.io/integrations/builtin/trigger-nodes/n8n-nodes-base.boxtrigger/";
+
+const BOX_EVENT_OPTIONS: INodePropertyOption[] = [
+  // File events
+  { name: "FILE.UPLOADED", value: "FILE.UPLOADED" },
+  { name: "FILE.PREVIEWED", value: "FILE.PREVIEWED" },
+  { name: "FILE.DOWNLOADED", value: "FILE.DOWNLOADED" },
+  { name: "FILE.TRASHED", value: "FILE.TRASHED" },
+  { name: "FILE.DELETED", value: "FILE.DELETED" },
+  { name: "FILE.RESTORED", value: "FILE.RESTORED" },
+  { name: "FILE.COPIED", value: "FILE.COPIED" },
+  { name: "FILE.MOVED", value: "FILE.MOVED" },
+  { name: "FILE.LOCKED", value: "FILE.LOCKED" },
+  { name: "FILE.UNLOCKED", value: "FILE.UNLOCKED" },
+  { name: "FILE.RENAMED", value: "FILE.RENAMED" },
+  // Folder events
+  { name: "FOLDER.CREATED", value: "FOLDER.CREATED" },
+  { name: "FOLDER.RENAMED", value: "FOLDER.RENAMED" },
+  { name: "FOLDER.DOWNLOADED", value: "FOLDER.DOWNLOADED" },
+  { name: "FOLDER.RESTORED", value: "FOLDER.RESTORED" },
+  { name: "FOLDER.DELETED", value: "FOLDER.DELETED" },
+  { name: "FOLDER.COPIED", value: "FOLDER.COPIED" },
+  { name: "FOLDER.MOVED", value: "FOLDER.MOVED" },
+  { name: "FOLDER.TRASHED", value: "FOLDER.TRASHED" },
+  // Collaboration events
+  { name: "COLLABORATION.CREATED", value: "COLLABORATION.CREATED" },
+  { name: "COLLABORATION.ACCEPTED", value: "COLLABORATION.ACCEPTED" },
+  { name: "COLLABORATION.REJECTED", value: "COLLABORATION.REJECTED" },
+  { name: "COLLABORATION.REMOVED", value: "COLLABORATION.REMOVED" },
+  { name: "COLLABORATION.UPDATED", value: "COLLABORATION.UPDATED" },
+  // Comment events
+  { name: "COMMENT.CREATED", value: "COMMENT.CREATED" },
+  { name: "COMMENT.UPDATED", value: "COMMENT.UPDATED" },
+  { name: "COMMENT.DELETED", value: "COMMENT.DELETED" },
+  // Task assignment events
+  { name: "TASK_ASSIGNMENT.CREATED", value: "TASK_ASSIGNMENT.CREATED" },
+  { name: "TASK_ASSIGNMENT.UPDATED", value: "TASK_ASSIGNMENT.UPDATED" },
+  // Metadata instance events
+  { name: "METADATA_INSTANCE.CREATED", value: "METADATA_INSTANCE.CREATED" },
+  { name: "METADATA_INSTANCE.UPDATED", value: "METADATA_INSTANCE.UPDATED" },
+  { name: "METADATA_INSTANCE.DELETED", value: "METADATA_INSTANCE.DELETED" },
+  // Shared link events
+  { name: "SHARED_LINK.CREATED", value: "SHARED_LINK.CREATED" },
+  { name: "SHARED_LINK.DELETED", value: "SHARED_LINK.DELETED" },
+  { name: "SHARED_LINK.UPDATED", value: "SHARED_LINK.UPDATED" },
+  // Other
+  { name: "WEBHOOK.DELETED", value: "WEBHOOK.DELETED" },
+  { name: "SIGN_REQUEST.COMPLETED", value: "SIGN_REQUEST.COMPLETED" },
+  { name: "SIGN_REQUEST.DECLINED", value: "SIGN_REQUEST.DECLINED" },
+  { name: "SIGN_REQUEST.EXPIRED", value: "SIGN_REQUEST.EXPIRED" },
+  { name: "SIGN_REQUEST.SIGNER_EMAIL_BOUNCED", value: "SIGN_REQUEST.SIGNER_EMAIL_BOUNCED" },
+  { name: "SIGN_REQUEST.SIGN_SIGNER_SIGNED", value: "SIGN_REQUEST.SIGN_SIGNER_SIGNED" },
+  { name: "SIGN_REQUEST.SIGN_DOCUMENT_CREATED", value: "SIGN_REQUEST.SIGN_DOCUMENT_CREATED" },
+  { name: "SIGN_REQUEST.SIGN_ERROR_FINALIZING", value: "SIGN_REQUEST.SIGN_ERROR_FINALIZING" },
+];
+
+export const chargebeeTrigger: INodeTypeDescription = {
+  name: "n8n-nodes-base.chargebeeTrigger",
+  displayName: "Chargebee Trigger",
+  category: "Finance & Accounting",
+  group: ["trigger"],
+  version: 1,
+  description: "Starts the workflow when a Chargebee webhook event is received.",
+  defaults: { name: "Chargebee Trigger" },
+  inputs: [],
+  outputs: ["main"],
+  icon: "Webhook",
+  credentials: [
+    { name: "chargebeeApi", required: true },
+  ],
+  sources: [
+    "https://docs.n8n.io/integrations/builtin/trigger-nodes/n8n-nodes-base.chargebeetrigger.md",
+  ],
+  properties: [
+    {
+      displayName: "Events",
+      name: "events",
+      type: "multiOptions",
+      default: ["*"],
+      noDataExpression: true,
+      description: "Which Chargebee event types to subscribe to. Use * to receive all events.",
+      options: [
+        { name: "* (All)", value: "*" },
+        { name: "Subscription Created", value: "subscription_created" },
+        { name: "Subscription Changed", value: "subscription_changed" },
+        { name: "Subscription Cancelled", value: "subscription_cancelled" },
+        { name: "Customer Changed", value: "customer_changed" },
+        { name: "Invoice Generated", value: "invoice_generated" },
+        { name: "Invoice Updated", value: "invoice_updated" },
+        { name: "Payment Succeeded", value: "payment_succeeded" },
+        { name: "Payment Failed", value: "payment_failed" },
+        { name: "Card Added", value: "card_added" },
+        { name: "Card Updated", value: "card_updated" },
+        { name: "Card Expired", value: "card_expired" },
+        { name: "Credit Note Created", value: "credit_note_created" },
+        { name: "Order Created", value: "order_created" },
+      ],
+    },
+  ],
+};
+
+export const boxTrigger: INodeTypeDescription = {
+  name: "n8n-nodes-base.boxTrigger",
+  displayName: "Box Trigger",
+  category: "Data & Storage",
+  group: ["trigger"],
+  version: 1,
+  description: "Starts the workflow when a Box webhook event is received.",
+  defaults: { name: "Box Trigger" },
+  inputs: [],
+  outputs: ["main"],
+  icon: "Webhook",
+  credentials: [
+    { name: "boxOAuth2Api", required: true },
+  ],
+  sources: [BOX_TRIGGER_DOCS],
+  properties: [
+    {
+      displayName: "Events",
+      name: "events",
+      type: "multiOptions",
+      default: [],
+      required: true,
+      noDataExpression: true,
+      description: "One or more Box webhook trigger event types to subscribe to.",
+      options: BOX_EVENT_OPTIONS,
+    },
+    {
+      displayName: "Target Type",
+      name: "targetType",
+      type: "options",
+      default: "file",
+      required: true,
+      noDataExpression: true,
+      description: "The type of Box item to monitor.",
+      options: [
+        { name: "File", value: "file" },
+        { name: "Folder", value: "folder" },
+      ],
+    },
+    {
+      displayName: "Target ID",
+      name: "targetId",
+      type: "string",
+      default: "",
+      required: true,
+      description: "The Box ID of the file or folder to monitor (found in the URL after folder/).",
+    },
+  ],
+};
+
 const ZENDESK_TRIGGER_DOCS =
   "https://docs.n8n.io/integrations/builtin/trigger-nodes/n8n-nodes-base.zendesktrigger/";
+
+const CONVERTKIT_TRIGGER_DOCS =
+  "https://docs.n8n.io/integrations/builtin/trigger-nodes/n8n-nodes-base.convertkittrigger/";
+
+const CUSTOMER_IO_TRIGGER_DOCS =
+  "https://docs.n8n.io/integrations/builtin/trigger-nodes/n8n-nodes-base.customeriotrigger/";
+
+const CUSTOMER_IO_EVENT_OPTIONS: INodePropertyOption[] = [
+  { name: "Customer Subscribed", value: "customer.subscribed" },
+  { name: "Customer Unsubscribed", value: "customer.unsubscribed" },
+  { name: "Email Bounced", value: "email.bounced" },
+  { name: "Email Clicked", value: "email.clicked" },
+  { name: "Email Converted", value: "email.converted" },
+  { name: "Email Delivered", value: "email.delivered" },
+  { name: "Email Drafted", value: "email.drafted" },
+  { name: "Email Failed", value: "email.failed" },
+  { name: "Email Opened", value: "email.opened" },
+  { name: "Email Sent", value: "email.sent" },
+  { name: "Email Spammed", value: "email.spammed" },
+  { name: "Push Attempted", value: "push.attempted" },
+  { name: "Push Bounced", value: "push.bounced" },
+  { name: "Push Clicked", value: "push.clicked" },
+  { name: "Push Delivered", value: "push.delivered" },
+  { name: "Push Drafted", value: "push.drafted" },
+  { name: "Push Failed", value: "push.failed" },
+  { name: "Push Opened", value: "push.opened" },
+  { name: "Push Sent", value: "push.sent" },
+  { name: "Slack Attempted", value: "slack.attempted" },
+  { name: "Slack Clicked", value: "slack.clicked" },
+  { name: "Slack Drafted", value: "slack.drafted" },
+  { name: "Slack Failed", value: "slack.failed" },
+  { name: "Slack Sent", value: "slack.sent" },
+  { name: "SMS Attempted", value: "sms.attempted" },
+  { name: "SMS Bounced", value: "sms.bounced" },
+  { name: "SMS Clicked", value: "sms.clicked" },
+  { name: "SMS Delivered", value: "sms.delivered" },
+  { name: "SMS Drafted", value: "sms.drafted" },
+  { name: "SMS Failed", value: "sms.failed" },
+  { name: "SMS Sent", value: "sms.sent" },
+];
+
+export const customerIoTrigger: INodeTypeDescription = {
+  name: "n8n-nodes-base.customerIoTrigger",
+  displayName: "Customer.io Trigger",
+  category: "Communication",
+  group: ["trigger"],
+  version: 1,
+  description: "Starts the workflow when a Customer.io webhook event is received (customer, email, push, slack, SMS).",
+  defaults: { name: "Customer.io Trigger" },
+  inputs: [],
+  outputs: ["main"],
+  icon: "Webhook",
+  credentials: [
+    { name: "customerIoApi", required: true },
+  ],
+  sources: [CUSTOMER_IO_TRIGGER_DOCS],
+  properties: [
+    {
+      displayName: "Events",
+      name: "events",
+      type: "multiOptions",
+      default: [],
+      required: true,
+      noDataExpression: true,
+      description: "One or more Customer.io event types to subscribe to.",
+      options: CUSTOMER_IO_EVENT_OPTIONS,
+    },
+  ],
+};
+
+export const convertKitTrigger: INodeTypeDescription = {
+  name: "n8n-nodes-base.convertKitTrigger",
+  displayName: "ConvertKit Trigger",
+  category: "Marketing",
+  group: ["trigger"],
+  version: 1,
+  description: "Starts the workflow when a ConvertKit webhook event is received (form subscribe, link click, purchase, sequence, tag, etc.).",
+  defaults: { name: "ConvertKit Trigger" },
+  inputs: [],
+  outputs: ["main"],
+  icon: "Webhook",
+  credentials: [
+    { name: "convertKitApi", required: true },
+  ],
+  sources: [CONVERTKIT_TRIGGER_DOCS],
+  properties: [
+    {
+      displayName: "Event",
+      name: "event",
+      type: "options",
+      default: "",
+      required: true,
+      noDataExpression: true,
+      description: "The ConvertKit event to subscribe to.",
+      options: [
+        { name: "Form Subscribe", value: "form_subscribe" },
+        { name: "Link Click", value: "link_click" },
+        { name: "Product Purchase", value: "product_purchase" },
+        { name: "Purchase Created", value: "purchase_created" },
+        { name: "Purchase Complete", value: "purchase_complete" },
+        { name: "Sequence Complete", value: "sequence_complete" },
+        { name: "Sequence Subscribe", value: "sequence_subscribe" },
+        { name: "Subscriber Activated", value: "subscriber_activated" },
+        { name: "Subscriber Unsubscribe", value: "subscriber_unsubscribe" },
+        { name: "Tag Add", value: "tag_add" },
+        { name: "Tag Remove", value: "tag_remove" },
+      ],
+    },
+  ],
+};
 
 export const zendeskTrigger: INodeTypeDescription = {
   name: "n8n-nodes-base.zendeskTrigger",
@@ -5428,6 +5690,122 @@ export const asanaTrigger: INodeTypeDescription = {
       type: "string",
       default: "",
       description: "Workspace GID — used for webhook deduplication on node re-activation.",
+    },
+  ],
+};
+
+export const awsSnsTrigger: INodeTypeDescription = {
+  name: "n8n-nodes-base.awsSnsTrigger",
+  displayName: "AWS SNS Trigger",
+  category: "Communication",
+  group: ["trigger"],
+  version: 1,
+  description: "Starts the workflow when an AWS SNS notification is received on a subscribed topic.",
+  defaults: { name: "AWS SNS Trigger" },
+  inputs: [],
+  outputs: ["main"],
+  icon: "Webhook",
+  credentials: [
+    { name: "aws", required: true },
+    { name: "awsAssumeRole", required: false },
+  ],
+  sources: [
+    "https://docs.n8n.io/integrations/builtin/trigger-nodes/n8n-nodes-base.awssnstrigger/",
+  ],
+  properties: [
+    {
+      displayName: "Topic",
+      name: "topic",
+      type: "resourceLocator",
+      default: { mode: "list", value: "" },
+      required: true,
+      description: "SNS topic ARN to subscribe to",
+    },
+    {
+      displayName: "AWS Credentials",
+      name: "awsUser",
+      type: "credentialsSelector",
+      default: "aws",
+      description: "Selects between AWS (IAM) or AWS Assume Role credential types",
+    },
+    {
+      displayName: "This node will subscribe to the selected topic and receive HTTP POST notifications. An SQS queue is created per topic subscription for reliable delivery.",
+      name: "subscribe",
+      type: "notice",
+      default: "",
+    },
+    {
+      displayName: "JSON Parse Body",
+      name: "jsonParseBody",
+      type: "boolean",
+      default: true,
+      description: "When enabled, attempts to JSON-parse the SNS message body before emitting output items. Falls back to raw string on parse failure.",
+    },
+    {
+      displayName: "Only Message",
+      name: "onlyMessage",
+      type: "boolean",
+      default: false,
+      description: "When enabled, emits only the SNS message body instead of the full SNS notification envelope",
+    },
+    {
+      displayName: "Ignore SSL Issues",
+      name: "ignoreSslIssues",
+      type: "boolean",
+      default: false,
+      description: "When enabled, allows the HTTP endpoint to skip TLS certificate verification for the SNS subscription endpoint URL",
+    },
+  ],
+};
+
+const CLOCKIFY_DOCS =
+  "https://docs.n8n.io/integrations/builtin/trigger-nodes/n8n-nodes-base.clockifytrigger/";
+
+export const clockifyTrigger: INodeTypeDescription = {
+  name: "n8n-nodes-base.clockifyTrigger",
+  displayName: "Clockify Trigger",
+  category: "Productivity",
+  group: ["trigger"],
+  version: 1,
+  description: "Starts the workflow when a Clockify time-entry event (started or ended) is detected.",
+  defaults: { name: "Clockify Trigger" },
+  inputs: [],
+  outputs: ["main"],
+  icon: "Clock",
+  credentials: [
+    { name: "clockifyApi", required: true },
+  ],
+  sources: [CLOCKIFY_DOCS],
+  properties: [
+    {
+      displayName: "Workspace",
+      name: "workspaceId",
+      type: "options",
+      default: "",
+      required: true,
+      noDataExpression: true,
+      description: "The Clockify workspace to watch",
+      options: [],
+    },
+    {
+      displayName: "Event",
+      name: "event",
+      type: "options",
+      default: "timeEntry.started",
+      required: true,
+      noDataExpression: true,
+      description: "The type of time-entry event that triggers the workflow",
+      options: [
+        { name: "Time Entry Started", value: "timeEntry.started" },
+        { name: "Time Entry Ended", value: "timeEntry.ended" },
+      ],
+    },
+    {
+      displayName: "Timezone",
+      name: "timezone",
+      type: "string",
+      default: "",
+      description: "Override the workflow-level timezone for computing the polling window",
     },
   ],
 };

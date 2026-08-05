@@ -1558,6 +1558,57 @@ export const dhl: INodeTypeDescription = {
   ],
 };
 
+export const dhlTool: INodeTypeDescription = {
+  name: "n8n-nodes-base.dhlTool",
+  displayName: "DHL (AI Tool)",
+  category: "Integration",
+  group: ["integration"],
+  version: 1,
+  description: "Track DHL shipments via the Shipment Tracking API (AI agent tool variant)",
+  defaults: { name: "DHL Tool" },
+  inputs: ["main"],
+  outputs: ["main"],
+  icon: "Package",
+  credentials: [{ name: "dhlApi", required: false }],
+  sources: [DHL_DOCS],
+  usableAsTool: true,
+  properties: [
+    {
+      displayName: "Resource",
+      name: "resource",
+      type: "hidden",
+      default: "shipment",
+      required: true,
+    },
+    {
+      displayName: "Operation",
+      name: "operation",
+      type: "options",
+      default: "get",
+      required: true,
+      noDataExpression: true,
+      displayOptions: { show: { resource: ["shipment"] } },
+      options: SHIPMENT_OPERATIONS,
+    },
+    {
+      displayName: "Tracking Number",
+      name: "trackingNumber",
+      type: "string",
+      default: "",
+      required: true,
+      displayOptions: { show: { resource: ["shipment"], operation: ["get"] } },
+    },
+    {
+      displayName: "Options",
+      name: "options",
+      type: "collection",
+      default: {},
+      displayOptions: { show: { resource: ["shipment"], operation: ["get"] } },
+      options: DHL_OPTIONS,
+    },
+  ],
+};
+
 const GCS_DOCS = "https://docs.n8n.io/integrations/builtin/app-nodes/n8n-nodes-base.googlecloudstorage/";
 
 const BUCKET_OPERATIONS = [

@@ -212,6 +212,11 @@ export const BUILTIN_EXECUTOR_MODULES: Array<{
   { type: "n8n-nodes-base.set", modulePath: "./executors/set", exportName: "setExecutor" },
   { type: "n8n-nodes-base.noOp", modulePath: "./executors/noop", exportName: "noopExecutor" },
   {
+    type: "n8n-nodes-base.automizy",
+    modulePath: "./executors/n8n-nodes-base.automizy",
+    exportName: "automizyExecutor",
+  },
+  {
     type: "n8n-nodes-base.moveBinaryData",
     modulePath: "./executors/move-binary-data",
     exportName: "moveBinaryDataExecutor",
@@ -480,6 +485,11 @@ export const BUILTIN_EXECUTOR_MODULES: Array<{
     type: "@n8n/n8n-nodes-langchain.mcpTrigger",
     modulePath: "./executors/mcp-trigger",
     exportName: "mcpTriggerExecutor",
+  },
+  {
+    type: "@n8n/n8n-nodes-langchain.microsoftAgent365Trigger",
+    modulePath: "./executors/microsoft-agent-365-trigger",
+    exportName: "microsoftAgent365TriggerExecutor",
   },
   {
     type: "n8n-nodes-base.stickyNote",
@@ -1407,6 +1417,16 @@ export const BUILTIN_EXECUTOR_MODULES: Array<{
     exportName: "n8nNodesLangchainMemoryManagerExecutor",
   },
   {
+    type: "n8n-nodes-base.chargebeeTrigger",
+    modulePath: "./executors/n8n-nodes-base.chargebeeTrigger",
+    exportName: "chargebeeTriggerExecutor",
+  },
+  {
+    type: "n8n-nodes-base.convertKitTrigger",
+    modulePath: "./executors/convertKitTrigger",
+    exportName: "convertKitTriggerExecutor",
+  },
+  {
     type: "n8n-nodes-base.perplexity",
     modulePath: "./executors/perplexity",
     exportName: "perplexityExecutor",
@@ -1687,6 +1707,11 @@ export const BUILTIN_EXECUTOR_MODULES: Array<{
     exportName: "dataTableToolExecutor",
   },
   {
+    type: "n8n-nodes-base.discourse",
+    modulePath: "./executors/discourse",
+    exportName: "discourseExecutor",
+  },
+  {
     type: "n8n-nodes-base.hunter",
     modulePath: "./executors/n8n-nodes-base.hunter",
     exportName: "hunterExecutor",
@@ -1767,6 +1792,11 @@ export const BUILTIN_EXECUTOR_MODULES: Array<{
     exportName: "wooCommerceTriggerExecutor",
   },
   {
+    type: "n8n-nodes-base.Brandfetch",
+    modulePath: "./executors/Brandfetch",
+    exportName: "brandfetchExecutor",
+  },
+  {
     type: "n8n-nodes-base.clearbit",
     modulePath: "./executors/n8n-nodes-base.clearbit",
     exportName: "clearbitExecutor",
@@ -1775,6 +1805,11 @@ export const BUILTIN_EXECUTOR_MODULES: Array<{
     type: "n8n-nodes-base.deepL",
     modulePath: "./executors/deepL",
     exportName: "deepLExecutor",
+  },
+  {
+    type: "n8n-nodes-base.deepLTool",
+    modulePath: "./executors/deepLTool",
+    exportName: "deepLToolExecutor",
   },
   {
     type: "n8n-nodes-base.zoom",
@@ -2017,6 +2052,11 @@ export const BUILTIN_EXECUTOR_MODULES: Array<{
     exportName: "clockifyExecutor",
   },
   {
+    type: "n8n-nodes-base.clockifyTool",
+    modulePath: "./executors/n8n-nodes-base.clockifyTool",
+    exportName: "clockifyToolExecutor",
+  },
+  {
     type: "n8n-nodes-base.googleFirebaseCloudFirestore",
     modulePath: "./executors/googleFirebaseCloudFirestore",
     exportName: "googleFirebaseCloudFirestoreExecutor",
@@ -2112,6 +2152,11 @@ export const BUILTIN_EXECUTOR_MODULES: Array<{
     exportName: "googleAnalyticsToolExecutor",
   },
   {
+    type: "n8n-nodes-base.demio",
+    modulePath: "./executors/communication/demio",
+    exportName: "demioExecutor",
+  },
+  {
     type: "n8n-nodes-base.intercom",
     modulePath: "./executors/n8n-nodes-base.intercom",
     exportName: "intercomExecutor",
@@ -2202,6 +2247,11 @@ export const BUILTIN_EXECUTOR_MODULES: Array<{
     exportName: "lmChatCohereExecutor",
   },
   {
+    type: "n8n-nodes-base.awsCertificateManager",
+    modulePath: "./executors/awsCertificateManager",
+    exportName: "awsCertificateManagerExecutor",
+  },
+  {
     type: "@n8n/n8n-nodes-langchain.retrieverWorkflow",
     modulePath: "./executors/retrieverWorkflow",
     exportName: "retrieverWorkflowExecutor",
@@ -2232,14 +2282,29 @@ export const BUILTIN_EXECUTOR_MODULES: Array<{
     exportName: "coinGeckoExecutor",
   },
   {
+    type: "n8n-nodes-base.coinGeckoTool",
+    modulePath: "./executors/n8n-nodes-base.coinGeckoTool",
+    exportName: "coinGeckoToolExecutor",
+  },
+  {
     type: "n8n-nodes-base.cortex",
     modulePath: "./executors/n8n-nodes-base.cortex",
     exportName: "cortexExecutor",
   },
   {
+    type: "n8n-nodes-base.activeCampaignTrigger",
+    modulePath: "./executors/activeCampaignTrigger",
+    exportName: "activeCampaignTriggerExecutor",
+  },
+  {
     type: "n8n-nodes-base.convertKit",
     modulePath: "./executors/convertKit",
     exportName: "convertKitExecutor",
+  },
+  {
+    type: "n8n-nodes-base.convertKitTool",
+    modulePath: "./executors/n8n-nodes-base.convertKitTool",
+    exportName: "convertKitToolExecutor",
   },
   {
     type: "n8n-nodes-base.crateDb",
@@ -2250,6 +2315,11 @@ export const BUILTIN_EXECUTOR_MODULES: Array<{
     type: "n8n-nodes-base.dhl",
     modulePath: "./executors/n8n-nodes-base.dhl",
     exportName: "dhlExecutor",
+  },
+  {
+    type: "n8n-nodes-base.dhlTool",
+    modulePath: "./executors/n8n-nodes-base.dhlTool",
+    exportName: "dhlToolExecutor",
   },
   {
     type: "n8n-nodes-base.filemaker",
@@ -2352,6 +2422,11 @@ export const BUILTIN_EXECUTOR_MODULES: Array<{
     exportName: "zulipExecutor",
   },
   {
+    type: "n8n-nodes-base.discourse",
+    modulePath: "./executors/discourse",
+    exportName: "discourseExecutor",
+  },
+  {
     type: "@n8n/n8n-nodes-langchain.anthropicTool",
     modulePath: "./executors/n8n-nodes-langchain.anthropicTool",
     exportName: "anthropicToolExecutor",
@@ -2365,6 +2440,191 @@ export const BUILTIN_EXECUTOR_MODULES: Array<{
     type: "@n8n/n8n-nodes-langchain.lmChatMoonshot",
     modulePath: "./executors/lm-chat-moonshot",
     exportName: "lmChatMoonshotExecutor",
+  },
+  {
+    type: "@n8n/n8n-nodes-langchain.ollama",
+    modulePath: "./executors/ollama-app",
+    exportName: "ollamaAppExecutor",
+  },
+  {
+    type: "@n8n/n8n-nodes-langchain.vectorStoreSupabaseInsert",
+    modulePath: "./executors/vectorStoreSupabaseInsert",
+    exportName: "vectorStoreSupabaseInsertExecutor",
+  },
+  {
+    type: "n8n-nodes-base.acuitySchedulingTrigger",
+    modulePath: "./executors/acuitySchedulingTrigger",
+    exportName: "acuitySchedulingTriggerExecutor",
+  },
+  {
+    type: "n8n-nodes-base.actionNetworkTool",
+    modulePath: "./executors/ActionNetworkTool",
+    exportName: "actionNetworkToolExecutor",
+  },
+  {
+    type: "n8n-nodes-base.affinity",
+    modulePath: "./executors/affinity",
+    exportName: "affinityExecutor",
+  },
+  {
+    type: "n8n-nodes-base.affinityTrigger",
+    modulePath: "./executors/affinityTrigger",
+    exportName: "affinityTriggerExecutor",
+  },
+  {
+    type: "n8n-nodes-base.affinityTool",
+    modulePath: "./executors/n8n-nodes-base.affinityTool",
+    exportName: "affinityToolExecutor",
+  },
+  {
+    type: "n8n-nodes-base.agileCrm",
+    modulePath: "./executors/n8n-nodes-base.agileCrm",
+    exportName: "agileCrmExecutor",
+  },
+  {
+    type: "n8n-nodes-base.autopilotTool",
+    modulePath: "./executors/n8n-nodes-base.autopilotTool",
+    exportName: "autopilotToolExecutor",
+  },
+  {
+    type: "n8n-nodes-base.autopilotTrigger",
+    modulePath: "./executors/autopilot-trigger",
+    exportName: "autopilotTriggerExecutor",
+  },
+  {
+    type: "n8n-nodes-base.awsRekognition",
+    modulePath: "./executors/awsRekognition",
+    exportName: "awsRekognitionExecutor",
+  },
+  {
+    type: "n8n-nodes-base.awsDynamoDb",
+    modulePath: "./executors/awsDynamoDb",
+    exportName: "awsDynamoDbExecutor",
+  },
+  {
+    type: "n8n-nodes-base.awsSns",
+    modulePath: "./executors/awsSns",
+    exportName: "awsSnsExecutor",
+  },
+  {
+    type: "n8n-nodes-base.awsSqs",
+    modulePath: "./executors/awsSqs",
+    exportName: "awsSqsExecutor",
+  },
+  {
+    type: "n8n-nodes-base.awsSnsTrigger",
+    modulePath: "./executors/awsSnsTrigger",
+    exportName: "awsSnsTriggerExecutor",
+  },
+  {
+    type: "n8n-nodes-base.awsTranscribeTool",
+    modulePath: "./executors/awsTranscribeTool",
+    exportName: "awsTranscribeToolExecutor",
+  },
+  {
+    type: "n8n-nodes-base.beeminderTool",
+    modulePath: "./executors/n8n-nodes-base.beeminderTool",
+    exportName: "beeminderToolExecutor",
+  },
+  {
+    type: "n8n-nodes-base.bitlyTool",
+    modulePath: "./executors/n8n-nodes-base.bitlyTool",
+    exportName: "bitlyToolExecutor",
+  },
+  {
+    type: "n8n-nodes-base.boxTrigger",
+    modulePath: "./executors/box-trigger",
+    exportName: "boxTriggerExecutor",
+  },
+  {
+    type: "n8n-nodes-base.bitwardenTool",
+    modulePath: "./executors/bitwardenTool",
+    exportName: "bitwardenToolExecutor",
+  },
+  {
+    type: "n8n-nodes-base.bubbleTool",
+    modulePath: "./executors/n8n-nodes-base.bubbleTool",
+    exportName: "bubbleToolExecutor",
+  },
+  {
+    type: "n8n-nodes-base.chargebee",
+    modulePath: "./executors/Chargebee",
+    exportName: "chargebeeExecutor",
+  },
+  {
+    type: "n8n-nodes-base.cheerio",
+    modulePath: "./executors/cheerio",
+    exportName: "cheerioExecutor",
+  },
+  {
+    type: "n8n-nodes-base.circleCiTool",
+    modulePath: "./executors/n8n-nodes-base.circleCiTool",
+    exportName: "circleCiToolExecutor",
+  },
+  {
+    type: "n8n-nodes-base.clearbitTool",
+    modulePath: "./executors/n8n-nodes-base.clearbitTool",
+    exportName: "clearbitToolExecutor",
+  },
+  {
+    type: "n8n-nodes-base.clockifyTrigger",
+    modulePath: "./executors/n8n-nodes-base.clockifyTrigger",
+    exportName: "clockifyTriggerExecutor",
+  },
+  {
+    type: "n8n-nodes-base.cloudflareTool",
+    modulePath: "./executors/cloudflareTool",
+    exportName: "cloudflareToolExecutor",
+  },
+  {
+    type: "n8n-nodes-base.cockpit",
+    modulePath: "./executors/cockpit",
+    exportName: "cockpitExecutor",
+  },
+  {
+    type: "n8n-nodes-base.codaTool",
+    modulePath: "./executors/n8n-nodes-base.codaTool",
+    exportName: "codaToolExecutor",
+  },
+  {
+    type: "n8n-nodes-base.contentful",
+    modulePath: "./executors/contentful",
+    exportName: "contentfulExecutor",
+  },
+  {
+    type: "n8n-nodes-base.copper",
+    modulePath: "./executors/copper",
+    exportName: "copperExecutor",
+  },
+  {
+    type: "n8n-nodes-base.copperTool",
+    modulePath: "./executors/n8n-nodes-base.copperTool",
+    exportName: "copperToolExecutor",
+  },
+  {
+    type: "n8n-nodes-base.copperTrigger",
+    modulePath: "./executors/copperTrigger",
+    exportName: "copperTriggerExecutor",
+  },
+  {
+    type: "n8n-nodes-base.customerIoTool",
+    modulePath: "./executors/n8n-nodes-base.customerIoTool",
+    exportName: "customerIoToolExecutor",
+  },
+  {
+    type: "n8n-nodes-base.customerIoTrigger",
+    modulePath: "./executors/n8n-nodes-base.customerIoTrigger",
+    exportName: "customerIoTriggerExecutor",
+  },
+  {
+    type: "n8n-nodes-base.discourse",
+    modulePath: "./executors/discourse",
+    exportName: "discourseExecutor",
+  },
+  {
+    type: "n8n-nodes-base.disqus",
+    modulePath: "./executors/n8n-nodes-base.disqus",
+    exportName: "disqusExecutor",
   },
 ];
 

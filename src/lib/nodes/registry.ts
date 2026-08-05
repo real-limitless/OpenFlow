@@ -10,6 +10,7 @@ import { manualTrigger, formTrigger, googleSheetsTrigger, typeformTrigger } from
 import { code, stickyNote } from "./definitions/core";
 import { xml, openAiApp } from "./definitions/transform";
 import { form } from "./definitions/helpers";
+import { deepLTool } from "./definitions/tools";
 
 /**
  * Every node description exported from ./definitions is seeded automatically,
@@ -42,6 +43,10 @@ const ALIAS_PAIRS: Array<[string, string]> = [
   ["Spreadsheet", googleSheetsTrigger.name],
   ["GS", googleSheetsTrigger.name],
   ["Form", typeformTrigger.name],
+  ["Translate", deepLTool.name],
+  ["Translator", deepLTool.name],
+  ["Shipping", "n8n-nodes-base.dhlTool"],
+  ["n8n-nodes-base.discourseTool", "n8n-nodes-base.discourse"],
 ];
 
 let descriptionsSeeded = false;
