@@ -1,0 +1,541 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>OpenFlow — Self-hosted workflow automation</title>
+    <meta
+      name="description"
+      content="OpenFlow is a self-hosted workflow automation engine with a visual editor, clean-room node implementations, and Docker-first install. Compatible with familiar workflow JSON definitions."
+    />
+    <meta name="theme-color" content="#1a1e2a" />
+    <link rel="canonical" href="https://real-limitless.github.io/OpenFlow/" />
+    <meta property="og:title" content="OpenFlow — Self-hosted workflow automation" />
+    <meta
+      property="og:description"
+      content="Own your automation. Visual editor, clean-room nodes, Docker in minutes."
+    />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://real-limitless.github.io/OpenFlow/" />
+    <meta
+      property="og:image"
+      content="https://real-limitless.github.io/OpenFlow/assets/screenshots/app-editor-palette.png"
+    />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta
+      name="twitter:image"
+      content="https://real-limitless.github.io/OpenFlow/assets/screenshots/app-editor-palette.png"
+    />
+    <link rel="icon" href="./assets/logo.svg" type="image/svg+xml" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <header class="site-header">
+      <div class="container header-inner">
+        <a class="brand" href="#top" aria-label="OpenFlow home">
+          <img src="./assets/logo.svg" width="32" height="32" alt="" />
+          <span>OpenFlow</span>
+        </a>
+        <button
+          class="nav-toggle"
+          type="button"
+          aria-label="Open menu"
+          aria-expanded="false"
+          aria-controls="site-nav"
+        >
+          <span class="nav-toggle-bars" aria-hidden="true"></span>
+        </button>
+        <nav class="nav" id="site-nav" aria-label="Primary">
+          <a href="#product">Product</a>
+          <a href="#how">How it works</a>
+          <a href="#made">How it was made</a>
+          <a href="#about">Who made it</a>
+          <a href="#start">Get started</a>
+          <a
+            class="nav-cta"
+            href="https://github.com/real-limitless/OpenFlow"
+            rel="noopener noreferrer"
+            target="_blank"
+            >GitHub ↗</a
+          >
+        </nav>
+      </div>
+    </header>
+
+    <main id="top">
+      <!-- Hero -->
+      <section class="hero" aria-labelledby="hero-title">
+        <div class="hero-grid" aria-hidden="true"></div>
+        <div class="hero-glow" aria-hidden="true"></div>
+        <div class="container hero-inner">
+          <p class="eyebrow">Open source · Self-hosted</p>
+          <h1 id="hero-title">
+            Workflow automation<br />
+            <span class="accent">you own</span>
+          </h1>
+          <p class="hero-lead">
+            OpenFlow is a self-hosted engine and visual editor for building automations.
+            Import familiar workflow JSON, run nodes you control, and deploy with Docker —
+            no cloud lock-in.
+          </p>
+          <div class="hero-actions">
+            <a
+              class="btn btn-primary"
+              href="https://github.com/real-limitless/OpenFlow"
+              rel="noopener noreferrer"
+              target="_blank"
+              >View on GitHub</a
+            >
+            <a class="btn btn-ghost" href="#start">Quick start</a>
+          </div>
+          <div class="stats" role="list">
+            <span class="stat" role="listitem"><strong>Clean-room</strong> node factory</span>
+            <span class="stat" role="listitem"><strong>Docker</strong> one-command install</span>
+            <span class="stat" role="listitem"><strong>400+</strong> specs &amp; executors</span>
+          </div>
+        </div>
+
+        <div class="container hero-shot">
+          <figure class="shot-frame">
+            <div class="shot-chrome" aria-hidden="true">
+              <span></span><span></span><span></span>
+              <div class="shot-url">localhost:3000/workflow/…</div>
+            </div>
+            <img
+              src="./assets/screenshots/app-editor-palette.png"
+              width="1920"
+              height="1200"
+              alt="OpenFlow visual workflow editor with node palette, canvas graph, and AI assistant panel"
+              loading="eager"
+              decoding="async"
+            />
+          </figure>
+        </div>
+      </section>
+
+      <!-- Product screenshots -->
+      <section id="product" class="section-shots" aria-labelledby="product-title">
+        <div class="container">
+          <div class="section-head center">
+            <span class="section-label">Product</span>
+            <h2 id="product-title">See it in action</h2>
+            <p>
+              Workflow library, template marketplace, and a canvas that feels built for
+              operators — not demos.
+            </p>
+          </div>
+          <div class="shot-grid">
+            <figure class="shot-card">
+              <div class="shot-frame compact">
+                <img
+                  src="./assets/screenshots/app-home.png"
+                  width="1920"
+                  height="1200"
+                  alt="OpenFlow workflows list with new, import, and template actions"
+                  loading="lazy"
+                  decoding="async"
+                />
+              </div>
+              <figcaption>
+                <strong>Workflows</strong>
+                <span>Create, import JSON, or start from an example.</span>
+              </figcaption>
+            </figure>
+            <figure class="shot-card">
+              <div class="shot-frame compact">
+                <img
+                  src="./assets/screenshots/app-templates.png"
+                  width="1920"
+                  height="1200"
+                  alt="OpenFlow template marketplace with community workflow cards"
+                  loading="lazy"
+                  decoding="async"
+                />
+              </div>
+              <figcaption>
+                <strong>Templates</strong>
+                <span>Browse community flows with compatibility badges.</span>
+              </figcaption>
+            </figure>
+            <figure class="shot-card">
+              <div class="shot-frame compact">
+                <img
+                  src="./assets/screenshots/app-editor.png"
+                  width="1920"
+                  height="1200"
+                  alt="OpenFlow canvas showing Schedule Trigger, HTTP Request, IF, and branch nodes"
+                  loading="lazy"
+                  decoding="async"
+                />
+              </div>
+              <figcaption>
+                <strong>Editor</strong>
+                <span>Branching graphs, expressions, credentials, and assistant.</span>
+              </figcaption>
+            </figure>
+          </div>
+        </div>
+      </section>
+
+      <!-- Features -->
+      <section id="features" class="section-alt" aria-labelledby="features-title">
+        <div class="container">
+          <div class="section-head center">
+            <span class="section-label">Why OpenFlow</span>
+            <h2 id="features-title">Built for people who run their own stack</h2>
+            <p>
+              A full product surface — editor, engine, credentials, and workers —
+              designed to stay under your control.
+            </p>
+          </div>
+          <div class="feature-grid">
+            <article class="card">
+              <div class="card-icon" aria-hidden="true">◇</div>
+              <h3>Visual workflow editor</h3>
+              <p>
+                Canvas-first UI powered by React Flow. Drag nodes, wire branches, inspect
+                data, and iterate without leaving the browser.
+              </p>
+            </article>
+            <article class="card">
+              <div class="card-icon" aria-hidden="true">⇄</div>
+              <h3>Familiar workflow JSON</h3>
+              <p>
+                Targets the publicly documented workflow format and expression style so
+                exports can be opened, edited, and saved. Independent implementation —
+                not a fork of any proprietary source tree.
+              </p>
+            </article>
+            <article class="card">
+              <div class="card-icon" aria-hidden="true">▣</div>
+              <h3>Credentials &amp; secrets</h3>
+              <p>
+                Encrypted credentials, environments, variables, and secret providers so
+                production secrets stay out of your graph definitions.
+              </p>
+            </article>
+            <article class="card">
+              <div class="card-icon" aria-hidden="true">⚡</div>
+              <h3>Queue-backed workers</h3>
+              <p>
+                Hono API, Postgres via Prisma, and BullMQ on Redis for durable runs —
+                the pieces you need for real self-hosted workloads.
+              </p>
+            </article>
+            <article class="card">
+              <div class="card-icon" aria-hidden="true">{ }</div>
+              <h3>Plugin SDK</h3>
+              <p>
+                Author nodes with a stable TypeScript surface:
+                <code>defineNode</code>, execution context, and helpers — the only
+                supported path for builtins and future plugins.
+              </p>
+            </article>
+            <article class="card">
+              <div class="card-icon" aria-hidden="true">⧉</div>
+              <h3>Templates &amp; projects</h3>
+              <p>
+                Projects, sharing, RBAC, data tables, and a template marketplace path so
+                teams can reuse patterns instead of rebuilding every flow.
+              </p>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <!-- How it works -->
+      <section id="how" aria-labelledby="how-title">
+        <div class="container">
+          <div class="section-head">
+            <span class="section-label">How it works</span>
+            <h2 id="how-title">Design, execute, operate</h2>
+            <p>
+              OpenFlow is a single deployable stack: a React editor for humans, a graph
+              engine for nodes, and Postgres + Redis for state and jobs.
+            </p>
+          </div>
+          <div class="steps">
+            <article class="step">
+              <h3>Design on the canvas</h3>
+              <p>
+                Build workflows from triggers and actions. Configure parameters with
+                expressions, pick credentials, and organize work into projects.
+              </p>
+            </article>
+            <article class="step">
+              <h3>Engine runs the graph</h3>
+              <p>
+                The runtime walks the graph, evaluates expressions, passes items between
+                nodes, and records execution history you can inspect in the UI.
+              </p>
+            </article>
+            <article class="step">
+              <h3>Host it yourself</h3>
+              <p>
+                Docker Compose brings up API, worker, Postgres, and Redis. Point TLS at
+                the API and you are in production-shaped territory.
+              </p>
+            </article>
+          </div>
+
+          <div class="flow-diagram" aria-label="Architecture diagram">
+            <svg viewBox="0 0 900 220" xmlns="http://www.w3.org/2000/svg" role="img">
+              <title>Editor, API, engine, and data stores</title>
+              <!-- Editor -->
+              <rect x="20" y="50" width="160" height="120" rx="12" fill="#2a3142" stroke="#4a5568" />
+              <text x="100" y="100" text-anchor="middle" fill="#e8ecf4" font-family="IBM Plex Sans, sans-serif" font-size="15" font-weight="600">Editor</text>
+              <text x="100" y="124" text-anchor="middle" fill="#9aa3b5" font-family="IBM Plex Sans, sans-serif" font-size="12">React · React Flow</text>
+              <!-- Arrow -->
+              <path d="M190 110 H240" stroke="#5eead4" stroke-width="2" marker-end="url(#arrow)" />
+              <!-- API -->
+              <rect x="250" y="50" width="160" height="120" rx="12" fill="#2a3142" stroke="#4a5568" />
+              <text x="330" y="100" text-anchor="middle" fill="#e8ecf4" font-family="IBM Plex Sans, sans-serif" font-size="15" font-weight="600">API + Worker</text>
+              <text x="330" y="124" text-anchor="middle" fill="#9aa3b5" font-family="IBM Plex Sans, sans-serif" font-size="12">Hono · BullMQ</text>
+              <!-- Arrow -->
+              <path d="M420 110 H470" stroke="#5eead4" stroke-width="2" marker-end="url(#arrow)" />
+              <!-- Engine -->
+              <rect x="480" y="50" width="160" height="120" rx="12" fill="#24353a" stroke="#5eead4" />
+              <text x="560" y="100" text-anchor="middle" fill="#e8ecf4" font-family="IBM Plex Sans, sans-serif" font-size="15" font-weight="600">Engine</text>
+              <text x="560" y="124" text-anchor="middle" fill="#9aa3b5" font-family="IBM Plex Sans, sans-serif" font-size="12">Nodes · Expressions</text>
+              <!-- Arrow -->
+              <path d="M650 110 H700" stroke="#5eead4" stroke-width="2" marker-end="url(#arrow)" />
+              <!-- Data -->
+              <rect x="710" y="30" width="160" height="70" rx="12" fill="#2a3142" stroke="#4a5568" />
+              <text x="790" y="72" text-anchor="middle" fill="#e8ecf4" font-family="IBM Plex Sans, sans-serif" font-size="14" font-weight="600">Postgres</text>
+              <rect x="710" y="120" width="160" height="70" rx="12" fill="#2a3142" stroke="#4a5568" />
+              <text x="790" y="162" text-anchor="middle" fill="#e8ecf4" font-family="IBM Plex Sans, sans-serif" font-size="14" font-weight="600">Redis</text>
+              <defs>
+                <marker id="arrow" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+                  <path d="M0,0 L6,3 L0,6 Z" fill="#5eead4" />
+                </marker>
+              </defs>
+            </svg>
+          </div>
+        </div>
+      </section>
+
+      <!-- How it was made -->
+      <section id="made" class="section-alt" aria-labelledby="made-title">
+        <div class="container">
+          <div class="section-head">
+            <span class="section-label">How it was made</span>
+            <h2 id="made-title">Clean-room by design</h2>
+            <p>
+              OpenFlow grows coverage without copying third-party source. Public docs
+              become specs; specs become SDK nodes — with isolation and validation at
+              every stage.
+            </p>
+          </div>
+          <div class="made-layout">
+            <div class="prose">
+              <p>
+                Early on, the project rejected a managed-cloud-only backend. Workflow
+                execution needs long-running workers, persistent state, and control over
+                the sandbox — so OpenFlow ships as a <strong>self-hosted</strong> app:
+                TypeScript end to end, Hono for the API, Prisma for Postgres, BullMQ for
+                the queue.
+              </p>
+              <p>
+                Node coverage is the hard problem. Instead of vendoring someone else’s
+                codebase, OpenFlow uses a <strong>clean-room factory</strong>: agents
+                read public documentation and write behavioral specs; a separate
+                implement path is allowed to see only those specs and the OpenFlow Plugin
+                SDK — never third-party source trees.
+              </p>
+              <p>
+                Temporary corpus used for speccing lives outside the git tree and is
+                wiped after the SPEC stage. Implement and validate gates keep the repo
+                free of forbidden material. The result is hundreds of specs and
+                executors grown at scale, with AI in the loop and human-owned process
+                rules.
+              </p>
+              <div class="stack-tags" aria-label="Tech stack">
+                <span class="tag">TypeScript</span>
+                <span class="tag">React</span>
+                <span class="tag">TanStack Start</span>
+                <span class="tag">React Flow</span>
+                <span class="tag">Hono</span>
+                <span class="tag">Prisma</span>
+                <span class="tag">Postgres</span>
+                <span class="tag">BullMQ</span>
+                <span class="tag">Redis</span>
+                <span class="tag">Docker</span>
+              </div>
+            </div>
+            <div class="pipeline" aria-label="Factory pipeline">
+              <div class="pipeline-item">
+                <span class="pipeline-num">1</span>
+                <div>
+                  <h4>SPEC</h4>
+                  <p>Public docs → behavioral markdown under docs/specs/nodes/</p>
+                </div>
+              </div>
+              <div class="pipeline-item">
+                <span class="pipeline-num">2</span>
+                <div>
+                  <h4>Wipe corpus</h4>
+                  <p>No third-party packs remain in the factory run tree</p>
+                </div>
+              </div>
+              <div class="pipeline-item">
+                <span class="pipeline-num">3</span>
+                <div>
+                  <h4>IMPLEMENT</h4>
+                  <p>Spec + SDK only → executor, tests, registry registration</p>
+                </div>
+              </div>
+              <div class="pipeline-item">
+                <span class="pipeline-num">4</span>
+                <div>
+                  <h4>VALIDATE</h4>
+                  <p>Gates and checks; fail cycles back to SPEC when needed</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Who made it -->
+      <section id="about" aria-labelledby="about-title">
+        <div class="container">
+          <div class="section-head center">
+            <span class="section-label">Who made it</span>
+            <h2 id="about-title">Built by Chen Chiu</h2>
+            <p>Independent open-source project under the real-limitless GitHub account.</p>
+          </div>
+          <article class="about-card">
+            <div class="about-avatar" aria-hidden="true">
+              <img src="./assets/logo.svg" width="36" height="36" alt="" />
+            </div>
+            <div>
+              <h3>Chen Chiu</h3>
+              <p class="role">Creator · @real-limitless</p>
+              <p>
+                Building OpenFlow as a self-hosted automation platform with a clean-room
+                node factory — so ownership of the runtime and the process stays with the
+                people running it.
+              </p>
+              <div class="about-links">
+                <a
+                  class="btn btn-ghost"
+                  href="https://github.com/real-limitless"
+                  rel="noopener noreferrer"
+                  target="_blank"
+                  >GitHub profile</a
+                >
+                <a
+                  class="btn btn-primary"
+                  href="https://github.com/real-limitless/OpenFlow/issues"
+                  rel="noopener noreferrer"
+                  target="_blank"
+                  >Open an issue</a
+                >
+              </div>
+            </div>
+          </article>
+        </div>
+      </section>
+
+      <!-- Get started -->
+      <section id="start" class="section-alt" aria-labelledby="start-title">
+        <div class="container">
+          <div class="section-head">
+            <span class="section-label">Get started</span>
+            <h2 id="start-title">Running in minutes</h2>
+            <p>Only Docker is required for the recommended path. No manual database setup.</p>
+          </div>
+          <div class="start-box">
+            <div class="code-panel">
+              <div class="code-panel-header">
+                <span>terminal</span>
+                <span>docker compose</span>
+              </div>
+              <pre><code><span class="comment"># clone and start</span>
+git clone https://github.com/real-limitless/OpenFlow.git
+cd OpenFlow
+<span class="cmd">docker compose up -d</span>
+
+<span class="comment"># open the app</span>
+<span class="comment"># → http://localhost:3000</span></code></pre>
+            </div>
+            <div class="side-note">
+              <h3>Developing locally</h3>
+              <p>
+                Need Node.js 22+ and Docker for Postgres + Redis. Then:
+                <code>npm run setup</code> and <code>npm run dev</code>.
+              </p>
+              <a
+                class="btn btn-primary"
+                href="https://github.com/real-limitless/OpenFlow#quick-start-docker"
+                rel="noopener noreferrer"
+                target="_blank"
+                >Full install docs</a
+              >
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <div class="container footer-inner">
+        <div class="footer-brand">
+          <strong>OpenFlow</strong>
+          <span>Self-hosted workflow automation.</span>
+          <p class="disclaimer">
+            OpenFlow is an independent project. It is not affiliated with, endorsed by,
+            or derived from any other product’s source code. Workflow type strings are
+            wire identifiers for interop only.
+          </p>
+        </div>
+        <nav class="footer-links" aria-label="Footer">
+          <a href="https://github.com/real-limitless/OpenFlow" rel="noopener noreferrer" target="_blank"
+            >Repository</a
+          >
+          <a
+            href="https://github.com/real-limitless/OpenFlow/blob/main/docs/install.md"
+            rel="noopener noreferrer"
+            target="_blank"
+            >Install</a
+          >
+          <a
+            href="https://github.com/real-limitless/OpenFlow/blob/main/docs/sdk/OVERVIEW.md"
+            rel="noopener noreferrer"
+            target="_blank"
+            >SDK</a
+          >
+          <a href="#top">Back to top</a>
+        </nav>
+      </div>
+    </footer>
+
+    <script>
+      (function () {
+        var toggle = document.querySelector(".nav-toggle");
+        var nav = document.getElementById("site-nav");
+        if (!toggle || !nav) return;
+
+        toggle.addEventListener("click", function () {
+          var open = nav.classList.toggle("is-open");
+          toggle.setAttribute("aria-expanded", open ? "true" : "false");
+          toggle.setAttribute("aria-label", open ? "Close menu" : "Open menu");
+        });
+
+        nav.querySelectorAll("a").forEach(function (link) {
+          link.addEventListener("click", function () {
+            nav.classList.remove("is-open");
+            toggle.setAttribute("aria-expanded", "false");
+            toggle.setAttribute("aria-label", "Open menu");
+          });
+        });
+      })();
+    </script>
+  </body>
+</html>
