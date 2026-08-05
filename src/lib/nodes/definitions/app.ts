@@ -1135,8 +1135,321 @@ export const perplexity: INodeTypeDescription = {
   ],
 };
 
+const ELASTIC_SECURITY_DOCS = "https://docs.n8n.io/integrations/builtin/app-nodes/n8n-nodes-base.elasticsecurity/";
+const ELASTIC_SECURITY_CRED_DOCS = "https://docs.n8n.io/integrations/builtin/credentials/elasticsecurity/";
+
 const WEATHER_DOCS = "https://docs.n8n.io/integrations/builtin/app-nodes/n8n-nodes-base.openweathermap.md";
 const WEATHER_CRED_DOCS = "https://docs.n8n.io/integrations/builtin/credentials/openweathermap.md";
+
+const ELASTIC_CASE_OPERATIONS = [
+  { name: "Create", value: "create" },
+  { name: "Delete", value: "delete" },
+  { name: "Get", value: "get" },
+  { name: "Get All", value: "getAll" },
+  { name: "Get Summary", value: "getSummary" },
+  { name: "Update", value: "update" },
+];
+
+const ELASTIC_CASE_COMMENT_OPERATIONS = [
+  { name: "Create", value: "create" },
+  { name: "Get", value: "get" },
+  { name: "Get All", value: "getAll" },
+  { name: "Remove", value: "remove" },
+  { name: "Update", value: "update" },
+];
+
+const ELASTIC_CASE_TAG_OPERATIONS = [
+  { name: "Add", value: "add" },
+  { name: "Remove", value: "remove" },
+];
+
+const ELASTIC_CONNECTOR_OPERATIONS = [
+  { name: "Create", value: "create" },
+];
+
+const ELASTIC_RESOURCES = [
+  { name: "Case", value: "case" },
+  { name: "Case Comment", value: "caseComment" },
+  { name: "Case Tag", value: "caseTag" },
+  { name: "Connector", value: "connector" },
+];
+
+export const elasticSecurity: INodeTypeDescription = {
+  name: "n8n-nodes-base.elasticSecurityTool",
+  displayName: "Elastic Security",
+  category: "App",
+  group: ["output"],
+  version: 1,
+  description: "Manage cases, comments, tags, and connectors in Elastic Security",
+  defaults: { name: "Elastic Security" },
+  inputs: ["main"],
+  outputs: ["main"],
+  icon: "Shield",
+  credentials: [{ name: "elasticSecurityApi", required: true }],
+  sources: [ELASTIC_SECURITY_DOCS, ELASTIC_SECURITY_CRED_DOCS],
+  properties: [
+    {
+      displayName: "Resource",
+      name: "resource",
+      type: "options",
+      default: "case",
+      required: true,
+      noDataExpression: true,
+      options: ELASTIC_RESOURCES,
+    },
+    {
+      displayName: "Operation",
+      name: "operation",
+      type: "options",
+      default: "create",
+      required: true,
+      noDataExpression: true,
+      displayOptions: { show: { resource: ["case"] } },
+      options: ELASTIC_CASE_OPERATIONS,
+    },
+    {
+      displayName: "Operation",
+      name: "operation",
+      type: "options",
+      default: "create",
+      required: true,
+      noDataExpression: true,
+      displayOptions: { show: { resource: ["caseComment"] } },
+      options: ELASTIC_CASE_COMMENT_OPERATIONS,
+    },
+    {
+      displayName: "Operation",
+      name: "operation",
+      type: "options",
+      default: "add",
+      required: true,
+      noDataExpression: true,
+      displayOptions: { show: { resource: ["caseTag"] } },
+      options: ELASTIC_CASE_TAG_OPERATIONS,
+    },
+    {
+      displayName: "Operation",
+      name: "operation",
+      type: "options",
+      default: "create",
+      required: true,
+      noDataExpression: true,
+      displayOptions: { show: { resource: ["connector"] } },
+      options: ELASTIC_CONNECTOR_OPERATIONS,
+    },
+    {
+      displayName: "Case ID",
+      name: "caseId",
+      type: "string",
+      default: "",
+      displayOptions: {
+        show: {
+          resource: ["case", "caseComment", "caseTag"],
+          operation: ["delete", "get", "update", "getSummary", "create", "getAll", "remove", "add", "get"],
+        },
+      },
+      description: "The Elastic Security case identifier",
+    },
+    {
+      displayName: "Comment ID",
+      name: "commentId",
+      type: "string",
+      default: "",
+      displayOptions: {
+        show: {
+          resource: ["caseComment"],
+          operation: ["get", "remove", "update"],
+        },
+      },
+      description: "The comment identifier",
+    },
+    {
+      displayName: "Title",
+      name: "title",
+      type: "string",
+      default: "",
+      displayOptions: {
+        show: { resource: ["case"], operation: ["create", "update"] },
+      },
+      description: "Case title",
+    },
+    {
+      displayName: "Description",
+      name: "description",
+      type: "string",
+      default: "",
+      displayOptions: {
+        show: { resource: ["case"], operation: ["create", "update"] },
+      },
+      description: "Case description",
+    },
+    {
+      displayName: "Status",
+      name: "status",
+      type: "options",
+      default: "open",
+      displayOptions: {
+        show: { resource: ["case"], operation: ["update"] },
+      },
+      options: [
+        { name: "Open", value: "open" },
+        { name: "In Progress", value: "in-progress" },
+        { name: "Closed", value: "closed" },
+      ],
+      description: "Case status",
+    },
+    {
+      displayName: "Severity",
+      name: "severity",
+      type: "options",
+      default: "low",
+      displayOptions: {
+        show: { resource: ["case"], operation: ["create", "update"] },
+      },
+      options: [
+        { name: "Low", value: "low" },
+        { name: "Medium", value: "medium" },
+        { name: "High", value: "high" },
+        { name: "Critical", value: "critical" },
+      ],
+      description: "Case severity",
+    },
+    {
+      displayName: "Tags",
+      name: "tags",
+      type: "string",
+      default: "",
+      displayOptions: {
+        show: { resource: ["case"], operation: ["create", "update"] },
+      },
+      description: "Comma-separated list of tags",
+    },
+    {
+      displayName: "Tag",
+      name: "tag",
+      type: "string",
+      default: "",
+      displayOptions: {
+        show: { resource: ["caseTag"], operation: ["add", "remove"] },
+      },
+      description: "Single tag to add or remove",
+    },
+    {
+      displayName: "Comment",
+      name: "comment",
+      type: "string",
+      default: "",
+      displayOptions: {
+        show: { resource: ["caseComment"], operation: ["create", "update"] },
+      },
+      description: "Comment message text",
+    },
+    {
+      displayName: "Connector Type",
+      name: "connectorType",
+      type: "string",
+      default: "",
+      displayOptions: {
+        show: { resource: ["connector"], operation: ["create"] },
+      },
+      placeholder: ".jira",
+      description: "Connector type (e.g. .jira, .resilient, .swimlane)",
+    },
+    {
+      displayName: "Connector Fields",
+      name: "connectorFields",
+      type: "json",
+      default: "{}",
+      displayOptions: {
+        show: { resource: ["connector"], operation: ["create"] },
+      },
+      description: "Connector-type-specific fields as JSON",
+    },
+    {
+      displayName: "Connector",
+      name: "connector",
+      type: "json",
+      default: '{"id": "none", "name": "none", "type": ".none", "fields": null}',
+      displayOptions: {
+        show: { resource: ["case"], operation: ["create", "update"] },
+      },
+      description: "Connector configuration as JSON",
+    },
+    {
+      displayName: "Page",
+      name: "page",
+      type: "number",
+      default: 1,
+      displayOptions: {
+        show: {
+          resource: ["case", "caseComment"],
+          operation: ["getAll"],
+        },
+      },
+      description: "Page number for pagination",
+    },
+    {
+      displayName: "Per Page",
+      name: "perPage",
+      type: "number",
+      default: 20,
+      displayOptions: {
+        show: {
+          resource: ["case", "caseComment"],
+          operation: ["getAll"],
+        },
+      },
+      description: "Number of items per page",
+    },
+    {
+      displayName: "Filters",
+      name: "filters",
+      type: "collection",
+      default: {},
+      displayOptions: {
+        show: {
+          resource: ["case"],
+          operation: ["getAll"],
+        },
+      },
+      options: [
+        { displayName: "Assignee", name: "assignee", type: "string", default: "" },
+        { displayName: "From", name: "from", type: "dateTime", default: "" },
+        { displayName: "Search", name: "search", type: "string", default: "" },
+        { displayName: "Status", name: "status", type: "options", default: "", options: [
+          { name: "Open", value: "open" },
+          { name: "In Progress", value: "in-progress" },
+          { name: "Closed", value: "closed" },
+        ]},
+        { displayName: "Severity", name: "severity", type: "options", default: "", options: [
+          { name: "Low", value: "low" },
+          { name: "Medium", value: "medium" },
+          { name: "High", value: "high" },
+          { name: "Critical", value: "critical" },
+        ]},
+        { displayName: "Tags", name: "tags", type: "string", default: "" },
+        { displayName: "To", name: "to", type: "dateTime", default: "" },
+      ],
+    },
+    {
+      displayName: "Additional Fields",
+      name: "additionalFields",
+      type: "collection",
+      default: {},
+      displayOptions: {
+        show: {
+          resource: ["case"],
+          operation: ["create", "update"],
+        },
+      },
+      options: [
+        { displayName: "Assignee", name: "assignee", type: "string", default: "" },
+        { displayName: "Owner", name: "owner", type: "string", default: "" },
+        { displayName: "Sync Alerts", name: "syncAlerts", type: "boolean", default: true },
+      ],
+    },
+  ],
+};
 
 export const openWeatherMap: INodeTypeDescription = {
   name: "n8n-nodes-base.openWeatherMap",

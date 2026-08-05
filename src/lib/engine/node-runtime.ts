@@ -2062,6 +2062,11 @@ export const BUILTIN_EXECUTOR_MODULES: Array<{
     exportName: "googleFirebaseCloudFirestoreExecutor",
   },
   {
+    type: "n8n-nodes-base.googleFirebaseCloudFirestoreTool",
+    modulePath: "./executors/googleFirebaseCloudFirestoreTool",
+    exportName: "googleFirebaseCloudFirestoreToolExecutor",
+  },
+  {
     type: "n8n-nodes-base.onfleetTrigger",
     modulePath: "./executors/n8n-nodes-base.onfleetTrigger",
     exportName: "onfleetTriggerExecutor",
@@ -2130,6 +2135,11 @@ export const BUILTIN_EXECUTOR_MODULES: Array<{
     type: "n8n-nodes-base.freshdesk",
     modulePath: "./executors/freshdesk",
     exportName: "freshdeskExecutor",
+  },
+  {
+    type: "n8n-nodes-base.freshdeskTool",
+    modulePath: "./executors/freshdeskTool",
+    exportName: "freshdeskToolExecutor",
   },
   {
     type: "n8n-nodes-base.ghost",
@@ -2318,8 +2328,13 @@ export const BUILTIN_EXECUTOR_MODULES: Array<{
   },
   {
     type: "n8n-nodes-base.dhlTool",
-    modulePath: "./executors/n8n-nodes-base.dhlTool",
+    modulePath: "./executors/dhlTool",
     exportName: "dhlToolExecutor",
+  },
+  {
+    type: "n8n-nodes-base.goToWebinar",
+    modulePath: "./executors/n8n-nodes-base.goToWebinar",
+    exportName: "goToWebinarExecutor",
   },
   {
     type: "n8n-nodes-base.filemaker",
@@ -2626,6 +2641,96 @@ export const BUILTIN_EXECUTOR_MODULES: Array<{
     modulePath: "./executors/n8n-nodes-base.disqus",
     exportName: "disqusExecutor",
   },
+  {
+    type: "n8n-nodes-base.drift",
+    modulePath: "./executors/drift",
+    exportName: "driftExecutor",
+  },
+  {
+    type: "n8n-nodes-base.driftTool",
+    modulePath: "./executors/n8n-nodes-base.driftTool",
+    exportName: "driftToolExecutor",
+  },
+  {
+    type: "n8n-nodes-base.dropcontactTool",
+    modulePath: "./executors/n8n-nodes-base.dropcontactTool",
+    exportName: "dropcontactToolExecutor",
+  },
+  {
+    type: "n8n-nodes-base.egoi",
+    modulePath: "./executors/n8n-nodes-base.egoi",
+    exportName: "egoiExecutor",
+  },
+  {
+    type: "n8n-nodes-base.elasticSecurityTool",
+    modulePath: "./executors/ElasticSecurityExecutor",
+    exportName: "elasticSecurityExecutor",
+  },
+  {
+    type: "n8n-nodes-base.elevenLabs",
+    modulePath: "./executors/ElevenLabs",
+    exportName: "elevenLabsExecutor",
+  },
+  {
+    type: "n8n-nodes-base.emailSendHitlTool",
+    modulePath: "./executors/n8n-nodes-base.emailSendHitlTool",
+    exportName: "emailSendHitlToolExecutor",
+  },
+  {
+    type: "n8n-nodes-base.emelia",
+    modulePath: "./executors/n8n-nodes-base.emelia",
+    exportName: "emeliaExecutor",
+  },
+  {
+    type: "n8n-nodes-base.emeliaTrigger",
+    modulePath: "./executors/n8n-nodes-base.emeliaTrigger",
+    exportName: "emeliaTriggerExecutor",
+  },
+  {
+    type: "n8n-nodes-base.flowTrigger",
+    modulePath: "./executors/flowTrigger",
+    exportName: "flowTriggerExecutor",
+  },
+  {
+    type: "n8n-nodes-base.formIoTrigger",
+    modulePath: "./executors/formIoTrigger",
+    exportName: "formIoTriggerExecutor",
+  },
+  {
+    type: "n8n-nodes-base.freshworksCrm",
+    modulePath: "./executors/n8n-nodes-base.freshworksCrm",
+    exportName: "freshworksCrmExecutor",
+  },
+  {
+    type: "n8n-nodes-base.getResponse",
+    modulePath: "./executors/getResponse",
+    exportName: "getResponseExecutor",
+  },
+  {
+    type: "n8n-nodes-base.gong",
+    modulePath: "./executors/gong",
+    exportName: "gongExecutor",
+  },
+  {
+    type: "n8n-nodes-base.gongTool",
+    modulePath: "./executors/gongTool",
+    exportName: "gongToolExecutor",
+  },
+  {
+    type: "n8n-nodes-base.googleCloudStorageTool",
+    modulePath: "./executors/n8n-nodes-base.googleCloudStorageTool",
+    exportName: "googleCloudStorageToolExecutor",
+  },
+  {
+    type: "n8n-nodes-base.googleCloudNaturalLanguageTool",
+    modulePath: "./executors/googleCloudNaturalLanguageTool",
+    exportName: "googleCloudNaturalLanguageToolExecutor",
+  },
+  {
+    type: "n8n-nodes-base.googleCustomSearch",
+    modulePath: "./executors/googleCustomSearch",
+    exportName: "googleCustomSearchExecutor",
+  },
 ];
 
 /** Types OpenFlow ships an executor for. Derived, so it needs no maintenance. */
@@ -2648,3 +2753,5 @@ export async function reloadBuiltinExecutors(): Promise<{
   // Stub implementation
   return { reloaded: [], errors: [] };
 }
+
+

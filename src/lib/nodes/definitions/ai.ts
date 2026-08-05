@@ -5247,6 +5247,122 @@ export const embeddingsAwsBedrock: INodeTypeDescription = {
   ],
 };
 
+export const dropcontactTool: INodeTypeDescription = {
+  name: "n8n-nodes-base.dropcontactTool",
+  displayName: "Dropcontact (AI Tool)",
+  category: "AI Tool",
+  group: ["output"],
+  version: 1,
+  description:
+    "AI agent tool for enriching contact data via the Dropcontact API. Supports enrich (submit with optional polling) and fetchRequest (retrieve previous results) operations.",
+  defaults: { name: "Dropcontact (AI Tool)" },
+  inputs: ["main"],
+  outputs: ["main"],
+  icon: "Globe",
+  credentials: [{ name: "dropcontactApi", required: true }],
+  sources: [
+    "https://docs.n8n.io/integrations/builtin/app-nodes/n8n-nodes-base.dropcontact.md",
+    "https://docs.n8n.io/integrations/builtin/credentials/dropcontact.md",
+    "https://developer.dropcontact.com/",
+  ],
+  properties: [
+    {
+      displayName: "Operation",
+      name: "operation",
+      type: "options",
+      default: "enrich",
+      required: true,
+      noDataExpression: true,
+      options: [
+        { name: "Enrich", value: "enrich", description: "Submit contacts for enrichment (POST then optionally poll for results)" },
+        { name: "Fetch Request", value: "fetchRequest", description: "Retrieve results of a previously submitted enrichment by request ID" },
+      ],
+      description: "The Dropcontact operation to perform",
+    },
+    {
+      displayName: "Additional Fields",
+      name: "additionalFields",
+      type: "collection",
+      default: {},
+      displayOptions: { show: { operation: ["enrich"] } },
+      options: [
+        { displayName: "Email", name: "email", type: "string", default: "", description: "Contact email address. Supports $fromAI()." },
+        { displayName: "First Name", name: "first_name", type: "string", default: "", description: "Contact first name. Supports $fromAI()." },
+        { displayName: "Last Name", name: "last_name", type: "string", default: "", description: "Contact last name. Supports $fromAI()." },
+        { displayName: "Full Name", name: "full_name", type: "string", default: "", description: "Contact full name. Supports $fromAI()." },
+        { displayName: "Phone", name: "phone", type: "string", default: "", description: "Contact phone number. Supports $fromAI()." },
+        { displayName: "Company", name: "company", type: "string", default: "", description: "Company name. Supports $fromAI()." },
+        { displayName: "Website", name: "website", type: "string", default: "", description: "Website URL. Supports $fromAI()." },
+        { displayName: "SIREN", name: "num_siren", type: "string", default: "", description: "SIREN number. Supports $fromAI()." },
+        { displayName: "SIRET", name: "siret", type: "string", default: "", description: "SIRET number. Supports $fromAI()." },
+        { displayName: "LinkedIn", name: "linkedin", type: "string", default: "", description: "LinkedIn profile URL. Supports $fromAI()." },
+        { displayName: "Company LinkedIn", name: "company_linkedin", type: "string", default: "", description: "Company LinkedIn URL. Supports $fromAI()." },
+        { displayName: "Country", name: "country", type: "string", default: "", description: "Country code or name. Supports $fromAI()." },
+        { displayName: "Job", name: "job", type: "string", default: "", description: "Job title. Supports $fromAI()." },
+      ],
+      description: "Per-contact input fields for enrichment",
+    },
+    {
+      displayName: "Simplify",
+      name: "simplify",
+      type: "boolean",
+      default: false,
+      displayOptions: { show: { operation: ["enrich", "fetchRequest"] } },
+      description: "When on, flatten response data array fields to top-level keys",
+    },
+    {
+      displayName: "Request ID",
+      name: "requestId",
+      type: "string",
+      default: "",
+      displayOptions: { show: { operation: ["fetchRequest"] } },
+      description: "The request_id returned by a previous enrich POST. Supports $fromAI().",
+    },
+    {
+      displayName: "Options",
+      name: "options",
+      type: "collection",
+      default: {},
+      placeholder: "Add Option",
+      displayOptions: { show: { operation: ["enrich"] } },
+      options: [
+        {
+          displayName: "SIREN",
+          name: "siren",
+          type: "boolean",
+          default: false,
+          description: "Request SIREN number, NAF code, VAT number, company address, and company leader info",
+        },
+        {
+          displayName: "Language",
+          name: "language",
+          type: "options",
+          default: "",
+          options: [
+            { name: "English", value: "en" },
+            { name: "French", value: "fr" },
+          ],
+          description: "Response language",
+        },
+        {
+          displayName: "Wait Time (ms)",
+          name: "waitTime",
+          type: "number",
+          default: 0,
+          description: "Milliseconds to wait before polling for results; omit for immediate POST-only mode",
+        },
+        {
+          displayName: "Custom Callback URL",
+          name: "customCallbackUrl",
+          type: "string",
+          default: "",
+          description: "Webhook URL for async result delivery",
+        },
+      ],
+    },
+  ],
+};
+
 export const ollamaApp: INodeTypeDescription = {
   name: "@n8n/n8n-nodes-langchain.ollama",
   displayName: "Ollama",
@@ -5595,6 +5711,175 @@ export const ollamaApp: INodeTypeDescription = {
           description: "Output format — default (free text) or JSON",
         },
       ],
+    },
+  ],
+};
+
+export const googleFirebaseCloudFirestoreTool: INodeTypeDescription = {
+  name: "n8n-nodes-base.googleFirebaseCloudFirestoreTool",
+  displayName: "Google Firebase Cloud Firestore (AI Tool)",
+  category: "AI Tool",
+  group: ["output"],
+  version: 1,
+  description: "Reads and writes Firestore documents and collections as an AI agent tool via the Firestore REST API. Supports Document (create/upsert/get/getAll/delete/query) and Collection (getAll) operations.",
+  defaults: { name: "Google Firebase Cloud Firestore" },
+  inputs: ["main"],
+  outputs: ["main"],
+  icon: "Cloud",
+  credentials: [
+    { name: "googleFirebaseCloudFirestoreOAuth2Api" },
+    { name: "googleApi" },
+  ],
+  sources: [
+    "https://docs.n8n.io/integrations/builtin/app-nodes/n8n-nodes-base.googlecloudfirestore.md",
+    "https://docs.n8n.io/build/integrate-ai/understand-ai-components/how-tools-work.md",
+    "https://firebase.google.com/docs/firestore/reference/rest",
+  ],
+  properties: [
+    {
+      displayName: "Resource",
+      name: "resource",
+      type: "options",
+      default: "document",
+      noDataExpression: true,
+      required: true,
+      options: [
+        { name: "Document", value: "document" },
+        { name: "Collection", value: "collection" },
+      ],
+    },
+    {
+      displayName: "Operation",
+      name: "operation",
+      type: "options",
+      default: "create",
+      noDataExpression: true,
+      required: true,
+      displayOptions: { show: { resource: ["document"] } },
+      options: [
+        { name: "Create", value: "create" },
+        { name: "Upsert", value: "upsert" },
+        { name: "Get", value: "get" },
+        { name: "Get All", value: "getAll" },
+        { name: "Delete", value: "delete" },
+        { name: "Query", value: "query" },
+      ],
+    },
+    {
+      displayName: "Operation",
+      name: "operation",
+      type: "options",
+      default: "getAll",
+      noDataExpression: true,
+      required: true,
+      displayOptions: { show: { resource: ["collection"] } },
+      options: [
+        { name: "Get All", value: "getAll" },
+      ],
+    },
+    {
+      displayName: "Project ID",
+      name: "projectId",
+      type: "string",
+      default: "",
+      required: true,
+    },
+    {
+      displayName: "Database",
+      name: "database",
+      type: "string",
+      default: "(default)",
+    },
+    {
+      displayName: "Collection",
+      name: "collection",
+      type: "string",
+      default: "",
+      required: true,
+      displayOptions: { show: { resource: ["document"] }, hide: { operation: ["query"] } },
+    },
+    {
+      displayName: "Collection",
+      name: "collection",
+      type: "string",
+      default: "",
+      displayOptions: { show: { resource: ["document"], operation: ["query"] } },
+    },
+    {
+      displayName: "Document ID",
+      name: "documentId",
+      type: "string",
+      default: "",
+      displayOptions: {
+        show: {
+          resource: ["document"],
+          operation: ["create", "get", "delete"],
+        },
+      },
+    },
+    {
+      displayName: "Update Key",
+      name: "updateKey",
+      type: "string",
+      default: "",
+      displayOptions: { show: { resource: ["document"], operation: ["upsert"] } },
+    },
+    {
+      displayName: "Columns",
+      name: "columns",
+      type: "json",
+      default: "{}",
+      displayOptions: {
+        show: {
+          resource: ["document"],
+          operation: ["create", "upsert"],
+        },
+      },
+    },
+    {
+      displayName: "Query",
+      name: "query",
+      type: "json",
+      default: "{}",
+      displayOptions: {
+        show: { resource: ["document"], operation: ["query"] },
+      },
+    },
+    {
+      displayName: "Simplify",
+      name: "simple",
+      type: "boolean",
+      default: true,
+      displayOptions: {
+        show: {
+          resource: ["document"],
+          operation: ["create", "get", "getAll", "query"],
+        },
+      },
+    },
+    {
+      displayName: "Return All",
+      name: "returnAll",
+      type: "boolean",
+      default: false,
+      displayOptions: {
+        show: {
+          operation: ["getAll"],
+        },
+      },
+    },
+    {
+      displayName: "Limit",
+      name: "limit",
+      type: "number",
+      default: 100,
+      typeOptions: { minValue: 1 },
+      displayOptions: {
+        show: {
+          operation: ["getAll"],
+          returnAll: [false],
+        },
+      },
     },
   ],
 };

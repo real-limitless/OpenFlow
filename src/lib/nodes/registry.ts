@@ -47,6 +47,9 @@ const ALIAS_PAIRS: Array<[string, string]> = [
   ["Translator", deepLTool.name],
   ["Shipping", "n8n-nodes-base.dhlTool"],
   ["n8n-nodes-base.discourseTool", "n8n-nodes-base.discourse"],
+  ["n8n-nodes-base.driftTool", "n8n-nodes-base.drift"],
+  ["n8n-nodes-base.egoiTool", "n8n-nodes-base.egoi"],
+  ["n8n-nodes-base.elasticSecurity", "n8n-nodes-base.elasticSecurityTool"],
 ];
 
 let descriptionsSeeded = false;

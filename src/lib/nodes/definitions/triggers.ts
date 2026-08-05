@@ -1224,6 +1224,53 @@ export const chargebeeTrigger: INodeTypeDescription = {
   ],
 };
 
+const EMELIA_DOCS =
+  "https://docs.n8n.io/integrations/builtin/trigger-nodes/n8n-nodes-base.emeliatrigger/";
+
+export const emeliaTrigger: INodeTypeDescription = {
+  name: "n8n-nodes-base.emeliaTrigger",
+  displayName: "Emelia Trigger",
+  category: "Communication",
+  group: ["trigger"],
+  version: 1,
+  description: "Starts the workflow when an Emelia webhook event is received (email bounced, opened, replied, sent, link clicked, unsubscribed).",
+  defaults: { name: "Emelia Trigger" },
+  inputs: [],
+  outputs: ["main"],
+  icon: "Webhook",
+  credentials: [
+    { name: "emeliaApi", required: true },
+  ],
+  sources: [EMELIA_DOCS],
+  properties: [
+    {
+      displayName: "Events",
+      name: "events",
+      type: "multiOptions",
+      default: [],
+      required: true,
+      noDataExpression: true,
+      description: "One or more Emelia event types to subscribe to.",
+      options: [
+        { name: "Email Bounced", value: "emailBounced" },
+        { name: "Email Opened", value: "emailOpened" },
+        { name: "Email Replied", value: "emailReplied" },
+        { name: "Email Sent", value: "emailSent" },
+        { name: "Link Clicked", value: "linkClicked" },
+        { name: "Unsubscribed Contact", value: "unsubscribedContact" },
+      ],
+    },
+    {
+      displayName: "Campaign ID",
+      name: "campaignId",
+      type: "string",
+      default: "",
+      required: true,
+      description: "The Emelia campaign to link the webhook to.",
+    },
+  ],
+};
+
 export const boxTrigger: INodeTypeDescription = {
   name: "n8n-nodes-base.boxTrigger",
   displayName: "Box Trigger",
@@ -5143,6 +5190,71 @@ export const webflowTrigger: INodeTypeDescription = {
   ],
 };
 
+export const formIoTrigger: INodeTypeDescription = {
+  name: "n8n-nodes-base.formIoTrigger",
+  displayName: "Form.io Trigger",
+  category: "Communication",
+  group: ["trigger"],
+  version: 1,
+  description: "Starts the workflow when a Form.io webhook event is received (submission lifecycle, form updates).",
+  defaults: { name: "Form.io Trigger" },
+  inputs: [],
+  outputs: ["main"],
+  icon: "Webhook",
+  credentials: [
+    { name: "formIoTriggerApi", required: true },
+  ],
+  sources: [
+    "https://docs.n8n.io/integrations/builtin/trigger-nodes/n8n-nodes-base.formiotrigger/",
+  ],
+  properties: [
+    {
+      displayName: "Project",
+      name: "project",
+      type: "options",
+      default: "",
+      required: true,
+      noDataExpression: true,
+      typeOptions: { loadOptionsMethod: "getProjects" },
+      description: "The Form.io project to watch for events",
+    },
+    {
+      displayName: "Form",
+      name: "form",
+      type: "options",
+      default: "",
+      required: true,
+      noDataExpression: true,
+      typeOptions: { loadOptionsMethod: "getForms" },
+      description: "The Form.io form to watch for events",
+    },
+    {
+      displayName: "URL",
+      name: "url",
+      type: "string",
+      default: "",
+      description: "Callback URL override. Uses the workflow's own webhook URL when empty.",
+    },
+    {
+      displayName: "Events",
+      name: "events",
+      type: "multiOptions",
+      default: [],
+      required: true,
+      noDataExpression: true,
+      description: "Which Form.io webhook event types to subscribe to.",
+      options: [
+        { name: "Submission Created", value: "submission.create" },
+        { name: "Submission Updated", value: "submission.update" },
+        { name: "Submission Deleted", value: "submission.delete" },
+        { name: "Form Created", value: "form.create" },
+        { name: "Form Updated", value: "form.update" },
+        { name: "Form Deleted", value: "form.delete" },
+      ],
+    },
+  ],
+};
+
 export const jiraTrigger: INodeTypeDescription = {
   name: "n8n-nodes-base.jiraTrigger",
   displayName: "Jira Trigger",
@@ -5806,6 +5918,59 @@ export const clockifyTrigger: INodeTypeDescription = {
       type: "string",
       default: "",
       description: "Override the workflow-level timezone for computing the polling window",
+    },
+  ],
+};
+
+const FLOW_TRIGGER_DOCS =
+  "https://docs.n8n.io/integrations/builtin/trigger-nodes/n8n-nodes-base.flowtrigger/";
+
+export const flowTrigger: INodeTypeDescription = {
+  name: "n8n-nodes-base.flowTrigger",
+  displayName: "Flow Trigger",
+  category: "Productivity",
+  group: ["trigger"],
+  version: 1,
+  description: "Starts the workflow when a Flow (getflow.com) webhook event is received for the selected projects or tasks.",
+  defaults: { name: "Flow Trigger" },
+  inputs: [],
+  outputs: ["main"],
+  icon: "Webhook",
+  credentials: [
+    { name: "flowApi", required: true },
+  ],
+  sources: [FLOW_TRIGGER_DOCS],
+  properties: [
+    {
+      displayName: "Resource",
+      name: "resource",
+      type: "options",
+      default: "",
+      required: true,
+      noDataExpression: true,
+      description: "Which Flow resource type the webhook subscribes to.",
+      options: [
+        { name: "Project", value: "list" },
+        { name: "Task", value: "task" },
+      ],
+    },
+    {
+      displayName: "Project IDs",
+      name: "listIds",
+      type: "string",
+      default: "",
+      placeholder: "12345,67890",
+      displayOptions: { show: { resource: ["list"] } },
+      description: "Comma-separated Flow project (list) IDs to watch. Required when resource is Project.",
+    },
+    {
+      displayName: "Task IDs",
+      name: "taskIds",
+      type: "string",
+      default: "",
+      placeholder: "555",
+      displayOptions: { show: { resource: ["task"] } },
+      description: "Comma-separated Flow task IDs to watch. Required when resource is Task.",
     },
   ],
 };
