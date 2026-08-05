@@ -990,3 +990,58 @@ export const telegramTool: INodeTypeDescription = {
     },
   ],
 };
+
+export const googleTranslateTool: INodeTypeDescription = {
+  name: "n8n-nodes-base.googleTranslateTool",
+  displayName: "Google Translate Tool",
+  category: "AI",
+  group: ["transform"],
+  version: 2,
+  description: "Wraps a single translate operation as an AI tool. Shared credential types, $fromAI() support.",
+  defaults: { name: "Google Translate Tool" },
+  inputs: ["main"],
+  outputs: ["main"],
+  icon: "Globe",
+  credentials: [
+    { name: "googleApi", required: false },
+    { name: "googleTranslateOAuth2Api", required: false },
+  ],
+  sources: [
+    "https://docs.n8n.io/integrations/builtin/app-nodes/n8n-nodes-base.googletranslate/",
+    "https://cloud.google.com/translate/docs/reference/rest/v2/translate",
+  ],
+  properties: [
+    {
+      displayName: "Resource",
+      name: "resource",
+      type: "hidden",
+      default: "language",
+    },
+    {
+      displayName: "Operation",
+      name: "operation",
+      type: "hidden",
+      default: "translate",
+      displayOptions: { show: { resource: ["language"] } },
+    },
+    {
+      displayName: "Text",
+      name: "text",
+      type: "string",
+      default: "",
+      required: true,
+      displayOptions: { show: { operation: ["translate"] } },
+      description: "The input text to translate",
+    },
+    {
+      displayName: "Translate To",
+      name: "translateTo",
+      type: "options",
+      default: "",
+      required: true,
+      displayOptions: { show: { operation: ["translate"] } },
+      typeOptions: { loadOptionsMethod: "getLanguages" },
+      description: "Target language code or name",
+    },
+  ],
+};

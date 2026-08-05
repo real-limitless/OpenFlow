@@ -50,6 +50,7 @@ const ALIAS_PAIRS: Array<[string, string]> = [
   ["n8n-nodes-base.driftTool", "n8n-nodes-base.drift"],
   ["n8n-nodes-base.egoiTool", "n8n-nodes-base.egoi"],
   ["n8n-nodes-base.elasticSecurity", "n8n-nodes-base.elasticSecurityTool"],
+  ["Moderation", "n8n-nodes-base.googlePerspective"],
 ];
 
 let descriptionsSeeded = false;

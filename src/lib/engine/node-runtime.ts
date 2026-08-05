@@ -592,6 +592,11 @@ export const BUILTIN_EXECUTOR_MODULES: Array<{
     exportName: "graphqlExecutor",
   },
   {
+    type: "n8n-nodes-base.graphqlTool",
+    modulePath: "./executors/graphqlTool",
+    exportName: "graphqlToolExecutor",
+  },
+  {
     type: "@n8n/n8n-nodes-langchain.openAi",
     modulePath: "./executors/openai",
     exportName: "openAiExecutor",
@@ -919,6 +924,11 @@ export const BUILTIN_EXECUTOR_MODULES: Array<{
     type: "n8n-nodes-base.gotify",
     modulePath: "./executors/gotify",
     exportName: "gotifyExecutor",
+  },
+  {
+    type: "n8n-nodes-base.gotifyTool",
+    modulePath: "./executors/gotifyTool",
+    exportName: "gotifyToolExecutor",
   },
   {
     type: "n8n-nodes-base.pushbullet",
@@ -2717,6 +2727,11 @@ export const BUILTIN_EXECUTOR_MODULES: Array<{
     exportName: "gongToolExecutor",
   },
   {
+    type: "n8n-nodes-base.grafanaTool",
+    modulePath: "./executors/grafana",
+    exportName: "grafanaExecutor",
+  },
+  {
     type: "n8n-nodes-base.googleCloudStorageTool",
     modulePath: "./executors/n8n-nodes-base.googleCloudStorageTool",
     exportName: "googleCloudStorageToolExecutor",
@@ -2730,6 +2745,31 @@ export const BUILTIN_EXECUTOR_MODULES: Array<{
     type: "n8n-nodes-base.googleCustomSearch",
     modulePath: "./executors/googleCustomSearch",
     exportName: "googleCustomSearchExecutor",
+  },
+  {
+    type: "n8n-nodes-base.googleFirebaseRealtimeDatabase",
+    modulePath: "./executors/googleFirebaseRealtimeDatabase",
+    exportName: "googleFirebaseRealtimeDatabaseExecutor",
+  },
+  {
+    type: "n8n-nodes-base.googlePageSpeedInsights",
+    modulePath: "./executors/googlePageSpeedInsights",
+    exportName: "googlePageSpeedInsightsExecutor",
+  },
+  {
+    type: "n8n-nodes-base.googlePerspective",
+    modulePath: "./executors/googlePerspective",
+    exportName: "googlePerspectiveExecutor",
+  },
+  {
+    type: "n8n-nodes-base.googleSearchConsole",
+    modulePath: "./executors/googleSearchConsole",
+    exportName: "googleSearchConsoleExecutor",
+  },
+  {
+    type: "n8n-nodes-base.googleTranslateTool",
+    modulePath: "./executors/googleTranslateTool",
+    exportName: "googleTranslateToolExecutor",
   },
 ];
 

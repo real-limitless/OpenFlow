@@ -2,6 +2,8 @@ import type { INodeTypeDescription } from "../types";
 
 const AZURE_STORAGE_DOCS =
   "https://docs.n8n.io/integrations/builtin/app-nodes/n8n-nodes-base.azurestorage/";
+const FIREBASE_RTDB_DOCS =
+  "https://docs.n8n.io/integrations/builtin/app-nodes/n8n-nodes-base.googlecloudrealtimedatabase/";
 
 export const azureStorage: INodeTypeDescription = {
   name: "n8n-nodes-base.azureStorage",
@@ -204,6 +206,70 @@ export const azureStorage: INodeTypeDescription = {
         { displayName: "Binary Property Name", name: "binaryPropertyName", type: "string", default: "data" },
         { displayName: "Simplify", name: "simplify", type: "boolean", default: false },
       ],
+    },
+  ],
+};
+
+export const googleFirebaseRealtimeDatabase: INodeTypeDescription = {
+  name: "n8n-nodes-base.googleFirebaseRealtimeDatabase",
+  displayName: "Google Cloud Realtime Database",
+  category: "Data & Storage",
+  group: ["output"],
+  version: 1,
+  description: "Read, write, update, delete, and push data to a Firebase Realtime Database.",
+  defaults: { name: "Realtime Database" },
+  inputs: ["main"],
+  outputs: ["main"],
+  icon: "Globe",
+  credentials: [{ name: "googleFirebaseRealtimeDatabaseOAuth2Api" }],
+  sources: [FIREBASE_RTDB_DOCS],
+  properties: [
+    {
+      displayName: "Project ID",
+      name: "projectId",
+      type: "options",
+      default: "",
+      required: true,
+      typeOptions: {
+        loadOptionsMethod: "getProjects",
+      },
+      description: "Firebase project name/ID, dynamically loaded via getProjects; accepts expression",
+    },
+    {
+      displayName: "Operation",
+      name: "operation",
+      type: "options",
+      default: "create",
+      required: true,
+      noDataExpression: true,
+      options: [
+        { name: "Create", value: "create" },
+        { name: "Delete", value: "delete" },
+        { name: "Get", value: "get" },
+        { name: "Push", value: "push" },
+        { name: "Update", value: "update" },
+      ],
+    },
+    {
+      displayName: "Path",
+      name: "path",
+      type: "string",
+      default: "",
+      required: true,
+      placeholder: "/app/users",
+      description: "Object path on database, e.g. /app/users. Do not append .json. For Get operation the path is optional (blank = whole database)",
+    },
+    {
+      displayName: "Attributes",
+      name: "attributes",
+      type: "string",
+      default: "",
+      required: true,
+      displayOptions: {
+        show: { operation: ["create", "push", "update"] },
+      },
+      placeholder: "age, name, city",
+      description: "Comma-separated column/attribute names to write, e.g. age, name, city",
     },
   ],
 };

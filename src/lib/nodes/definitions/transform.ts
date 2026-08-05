@@ -10490,6 +10490,97 @@ const SESSION_MODE_PARAMS = [
   { displayName: "Auto Terminate Session", name: "autoTerminateSession", type: "boolean", default: true, displayOptions: { show: { sessionMode: ["new"] } } },
 ];
 
+export const googlePerspective: INodeTypeDescription = {
+  name: "n8n-nodes-base.googlePerspective",
+  displayName: "Google Perspective",
+  category: "Transform",
+  group: ["transform"],
+  version: 1,
+  description: "Analyzes text for toxicity and other content attributes using the Google Perspective API.",
+  defaults: { name: "Google Perspective" },
+  inputs: ["main"],
+  outputs: ["main"],
+  icon: "Shield",
+  credentials: [{ name: "googlePerspectiveOAuth2Api", required: true }],
+  properties: [
+    {
+      displayName: "Operation",
+      name: "operation",
+      type: "options",
+      default: "analyzeComment",
+      noDataExpression: true,
+      options: [
+        { name: "Analyze Comment", value: "analyzeComment" },
+      ],
+    },
+    {
+      displayName: "Text",
+      name: "text",
+      type: "string",
+      default: "",
+      required: true,
+      displayOptions: { show: { operation: ["analyzeComment"] } },
+      description: "The comment text to analyze",
+    },
+    {
+      displayName: "Requested Attributes",
+      name: "requestedAttributesUi",
+      type: "fixedCollection",
+      default: {},
+      required: true,
+      displayOptions: { show: { operation: ["analyzeComment"] } },
+      typeOptions: { multipleValues: true },
+      options: [
+        {
+          name: "requestedAttributesValues",
+          displayName: "Attribute",
+          values: [
+            {
+              displayName: "Attribute Name",
+              name: "attributeName",
+              type: "options",
+              default: "flirtation",
+              options: [
+                { name: "Flirtation", value: "flirtation" },
+                { name: "Identity Attack", value: "identity_attack" },
+                { name: "Insult", value: "insult" },
+                { name: "Profanity", value: "profanity" },
+                { name: "Severe Toxicity", value: "severe_toxicity" },
+                { name: "Sexually Explicit", value: "sexually_explicit" },
+                { name: "Threat", value: "threat" },
+                { name: "Toxicity", value: "toxicity" },
+              ],
+            },
+            {
+              displayName: "Score Threshold",
+              name: "scoreThreshold",
+              type: "number",
+              default: 0,
+              description: "Scores below this threshold are omitted from results",
+            },
+          ],
+        },
+      ],
+    },
+    {
+      displayName: "Options",
+      name: "options",
+      type: "collection",
+      default: {},
+      displayOptions: { show: { operation: ["analyzeComment"] } },
+      options: [
+        {
+          displayName: "Languages",
+          name: "languages",
+          type: "string",
+          default: "",
+          description: "Language(s) of the input text; auto-detected when omitted. Dynamic list loaded via the Perspective API",
+        },
+      ],
+    },
+  ],
+};
+
 export const airtop: INodeTypeDescription = {
   name: "n8n-nodes-base.airtop",
   displayName: "Airtop",
