@@ -13,41 +13,46 @@ status: specced
 
 | URL | Source class |
 |-----|--------------|
-| https://docs.n8n.io/integrations/builtin/app-nodes/n8n-nodes-base.bitly.html | Public docs only |
-| https://docs.n8n.io/integrations/builtin/credentials/bitly.html | Public docs only |
+| https://docs.n8n.io/integrations/builtin/app-nodes/n8n-nodes-base.bitly.md | Public docs only |
+| https://docs.n8n.io/integrations/builtin/credentials/bitly.md | Public docs only |
 | https://dev.bitly.com/ | Public docs only |
 
 ## Wire format
 
 - **Type string:** `n8n-nodes-base.bitly`
-- **Aliases:** (none)
+- **Aliases:** `n8n-nodes-base.bitlyTool`
 - **Inputs:** `main` × 1
 - **Outputs:** `main` × 1
-- **Credentials:** `bitlyApi` (Generic OAuth2 API) or `bitlyOAuth2Api` (OAuth2)
+- **Credentials:** `bitlyApi` (API access token) or `bitlyOAuth2Api` (OAuth2)
+- **Auth selection parameter:** `authentication` — enum: `accessToken`, `oAuth2` (default determined by credential presence)
+- **AI tool:** `usableAsTool: true` — the same node definition is registered as a tool variant for AI agents under the `bitlyTool` type string. When used by an AI agent, all string/collection parameters accept `$fromAI()` expressions that the model supplies dynamically at call time.
 
 ## Parameters
 
-The node exposes a single **Link** resource with three operations. High-level parameters:
+The node exposes a single **Link** resource with three operations. High-level parameters. When used as an AI agent tool, all parameters (except resource/operation selectors) support `$fromAI()` population by the calling model:
 
 | Resource | Operation | Parameter name | type | required | notes |
 |----------|-----------|----------------|------|----------|-------|
-| Link | Create | Long URL | string | yes | The URL to shorten. Expression-capable. |
-| Link | Create | Domain | string, optional | no | Custom back-half domain (e.g. `bit.ly`, `j.mp`). Defaults to account default. |
-| Link | Create | Group GUID | string, optional | no | Bitly group to own the link. Defaults to primary group. |
-| Link | Create | Tags | string[], optional | no | Free-form tags applied to the link. |
-| Link | Create | Title | string, optional | no | Human-readable title for the shortened link. |
-| Link | Get | Link / Bitlink ID | string | yes | The shortened link or its ID to retrieve details for. |
-| Link | Update | Link / Bitlink ID | string | yes | The shortened link or ID to modify. |
-| Link | Update | Archived | boolean, optional | no | Whether the link is archived. |
-| Link | Update | Tags | string[], optional | no | Replace existing tags. |
-| Link | Update | Title | string, optional | no | Replace existing title. |
-| Link | Update | Long URL | string, optional | no | Replace the destination URL (updates `long_url`). |
+| Link | Create | longUrl | string | yes | The URL to shorten. Expression-capable. |
+| Link | Create | domain | string, optional | no | Custom back-half domain (e.g. `bit.ly`, `j.mp`). Defaults to `bit.ly`. |
+| Link | Create | group | string, optional | no | Bitly group to own the link. Accepts group GUID via dropdown or expression. |
+| Link | Create | tags | string[], optional | no | Free-form tags applied to the link. |
+| Link | Create | title | string, optional | no | Human-readable title for the shortened link. |
+| Link | Create | deeplinks | Deeplink[], optional | no | Array of deep link configurations, each with appId, appUriPath, installType, installUrl. |
+| Link | Get | id | string | yes | The bitlink ID (e.g. `bit.ly/abc123`) or full shortened URL. |
+| Link | Update | id | string | yes | The bitlink ID or shortened URL to modify. |
+| Link | Update | archived | boolean, optional | no | Whether the link is archived. Defaults to false. |
+| Link | Update | tags | string[], optional | no | Replace existing tags. |
+| Link | Update | title | string, optional | no | Replace existing title. |
+| Link | Update | longUrl | string, optional | no | Replace the destination URL. |
+| Link | Update | group | string, optional | no | Move the link to a different group. |
+| Link | Update | deeplinks | Deeplink[], optional | no | Array of deep link configurations, same shape as Create. |
 
 ## Runtime behavior
 
 ### Input
 
-Each input item is processed independently. The node sends one Bitly API request per input item and collects the responses. All parameters may be set via expression against the input item data.
+Each input item is processed independently. The node sends one Bitly API request per input item and collects the responses. All parameters may be set via expression against the input item data. In AI agent tool mode, parameters are populated by the model via `$fromAI()` expressions rather than from workflow items; when `executeOnce` is true (tool mode default), only the first item is processed.
 
 ### Output
 
@@ -61,6 +66,8 @@ Each output item carries the input JSON merged with the Bitly API response under
 - `tags` — array of tag strings
 - `references` — object with related resource URLs (e.g. `group`)
 
+The Deeplink parameter accepts an array of objects with fields: `appId` (app store app ID), `appUriPath` (URI path for deep linking), `installType` (installation type), `installUrl` (fallback install URL). Only applicable to Create and Update operations.
+
 **Error handling:** If the API returns a non-2xx status, the node throws an error unless `continueOnFail` is enabled. On `continueOnFail`, an error object is returned in place of the expected output.
 
 ### Errors
@@ -69,7 +76,7 @@ Throw on invalid authentication, nonexistent bitlink, rate limiting, or malforme
 
 ### Expressions
 
-All parameter values accept expression strings (`=...` syntax). This includes the long URL, bitlink ID, tags arrays, and optional fields.
+All parameter values accept expression strings (`=...` syntax). This includes the long URL, bitlink ID, tags arrays, and optional fields. When used as an AI agent tool, all string and collection parameters additionally accept `$fromAI()` expressions that resolve to values supplied by the calling AI model at runtime.
 
 ## Acceptance tests
 
@@ -142,13 +149,18 @@ All parameter values accept expression strings (`=...` syntax). This includes th
 | Topic | documented / inferred | Notes |
 |-------|----------------------|-------|
 | Available operations | documented | Public n8n docs list Create/Get/Update for Link resource |
-| Parameters per operation | partially inferred | Public docs only give operation names; parameter details from Bitly API docs and schema snapshot |
-| Response shape | inferred from Bitly API schema | The `create.json` schema in the corpus confirms the response fields |
+| Parameters per operation | documented | Parameter names confirmed from published type descriptors; aligns with Bitly REST API |
+| Response shape | documented | Bitly REST API response shape for create/get/update endpoints |
 | Credential types | documented | API token and OAuth2 both documented on n8n credentials page |
+| Deeplinks support | inferred | Not mentioned in public n8n docs; confirmed from published type definitions |
 | Expression behavior | documented | Standard n8n expression behavior applies |
+| Tool alias (bitlyTool) | documented | Corpus confirms `usableAsTool: true` on the bitly node definition; `bitlyTool` is registered as an alias of this same node for AI agent usage |
+| `$fromAI()` behavior | documented | Standard n8n AI-tool mechanism documented at docs.n8n.io/build/integrate-ai/understand-ai-components/how-tools-work.md |
+| AI tool-specific parameters | inferred | No separate Tool-only parameters exist; all base parameters support `$fromAI()` when used in tool mode |
 
 ## OpenFlow mapping
 
 - **Definition group:** `core`
-- **Executor file:** `src/lib/engine/executors/n8n-nodes-base.bitly.ts`
+- **Executor file (base):** `src/lib/engine/executors/n8n-nodes-base.bitly.ts`
+- **Executor file (tool):** `src/lib/engine/executors/n8n-nodes-base.bitlyTool.ts` — thin wrapper around the base executor adding `ai_tool` input handling and `$fromAI()` expression support
 - **SDK:** `defineNode` + native `ExecutionContext` only

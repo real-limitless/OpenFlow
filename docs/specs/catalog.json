@@ -2000,6 +2000,14 @@
       "source": "scraped-usage",
       "usageWorkflows": 23
     },
+    "n8n-nodes-base.chargebee": {
+      "priority": "P2",
+      "executor": "implemented",
+      "spec": "specced",
+      "factory": "pass",
+      "source": "scraped-usage",
+      "usageWorkflows": 1
+    },
     "n8n-nodes-base.calendlyTrigger": {
       "priority": "P2",
       "executor": "implemented",
@@ -2576,6 +2584,14 @@
       "source": "scraped-usage",
       "usageWorkflows": 4
     },
+    "n8n-nodes-base.clockifyTool": {
+      "priority": "P2",
+      "executor": "implemented",
+      "spec": "specced",
+      "factory": "pass",
+      "source": "scraped-usage",
+      "usageWorkflows": 1
+    },
     "n8n-nodes-base.googleContactsTool": {
       "priority": "P2",
       "executor": "implemented",
@@ -2679,6 +2695,14 @@
       "factory": "pass",
       "source": "scraped-usage",
       "usageWorkflows": 3
+    },
+    "n8n-nodes-base.bitwardenTool": {
+      "priority": "P2",
+      "executor": "implemented",
+      "spec": "specced",
+      "factory": "pass",
+      "source": "scraped-usage",
+      "usageWorkflows": 1
     },
     "n8n-nodes-base.bitly": {
       "priority": "P2",
@@ -3316,7 +3340,7 @@
       "priority": "P2",
       "executor": "implemented",
       "spec": "specced",
-      "factory": "partial",
+      "factory": "pass",
       "source": "scraped-usage",
       "usageWorkflows": 1
     },
@@ -3330,409 +3354,385 @@
     },
     "@n8n/n8n-nodes-langchain.microsoftAgent365Trigger": {
       "priority": "P2",
-      "executor": "missing",
-      "spec": "missing",
-      "factory": "pending",
+      "executor": "implemented",
+      "spec": "specced",
+      "factory": "pass",
       "source": "scraped-usage",
       "usageWorkflows": 1
     },
     "@n8n/n8n-nodes-langchain.ollama": {
       "priority": "P2",
-      "executor": "missing",
-      "spec": "missing",
-      "factory": "pending",
+      "executor": "implemented",
+      "spec": "specced",
+      "factory": "pass",
       "source": "scraped-usage",
       "usageWorkflows": 1
     },
     "@n8n/n8n-nodes-langchain.vectorStoreSupabaseInsert": {
       "priority": "P2",
-      "executor": "missing",
-      "spec": "missing",
-      "factory": "pending",
+      "executor": "implemented",
+      "spec": "specced",
+      "factory": "pass",
       "source": "scraped-usage",
       "usageWorkflows": 1
     },
     "n8n-nodes-base.Brandfetch": {
       "priority": "P2",
-      "executor": "missing",
-      "spec": "missing",
-      "factory": "pending",
+      "executor": "implemented",
+      "spec": "specced",
+      "factory": "pass",
       "source": "scraped-usage",
       "usageWorkflows": 1
     },
     "n8n-nodes-base.actionNetworkTool": {
       "priority": "P2",
-      "executor": "missing",
-      "spec": "missing",
-      "factory": "pending",
-      "source": "scraped-usage",
-      "usageWorkflows": 1
-    },
-    "n8n-nodes-base.activeCampaignTrigger": {
-      "priority": "P2",
-      "executor": "missing",
-      "spec": "missing",
-      "factory": "pending",
-      "source": "scraped-usage",
-      "usageWorkflows": 1
-    },
-    "n8n-nodes-base.acuitySchedulingTrigger": {
-      "priority": "P2",
-      "executor": "missing",
-      "spec": "missing",
-      "factory": "pending",
+      "executor": "implemented",
+      "spec": "specced",
+      "factory": "pass",
       "source": "scraped-usage",
       "usageWorkflows": 1
     },
     "n8n-nodes-base.affinity": {
       "priority": "P2",
-      "executor": "missing",
-      "spec": "missing",
-      "factory": "pending",
+      "executor": "implemented",
+      "spec": "specced",
+      "factory": "pass",
+      "source": "scraped-usage",
+      "usageWorkflows": 1
+    },
+    "n8n-nodes-base.activeCampaignTrigger": {
+      "priority": "P2",
+      "executor": "implemented",
+      "spec": "specced",
+      "factory": "pass",
+      "source": "scraped-usage",
+      "usageWorkflows": 1
+    },
+    "n8n-nodes-base.acuitySchedulingTrigger": {
+      "priority": "P2",
+      "executor": "implemented",
+      "spec": "specced",
+      "factory": "pass",
       "source": "scraped-usage",
       "usageWorkflows": 1
     },
     "n8n-nodes-base.affinityTool": {
       "priority": "P2",
-      "executor": "missing",
-      "spec": "missing",
-      "factory": "pending",
+      "executor": "implemented",
+      "spec": "specced",
+      "factory": "pass",
       "source": "scraped-usage",
       "usageWorkflows": 1
     },
     "n8n-nodes-base.affinityTrigger": {
       "priority": "P2",
-      "executor": "missing",
-      "spec": "missing",
-      "factory": "pending",
+      "executor": "implemented",
+      "spec": "specced",
+      "factory": "pass",
       "source": "scraped-usage",
       "usageWorkflows": 1
     },
     "n8n-nodes-base.agileCrm": {
       "priority": "P2",
-      "executor": "missing",
-      "spec": "missing",
-      "factory": "pending",
+      "executor": "implemented",
+      "spec": "specced",
+      "factory": "pass",
       "source": "scraped-usage",
       "usageWorkflows": 1
     },
     "n8n-nodes-base.automizy": {
       "priority": "P2",
-      "executor": "missing",
-      "spec": "missing",
-      "factory": "pending",
+      "executor": "implemented",
+      "spec": "specced",
+      "factory": "pass",
       "source": "scraped-usage",
       "usageWorkflows": 1
     },
     "n8n-nodes-base.autopilotTool": {
       "priority": "P2",
-      "executor": "missing",
-      "spec": "missing",
-      "factory": "pending",
+      "executor": "implemented",
+      "spec": "specced",
+      "factory": "pass",
       "source": "scraped-usage",
       "usageWorkflows": 1
     },
     "n8n-nodes-base.autopilotTrigger": {
       "priority": "P2",
-      "executor": "missing",
-      "spec": "missing",
-      "factory": "pending",
+      "executor": "implemented",
+      "spec": "specced",
+      "factory": "pass",
       "source": "scraped-usage",
       "usageWorkflows": 1
     },
     "n8n-nodes-base.awsCertificateManager": {
       "priority": "P2",
-      "executor": "missing",
-      "spec": "missing",
-      "factory": "pending",
+      "executor": "implemented",
+      "spec": "specced",
+      "factory": "pass",
       "source": "scraped-usage",
       "usageWorkflows": 1
     },
     "n8n-nodes-base.awsDynamoDb": {
       "priority": "P2",
-      "executor": "missing",
-      "spec": "missing",
-      "factory": "pending",
+      "executor": "implemented",
+      "spec": "specced",
+      "factory": "pass",
       "source": "scraped-usage",
       "usageWorkflows": 1
     },
     "n8n-nodes-base.awsRekognition": {
       "priority": "P2",
-      "executor": "missing",
-      "spec": "missing",
-      "factory": "pending",
+      "executor": "implemented",
+      "spec": "specced",
+      "factory": "pass",
       "source": "scraped-usage",
       "usageWorkflows": 1
     },
     "n8n-nodes-base.awsSns": {
       "priority": "P2",
-      "executor": "missing",
-      "spec": "missing",
-      "factory": "pending",
+      "executor": "implemented",
+      "spec": "specced",
+      "factory": "pass",
       "source": "scraped-usage",
       "usageWorkflows": 1
     },
     "n8n-nodes-base.awsSnsTrigger": {
       "priority": "P2",
-      "executor": "missing",
-      "spec": "missing",
-      "factory": "pending",
+      "executor": "implemented",
+      "spec": "specced",
+      "factory": "pass",
       "source": "scraped-usage",
       "usageWorkflows": 1
     },
     "n8n-nodes-base.awsSqs": {
       "priority": "P2",
-      "executor": "missing",
-      "spec": "missing",
-      "factory": "pending",
+      "executor": "implemented",
+      "spec": "specced",
+      "factory": "pass",
       "source": "scraped-usage",
       "usageWorkflows": 1
     },
     "n8n-nodes-base.awsTranscribeTool": {
       "priority": "P2",
-      "executor": "missing",
-      "spec": "missing",
-      "factory": "pending",
+      "executor": "implemented",
+      "spec": "specced",
+      "factory": "pass",
       "source": "scraped-usage",
       "usageWorkflows": 1
     },
     "n8n-nodes-base.beeminderTool": {
       "priority": "P2",
-      "executor": "missing",
-      "spec": "missing",
-      "factory": "pending",
+      "executor": "implemented",
+      "spec": "specced",
+      "factory": "pass",
       "source": "scraped-usage",
       "usageWorkflows": 1
     },
     "n8n-nodes-base.bitlyTool": {
       "priority": "P2",
-      "executor": "missing",
-      "spec": "missing",
-      "factory": "pending",
-      "source": "scraped-usage",
-      "usageWorkflows": 1
-    },
-    "n8n-nodes-base.bitwardenTool": {
-      "priority": "P2",
-      "executor": "missing",
-      "spec": "missing",
-      "factory": "pending",
+      "executor": "implemented",
+      "spec": "specced",
+      "factory": "pass",
       "source": "scraped-usage",
       "usageWorkflows": 1
     },
     "n8n-nodes-base.boxTrigger": {
       "priority": "P2",
-      "executor": "missing",
-      "spec": "missing",
-      "factory": "pending",
+      "executor": "implemented",
+      "spec": "specced",
+      "factory": "pass",
       "source": "scraped-usage",
       "usageWorkflows": 1
     },
     "n8n-nodes-base.bubbleTool": {
       "priority": "P2",
-      "executor": "missing",
-      "spec": "missing",
-      "factory": "pending",
-      "source": "scraped-usage",
-      "usageWorkflows": 1
-    },
-    "n8n-nodes-base.chargebee": {
-      "priority": "P2",
-      "executor": "missing",
-      "spec": "missing",
-      "factory": "pending",
+      "executor": "implemented",
+      "spec": "specced",
+      "factory": "pass",
       "source": "scraped-usage",
       "usageWorkflows": 1
     },
     "n8n-nodes-base.chargebeeTrigger": {
       "priority": "P2",
-      "executor": "missing",
-      "spec": "missing",
-      "factory": "pending",
+      "executor": "implemented",
+      "spec": "specced",
+      "factory": "pass",
       "source": "scraped-usage",
       "usageWorkflows": 1
     },
     "n8n-nodes-base.cheerio": {
       "priority": "P2",
-      "executor": "missing",
-      "spec": "missing",
-      "factory": "pending",
+      "executor": "implemented",
+      "spec": "specced",
+      "factory": "pass",
       "source": "scraped-usage",
       "usageWorkflows": 1
     },
     "n8n-nodes-base.circleCiTool": {
       "priority": "P2",
-      "executor": "missing",
-      "spec": "missing",
-      "factory": "pending",
+      "executor": "implemented",
+      "spec": "specced",
+      "factory": "pass",
       "source": "scraped-usage",
       "usageWorkflows": 1
     },
     "n8n-nodes-base.clearbitTool": {
       "priority": "P2",
-      "executor": "missing",
-      "spec": "missing",
-      "factory": "pending",
-      "source": "scraped-usage",
-      "usageWorkflows": 1
-    },
-    "n8n-nodes-base.clockifyTool": {
-      "priority": "P2",
-      "executor": "missing",
-      "spec": "missing",
-      "factory": "pending",
+      "executor": "implemented",
+      "spec": "specced",
+      "factory": "pass",
       "source": "scraped-usage",
       "usageWorkflows": 1
     },
     "n8n-nodes-base.clockifyTrigger": {
       "priority": "P2",
-      "executor": "missing",
-      "spec": "missing",
-      "factory": "pending",
+      "executor": "implemented",
+      "spec": "specced",
+      "factory": "pass",
       "source": "scraped-usage",
       "usageWorkflows": 1
     },
     "n8n-nodes-base.cloudflareTool": {
       "priority": "P2",
-      "executor": "missing",
-      "spec": "missing",
-      "factory": "pending",
-      "source": "scraped-usage",
-      "usageWorkflows": 1
-    },
-    "n8n-nodes-base.cockpit": {
-      "priority": "P2",
-      "executor": "missing",
-      "spec": "missing",
-      "factory": "pending",
-      "source": "scraped-usage",
-      "usageWorkflows": 1
-    },
-    "n8n-nodes-base.codaTool": {
-      "priority": "P2",
-      "executor": "missing",
-      "spec": "missing",
-      "factory": "pending",
-      "source": "scraped-usage",
-      "usageWorkflows": 1
-    },
-    "n8n-nodes-base.coinGeckoTool": {
-      "priority": "P2",
-      "executor": "missing",
-      "spec": "missing",
-      "factory": "pending",
+      "executor": "implemented",
+      "spec": "specced",
+      "factory": "pass",
       "source": "scraped-usage",
       "usageWorkflows": 1
     },
     "n8n-nodes-base.contentful": {
       "priority": "P2",
-      "executor": "missing",
-      "spec": "missing",
-      "factory": "pending",
+      "executor": "implemented",
+      "spec": "specced",
+      "factory": "pass",
+      "source": "scraped-usage",
+      "usageWorkflows": 1
+    },
+    "n8n-nodes-base.cockpit": {
+      "priority": "P2",
+      "executor": "implemented",
+      "spec": "specced",
+      "factory": "pass",
+      "source": "scraped-usage",
+      "usageWorkflows": 1
+    },
+    "n8n-nodes-base.codaTool": {
+      "priority": "P2",
+      "executor": "implemented",
+      "spec": "specced",
+      "factory": "pass",
+      "source": "scraped-usage",
+      "usageWorkflows": 1
+    },
+    "n8n-nodes-base.coinGeckoTool": {
+      "priority": "P2",
+      "executor": "implemented",
+      "spec": "specced",
+      "factory": "pass",
       "source": "scraped-usage",
       "usageWorkflows": 1
     },
     "n8n-nodes-base.convertKitTool": {
       "priority": "P2",
-      "executor": "missing",
-      "spec": "missing",
-      "factory": "pending",
+      "executor": "implemented",
+      "spec": "specced",
+      "factory": "pass",
       "source": "scraped-usage",
       "usageWorkflows": 1
     },
     "n8n-nodes-base.convertKitTrigger": {
       "priority": "P2",
-      "executor": "missing",
-      "spec": "missing",
-      "factory": "pending",
+      "executor": "implemented",
+      "spec": "specced",
+      "factory": "pass",
       "source": "scraped-usage",
       "usageWorkflows": 1
     },
     "n8n-nodes-base.copper": {
       "priority": "P2",
-      "executor": "missing",
-      "spec": "missing",
-      "factory": "pending",
+      "executor": "implemented",
+      "spec": "specced",
+      "factory": "pass",
       "source": "scraped-usage",
       "usageWorkflows": 1
     },
     "n8n-nodes-base.copperTool": {
       "priority": "P2",
-      "executor": "missing",
-      "spec": "missing",
-      "factory": "pending",
+      "executor": "implemented",
+      "spec": "specced",
+      "factory": "pass",
       "source": "scraped-usage",
       "usageWorkflows": 1
     },
     "n8n-nodes-base.copperTrigger": {
       "priority": "P2",
-      "executor": "missing",
-      "spec": "missing",
-      "factory": "pending",
+      "executor": "implemented",
+      "spec": "specced",
+      "factory": "pass",
       "source": "scraped-usage",
       "usageWorkflows": 1
     },
     "n8n-nodes-base.customerIoTool": {
       "priority": "P2",
-      "executor": "missing",
-      "spec": "missing",
-      "factory": "pending",
+      "executor": "implemented",
+      "spec": "specced",
+      "factory": "pass",
       "source": "scraped-usage",
       "usageWorkflows": 1
     },
     "n8n-nodes-base.customerIoTrigger": {
       "priority": "P2",
-      "executor": "missing",
-      "spec": "missing",
-      "factory": "pending",
+      "executor": "implemented",
+      "spec": "specced",
+      "factory": "pass",
       "source": "scraped-usage",
       "usageWorkflows": 1
     },
     "n8n-nodes-base.deepLTool": {
       "priority": "P2",
-      "executor": "missing",
-      "spec": "missing",
-      "factory": "pending",
+      "executor": "implemented",
+      "spec": "specced",
+      "factory": "pass",
       "source": "scraped-usage",
       "usageWorkflows": 1
     },
     "n8n-nodes-base.demio": {
       "priority": "P2",
-      "executor": "missing",
-      "spec": "missing",
-      "factory": "pending",
+      "executor": "implemented",
+      "spec": "specced",
+      "factory": "pass",
       "source": "scraped-usage",
       "usageWorkflows": 1
     },
     "n8n-nodes-base.dhlTool": {
       "priority": "P2",
-      "executor": "missing",
-      "spec": "missing",
-      "factory": "pending",
+      "executor": "implemented",
+      "spec": "specced",
+      "factory": "partial",
       "source": "scraped-usage",
       "usageWorkflows": 1
     },
     "n8n-nodes-base.discourse": {
       "priority": "P2",
-      "executor": "missing",
-      "spec": "missing",
-      "factory": "pending",
+      "executor": "implemented",
+      "spec": "specced",
+      "factory": "partial",
       "source": "scraped-usage",
       "usageWorkflows": 1
     },
     "n8n-nodes-base.discourseTool": {
       "priority": "P2",
-      "executor": "missing",
-      "spec": "missing",
-      "factory": "pending",
+      "executor": "implemented",
+      "spec": "specced",
+      "factory": "partial",
       "source": "scraped-usage",
       "usageWorkflows": 1
     },
     "n8n-nodes-base.disqus": {
       "priority": "P2",
-      "executor": "missing",
-      "spec": "missing",
-      "factory": "pending",
+      "executor": "implemented",
+      "spec": "specced",
+      "factory": "partial",
       "source": "scraped-usage",
       "usageWorkflows": 1
     },
@@ -8001,8 +8001,8 @@
       "type": "@n8n/n8n-nodes-langchain.microsoftAgent365Trigger",
       "priority": 436,
       "tier": "langchain",
-      "executor": "missing",
-      "spec": "missing"
+      "executor": "implemented",
+      "spec": "specced"
     },
     {
       "type": "@n8n/n8n-nodes-langchain.ollama",
@@ -8043,8 +8043,8 @@
       "type": "n8n-nodes-base.acuitySchedulingTrigger",
       "priority": 442,
       "tier": "core",
-      "executor": "missing",
-      "spec": "missing"
+      "executor": "implemented",
+      "spec": "specced"
     },
     {
       "type": "n8n-nodes-base.affinity",
@@ -8071,8 +8071,8 @@
       "type": "n8n-nodes-base.agileCrm",
       "priority": 446,
       "tier": "core",
-      "executor": "missing",
-      "spec": "missing"
+      "executor": "implemented",
+      "spec": "specced"
     },
     {
       "type": "n8n-nodes-base.automizy",
@@ -8099,57 +8099,57 @@
       "type": "n8n-nodes-base.awsCertificateManager",
       "priority": 450,
       "tier": "core",
-      "executor": "missing",
-      "spec": "missing"
+      "executor": "implemented",
+      "spec": "specced"
     },
     {
       "type": "n8n-nodes-base.awsDynamoDb",
       "priority": 451,
       "tier": "core",
-      "executor": "missing",
-      "spec": "missing"
+      "executor": "implemented",
+      "spec": "specced"
     },
     {
       "type": "n8n-nodes-base.awsRekognition",
       "priority": 452,
       "tier": "core",
-      "executor": "missing",
-      "spec": "missing"
+      "executor": "implemented",
+      "spec": "specced"
     },
     {
       "type": "n8n-nodes-base.awsSns",
       "priority": 453,
       "tier": "core",
-      "executor": "missing",
-      "spec": "missing"
+      "executor": "implemented",
+      "spec": "specced"
     },
     {
       "type": "n8n-nodes-base.awsSnsTrigger",
       "priority": 454,
       "tier": "core",
-      "executor": "missing",
-      "spec": "missing"
+      "executor": "implemented",
+      "spec": "specced"
     },
     {
       "type": "n8n-nodes-base.awsSqs",
       "priority": 455,
       "tier": "core",
-      "executor": "missing",
-      "spec": "missing"
+      "executor": "implemented",
+      "spec": "specced"
     },
     {
       "type": "n8n-nodes-base.awsTranscribeTool",
       "priority": 456,
       "tier": "core",
-      "executor": "missing",
-      "spec": "missing"
+      "executor": "implemented",
+      "spec": "specced"
     },
     {
       "type": "n8n-nodes-base.beeminderTool",
       "priority": 457,
       "tier": "core",
-      "executor": "missing",
-      "spec": "missing"
+      "executor": "implemented",
+      "spec": "specced"
     },
     {
       "type": "n8n-nodes-base.bitlyTool",
@@ -8176,8 +8176,8 @@
       "type": "n8n-nodes-base.bubbleTool",
       "priority": 461,
       "tier": "core",
-      "executor": "missing",
-      "spec": "missing"
+      "executor": "implemented",
+      "spec": "specced"
     },
     {
       "type": "n8n-nodes-base.chargebee",
@@ -8190,8 +8190,8 @@
       "type": "n8n-nodes-base.chargebeeTrigger",
       "priority": 463,
       "tier": "core",
-      "executor": "missing",
-      "spec": "missing"
+      "executor": "implemented",
+      "spec": "specced"
     },
     {
       "type": "n8n-nodes-base.cheerio",
@@ -8211,8 +8211,8 @@
       "type": "n8n-nodes-base.clearbitTool",
       "priority": 466,
       "tier": "core",
-      "executor": "missing",
-      "spec": "missing"
+      "executor": "implemented",
+      "spec": "specced"
     },
     {
       "type": "n8n-nodes-base.clockifyTool",
@@ -8232,15 +8232,15 @@
       "type": "n8n-nodes-base.cloudflareTool",
       "priority": 469,
       "tier": "core",
-      "executor": "missing",
-      "spec": "missing"
+      "executor": "implemented",
+      "spec": "specced"
     },
     {
       "type": "n8n-nodes-base.cockpit",
       "priority": 470,
       "tier": "core",
-      "executor": "missing",
-      "spec": "missing"
+      "executor": "implemented",
+      "spec": "specced"
     },
     {
       "type": "n8n-nodes-base.codaTool",
@@ -8281,8 +8281,8 @@
       "type": "n8n-nodes-base.copper",
       "priority": 476,
       "tier": "core",
-      "executor": "missing",
-      "spec": "missing"
+      "executor": "implemented",
+      "spec": "specced"
     },
     {
       "type": "n8n-nodes-base.copperTool",
@@ -8323,8 +8323,8 @@
       "type": "n8n-nodes-base.demio",
       "priority": 482,
       "tier": "core",
-      "executor": "missing",
-      "spec": "missing"
+      "executor": "implemented",
+      "spec": "specced"
     },
     {
       "type": "n8n-nodes-base.dhlTool",
@@ -8337,8 +8337,8 @@
       "type": "n8n-nodes-base.discourse",
       "priority": 484,
       "tier": "core",
-      "executor": "missing",
-      "spec": "missing"
+      "executor": "implemented",
+      "spec": "specced"
     },
     {
       "type": "n8n-nodes-base.discourseTool",
