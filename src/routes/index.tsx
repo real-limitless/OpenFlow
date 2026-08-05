@@ -21,6 +21,14 @@ import { Button } from "@/components/ui/button";
 import { ImportCredentialsDialog } from "@/components/credentials";
 import { ShareDialog } from "@/components/share/share-dialog";
 import { PageShell } from "@/components/layout/page-shell";
+import { WelcomePanel } from "@/components/onboarding/welcome-panel";
+import {
+  armOnboardingBanner,
+  loadOnboardingState,
+  patchOnboardingState,
+  shouldShowOnboarding,
+  type OnboardingState,
+} from "@/lib/onboarding/state";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -41,6 +49,8 @@ function WorkflowList() {
   const [migrateCount, setMigrateCount] = useState<number | null>(null);
   const [importDraft, setImportDraft] = useState<IWorkflow | null>(null);
   const [shareWf, setShareWf] = useState<IWorkflow | null>(null);
+  const [onboarding, setOnboarding] = useState<OnboardingState>(() => loadOnboardingState());
+  const [busySample, setBusySample] = useState(false);
   const navigate = useNavigate();
   const fileInput = useRef<HTMLInputElement>(null);
 
@@ -99,6 +109,27 @@ function WorkflowList() {
     navigate({ to: "/workflow/$id", params: { id: saved.id } });
   };
 
+  const startSample = async () => {
+    setBusySample(true);
+    try {
+      const result = parseWorkflowJson(SAMPLE_WORKFLOW, newId("wf"));
+      if (!result.ok || !result.workflow) {
+        toast.error(result.error ?? "Could not load sample workflow");
+        return;
+      }
+      const saved = await getRepository().save(result.workflow);
+      const next = patchOnboardingState({ sampleCreated: true });
+      setOnboarding(next);
+      toast.success("Sample workflow ready — click Execute to run it");
+      armOnboardingBanner();
+      navigate({ to: "/workflow/$id", params: { id: saved.id } });
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Could not create sample");
+    } finally {
+      setBusySample(false);
+    }
+  };
+
   const onImport = async (file: File) => {
     const result = parseWorkflowJson(await file.text(), newId("wf"));
     if (!result.ok || !result.workflow) {
@@ -114,6 +145,10 @@ function WorkflowList() {
     await create(result.workflow);
   };
 
+  const empty = workflows !== null && workflows.length === 0;
+  const showWelcome =
+    workflows !== null && shouldShowOnboarding(onboarding, workflows.length);
+
   return (
     <PageShell>
       <h1 className="max-w-2xl text-3xl font-semibold leading-[1.15] tracking-tight">
@@ -124,39 +159,52 @@ function WorkflowList() {
         environment.
       </p>
 
-      <div className="mt-6 flex flex-wrap gap-2">
-        <Button onClick={() => void create(EMPTY_WORKFLOW(newId("wf")))}>
-          <Plus className="mr-1 size-4" /> New workflow
-        </Button>
-        <input
-          ref={fileInput}
-          type="file"
-          hidden
-          accept="application/json,.json"
-          onChange={(e) => {
-            const file = e.target.files?.[0];
-            if (file) void onImport(file);
-            e.target.value = "";
-          }}
+      {showWelcome ? (
+        <WelcomePanel
+          state={onboarding}
+          empty={empty}
+          busySample={busySample}
+          onRunSample={() => void startSample()}
+          onNewBlank={() => void create(EMPTY_WORKFLOW(newId("wf")))}
+          onImport={() => fileInput.current?.click()}
+          onDismiss={() => setOnboarding(patchOnboardingState({ dismissed: true }))}
         />
-        <Button variant="outline" onClick={() => fileInput.current?.click()}>
-          <Upload className="mr-1 size-4" /> Import JSON
-        </Button>
-        <Button variant="outline" asChild>
-          <Link to="/templates" search={{}}>
-            <Store className="mr-1 size-4" /> Browse templates
-          </Link>
-        </Button>
-        <Button
-          variant="outline"
-          onClick={() => {
-            const result = parseWorkflowJson(SAMPLE_WORKFLOW, newId("wf"));
-            if (result.workflow) void create(result.workflow);
-          }}
-        >
-          <Sparkles className="mr-1 size-4" /> Start from example
-        </Button>
-      </div>
+      ) : (
+        <div className="mt-6 flex flex-wrap gap-2">
+          <Button onClick={() => void create(EMPTY_WORKFLOW(newId("wf")))}>
+            <Plus className="mr-1 size-4" /> New workflow
+          </Button>
+          <Button variant="outline" onClick={() => fileInput.current?.click()}>
+            <Upload className="mr-1 size-4" /> Import JSON
+          </Button>
+          <Button variant="outline" asChild>
+            <Link to="/templates" search={{}}>
+              <Store className="mr-1 size-4" /> Browse templates
+            </Link>
+          </Button>
+          <Button
+            variant="outline"
+            onClick={() => {
+              const result = parseWorkflowJson(SAMPLE_WORKFLOW, newId("wf"));
+              if (result.workflow) void create(result.workflow);
+            }}
+          >
+            <Sparkles className="mr-1 size-4" /> Start from example
+          </Button>
+        </div>
+      )}
+
+      <input
+        ref={fileInput}
+        type="file"
+        hidden
+        accept="application/json,.json"
+        onChange={(e) => {
+          const file = e.target.files?.[0];
+          if (file) void onImport(file);
+          e.target.value = "";
+        }}
+      />
 
       <ImportCredentialsDialog
         open={importDraft != null}
@@ -205,11 +253,18 @@ function WorkflowList() {
 
         <div className="mt-3 divide-y divide-border overflow-hidden rounded-lg border border-border bg-card">
           {workflows === null && <p className="p-6 text-[13px] text-muted-foreground">Loading…</p>}
-          {workflows?.length === 0 && (
+          {workflows?.length === 0 && !showWelcome && (
             <div className="flex flex-col items-center gap-2 p-12 text-center">
               <FileJson className="size-8 text-muted-foreground" />
               <p className="text-[14px] text-muted-foreground">
                 Nothing here yet. Create one or import an existing export.
+              </p>
+            </div>
+          )}
+          {workflows?.length === 0 && showWelcome && (
+            <div className="flex flex-col items-center gap-2 p-8 text-center">
+              <p className="text-[13px] text-muted-foreground">
+                Your list is empty — use the welcome steps above to get started.
               </p>
             </div>
           )}

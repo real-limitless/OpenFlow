@@ -33,6 +33,7 @@ export function makeCtx(
   items: Array<Record<string, unknown> | INodeExecutionData> = [],
   node: INode = makeNode(),
   continueOnFail = false,
+  credentials: Record<string, Record<string, unknown>> = {},
 ): ExecutionContext {
   const normalized: INodeExecutionData[] = items.map((item) =>
     item && typeof item === "object" && "json" in item
@@ -45,15 +46,24 @@ export function makeCtx(
     workflow: makeWorkflow([node]),
     getNodeInputItems: () => normalized,
     continueOnFail,
-    getCredential: async (_name: string) => null,
+    // Defaults to {} so every credential resolves to null, as before. Executors
+    // that guard on a missing credential otherwise throw before reaching the
+    // behaviour under test, which silently turns those tests into assertions
+    // about the guard rather than about the node.
+    getCredential: async (name: string) => credentials[name] ?? null,
   });
+}
+
+export interface RunNodeOptions {
+  continueOnFail?: boolean;
+  credentials?: Record<string, Record<string, unknown>>;
 }
 
 export async function runNode(
   type: string,
   parameters: Record<string, unknown> = {},
   inputItems: Array<Record<string, unknown>> = [{}],
-  opts?: { continueOnFail?: boolean },
+  opts?: RunNodeOptions,
 ): Promise<INodeExecutionData[][]> {
   const { out } = await runNodeWithCtx(type, parameters, inputItems, opts);
   return out;
@@ -63,7 +73,7 @@ export async function runNodeWithCtx(
   type: string,
   parameters: Record<string, unknown> = {},
   inputItems: Array<Record<string, unknown>> = [{}],
-  opts?: { continueOnFail?: boolean },
+  opts?: RunNodeOptions,
 ): Promise<{ out: INodeExecutionData[][]; ctx: ExecutionContext }> {
   const map = getExecutorMap();
   const executor = map[type];
@@ -71,7 +81,7 @@ export async function runNodeWithCtx(
     throw new Error(`No executor registered for ${type}`);
   }
   const node = makeNode({ name: "N", type, parameters });
-  const ctx = makeCtx(inputItems, node, opts?.continueOnFail);
+  const ctx = makeCtx(inputItems, node, opts?.continueOnFail, opts?.credentials);
   const out = await executor(ctx, node);
   return { out, ctx };
 }

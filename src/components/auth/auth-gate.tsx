@@ -1,8 +1,8 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { useNavigate, useRouterState } from "@tanstack/react-router";
-import { fetchAuthStatus } from "@/lib/auth/client";
+import { fetchAuthStatus, fetchSetupStatus } from "@/lib/auth/client";
 
-const PUBLIC = new Set(["/login", "/register", "/docs/compatibility", "/templates"]);
+const PUBLIC = new Set(["/login", "/register", "/setup", "/docs/compatibility", "/templates"]);
 
 export function AuthGate({ children }: { children: ReactNode }) {
   const navigate = useNavigate();
@@ -13,13 +13,32 @@ export function AuthGate({ children }: { children: ReactNode }) {
   useEffect(() => {
     let cancelled = false;
     void (async () => {
-      const { user, authDisabled } = await fetchAuthStatus();
-      if (cancelled) return;
       const isPublic =
         PUBLIC.has(pathname) ||
         pathname.startsWith("/docs/") ||
         pathname.startsWith("/templates/") ||
         pathname === "/templates";
+
+      const setup = await fetchSetupStatus();
+      if (cancelled) return;
+
+      if (setup.needsOwner) {
+        if (pathname !== "/setup") {
+          navigate({ to: "/setup" });
+        }
+        setReady(true);
+        return;
+      }
+
+      if (pathname === "/setup") {
+        navigate({ to: setup.hasUsers ? "/login" : "/", search: setup.hasUsers ? {} : undefined });
+        setReady(true);
+        return;
+      }
+
+      const { user, authDisabled } = await fetchAuthStatus();
+      if (cancelled) return;
+
       if (!authDisabled && !user && !isPublic) {
         navigate({ to: "/login", search: { redirect: pathname } as never });
         setReady(true);

@@ -4,10 +4,24 @@
 
 | Goal | Command |
 | --- | --- |
-| Try OpenFlow | `docker compose up -d` → http://localhost:3000 |
-| Install without cloning | `curl -fsSL …/scripts/install.sh \| bash` |
-| Contribute / develop | `npm run setup && npm run dev` |
-| Production-ish | `docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d` |
+| Try OpenFlow | `docker compose up -d` → http://localhost:3000 → **Run sample workflow** |
+| One-line TUI install | `curl -fsSL …/scripts/get-openflow.sh \| bash` |
+| Non-interactive try-out | `…/get-openflow.sh \| bash -s -- --yes` |
+| Install with auth (owner setup) | `…/get-openflow.sh \| bash -s -- --yes --mode production` |
+| Build from source (no GHCR) | `…/get-openflow.sh \| bash -s -- --yes --mode build` |
+| Contribute / develop | `…/get-openflow.sh --mode develop` or `npm run setup && npm run dev` |
+| Production-ish compose overlay | `docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d` |
+
+## First-run experience
+
+After the stack is healthy:
+
+1. Open the UI (default **http://localhost:3000**).
+2. **Try-out** (`AUTH_DISABLED=true`, default): no login. On the home page use **Run sample workflow**, then **Execute** for a zero-credential success.
+3. **Production / auth on** (`AUTH_DISABLED=false`, `--prod`, or prod compose overlay): if no users exist, the UI redirects to **`/setup`** to create the **instance owner**. That account gets the global `owner` role (secret providers, admin gates). Further registers are `member` unless promoted.
+4. Dismiss the welcome checklist anytime; it is stored in browser `localStorage` (`openflow:onboarding.v1`).
+
+Product readiness (not infra): `GET /api/v1/setup/status` → `{ authDisabled, hasUsers, needsOwner }`.
 
 ## Docker (recommended)
 
@@ -47,17 +61,40 @@ docker compose up -d
 
 Compose still forces in-network `DATABASE_URL` / `REDIS_URL` to the `db` and `redis` services.
 
-## install.sh (prebuilt image)
+## get-openflow.sh (recommended one-liner)
+
+Full installer with an interactive TUI (and non-interactive flags):
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/real-limitless/OpenFlow/main/scripts/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/real-limitless/OpenFlow/main/scripts/get-openflow.sh | bash
 ```
 
-- Writes `~/openflow/docker-compose.yml` and `.env`
-- Image default: `ghcr.io/real-limitless/openflow:latest` (override with `OPENFLOW_IMAGE`)
-- Home dir override: `OPENFLOW_HOME=/opt/openflow bash install.sh`
+| Mode | What it does |
+| --- | --- |
+| `tryout` (default) | Prebuilt image under `~/openflow`, `AUTH_DISABLED=true` |
+| `production` | Same stack with auth on → first open is `/setup` owner account |
+| `build` | `git clone` + `docker compose up -d --build` (when GHCR image missing) |
+| `develop` | `git clone` + `npm run setup` (Node 22+) |
 
-Until GHCR packages are published for the repo, pull may fail — use `docker compose up -d --build` from a clone instead.
+| Flag | Meaning |
+| --- | --- |
+| `--yes` / `-y` | Skip TUI and confirmations |
+| `--mode tryout\|production\|build\|develop` | Install path |
+| `--prod` | Shortcut for `--mode production` |
+| `--port N` | Host port (default 3000) |
+| `--home PATH` | Data / compose directory |
+| `--clone-dir PATH` | Git clone path for build/develop |
+| `--image REF` | Container image override |
+| `--no-open` | Do not open a browser |
+| `--skip-wait` | Skip readiness poll |
+
+```sh
+bash scripts/get-openflow.sh --yes --mode production --port 3001 --no-open
+```
+
+`scripts/install.sh` is a thin wrapper: `get-openflow.sh --yes` with the same flags (kept for older docs / bookmarks).
+
+Until GHCR packages are published, use `--mode build` or `docker compose up -d --build` from a clone.
 
 ## Binary storage (S3 / MinIO)
 

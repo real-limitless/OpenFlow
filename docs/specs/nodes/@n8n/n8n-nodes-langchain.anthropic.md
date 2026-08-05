@@ -1,198 +1,117 @@
 ---
 type: @n8n/n8n-nodes-langchain.anthropic
 displayName: Anthropic
-category: Transform
+category: AI
 versions: [1]
 priority: high
 status: specced
 ---
 
-# Anthropic
-
-Transform node for interacting with Anthropic AI models via the Anthropic API. Supports document/image analysis, file management, prompt engineering tools, and text completion with tool calling, code execution, and web search.
+# Anthropic Tool
 
 ## Sources
 
 | URL | Source class |
 |-----|----------------|
-| https://docs.n8n.io/integrations/builtin/app-nodes/n8n-nodes-langchain.anthropic.md | Public docs only |
+| https://docs.n8n.io/integrations/builtin/app-nodes/n8n-nodes-langchain.anthropic/ | Public docs only |
+| https://docs.n8n.io/integrations/builtin/credentials/anthropic/ | Public docs only |
 | https://docs.anthropic.com/en/api/overview | Public docs only |
 
 ## Wire format
 
-- **Type string:** `@n8n/n8n-nodes-langchain.anthropic`
-- **Aliases:** none
-- **Inputs:** `main` × 1, plus `ai_tool` (for Text → Message operation only)
+- **Type string:** `anthropic` (alias: `@n8n/n8n-nodes-langchain.anthropic`)
+- **Aliases:** LangChain, document, image, assistant, claude
+- **Inputs:** `main` × 1 (all operations); `main` + `ai_tool` × 1 when resource=text, operation=message (tool-mode)
 - **Outputs:** `main` × 1
-- **Credentials:** `anthropicApi` (required)
+- **Credentials:** `anthropicApi` (API key, required)
 
 ## Parameters
 
-### Common
-
-| name | type | default | required | displayOptions | notes |
-|------|------|---------|----------|----------------|-------|
-| `resource` | options (document, file, image, prompt, text) | text | yes | — | Top-level resource selector |
-| `operation` | options (varies by resource) | — | yes | `show: { resource: [...] }` | Operation within the selected resource |
-| `modelId` | resourceLocator (list from API / custom ID) | — | yes | all operations | Anthropic model identifier (e.g., `claude-sonnet-4-6`, `claude-opus-4-6`) |
-
-### Document → Analyze
-
-| name | type | default | required | displayOptions | notes |
-|------|------|---------|----------|----------------|-------|
-| `text` | string (multiline) | "What's in this document?" | yes | `show: { resource: ['document'], operation: ['analyze'] }` | Prompt/question for the document |
-| `inputType` | options (url, binary) | url | yes | `show: { resource: ['document'], operation: ['analyze'] }` | Input source for document(s) |
-| `documentUrls` | string (comma-separated URLs) | — | when `inputType=url` | `show: { inputType: ['url'] }` | Document URL(s) to analyze |
-| `binaryPropertyName` | string (comma-separated field names) | data | when `inputType=binary` | `show: { inputType: ['binary'] }` | Binary data field name(s) containing document(s) |
-| `options.maxTokens` | number (≥1) | 1024 | no | `show: { resource: ['document'], operation: ['analyze'] }` | Max tokens for response |
-| `simplify` | boolean | true | no | `show: { resource: ['document'], operation: ['analyze'] }` | Return simplified vs raw response |
-
-### File → Upload
-
-| name | type | default | required | displayOptions | notes |
-|------|------|---------|----------|----------------|-------|
-| `inputType` | options (url, binary) | url | yes | `show: { resource: ['file'], operation: ['upload'] }` | Input source for file |
-| `fileUrl` | string | — | when `inputType=url` | `show: { inputType: ['url'] }` | File URL to upload |
-| `binaryPropertyName` | string | data | when `inputType=binary` | `show: { inputType: ['binary'] }` | Binary data field name containing file |
-| `options.fileName` | string | file | no | `show: { resource: ['file'], operation: ['upload'] }` | File name for uploaded file |
-
-### File → Get
-
-| name | type | default | required | displayOptions | notes |
-|------|------|---------|----------|----------------|-------|
-| `fileId` | string | — | yes | `show: { resource: ['file'], operation: ['get'] }` | File ID to retrieve metadata for |
-
-### File → List
-
-| name | type | default | required | displayOptions | notes |
-|------|------|---------|----------|----------------|-------|
-| `returnAll` | boolean | false | no | `show: { resource: ['file'], operation: ['list'] }` | Return all files (paginated) |
-| `limit` | number (1–1000) | 50 | when `returnAll=false` | `show: { returnAll: [false] }` | Max files to return |
-
-### File → Delete
-
-| name | type | default | required | displayOptions | notes |
-|------|------|---------|----------|----------------|-------|
-| `fileId` | string | — | yes | `show: { resource: ['file'], operation: ['deleteFile'] }` | File ID to delete |
-
-### Image → Analyze
-
-| name | type | default | required | displayOptions | notes |
-|------|------|---------|----------|----------------|-------|
-| `text` | string (multiline) | "What's in this image?" | yes | `show: { resource: ['image'], operation: ['analyze'] }` | Prompt/question for the image |
-| `inputType` | options (url, binary) | url | yes | `show: { resource: ['image'], operation: ['analyze'] }` | Input source for image(s) |
-| `imageUrls` | string (comma-separated URLs) | — | when `inputType=url` | `show: { inputType: ['url'] }` | Image URL(s) to analyze |
-| `binaryPropertyName` | string (comma-separated field names) | data | when `inputType=binary` | `show: { inputType: ['binary'] }` | Binary data field name(s) containing image(s) |
-| `options.maxTokens` | number (≥1) | 1024 | no | `show: { resource: ['image'], operation: ['analyze'] }` | Max tokens for response |
-| `simplify` | boolean | true | no | `show: { resource: ['image'], operation: ['analyze'] }` | Return simplified vs raw response |
-
-### Prompt → Generate
-
-| name | type | default | required | displayOptions | notes |
-|------|------|---------|----------|----------------|-------|
-| `task` | string (multiline) | — | yes | `show: { resource: ['prompt'], operation: ['generate'] }` | Description of the prompt's purpose |
-| `simplify` | boolean | true | no | `show: { resource: ['prompt'], operation: ['generate'] }` | Return simplified vs raw response |
-
-### Prompt → Improve
-
-| name | type | default | required | displayOptions | notes |
-|------|------|---------|----------|----------------|-------|
-| `messages` | fixedCollection (content + role) | [{ content: '', role: 'user' }] | yes | `show: { resource: ['prompt'], operation: ['improve'] }` | Messages constituting the prompt to improve |
-| `options.system` | string | — | no | `show: { resource: ['prompt'], operation: ['improve'] }` | Existing system prompt to incorporate |
-| `options.feedback` | string | — | no | `show: { resource: ['prompt'], operation: ['improve'] }` | Feedback for improving the prompt |
-| `simplify` | boolean | true | no | `show: { resource: ['prompt'], operation: ['improve'] }` | Return simplified vs raw response |
-
-### Prompt → Templatize
-
-| name | type | default | required | displayOptions | notes |
-|------|------|---------|----------|----------------|-------|
-| `messages` | fixedCollection (content + role) | [{ content: '', role: 'user' }] | yes | `show: { resource: ['prompt'], operation: ['templatize'] }` | Messages constituting the prompt to templatize |
-| `options.system` | string | — | no | `show: { resource: ['prompt'], operation: ['templatize'] }` | Existing system prompt to templatize |
-| `simplify` | boolean | true | no | `show: { resource: ['prompt'], operation: ['templatize'] }` | Return simplified vs raw response |
-
-> **Note:** Prompt operations (Generate/Improve/Templatize) use experimental Anthropic APIs (`/v1/experimental/*_prompt`) behind the `promptTools` beta header. Access must be requested from Anthropic.
-
-### Text → Message
-
-| name | type | default | required | displayOptions | notes |
-|------|------|---------|----------|----------------|-------|
-| `messages` | fixedCollection (content + role) | [{ content: '', role: 'user' }] | yes | `show: { resource: ['text'], operation: ['message'] }` | Conversation messages (user/assistant roles) |
-| `addAttachments` | boolean | false | no | `show: { resource: ['text'], operation: ['message'] }` | Attach files/images to the message |
-| `attachmentsInputType` | options (url, binary) | url | when `addAttachments=true` | `show: { addAttachments: [true] }` | Attachment input source |
-| `attachmentsUrls` | string (comma-separated URLs) | — | when `addAttachments=true ∧ attachmentsInputType=url` | `show: { attachmentsInputType: ['url'] }` | Attachment URL(s) |
-| `binaryPropertyName` | string (comma-separated field names) | data | when `addAttachments=true ∧ attachmentsInputType=binary` | `show: { attachmentsInputType: ['binary'] }` | Binary data field name(s) for attachments |
-| `simplify` | boolean | true | no | `show: { resource: ['text'], operation: ['message'] }` | Return simplified vs raw response |
-| `options.system` | string | — | no | `show: { resource: ['text'], operation: ['message'] }` | System prompt |
-| `options.maxTokens` | number (≥1) | 1024 | no | `show: { resource: ['text'], operation: ['message'] }` | Max tokens for completion |
-| `options.temperature` | number (0–1) | 1 | no | `show: { resource: ['text'], operation: ['message'] }` | Sampling temperature |
-| `options.topP` | number (0–1) | 0.7 | no | `show: { resource: ['text'], operation: ['message'] }` | Top-p nucleus sampling |
-| `options.topK` | number (≥0) | 5 | no | `show: { resource: ['text'], operation: ['message'] }` | Top-k sampling |
-| `options.codeExecution` | boolean | false | no | `show: { resource: ['text'], operation: ['message'] }` | Enable code execution tool (model-dependent) |
-| `options.webSearch` | boolean | false | no | `show: { resource: ['text'], operation: ['message'] }` | Enable web search tool |
-| `options.maxUses` | number (≥0) | 5 | when `webSearch=true` | `show: { webSearch: [true] }` | Max web search uses per request |
-| `options.allowedDomains` | string (comma-separated) | — | when `webSearch=true` | `show: { webSearch: [true] }` | Allowed domains for web search |
-| `options.blockedDomains` | string (comma-separated) | — | when `webSearch=true` | `show: { webSearch: [true] }` | Blocked domains for web search |
-| `options.includeMergedResponse` | boolean | false | no | `show: { resource: ['text'], operation: ['message'] }` | Include merged text response in output |
-| `options.maxToolsIterations` | number (≥0) | 15 | no | `show: { resource: ['text'], operation: ['message'] }` | Max tool iteration cycles |
+| name | type | default | required | notes |
+|------|------|---------|----------|-------|
+| resource | options | `text` | yes | One of: `document`, `file`, `image`, `prompt`, `text` |
+| operation | options | (per resource) | yes | Determined by resource; see runtime behavior |
+| modelId | resourceLocator | list mode | yes | Dynamic list from Anthropic API via `modelSearch` method, or raw model ID string |
+| text | string | varies | no | Prompt text for analyze/message operations |
+| messages | fixedCollection | [{content:"", role:"user"}] | no | Message history with content + role (user/assistant); used by text→message and prompt→improve/templatize |
+| simplify | boolean | true | no | Whether to return a simplified response instead of raw API output |
+| inputType | options | `url` | no | Source of media: `url` or `binary`; used by document, image, file resources |
+| documentUrls | string | "" | no | Comma-separated URLs for document analysis |
+| imageUrls | string | "" | no | Comma-separated URLs for image analysis |
+| fileUrl | string | "" | no | Single URL for file upload |
+| binaryPropertyName | string | `data` | no | Binary input field name for binary-mode attachments |
+| addAttachments | boolean | false | no | Whether to attach files to a text→message request |
+| attachmentsInputType | options | `url` | no | URL or binary for message attachments |
+| attachmentsUrls | string | "" | no | Comma-separated URLs for message attachments |
+| fileId | string | "" | no | File identifier for file→get or file→deleteFile |
+| returnAll | boolean | false | no | Pagination mode for file→list |
+| limit | number | 50 | no | Max results for file→list (1-1000) |
+| task | string | "" | no | Task description for prompt→generate |
+| options.system | string | "" | no | System message / system prompt |
+| options.maxTokens | number | 1024 | no | Max tokens in completion |
+| options.temperature | number | 1 | no | Sampling temperature (0-1, step 0.1) |
+| options.topP | number | 0.7 | no | Top-p nucleus sampling (0-1, step 0.1) |
+| options.topK | number | 5 | no | Top-k token selection |
+| options.includeMergedResponse | boolean | false | no | Include a single merged text output string |
+| options.codeExecution | boolean | false | no | Enable Anthropic code execution tool |
+| options.webSearch | boolean | false | no | Enable Anthropic web search tool |
+| options.maxUses | number | 5 | no | Max web search invocations per request |
+| options.allowedDomains | string | "" | no | Comma-separated allowed search domains |
+| options.blockedDomains | string | "" | no | Comma-separated blocked search domains |
+| options.maxToolsIterations | number | 15 | no | Max tool call iteration cycles (0 = unlimited) |
+| options.feedback | string | "" | no | Feedback text for prompt→improve |
+| options.fileName | string | "" | no | File name override for file→upload |
 
 ## Runtime behavior
 
+### Resource / operation matrix
+
+| resource | operation | behavior summary |
+|----------|-----------|------------------|
+| text | message | Sends a multi-turn message to an Anthropic model via the Messages API. Accepts attachments (images, documents via URL or binary). When connected to `ai_tool` input, tools are bound and the model can invoke them in a loop up to `maxToolsIterations` cycles. Supports web search and code execution tools. |
+| document | analyze | Takes document URLs or binary files, sends them with a text prompt to an Anthropic model for document question-answering. |
+| image | analyze | Takes image URLs or binary files, sends them with a text prompt for visual analysis. |
+| file | upload | Uploads a file to the Anthropic Files API by URL or binary data. Returns file metadata. |
+| file | get | Retrieves metadata for a previously uploaded file by file ID. |
+| file | list | Lists uploaded files with pagination support. |
+| file | deleteFile | Deletes a previously uploaded file by file ID. |
+| prompt | generate | Generates an optimized prompt from a task description using Anthropic prompt tools APIs. |
+| prompt | improve | Improves an existing prompt with optional system message and feedback. |
+| prompt | templatize | Converts a prompt into a reusable template with variable placeholders. |
+
 ### Input processing
 
-- Each input item is processed independently (item-wise execution).
-- Expression parameters (`modelId`, `text`, `documentUrls`, `imageUrls`, `fileUrl`, `fileId`, `task`, `messages[].content`, `options.system`, `options.feedback`, URLs, binary field names) are evaluated per item before API calls.
-- `modelId` from resourceLocator: when mode is `list`, use the selected value; when mode is `id`, use the custom string. The `extractValue: true` semantics apply (read `.value` from `{ mode, value }` object).
-- For binary inputs (`inputType=binary` or `attachmentsInputType=binary`):
-  - Read binary data from the named field(s) on the input item.
-  - Convert to base64 with media type for `document`/`image` analyze and text message attachments.
-  - Upload to Anthropic Files API for file operations and code execution attachments.
-- For URL inputs:
-  - Download file/image/document from URL.
-  - For text message attachments with regular (non-code-execution) mode: if URL is an Anthropic file URL (`/v1/files/{id}`), reference by file ID; otherwise download and send as base64 or URL source per media type.
-  - For code execution attachments: upload external URLs to Files API first.
-- For Text → Message with `addAttachments=false`: at least one non-empty message content is required.
-- Connected `ai_tool` inputs (when resource=text, operation=message) are converted to Anthropic `custom` tool definitions with JSON schema from the tool's Zod schema.
+- **text→message:** Accepts a fixed collection of message objects (content + role). When `addAttachments` is true, additional image/document content blocks are appended to the last user message using URL downloads or binary data.
+- **document/image→analyze:** Accepts single or multiple URLs (comma-separated) or binary field names. URLs are downloaded server-side; binary data is read from the execution item.
+- **file→upload:** Accepts a single URL or binary field. Optionally renames via `fileName` option.
+- All string-type parameters support n8n expressions.
 
 ### Output shape
 
-- **Simplified mode** (`simplify=true`, default):
-  - Document/Image Analyze: `{ content: [...] }` where content is array of content blocks (text, etc.)
-  - File Upload/Get/List: `{ id, url, ...metadata }` with `url` = `{baseUrl}/v1/files/{id}`
-  - File Delete: `{ deleted: true, id }` (per API response)
-  - Prompt Generate/Improve: `{ messages: [...], system: "..." }` (Improve also returns improved system)
-  - Prompt Templatize: `{ messages: [...], system: "...", variable_values: {...} }`
-  - Text Message: `{ content: [...], merged_response?: "..." }` (merged when `includeMergedResponse=true`)
-- **Raw mode** (`simplify=false`): Full Anthropic API response object, augmented with `merged_response` when applicable.
-- All outputs include `pairedItem: { item: <input_index> }` for item tracing.
+- **text→message (simplified):** Each output item contains `{ messages: [{ role, content }], model, usage }` where content is the assistant's text response.
+- **text→message (raw):** Full Anthropic Messages API response including content blocks, stop reason, and usage metadata.
+- **text→message (merged response):** When `includeMergedResponse` is true, the output includes `{ mergedResponse: "<all text blocks concatenated>" }`.
+- **document/image→analyze:** Natural language answer string or raw response depending on `simplify`.
+- **file→upload/get:** File metadata object with id, filename, mime_type, size_bytes, created_at.
+- **file→list:** Array of file metadata objects.
+- **file→deleteFile:** Deletion confirmation.
+- **prompt→generate/improve/templatize:** Generated/improved/templatized prompt messages and system prompt.
 
-### Tool calling loop (Text → Message)
+### Tool mode (ai_tool input)
 
-When the model returns `stop_reason: 'tool_use'`:
-1. Append assistant message with tool_use blocks to conversation.
-2. Invoke each matched connected tool with the tool input.
-3. Append user message with `tool_result` blocks.
-4. Repeat up to `maxToolsIterations` (default 15, 0 = unlimited).
-5. Stop on `stop_reason: 'end_turn'` or `pause_turn` (max 3 pauses).
+When the `text→message` operation is used within an AI Agent, the node exposes an `ai_tool` input connector. Connected tool sub-nodes are converted to Anthropic tool definitions and passed to the Messages API `tools` parameter. The executor orchestrates tool call → tool result cycles, respecting `maxToolsIterations`. The Anthropic SDK tool types supported are `custom` (tool name + input_schema + description), `web_search`, and `code_execution`.
 
-### Error handling
+### Errors
 
-- Throw `NodeOperationError` for:
-  - Missing required parameters (empty prompt/text, missing fileId, etc.)
-  - Unsupported file types (only images and PDFs for analyze/attachments)
-  - API errors (propagate Anthropic error response)
-  - Binary data not found for named field
-- Respect `continueOnFail` workflow setting: on failure, either throw (default) or emit error item and continue.
-- Accumulate token usage (`input_tokens`, `output_tokens`) via `accumulateTokenUsage` helper when available in response.
-
-### Expressions
-
-All string parameters support n8n expressions (`{{ $json.field }}`, `{{ $parameter.x }}`, etc.). Evaluated per item before API call.
+- Missing credentials → throws an error.
+- API errors (auth, rate limit, server errors) → throws with Anthropic API error message, unless `continueOnFail` is set, in which case the error item is passed through with `error: { ... }`.
+- Invalid file ID, URL fetch failure, or unsupported media type → throws.
 
 ## Acceptance tests
 
-### Test: Text Message basic
+### Test: text→message basic completion
 
-**Given** input items:
+**Given** input item:
 ```json
 [{ "json": {} }]
 ```
@@ -202,57 +121,42 @@ All string parameters support n8n expressions (`{{ $json.field }}`, `{{ $paramet
 {
   "resource": "text",
   "operation": "message",
-  "modelId": { "mode": "list", "value": "claude-sonnet-4-6" },
-  "messages": { "values": [{ "content": "Say hello", "role": "user" }] },
+  "modelId": { "mode": "id", "value": "claude-sonnet-4-20250514" },
+  "messages": { "values": [{ "content": "What is 2+2?", "role": "user" }] },
   "simplify": true
 }
 ```
 
-**Expect** output[0]:
-- Status success
-- Output item has `json.content` array with at least one text block
-- `json.merged_response` undefined (since `includeMergedResponse` not set)
+**Expect** output[0] to contain:
+- `json.messages` array with at least one entry
+- `json.messages[0].role` equal to `"assistant"`
+- `json.messages[0].content` to be a non-empty string
 
-### Test: Text Message with system prompt and options
+### Test: text→message with tool input
 
-**Given** input items:
+**Given** input item:
 ```json
-[{ "json": { "userQuery": "What is 2+2?" } }]
+[{ "json": {} }]
 ```
+and a connected tool sub-node on the `ai_tool` input.
 
 **Parameters:**
 ```json
 {
   "resource": "text",
   "operation": "message",
-  "modelId": { "mode": "id", "value": "claude-sonnet-4-6" },
-  "messages": { "values": [{ "content": "={{ $json.userQuery }}", "role": "user" }] },
-  "options": {
-    "system": "You are a concise math tutor.",
-    "maxTokens": 100,
-    "temperature": 0.2,
-    "topP": 0.9,
-    "topK": 10,
-    "includeMergedResponse": true
-  },
-  "simplify": true
+  "modelId": { "mode": "id", "value": "claude-sonnet-4-20250514" },
+  "messages": { "values": [{ "content": "What is the weather in London?", "role": "user" }] }
 }
 ```
 
-**Expect** output[0]:
-- Request body sent to `/v1/messages` includes `model: "claude-sonnet-4-6"`, `system: "You are a concise math tutor."`, `max_tokens: 100`, `temperature: 0.2`, `top_p: 0.9`, `top_k: 10`
-- Output `json.merged_response` is a non-empty string
+**Expect** the model to invoke the connected tool(s), produce tool_use content blocks, and return a final assistant response incorporating tool results.
 
-### Test: Image Analyze with binary input
+### Test: image→analyze with URL
 
-**Given** input items:
+**Given** input item:
 ```json
-[{
-  "json": {},
-  "binary": {
-    "imageData": { "mimeType": "image/png", "data": "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==" }
-  }
-}]
+[{ "json": {} }]
 ```
 
 **Parameters:**
@@ -260,54 +164,21 @@ All string parameters support n8n expressions (`{{ $json.field }}`, `{{ $paramet
 {
   "resource": "image",
   "operation": "analyze",
-  "modelId": { "mode": "list", "value": "claude-sonnet-4-6" },
-  "text": "Describe this image in one sentence.",
-  "inputType": "binary",
-  "binaryPropertyName": "imageData",
-  "simplify": true
-}
-```
-
-**Expect** output[0]:
-- Request body to `/v1/messages` includes a message with `content` array containing:
-  - An `image` block with `source: { type: "base64", media_type: "image/png", data: "<base64>" }`
-  - A `text` block with the prompt
-- Output `json.content` exists
-
-### Test: Document Analyze with URL input
-
-**Given** input items:
-```json
-[{ "json": { "docUrl": "https://example.com/document.pdf" } }]
-```
-
-**Parameters:**
-```json
-{
-  "resource": "document",
-  "operation": "analyze",
-  "modelId": { "mode": "list", "value": "claude-sonnet-4-6" },
-  "text": "Summarize this document.",
+  "modelId": { "mode": "id", "value": "claude-sonnet-4-20250514" },
+  "text": "What's in this image?",
   "inputType": "url",
-  "documentUrls": "={{ $json.docUrl }}",
+  "imageUrls": "https://example.com/test.png",
   "simplify": true
 }
 ```
 
-**Expect** output[0]:
-- Request body includes a `document` block with `source: { type: "url", url: "https://example.com/document.pdf" }`
-- Output `json.content` exists
+**Expect** output[0] to contain a non-empty string or structured response describing the image.
 
-### Test: File Upload from binary
+### Test: file→upload from URL
 
-**Given** input items:
+**Given** input item:
 ```json
-[{
-  "json": {},
-  "binary": {
-    "fileData": { "mimeType": "application/pdf", "data": "JVBERi0xLjQK..." }
-  }
-}]
+[{ "json": {} }]
 ```
 
 **Parameters:**
@@ -315,56 +186,43 @@ All string parameters support n8n expressions (`{{ $json.field }}`, `{{ $paramet
 {
   "resource": "file",
   "operation": "upload",
-  "inputType": "binary",
-  "binaryPropertyName": "fileData",
-  "options": { "fileName": "report.pdf" }
+  "inputType": "url",
+  "fileUrl": "https://example.com/document.pdf"
 }
 ```
 
-**Expect** output[0]:
-- File uploaded via multipart to `/v1/files`
-- Output `json.id` exists (file ID)
-- Output `json.url` equals `{baseUrl}/v1/files/{id}`
+**Expect** output[0].json to contain `id`, `filename`, `mime_type`, `size_bytes`, and `created_at`.
 
-### Test: Prompt Improve with feedback
+### Test: prompt→generate
 
-**Given** input items:
+**Given** input item:
 ```json
-[{ "json": { "prompt": "Write a poem about cats", "feedback": "Make it funnier" } }]
+[{ "json": {} }]
 ```
 
 **Parameters:**
 ```json
 {
   "resource": "prompt",
-  "operation": "improve",
-  "messages": { "values": [{ "content": "={{ $json.prompt }}", "role": "user" }] },
-  "options": { "feedback": "={{ $json.feedback }}" },
+  "operation": "generate",
+  "task": "A chef for a meal prep planning service",
   "simplify": true
 }
 ```
 
-**Expect** output[0]:
-- Request to `/v1/experimental/improve_prompt` with `enableAnthropicBetas: { promptTools: true }`
-- Body includes `messages`, `feedback`
-- Output `json.messages` and `json.system` exist
+**Expect** output[0].json to contain `messages` and `system` fields with the generated prompt.
 
 ## Gaps / confidence
 
 | Topic | documented / inferred | Notes |
 |-------|----------------------|-------|
-| Model list endpoint / available models | inferred | Model list loaded via `modelSearch` method; exact models not in public docs |
-| Exact Anthropic API version | documented | Uses `/v1/messages`, `/v1/files`, `/v1/experimental/*_prompt` |
-| Supported file types for analyze/attachments | documented | Images (image/*) and PDFs (application/pdf) only |
-| Code execution beta availability | documented | Model-dependent; enabled via `enableAnthropicBetas: { codeExecution: true }` |
-| Web search beta availability | documented | Enabled via `web_search_20250305` tool type |
-| Prompt tools (generate/improve/templatize) access | documented | Closed research preview; requires organization access request |
-| Token usage accumulation | inferred | Uses n8n's `accumulateTokenUsage` helper when response has `usage` |
-| `maxToolsIterations` default | documented | Default 15 per source; 0 = unlimited |
-| Pause turn handling | inferred | Max 3 pause turns before breaking |
+| AI Agent tool integration | documented | `usableAsTool: true` is confirmed from node descriptor; tool input binding via `ai_tool` is standard across n8n. |
+| Prompt tools (generate/improve/templatize) | documented | Public docs confirm these operations; anthropic doc notice warns about closed research preview. |
+| Tool types (web_search, code_execution) | inferred from corpus type definitions | Type definitions show web_search_20250305 and code_execution_20250522 tool types with their parameter schemas. |
+| Model dynamic listing | documented | `modelSearch` list-search method confirmed from node descriptor and methods list. |
 
 ## OpenFlow mapping
 
-- **Definition group:** `transform`
-- **Executor file:** `src/lib/engine/executors/n8n-nodes-langchain.anthropic.ts`
+- **Definition group:** `core` | `ai`
+- **Executor file:** `src/lib/engine/executors/anthropic.ts`
 - **SDK:** `defineNode` + native `ExecutionContext` only

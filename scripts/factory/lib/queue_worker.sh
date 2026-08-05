@@ -80,9 +80,12 @@ print(f"stg={d.get('stage') or ''!r}")
 print(f"cyc={int(d.get('cycle') or 1)}")
 PY
 )"
-        if [[ "$stg" == "implement-waitout" ]]; then
+        if [[ "$stg" == "implement-waitout" || "$stg" == "requeued" ]]; then
+          # Both resume at IMPLEMENT rather than SPEC: the spec already passed
+          # its gate, and re-running SPEC would overwrite a good spec with a
+          # fresh generation for no reason.
           extra_job+=(--continue --from-stage implement --start-cycle "$cyc" --once)
-          echo "[queue_worker] resume $t from implement after WAITOUT c$cyc"
+          echo "[queue_worker] resume $t from implement (${stg}) c$cyc"
         fi
       fi
       echo "[queue_worker] start $t SPEC=$FACTORY_MODEL_SPEC IMPL=$FACTORY_MODEL_IMPL VAL=$FACTORY_MODEL_VAL"
@@ -111,13 +114,16 @@ PY
 import sys
 from pathlib import Path
 sys.path.insert(0, str(Path("scripts/factory/lib").resolve()))
-from run_state import load_state, save_state, build_pending
-s = load_state()
-# waitout + interrupted stay eligible via build_pending
-s["pending"] = build_pending(include_partial=True)
-s["active"] = []
-save_state(s)
-print("[queue_worker] pending left", len(s["pending"]))
+from run_state import state_transaction, build_pending
+# Must be one locked transaction: the pipelines mark themselves completed/partial
+# concurrently, and a load/save pair here would write back a snapshot taken
+# before those landed, silently reverting them to pending.
+with state_transaction() as s:
+    # waitout + interrupted stay eligible via build_pending
+    s["pending"] = build_pending(include_partial=True)
+    s["active"] = []
+    n = len(s["pending"])
+print("[queue_worker] pending left", n)
 PY
 done
 

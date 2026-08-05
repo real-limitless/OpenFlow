@@ -3,9 +3,12 @@
 from __future__ import annotations
 
 import argparse
+import contextlib
+import fcntl
 import json
 import os
 import sys
+import tempfile
 import time
 from datetime import datetime, timezone
 from pathlib import Path
@@ -13,8 +16,48 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[3]
 JOBS = ROOT / "scripts" / "factory" / ".jobs"
 STATE = JOBS / "run-state.json"
+STATE_LOCK = JOBS / "run-state.lock"
+STATE_CORRUPT = JOBS / "run-state.corrupt.json"
 MODELS = JOBS / "models.json"
 CATALOG = ROOT / "docs" / "specs" / "catalog.json"
+
+
+class StateCorruptError(RuntimeError):
+    """run-state.json exists but is not parseable. Never recover silently."""
+
+
+@contextlib.contextmanager
+def _file_lock(path: Path, *, shared: bool = False):
+    """flock a sidecar file. The factory runs several jobs at once, and every
+    one of them read-modify-writes run-state.json."""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    fd = os.open(str(path), os.O_RDWR | os.O_CREAT, 0o644)
+    try:
+        fcntl.flock(fd, fcntl.LOCK_SH if shared else fcntl.LOCK_EX)
+        yield
+    finally:
+        try:
+            fcntl.flock(fd, fcntl.LOCK_UN)
+        finally:
+            os.close(fd)
+
+
+def _atomic_write(path: Path, text: str) -> None:
+    """Write via temp file + rename, so a failed write (ENOSPC/EDQUOT) leaves the
+    previous contents intact instead of truncating them to garbage."""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    fd, tmp = tempfile.mkstemp(dir=str(path.parent), prefix=f"{path.name}.", suffix=".tmp")
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as fh:
+            fh.write(text)
+            fh.flush()
+            os.fsync(fh.fileno())
+        os.replace(tmp, path)
+    except BaseException:
+        with contextlib.suppress(OSError):
+            os.unlink(tmp)
+        raise
+
 
 DEFAULT_MODELS = {
     "spec": "xai/grok-4.5",
@@ -55,12 +98,7 @@ def save_models(models: dict) -> None:
     MODELS.write_text(json.dumps({**DEFAULT_MODELS, **models}, indent=2) + "\n")
 
 
-def load_state() -> dict:
-    if STATE.exists():
-        try:
-            return json.loads(STATE.read_text())
-        except Exception:
-            pass
+def _default_state() -> dict:
     return {
         "runId": None,
         "status": "idle",
@@ -78,10 +116,87 @@ def load_state() -> dict:
     }
 
 
-def save_state(state: dict) -> None:
-    JOBS.mkdir(parents=True, exist_ok=True)
+def _read_state_unlocked() -> dict:
+    """Caller must already hold the state lock.
+
+    A missing file is a fresh run and is fine. A file that exists but does not
+    parse is NOT: swallowing that error and returning the default silently wipes
+    pending/completed/partial for the whole run, which looks exactly like a run
+    that legitimately finished with nothing done. Preserve a copy and refuse.
+    """
+    if not STATE.exists():
+        return _default_state()
+    raw = STATE.read_text(encoding="utf-8")
+    try:
+        return json.loads(raw)
+    except json.JSONDecodeError as exc:
+        # Copy, never move: leaving the damaged original in place keeps every
+        # later call failing too, instead of resetting on the next invocation.
+        with contextlib.suppress(OSError):
+            if not STATE_CORRUPT.exists():
+                _atomic_write(STATE_CORRUPT, raw)
+        raise StateCorruptError(
+            f"{STATE} exists but is not valid JSON ({exc}). "
+            f"A copy of the damaged file is at {STATE_CORRUPT}. "
+            "Refusing to continue: resetting to an empty state would silently "
+            "discard pending/completed/partial for this run. Repair or delete "
+            f"{STATE} to proceed."
+        ) from exc
+
+
+def _write_state_unlocked(state: dict) -> None:
+    """Caller must already hold the state lock."""
     state["updatedAt"] = now()
-    STATE.write_text(json.dumps(state, indent=2) + "\n")
+    _atomic_write(STATE, json.dumps(state, indent=2) + "\n")
+
+
+_state_lock_depth = 0
+
+
+@contextlib.contextmanager
+def _state_lock(*, shared: bool = False):
+    """Reentrant flock on the state sidecar.
+
+    flock attaches to the open file description, so a second open+flock from
+    this same process would block against the first. build_pending() reads the
+    state from inside init-run's transaction, so nesting must be a no-op.
+    Assumes nesting only ever goes exclusive-outer -> shared-inner, which is the
+    only direction that occurs here.
+    """
+    global _state_lock_depth
+    if _state_lock_depth > 0:
+        yield
+        return
+    with _file_lock(STATE_LOCK, shared=shared):
+        _state_lock_depth += 1
+        try:
+            yield
+        finally:
+            _state_lock_depth -= 1
+
+
+def load_state() -> dict:
+    with _state_lock(shared=True):
+        return _read_state_unlocked()
+
+
+def save_state(state: dict) -> None:
+    with _state_lock():
+        _write_state_unlocked(state)
+
+
+@contextlib.contextmanager
+def state_transaction():
+    """Hold the lock across a read-modify-write and yield the state to mutate.
+
+    load_state() + save_state() as separate calls is a lost update whenever two
+    jobs interleave -- the second writes back a snapshot taken before the first
+    landed, silently dropping it. Every mutation below goes through here.
+    """
+    with _state_lock():
+        state = _read_state_unlocked()
+        yield state
+        _write_state_unlocked(state)
 
 
 def _dedupe_preserve(items: list[str]) -> list[str]:
@@ -175,7 +290,9 @@ def build_pending(include_partial: bool = True) -> list[str]:
         if verdict == "pass" or stage == "pass":
             continue
         # waitout: always re-queue (no live pipeline by design)
-        if stage == "implement-waitout":
+        # requeued: operator put it back deliberately after fixing something
+        # outside the pipeline; skip the stale-failure filters below.
+        if stage in ("implement-waitout", "requeued"):
             seen.add(t)
             pending.append(t)
             continue
@@ -263,9 +380,8 @@ def main() -> None:
         if args.validate:
             m["validate"] = args.validate
         save_models(m)
-        s = load_state()
-        s["models"] = m
-        save_state(s)
+        with state_transaction() as s:
+            s["models"] = m
         print(json.dumps(m, indent=2))
     elif args.cmd == "init-run":
         # settings.json for concurrency / maxCycles when CLI omits them
@@ -281,57 +397,52 @@ def main() -> None:
         conc = args.concurrency if args.concurrency is not None else int(settings.get("concurrency") or 2)
         max_c = int(os.environ.get("FACTORY_MAX_CYCLES") or settings.get("maxCycles") or 3)
 
-        s = load_state()
-        pending = build_pending(include_partial=True)
-        completed = [
-            t
-            for t in load_queue_types()
-            if (read_node_status(t) or {}).get("verdict") == "pass"
-            or (read_node_status(t) or {}).get("stage") == "pass"
-        ]
-        if args.resume and s.get("runId") and s.get("status") in ("stopped", "running", "idle"):
-            s["pending"] = pending
-            s["active"] = []
-            s["completed"] = completed
-            s["status"] = "running"
-            s["models"] = models
-            s["concurrency"] = conc
-            s["maxCycles"] = max_c
-            s["implLock"] = bool(settings.get("implLock", True))
-            save_state(s)
-            print(
-                json.dumps(
+        # build_pending() reads the state itself; the lock is reentrant so this
+        # whole read-decide-write stays a single atomic step.
+        with state_transaction() as s:
+            pending = build_pending(include_partial=True)
+            completed = [
+                t
+                for t in load_queue_types()
+                if (read_node_status(t) or {}).get("verdict") == "pass"
+                or (read_node_status(t) or {}).get("stage") == "pass"
+            ]
+            resuming = (
+                args.resume
+                and s.get("runId")
+                and s.get("status") in ("stopped", "running", "idle")
+            )
+            if resuming:
+                run_id = s["runId"]
+                s["pending"] = pending
+                s["active"] = []
+                s["completed"] = completed
+                s["status"] = "running"
+                s["models"] = models
+                s["concurrency"] = conc
+                s["maxCycles"] = max_c
+                s["implLock"] = bool(settings.get("implLock", True))
+            else:
+                run_id = f"run-{time.strftime('%Y%m%d-%H%M%S')}"
+                s.clear()
+                s.update(
                     {
-                        "runId": s["runId"],
-                        "status": s["status"],
-                        "pending": len(pending),
-                        "completed": len(completed),
+                        "runId": run_id,
+                        "status": "running",
+                        "pid": None,
+                        "pgid": None,
+                        "models": models,
                         "concurrency": conc,
                         "maxCycles": max_c,
-                        "models": models,
-                    },
-                    indent=2,
+                        "implLock": bool(settings.get("implLock", True)),
+                        "pending": pending,
+                        "active": [],
+                        "completed": completed,
+                        "partial": [],
+                        "failed": [],
+                        "updatedAt": now(),
+                    }
                 )
-            )
-            return
-        run_id = f"run-{time.strftime('%Y%m%d-%H%M%S')}"
-        s = {
-            "runId": run_id,
-            "status": "running",
-            "pid": None,
-            "pgid": None,
-            "models": models,
-            "concurrency": conc,
-            "maxCycles": max_c,
-            "implLock": bool(settings.get("implLock", True)),
-            "pending": pending,
-            "active": [],
-            "completed": completed,
-            "partial": [],
-            "failed": [],
-            "updatedAt": now(),
-        }
-        save_state(s)
         print(
             json.dumps(
                 {
@@ -350,31 +461,32 @@ def main() -> None:
         s = load_state()
         print("\n".join(s.get("pending") or build_pending()))
     elif args.cmd == "mark":
-        s = load_state()
-        t = args.type
-        for k in ("pending", "active", "completed", "partial", "failed", "skipped"):
-            s[k] = _dedupe_preserve([x for x in (s.get(k) or []) if x != t])
-        if args.bucket == "clear-active":
-            pass
-        else:
-            bucket = s.setdefault(args.bucket, [])
-            if t not in bucket:
-                bucket.append(t)
-        save_state(s)
+        # Hottest concurrent path: every pipeline marks itself active on start and
+        # completed/partial on exit, while the worker rewrites pending underneath.
+        with state_transaction() as s:
+            t = args.type
+            for k in ("pending", "active", "completed", "partial", "failed", "skipped"):
+                s[k] = _dedupe_preserve([x for x in (s.get(k) or []) if x != t])
+            if args.bucket == "clear-active":
+                pass
+            else:
+                bucket = s.setdefault(args.bucket, [])
+                if t not in bucket:
+                    bucket.append(t)
         print("ok")
     elif args.cmd == "set-status":
-        s = load_state()
-        s["status"] = args.status
-        if args.pid is not None:
-            s["pid"] = args.pid
-        if args.pgid is not None:
-            s["pgid"] = args.pgid
-        if args.status in ("stopped", "idle"):
-            s["pid"] = None if args.pid is None else args.pid
-            s["pgid"] = None if args.pgid is None else args.pgid
-            s["active"] = []
-        save_state(s)
-        print(json.dumps({"status": s["status"], "runId": s.get("runId"), "pid": s.get("pid")}, indent=2))
+        with state_transaction() as s:
+            s["status"] = args.status
+            if args.pid is not None:
+                s["pid"] = args.pid
+            if args.pgid is not None:
+                s["pgid"] = args.pgid
+            if args.status in ("stopped", "idle"):
+                s["pid"] = None if args.pid is None else args.pid
+                s["pgid"] = None if args.pgid is None else args.pgid
+                s["active"] = []
+            out = {"status": s["status"], "runId": s.get("runId"), "pid": s.get("pid")}
+        print(json.dumps(out, indent=2))
 
 
 if __name__ == "__main__":

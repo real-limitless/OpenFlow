@@ -64,7 +64,7 @@ export const asanaExecutor: NodeExecutor = async (ctx, node) => {
   return [out];
 };
 
-async function getAuthHeaders(ctx: ExecutionContext): Promise<Record<string, string>> {
+export async function getAuthHeaders(ctx: ExecutionContext): Promise<Record<string, string>> {
   const apiKeyCred = await ctx.getCredential("asanaApi");
   if (apiKeyCred) {
     const data = apiKeyCred as Record<string, unknown>;
@@ -175,7 +175,7 @@ function getOptionNum(node: INode, key: string, itemJson: Record<string, unknown
 // Project
 // ---------------------------------------------------------------------------
 
-async function runProjectOperation(
+export async function runProjectOperation(
   node: INode,
   operation: string,
   itemJson: Record<string, unknown>,
@@ -257,7 +257,7 @@ async function runProjectOperation(
 // Task
 // ---------------------------------------------------------------------------
 
-async function runTaskOperation(
+export async function runTaskOperation(
   node: INode,
   operation: string,
   itemJson: Record<string, unknown>,
@@ -383,7 +383,7 @@ async function runTaskOperation(
 // Subtask
 // ---------------------------------------------------------------------------
 
-async function runSubtaskOperation(
+export async function runSubtaskOperation(
   node: INode,
   operation: string,
   itemJson: Record<string, unknown>,
@@ -420,7 +420,7 @@ async function runSubtaskOperation(
 // Task Comment
 // ---------------------------------------------------------------------------
 
-async function runTaskCommentOperation(
+export async function runTaskCommentOperation(
   node: INode,
   operation: string,
   itemJson: Record<string, unknown>,
@@ -452,7 +452,7 @@ async function runTaskCommentOperation(
 // Task Tag
 // ---------------------------------------------------------------------------
 
-async function runTaskTagOperation(
+export async function runTaskTagOperation(
   node: INode,
   operation: string,
   itemJson: Record<string, unknown>,
@@ -485,7 +485,7 @@ async function runTaskTagOperation(
 // Task Project
 // ---------------------------------------------------------------------------
 
-async function runTaskProjectOperation(
+export async function runTaskProjectOperation(
   node: INode,
   operation: string,
   itemJson: Record<string, unknown>,
@@ -518,7 +518,7 @@ async function runTaskProjectOperation(
 // User
 // ---------------------------------------------------------------------------
 
-async function runUserOperation(
+export async function runUserOperation(
   node: INode,
   operation: string,
   itemJson: Record<string, unknown>,
