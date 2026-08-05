@@ -2,7 +2,7 @@
 type: n8n-nodes-base.googleTranslate
 displayName: Google Translate
 category: Utility
-versions: [1]
+versions: [1, 2]
 priority: medium
 status: specced
 ---
@@ -12,10 +12,10 @@ status: specced
 ## Sources
 
 | URL | Source class |
-|-----|--------------|
+|-----|----------------|
 | https://docs.n8n.io/integrations/builtin/app-nodes/n8n-nodes-base.googletranslate.md | Public docs only |
-| https://docs.n8n.io/integrations/builtin/credentials/google/oauth-single-service/ | Public docs only |
-| https://cloud.google.com/translate/docs/reference/rest | Third-party API docs |
+| https://docs.n8n.io/integrations/builtin/credentials/google.md | Public docs only |
+| https://cloud.google.com/translate/docs/reference/rest/v2/translate | Public docs only |
 
 ## Wire format
 
@@ -23,188 +23,124 @@ status: specced
 - **Aliases:** (none)
 - **Inputs:** `main` × 1
 - **Outputs:** `main` × 1
-- **Credentials:** `googleTranslateOAuth2Api` (extends `googleOAuth2Api`, scope `https://www.googleapis.com/auth/cloud-translation`)
+- **Credentials:** `googleApi` (Service Account) or `googleTranslateOAuth2Api` (OAuth2); authentication method selected via parameter; OAuth2 is the default on v2, Service Account is the default on v1
 
 ## Parameters
 
 | name | type | default | required | displayOptions | notes |
 |------|------|---------|----------|----------------|-------|
-| resource | fixedString | `language` | yes | — | Always `language`; single resource |
-| operation | fixedString | `translate` | yes | — | Always `translate`; single operation |
-| text | string | — | yes | — | Text to translate. Accepts expressions. |
-| translateTo | string | — | yes | — | Target language code (BCP-47, e.g. `es`, `fr`, `zh-CN`). Accepts expressions. |
-| translateFrom | string | — | no | — | Source language code. If omitted, Google Cloud Translation API auto-detects. Accepts expressions. |
-| options | collection | — | no | — | Group of optional settings (see below) |
-| options.sessionId | string | — | no | — | Custom session ID for persistent model improvements |
-
-### Options
-
-The `options` collection may contain:
-- **sessionId** (string): Associates the translation with a session for model tuning.
+| resource | options: language | language | yes | — | Fixed single value |
+| operation | options: translate | translate | yes | resource = language | Fixed single value |
+| text | string | "" | yes | operation = translate | Expression-capable; the source text to be translated |
+| translateTo | options (dynamic via getLanguages) | "" | yes | operation = translate | Target language code; dynamically populated from Google Translate supported languages list; also accepts expression strings with a language code |
+| authentication | options | serviceAccount (v1) / oAuth2 (v2) | no | @version | Controls which credential type is used |
 
 ## Runtime behavior
 
 ### Input
 
-Each input item's `json` is processed independently. The `text` parameter is evaluated per item (may contain expressions referencing the item). Non-`json` fields on input items are preserved in the output.
+Each input item is processed independently. The `text` parameter is read per-item; expressions in `translateTo` are also evaluated per-item. If `text` is a static string, all items receive the same translation request.
 
 ### Output
 
-Each input item produces one output item on `main[0]` with the following shape:
+For each input item, one output item is produced containing:
 
-```json
-{
-  "json": {
-    "translatedText": "<translated string>",
-    "detectedSourceLanguage": "<auto-detected language code>"
-  }
-}
-```
+- All original input JSON properties
+- Additional property `translatedText` — the translated text returned by the Google Translate API
+- Additional property `detectedSourceLanguage` — the language code automatically detected by the API (present when no source language was specified)
+- Any binary data carried over from the input item
 
-- `detectedSourceLanguage` is always present (even when `translateFrom` is set, the API returns the source language).
-- Fields from the input item's `json` that are not overwritten by the output are NOT preserved (the output is the translation result only).
+The output is on `output[0]` (main).
 
 ### Errors
 
-- If the API call fails (authentication, quota, invalid language code), the node throws an error unless `continueOnFail` is enabled.
-- When `continueOnFail` is enabled, the failing item produces `[{ json: { error: <message> } }]` on output `main[0]`.
+- If the Google Translate API returns an error (e.g. invalid target language, quota exceeded), the node throws. If `continueOnFail` is enabled, the item is returned with error info instead.
+- Missing required parameters (`text`, `translateTo`) produce a validation error before any API call.
 
 ### Expressions
 
-`text`, `translateTo`, and `translateFrom` accept expression strings.
+`text` and `translateTo` accept expression strings.
 
 ## Acceptance tests
 
-### Test: basic translation
+### Test: basic translate
 
 **Given** input items:
 
 ```json
-[{ "json": { "source": "Hello world" } }]
+[{ "json": { "sourceText": "Hello world" } }]
 ```
 
 **Parameters:**
-
 ```json
 {
-  "text": "Hello world",
-  "translateTo": "es",
-  "translateFrom": "en"
+  "resource": "language",
+  "operation": "translate",
+  "text": "={{ $json.sourceText }}",
+  "translateTo": "es"
 }
 ```
 
-**Expect** output[0]:
+**Expect** output[0] contains an item whose JSON includes `translatedText` (a non-empty string) and `detectedSourceLanguage` equal to `"en"`.
 
-```json
-[{
-  "json": {
-    "translatedText": "Hola mundo",
-    "detectedSourceLanguage": "en"
-  }
-}]
-```
-
-### Test: auto-detect source language
+### Test: static text per-item
 
 **Given** input items:
 
 ```json
-[{ "json": {} }]
+[
+  { "json": { "id": 1 } },
+  { "json": { "id": 2 } }
+]
 ```
 
 **Parameters:**
-
 ```json
 {
-  "text": "Bonjour le monde",
+  "resource": "language",
+  "operation": "translate",
+  "text": "Good morning",
+  "translateTo": "fr"
+}
+```
+
+**Expect** output[0] has 2 items, each carrying `translatedText` (both same translation) and `detectedSourceLanguage`.
+
+### Test: oAuth2 authentication
+
+**Given** input items:
+
+```json
+[{ "json": { "text": "Bonjour" } }]
+```
+
+**Parameters:**
+```json
+{
+  "authentication": "oAuth2",
+  "resource": "language",
+  "operation": "translate",
+  "text": "={{ $json.text }}",
   "translateTo": "en"
 }
 ```
 
-**Expect** output[0]:
-
-```json
-[{
-  "json": {
-    "translatedText": "Hello world",
-    "detectedSourceLanguage": "fr"
-  }
-}]
-```
-
-### Test: per-item expression evaluation
-
-**Given** input items:
-
-```json
-[
-  { "json": { "msg": "Good morning", "target": "de" } },
-  { "json": { "msg": "Good night", "target": "fr" } }
-]
-```
-
-**Parameters:**
-
-```json
-{
-  "text": "={{ $json.msg }}",
-  "translateTo": "={{ $json.target }}"
-}
-```
-
-**Expect** output[0]:
-
-```json
-[
-  { "json": { "translatedText": "Guten Morgen", "detectedSourceLanguage": "en" } },
-  { "json": { "translatedText": "Bonne nuit", "detectedSourceLanguage": "en" } }
-]
-```
-
-### Test: continueOnFail error output
-
-**Given** input items:
-
-```json
-[{ "json": {} }]
-```
-
-**Parameters:**
-
-```json
-{
-  "text": "",
-  "translateTo": "",
-  "options": {}
-}
-```
-
-With `continueOnFail: true`.
-
-**Expect** output[0]:
-
-```json
-[{
-  "json": {
-    "error": "The parameter 'translateTo' is required."
-  }
-}]
-```
+**Expect** the node authenticates via `googleTranslateOAuth2Api` and produces output[0] with `translatedText` containing `"Hello"` or `"Good morning"`.
 
 ## Gaps / confidence
 
 | Topic | documented / inferred | Notes |
 |-------|----------------------|-------|
-| Resource and operation values | Public docs + descriptor | Single resource `language`, single operation `translate`; confirmed via public docs page and corpus descriptor |
-| Parameter names and types | Public descriptor | Names verified from npm package descriptor schema; `text`, `translateTo`, `translateFrom`, `options` with `sessionId` |
-| Credential type | Public descriptor | `googleTranslateOAuth2Api` extends `googleOAuth2Api`; scope `cloud-translation` confirmed from credential source |
-| Output shape | Public descriptor | Output schema shows `translatedText` (string) + `detectedSourceLanguage` (string) |
-| Language code format | Inferred from Google API docs | BCP-47 codes; documented in Cloud Translation API reference |
-| Error shapes | Inferred | Standard `continueOnFail` pattern; exact error messages may vary |
-| Options beyond sessionId | Inferred | Only `sessionId` documented in descriptor; additional API options (model, format, glossary) may exist but not surfaced |
+| Parameter names | Public corpus (JSON descriptor) | Confirmed via types/nodes.json |
+| Authentication methods | Public docs + corpus | Two methods: Service Account (googleApi) and OAuth2 (googleTranslateOAuth2Api); v2 defaults to OAuth2, v1 to Service Account |
+| Supported languages source | Public Google API docs | Dynamically loaded from `getLanguages` loadOptionsMethod against the Google Translate API |
+| Optional `source` language parameter | Inferred | The v2 Google Translate API accepts an optional `source` parameter for source language detection override, but this node does not expose it directly — auto-detection is always used |
+| Additional options (format, model) | Inferred | The API supports format (html/text) and model parameters, but the node does not expose them in its current parameter surface |
+| Output shape (translatedText, detectedSourceLanguage) | Public schema JSON | Confirmed via `__schema__/v2.0.0/language/translate.json` |
+| usableAsTool | Public corpus | Marked `usableAsTool: true` — supports `$fromAI()` parameter population for AI agents |
 
 ## OpenFlow mapping
 
 - **Definition group:** `transform`
-- **Executor file:** `src/lib/engine/executors/google-translate.ts`
+- **Executor file:** `src/lib/engine/executors/googleTranslate.ts`
 - **SDK:** `defineNode` + native `ExecutionContext` only

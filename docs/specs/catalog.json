@@ -314,6 +314,14 @@
       "dogfood": false,
       "factory": "partial"
     },
+    "n8n-nodes-base.graphqlTool": {
+      "priority": "P2",
+      "executor": "implemented",
+      "spec": "specced",
+      "factory": "pass",
+      "source": "scraped-usage",
+      "usageWorkflows": 1
+    },
     "n8n-nodes-base.rssFeedRead": {
       "priority": "P1",
       "executor": "implemented",
@@ -2616,6 +2624,14 @@
       "source": "scraped-usage",
       "usageWorkflows": 4
     },
+    "n8n-nodes-base.googleFirebaseRealtimeDatabase": {
+      "priority": "P2",
+      "executor": "implemented",
+      "spec": "specced",
+      "factory": "pass",
+      "source": "scraped-usage",
+      "usageWorkflows": 1
+    },
     "n8n-nodes-base.mailerLite": {
       "priority": "P2",
       "executor": "implemented",
@@ -3900,7 +3916,7 @@
       "priority": "P2",
       "executor": "implemented",
       "spec": "specced",
-      "factory": "pending",
+      "factory": "pass",
       "source": "scraped-usage",
       "usageWorkflows": 1
     },
@@ -3912,67 +3928,49 @@
       "source": "scraped-usage",
       "usageWorkflows": 1
     },
-    "n8n-nodes-base.googleFirebaseRealtimeDatabase": {
-      "priority": "P2",
-      "executor": "missing",
-      "spec": "missing",
-      "factory": "pending",
-      "source": "scraped-usage",
-      "usageWorkflows": 1
-    },
     "n8n-nodes-base.googlePageSpeedInsights": {
       "priority": "P2",
-      "executor": "missing",
-      "spec": "missing",
-      "factory": "pending",
+      "executor": "implemented",
+      "spec": "specced",
+      "factory": "pass",
       "source": "scraped-usage",
-      "usageWorkflows": 1
+      "usageWorkflows": 9
+    },
+    "n8n-nodes-base.googleSearchConsole": {
+      "priority": "medium",
+      "executor": "implemented",
+      "spec": "specced",
+      "factory": "pass"
     },
     "n8n-nodes-base.googlePerspective": {
       "priority": "P2",
-      "executor": "missing",
-      "spec": "missing",
-      "factory": "pending",
-      "source": "scraped-usage",
-      "usageWorkflows": 1
-    },
-    "n8n-nodes-base.googleSearchConsole": {
-      "priority": "P2",
-      "executor": "missing",
-      "spec": "missing",
-      "factory": "pending",
+      "executor": "implemented",
+      "spec": "specced",
+      "factory": "partial",
       "source": "scraped-usage",
       "usageWorkflows": 1
     },
     "n8n-nodes-base.googleTranslateTool": {
       "priority": "P2",
-      "executor": "missing",
-      "spec": "missing",
-      "factory": "pending",
+      "executor": "implemented",
+      "spec": "specced",
+      "factory": "pass",
       "source": "scraped-usage",
       "usageWorkflows": 1
     },
     "n8n-nodes-base.gotifyTool": {
       "priority": "P2",
-      "executor": "missing",
-      "spec": "missing",
-      "factory": "pending",
+      "executor": "implemented",
+      "spec": "specced",
+      "factory": "pass",
       "source": "scraped-usage",
       "usageWorkflows": 1
     },
     "n8n-nodes-base.grafanaTool": {
       "priority": "P2",
-      "executor": "missing",
-      "spec": "missing",
-      "factory": "pending",
-      "source": "scraped-usage",
-      "usageWorkflows": 1
-    },
-    "n8n-nodes-base.graphqlTool": {
-      "priority": "P2",
-      "executor": "missing",
-      "spec": "missing",
-      "factory": "pending",
+      "executor": "implemented",
+      "spec": "specced",
+      "factory": "pass",
       "source": "scraped-usage",
       "usageWorkflows": 1
     },
@@ -8526,8 +8524,8 @@
       "type": "n8n-nodes-base.googlePerspective",
       "priority": 511,
       "tier": "core",
-      "executor": "missing",
-      "spec": "missing"
+      "executor": "implemented",
+      "spec": "specced"
     },
     {
       "type": "n8n-nodes-base.googleSearchConsole",
@@ -8540,8 +8538,8 @@
       "type": "n8n-nodes-base.googleTranslateTool",
       "priority": 513,
       "tier": "core",
-      "executor": "missing",
-      "spec": "missing"
+      "executor": "implemented",
+      "spec": "specced"
     },
     {
       "type": "n8n-nodes-base.gotifyTool",

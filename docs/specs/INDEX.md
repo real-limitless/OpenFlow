@@ -2,6 +2,7 @@ n8n-nodes-base.contentful: specced, docs/specs/nodes/n8n-nodes-base.contentful.m
 n8n-nodes-base.customerIoTool: specced, docs/specs/nodes/n8n-nodes-base.customerIoTool.md
 n8n-nodes-base.customerIoTrigger: specced, docs/specs/nodes/n8n-nodes-base.customerIoTrigger.md
 n8n-nodes-base.googleFirebaseCloudFirestoreTool: specced, docs/specs/nodes/n8n-nodes-base.googleFirebaseCloudFirestoreTool.md
+n8n-nodes-base.googleFirebaseRealtimeDatabase: specced, docs/specs/nodes/n8n-nodes-base.googleFirebaseRealtimeDatabase.md
 1: 1: 1: 1: 1: 1: 1: n8n-nodes-base.circleCi: specced, docs/specs/nodes/n8n-nodes-base.circleCi.md
 2: 2: 2: 2: 2: 2: 2: n8n-edges.base.circleCi: specced, docs/specs/nodes/n8n-edges.base.circleCi.md
 3: 3: 3: 3: 3: 3: 3: n8n-nodes-base.salesforce: specced, docs/specs/nodes/n8n-nodes-base.salesforce.md
@@ -37,7 +38,9 @@ n8n-nodes-base.highLevelTool: specced, docs/specs/nodes/n8n-nodes-base.highLevel
 27: 27: 27: 27: 27: 27: 27: n8n-nodes-base.gSuiteAdminTool: specced, docs/specs/nodes/n8n-nodes-base.gSuiteAdminTool.md
 n8n-nodes-base.gong: specced, docs/specs/nodes/n8n-nodes-base.gong.md
 n8n-nodes-base.gongTool: specced, docs/specs/nodes/n8n-nodes-base.gongTool.md
+n8n-nodes-base.grafanaTool: specced, docs/specs/nodes/n8n-nodes-base.grafanaTool.md
 n8n-nodes-base.gotify: specced, docs/specs/nodes/n8n-nodes-base.gotify.md
+n8n-nodes-base.gotifyTool: specced, docs/specs/nodes/n8n-nodes-base.gotifyTool.md
 n8n-nodes-base.goToWebinar: specced, docs/specs/nodes/n8n-nodes-base.goToWebinar.md
 28: 28: 28: 28: 28: 28: 28: n8n-nodes-base.baserow: specced, docs/specs/nodes/n8n-nodes-base.baserow.md
 29: 29: 29: 29: 29: 29: 29: n8n-nodes-base.microsoftOneDrive: specced, docs/specs/nodes/n8n-nodes-base.microsoftOneDrive.md
@@ -191,6 +194,7 @@ n8n-nodes-base.hackerNewsTool: specced, docs/specs/nodes/n8n-nodes-base.hackerNe
 n8n-nodes-base.hunterTool: specced, docs/specs/nodes/n8n-nodes-base.hunterTool.md
 @n8n/n8n-nodes-langchain.ollama: specced, docs/specs/nodes/@n8n/n8n-nodes-langchain.ollama.md
 @n8n/n8n-nodes-langchain.anthropic: specced, docs/specs/nodes/@n8n/n8n-nodes-langchain.anthropic.md
+n8n-nodes-base.googlePerspective: specced, docs/specs/nodes/n8n-nodes-base.googlePerspective.md
 n8n-nodes-base.googleCustomSearch: specced, docs/specs/nodes/n8n-nodes-base.googleCustomSearch.md
 n8n-nodes-base.clearbit: specced, docs/specs/nodes/n8n-nodes-base.clearbit.md
 n8n-nodes-base.clearbitTool: specced, docs/specs/nodes/n8n-nodes-base.clearbitTool.md
@@ -327,6 +331,9 @@ n8n-nodes-base.webSearch: specced, docs/specs/nodes/n8n-nodes-base.webSearch.md
 n8n-nodes-base.whatsAppTool: specced, docs/specs/nodes/n8n-nodes-base.whatsAppTool.md
 n8n-nodes-base.zulip: implemented, docs/specs/nodes/n8n-nodes-base.zulip.md
 n8n-nodes-base.bubbleTool: specced, docs/specs/nodes/n8n-nodes-base.bubbleTool.md
+n8n-nodes-base.googleTranslate: specced, docs/specs/nodes/n8n-nodes-base.googleTranslate.md
+n8n-nodes-base.graphql: specced, docs/specs/nodes/n8n-nodes-base.graphqlTool.md
+n8n-nodes-base.googleSearchConsole: specced, docs/specs/nodes/n8n-nodes-base.googleSearchConsole.md
 @n8n/n8n-nodes-langchain.anthropicTool: specced, docs/specs/nodes/@n8n/n8n-nodes-langchain.anthropicTool.md
 @n8n/n8n-nodes-langchain.embeddingsAwsBedrock: specced, docs/specs/nodes/@n8n/n8n-nodes-langchain.embeddingsAwsBedrock.md
 @n8n/n8n-nodes-langchain.googleGeminiTool: specced, docs/specs/nodes/@n8n/n8n-nodes-langchain.googleGeminiTool.md
@@ -359,4 +366,6 @@ n8n-nodes-base.elevenLabs: specced, docs/specs/nodes/n8n-nodes-base.elevenLabs.m
 n8n-nodes-base.emelia: specced, docs/specs/nodes/n8n-nodes-base.emelia.md
 n8n-nodes-base.emeliaTrigger: specced, docs/specs/nodes/n8n-nodes-base.emeliaTrigger.md
 n8n-nodes-base.flowTrigger: specced, docs/specs/nodes/n8n-nodes-base.flowTrigger.md
+n8n-nodes-base.googlePageSpeedInsights: specced, docs/specs/nodes/n8n-nodes-base.googlePageSpeedInsights.md
 n8n-nodes-base.googleCloudStorageTool: specced, docs/specs/nodes/n8n-nodes-base.googleCloudStorageTool.md
+n8n-nodes-base.googleTranslateTool: specced, docs/specs/nodes/n8n-nodes-base.googleTranslateTool.md
