@@ -6,6 +6,7 @@ import {
   Download,
   KeyRound,
   LayoutGrid,
+  MoreHorizontal,
   Redo2,
   Save,
   Share2,
@@ -25,12 +26,20 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { MigrationReportDialog } from "./MigrationReport";
 import { ImportCredentialsDialog } from "@/components/credentials";
 import { ShareDialog } from "@/components/share/share-dialog";
 import { projectHeaders } from "@/lib/projects/client";
 import type { IWorkflow } from "@/lib/workflow/types";
 import { EnvironmentSwitcher } from "./EnvironmentSwitcher";
+import { cn } from "@/lib/utils";
 
 export function EditorTopBar({ actions }: { actions?: React.ReactNode }) {
   const workflow = useWorkflowStore((s) => s.workflow);
@@ -108,6 +117,54 @@ export function EditorTopBar({ actions }: { actions?: React.ReactNode }) {
     toast.success("Workflow imported");
   };
 
+  const handleSave = () => {
+    void persist();
+    toast.success("Workflow saved");
+  };
+
+  const secondaryItems = (
+    <>
+      <DropdownMenuItem onClick={() => commit((wf) => autoLayout(wf))}>
+        <LayoutGrid className="mr-2 size-4" /> Tidy
+      </DropdownMenuItem>
+      <DropdownMenuSeparator />
+      <DropdownMenuItem onClick={() => fileInput.current?.click()}>
+        <Upload className="mr-2 size-4" /> Import
+      </DropdownMenuItem>
+      <DropdownMenuItem onClick={handleExport}>
+        <Download className="mr-2 size-4" /> Export
+      </DropdownMenuItem>
+      <DropdownMenuItem onClick={() => setReportOpen(true)}>
+        <Check className="mr-2 size-4" /> Report
+      </DropdownMenuItem>
+      <DropdownMenuItem onClick={() => setCredsOpen(true)}>
+        <KeyRound className="mr-2 size-4" /> Credentials
+        {missingCount > 0 && (
+          <span className="ml-auto rounded bg-destructive/15 px-1.5 py-0.5 text-[10px] font-medium text-destructive">
+            {missingCount}
+          </span>
+        )}
+      </DropdownMenuItem>
+      <DropdownMenuItem onClick={() => setShareOpen(true)}>
+        <Share2 className="mr-2 size-4" /> Share
+      </DropdownMenuItem>
+      <DropdownMenuSeparator />
+      <DropdownMenuItem asChild>
+        <Link to="/credentials">Vault</Link>
+      </DropdownMenuItem>
+      <DropdownMenuItem asChild>
+        <Link to="/variables">
+          <Braces className="mr-2 size-4" /> Vars
+        </Link>
+      </DropdownMenuItem>
+      <DropdownMenuItem asChild>
+        <Link to="/data-tables">
+          <Table2 className="mr-2 size-4" /> Tables
+        </Link>
+      </DropdownMenuItem>
+    </>
+  );
+
   return (
     <header className="flex h-14 shrink-0 items-center gap-2 border-b border-border bg-sidebar px-3">
       <Link to="/" className="flex items-center gap-2 pr-2 text-primary" aria-label="All workflows">
@@ -120,30 +177,97 @@ export function EditorTopBar({ actions }: { actions?: React.ReactNode }) {
       <Input
         value={workflow.name}
         onChange={(e) => setName(e.target.value)}
-        className="h-9 w-56 border-transparent bg-transparent text-[14px] font-medium hover:border-border focus:border-border"
+        className="h-9 min-w-0 w-32 border-transparent bg-transparent text-[14px] font-medium hover:border-border focus:border-border sm:w-44 md:w-56"
       />
 
-      <span className="font-mono text-[11px] text-muted-foreground">
-        {dirty ? "unsaved" : "saved"}
-      </span>
-
-      <div className="ml-auto flex items-center gap-1">
-        <Button variant="ghost" size="icon" className="size-8" onClick={undo} aria-label="Undo">
+      <div className="ml-auto flex min-w-0 items-center gap-1">
+        <Button variant="ghost" size="icon" className="size-8 shrink-0" onClick={undo} aria-label="Undo">
           <Undo2 className="size-4" />
         </Button>
-        <Button variant="ghost" size="icon" className="size-8" onClick={redo} aria-label="Redo">
+        <Button variant="ghost" size="icon" className="size-8 shrink-0" onClick={redo} aria-label="Redo">
           <Redo2 className="size-4" />
         </Button>
-        <Button
-          variant="ghost"
-          size="sm"
-          className="h-8 text-[12px]"
-          onClick={() => commit((wf) => autoLayout(wf))}
-        >
-          <LayoutGrid className="mr-1 size-4" /> Tidy
-        </Button>
 
-        <span className="mx-1 h-5 w-px bg-border" />
+        <div className="hidden items-center gap-1 xl:flex">
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-8 text-[12px]"
+            onClick={() => commit((wf) => autoLayout(wf))}
+          >
+            <LayoutGrid className="mr-1 size-4" /> Tidy
+          </Button>
+          <span className="mx-1 h-5 w-px bg-border" />
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-8 text-[12px]"
+            onClick={() => fileInput.current?.click()}
+          >
+            <Upload className="mr-1 size-4" /> Import
+          </Button>
+          <Button variant="ghost" size="sm" className="h-8 text-[12px]" onClick={handleExport}>
+            <Download className="mr-1 size-4" /> Export
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-8 text-[12px]"
+            onClick={() => setReportOpen(true)}
+          >
+            <Check className="mr-1 size-4" /> Report
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-8 text-[12px]"
+            onClick={() => setCredsOpen(true)}
+          >
+            <KeyRound className="mr-1 size-4" /> Credentials
+            {missingCount > 0 && (
+              <span className="ml-1 rounded bg-destructive/15 px-1.5 py-0.5 text-[10px] font-medium text-destructive">
+                {missingCount}
+              </span>
+            )}
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-8 text-[12px]"
+            onClick={() => setShareOpen(true)}
+          >
+            <Share2 className="mr-1 size-4" /> Share
+          </Button>
+          <Button variant="ghost" size="sm" className="h-8 text-[12px]" asChild>
+            <Link to="/credentials">Vault</Link>
+          </Button>
+          <Button variant="ghost" size="sm" className="h-8 text-[12px]" asChild>
+            <Link to="/variables">
+              <Braces className="mr-1 size-4" /> Vars
+            </Link>
+          </Button>
+          <Button variant="ghost" size="sm" className="h-8 text-[12px]" asChild>
+            <Link to="/data-tables">
+              <Table2 className="mr-1 size-4" /> Tables
+            </Link>
+          </Button>
+        </div>
+
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="size-8 shrink-0 xl:hidden"
+              aria-label="More actions"
+            >
+              <MoreHorizontal className="size-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-52">
+            {secondaryItems}
+          </DropdownMenuContent>
+        </DropdownMenu>
 
         <input
           ref={fileInput}
@@ -156,82 +280,38 @@ export function EditorTopBar({ actions }: { actions?: React.ReactNode }) {
             e.target.value = "";
           }}
         />
-        <Button
-          variant="ghost"
-          size="sm"
-          className="h-8 text-[12px]"
-          onClick={() => fileInput.current?.click()}
-        >
-          <Upload className="mr-1 size-4" /> Import
-        </Button>
-        <Button variant="ghost" size="sm" className="h-8 text-[12px]" onClick={handleExport}>
-          <Download className="mr-1 size-4" /> Export
-        </Button>
-        <Button
-          variant="ghost"
-          size="sm"
-          className="h-8 text-[12px]"
-          onClick={() => setReportOpen(true)}
-        >
-          <Check className="mr-1 size-4" /> Report
-        </Button>
-        <Button
-          variant="ghost"
-          size="sm"
-          className="h-8 text-[12px]"
-          onClick={() => setCredsOpen(true)}
-        >
-          <KeyRound className="mr-1 size-4" /> Credentials
-          {missingCount > 0 && (
-            <span className="ml-1 rounded bg-destructive/15 px-1.5 py-0.5 text-[10px] font-medium text-destructive">
-              {missingCount}
-            </span>
-          )}
-        </Button>
-        <Button
-          variant="ghost"
-          size="sm"
-          className="h-8 text-[12px]"
-          onClick={() => setShareOpen(true)}
-        >
-          <Share2 className="mr-1 size-4" /> Share
-        </Button>
-        <Button variant="ghost" size="sm" className="h-8 text-[12px]" asChild>
-          <Link to="/credentials">Vault</Link>
-        </Button>
-        <Button variant="ghost" size="sm" className="h-8 text-[12px]" asChild>
-          <Link to="/variables">
-            <Braces className="mr-1 size-4" /> Vars
-          </Link>
-        </Button>
-        <Button variant="ghost" size="sm" className="h-8 text-[12px]" asChild>
-          <Link to="/data-tables">
-            <Table2 className="mr-1 size-4" /> Tables
-          </Link>
-        </Button>
 
-        <span className="mx-1 h-5 w-px bg-border" />
+        <span className="mx-1 hidden h-5 w-px bg-border sm:block" />
 
-        <EnvironmentSwitcher />
+        <div className="hidden sm:block">
+          <EnvironmentSwitcher />
+        </div>
 
-        <span className="mx-1 h-5 w-px bg-border" />
+        <span className="mx-1 hidden h-5 w-px bg-border md:block" />
 
         {actions}
 
-        <label className="flex items-center gap-2 pr-1 text-[12px] text-muted-foreground">
-          Active
+        <label className="flex items-center gap-1.5 pr-0.5 text-[11px] text-muted-foreground sm:gap-2 sm:pr-1 sm:text-[12px]">
+          <span className="hidden xs:inline sm:inline">Active</span>
           <Switch checked={workflow.active} onCheckedChange={handleActiveChange} />
         </label>
 
         <Button
           size="sm"
-          className="h-8 text-[12px]"
-          onClick={() => {
-            void persist();
-            toast.success("Workflow saved");
-          }}
+          variant={dirty ? "default" : "outline"}
+          className={cn("h-8 shrink-0 text-[12px]", !dirty && "text-muted-foreground")}
+          disabled={!dirty}
+          onClick={handleSave}
         >
-          <Save className="mr-1 size-4" /> Save
+          {dirty ? (
+            <>
+              <Save className="mr-1 size-4" /> Save
+            </>
+          ) : (
+            <>
+              <Check className="mr-1 size-4" /> Saved
+            </>
+          )}
         </Button>
       </div>
 
