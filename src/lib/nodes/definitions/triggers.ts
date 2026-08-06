@@ -539,14 +539,15 @@ export const formTrigger: INodeTypeDescription = {
       description: "Custom slug appended to /form/. Replaces the auto-generated UUID when set.",
     },
     {
-      displayName: "Form Elements",
-      name: "formElements",
+      displayName: "Form Fields",
+      name: "formFields",
       type: "fixedCollection",
       default: {},
       typeOptions: { multipleValues: true },
       noDataExpression: true,
       required: true,
-      description: "Ordered list of form fields.",
+      description:
+        "Ordered list of form fields (n8n wire key formFields; formElements still accepted at runtime).",
       options: [
         {
           name: "values",
@@ -564,8 +565,8 @@ export const formTrigger: INodeTypeDescription = {
               name: "fieldName",
               type: "string",
               default: "",
-              required: true,
-              description: "Key used for this field's value in the node output.",
+              description:
+                "Key used for this field's value in the node output. Defaults from the label when empty.",
             },
             {
               displayName: "Element Type",
@@ -630,6 +631,7 @@ export const formTrigger: INodeTypeDescription = {
       options: [
         { name: "Form Is Submitted", value: "formSubmitted" },
         { name: "Workflow Finishes", value: "workflowFinishes" },
+        { name: "Last Node (n8n alias)", value: "lastNode" },
       ],
     },
     {

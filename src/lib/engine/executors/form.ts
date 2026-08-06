@@ -1,16 +1,6 @@
 import type { NodeExecutor } from "@/sdk";
 import { withPairedItem } from "@/sdk";
-
-interface FormField {
-  fieldLabel?: string;
-  fieldName?: string;
-  fieldType?: string;
-  defaultValue?: unknown;
-  fieldValue?: unknown;
-  requiredField?: boolean;
-  placeholder?: string;
-  [key: string]: unknown;
-}
+import { parseFormElements } from "@/lib/forms/path";
 
 export const formExecutor: NodeExecutor = async (ctx) => {
   const items = ctx.getInputItems(0);
@@ -21,8 +11,8 @@ export const formExecutor: NodeExecutor = async (ctx) => {
     return [items.map((item, idx) => withPairedItem(item, idx))];
   }
 
-  const formFieldsRaw = ctx.getParam<FormField[] | { values?: FormField[] }>("formFields", []);
-  const fields = extractFormFields(formFieldsRaw);
+  const formFieldsRaw = ctx.getParam<unknown>("formFields", []);
+  const fields = parseFormElements(formFieldsRaw);
 
   if (items.length === 0) return [[{ json: {} }]];
 
@@ -33,7 +23,7 @@ export const formExecutor: NodeExecutor = async (ctx) => {
         const name = f.fieldName;
         if (!name) continue;
         if (name in json) continue;
-        if (f.fieldType === "hiddenField" && f.fieldValue !== undefined) {
+        if (f.elementType === "hidden" && f.fieldValue !== undefined) {
           json[name] = f.fieldValue;
         } else if (f.defaultValue !== undefined) {
           json[name] = f.defaultValue;
@@ -43,12 +33,3 @@ export const formExecutor: NodeExecutor = async (ctx) => {
     }),
   ];
 };
-
-function extractFormFields(raw: unknown): FormField[] {
-  if (Array.isArray(raw)) return raw as FormField[];
-  if (raw && typeof raw === "object") {
-    const r = raw as { values?: FormField[] };
-    if (r.values && Array.isArray(r.values)) return r.values;
-  }
-  return [];
-}
