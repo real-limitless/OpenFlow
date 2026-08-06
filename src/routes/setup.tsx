@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { OpenFlowLogo } from "@/components/brand/openflow-logo";
-import { fetchSetupStatus, register } from "@/lib/auth/client";
+import { apiFetch, fetchSetupStatus, register } from "@/lib/auth/client";
 
 export const Route = createFileRoute("/setup")({
   head: () => ({ meta: [{ title: "Create owner — OpenFlow" }] }),
@@ -16,6 +16,7 @@ function SetupPage() {
   const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [loadTemplates, setLoadTemplates] = useState(true);
   const [busy, setBusy] = useState(false);
   const [checking, setChecking] = useState(true);
 
@@ -47,7 +48,24 @@ function SetupPage() {
       } else {
         toast.success("Owner account created");
       }
-      navigate({ to: "/" });
+      if (loadTemplates) {
+        try {
+          const res = await apiFetch("/api/v1/template-sources/sync", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ sourceId: "n8n-community" }),
+          });
+          if (res.ok) {
+            toast.message("Loading template library in the background", {
+              description:
+                "Default: github.com/real-limitless/n8n-workflow-library — open Templates when ready.",
+            });
+          }
+        } catch {
+          /* non-fatal */
+        }
+      }
+      navigate({ to: loadTemplates ? "/templates" : "/" });
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Setup failed");
     } finally {
@@ -103,6 +121,25 @@ function SetupPage() {
             onChange={(e) => setPassword(e.target.value)}
           />
         </div>
+        <label className="flex cursor-pointer items-start gap-2 rounded-md border border-border p-3 text-[12px] leading-snug">
+          <input
+            type="checkbox"
+            className="mt-0.5"
+            checked={loadTemplates}
+            onChange={(e) => setLoadTemplates(e.target.checked)}
+          />
+          <span>
+            <span className="font-medium text-foreground">
+              Load community templates
+            </span>
+            <span className="mt-0.5 block text-muted-foreground">
+              Sync{" "}
+              <span className="text-foreground">n8n-workflow-library</span> into
+              the marketplace after setup. You can add more repos later under
+              Settings → Templates.
+            </span>
+          </span>
+        </label>
         <Button type="submit" className="w-full" disabled={busy}>
           {busy ? "Creating…" : "Create owner account"}
         </Button>

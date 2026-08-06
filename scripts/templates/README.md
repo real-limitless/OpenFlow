@@ -56,7 +56,13 @@ export OPENFLOW_TEMPLATE_SOURCES='[{"id":"acme","name":"Acme","url":"https://git
 }
 ```
 
-## Sync
+## In the UI
+
+- **Marketplace** (`/templates`) — empty state offers **Load n8n-workflow-library**
+- **Settings → Templates** — add/remove git repos, enable/disable, sync
+- **First-time setup** (`/setup`) — optional “Load community templates” checkbox
+
+## Sync (CLI)
 
 ```bash
 export DATABASE_URL=…
@@ -68,6 +74,8 @@ npm run templates:sync -- --source n8n-community
 # dry-run / limit
 npm run templates:sync -- --dry-run --limit 20 --no-clone
 ```
+
+`npm run setup` also seeds the default library unless `OPENFLOW_SKIP_TEMPLATE_SYNC=1`.
 
 Clones land in `vendor/template-sources/{sourceId}/` (gitignored).  
 Sibling checkout `../n8n-workflow-library` is auto-detected for the default id.

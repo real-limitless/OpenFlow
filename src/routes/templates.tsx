@@ -1,10 +1,12 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useCallback, useEffect, useState } from "react";
 import { Search, Store, ChevronLeft, ChevronRight } from "lucide-react";
+import { toast } from "sonner";
 import { PageShell } from "@/components/layout/page-shell";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { TemplateCard } from "@/components/templates/template-card";
+import { apiFetch } from "@/lib/auth/client";
 import {
   fetchTemplateFacets,
   fetchTemplates,
@@ -60,23 +62,30 @@ function TemplatesMarketplace() {
   const [categories, setCategories] = useState<Array<{ name: string; count: number }>>([]);
   const [sources, setSources] = useState<Array<{ id: string; name: string; count: number }>>([]);
   const [error, setError] = useState<string | null>(null);
+  const [catalogEmpty, setCatalogEmpty] = useState(false);
+  const [syncing, setSyncing] = useState(false);
   const pageSize = 24;
 
   useEffect(() => {
     setQInput(search.q ?? "");
   }, [search.q]);
 
-  useEffect(() => {
+  const refreshFacets = useCallback(() => {
     void fetchTemplateFacets()
       .then((f) => {
         setCategories(f.categories.slice(0, 24));
         setSources(f.sources ?? []);
+        setCatalogEmpty(f.total === 0);
       })
       .catch(() => {
         setCategories([]);
         setSources([]);
       });
   }, []);
+
+  useEffect(() => {
+    refreshFacets();
+  }, [refreshFacets]);
 
   const load = useCallback(() => {
     setItems(null);
@@ -93,6 +102,11 @@ function TemplatesMarketplace() {
       .then((res) => {
         setItems(res.items);
         setTotal(res.total);
+        if (res.total === 0 && !search.q && !search.category && !search.source) {
+          setCatalogEmpty(true);
+        } else if (res.total > 0) {
+          setCatalogEmpty(false);
+        }
       })
       .catch((e: Error) => {
         setError(e.message);
@@ -103,6 +117,58 @@ function TemplatesMarketplace() {
   useEffect(() => {
     load();
   }, [load]);
+
+  useEffect(() => {
+    if (!syncing) return;
+    const t = setInterval(() => {
+      void (async () => {
+        const res = await fetch("/api/v1/template-sources/status", {
+          credentials: "include",
+        });
+        if (!res.ok) return;
+        const st = (await res.json()) as {
+          templateCount: number;
+          sync: { running: boolean; error: string | null };
+        };
+        if (st.templateCount > 0) {
+          setCatalogEmpty(false);
+          load();
+          refreshFacets();
+        }
+        if (!st.sync.running) {
+          setSyncing(false);
+          if (st.sync.error) toast.error(st.sync.error);
+          else toast.success("Template library sync finished");
+          load();
+          refreshFacets();
+        }
+      })();
+    }, 2500);
+    return () => clearInterval(t);
+  }, [syncing, load, refreshFacets]);
+
+  const loadDefaultLibrary = async () => {
+    setSyncing(true);
+    try {
+      const res = await apiFetch("/api/v1/template-sources/sync", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ sourceId: "n8n-community" }),
+      });
+      const body = (await res.json().catch(() => ({}))) as { error?: string };
+      if (res.status === 409) {
+        toast.message("Sync already running");
+        return;
+      }
+      if (!res.ok) {
+        throw new Error(body.error ?? `Sync failed (${res.status})`);
+      }
+      toast.success("Downloading n8n-workflow-library… this may take a few minutes");
+    } catch (e) {
+      setSyncing(false);
+      toast.error(e instanceof Error ? e.message : "Could not start sync");
+    }
+  };
 
   const setSearch = (patch: {
     q?: string | undefined;
@@ -149,14 +215,30 @@ function TemplatesMarketplace() {
           </div>
           <h1 className="text-3xl font-semibold tracking-tight">Templates</h1>
           <p className="mt-1.5 max-w-xl text-[14px] text-muted-foreground">
-            Browse workflows from configured template libraries (default: n8n
-            community pack). Compatibility badges show how many nodes OpenFlow
-            already supports.
+            Browse workflows from template libraries. Default pack:{" "}
+            <a
+              href="https://github.com/real-limitless/n8n-workflow-library"
+              target="_blank"
+              rel="noreferrer"
+              className="text-primary hover:underline"
+            >
+              real-limitless/n8n-workflow-library
+            </a>
+            . Add more under{" "}
+            <Link to="/settings/templates" className="text-primary hover:underline">
+              Settings → Templates
+            </Link>
+            .
           </p>
         </div>
-        <p className="text-[12px] text-muted-foreground">
-          {total > 0 ? `${total.toLocaleString()} templates` : "—"}
-        </p>
+        <div className="flex flex-col items-end gap-2">
+          <p className="text-[12px] text-muted-foreground">
+            {total > 0 ? `${total.toLocaleString()} templates` : "—"}
+          </p>
+          <Button variant="outline" size="sm" asChild>
+            <Link to="/settings/templates">Manage libraries</Link>
+          </Button>
+        </div>
       </div>
 
       <form
@@ -280,14 +362,43 @@ function TemplatesMarketplace() {
       )}
 
       {items && items.length === 0 && !error && (
-        <div className="mt-16 text-center text-sm text-muted-foreground">
-          <p>No templates match your filters.</p>
-          <p className="mt-2">
-            Configure sources in{" "}
-            <code className="rounded bg-muted px-1">config/template-sources.json</code>{" "}
-            then run{" "}
-            <code className="rounded bg-muted px-1">npm run templates:sync</code>
-          </p>
+        <div className="mt-16 flex flex-col items-center gap-4 text-center text-sm text-muted-foreground">
+          {catalogEmpty && !search.q && !search.category && !search.source ? (
+            <>
+              <p className="max-w-md text-[14px] text-foreground">
+                No templates loaded yet. Sync the default community library to
+                populate the marketplace.
+              </p>
+              <Button
+                type="button"
+                disabled={syncing}
+                onClick={() => void loadDefaultLibrary()}
+              >
+                {syncing
+                  ? "Syncing library…"
+                  : "Load n8n-workflow-library"}
+              </Button>
+              <p className="max-w-sm text-[12px]">
+                Or add other git repos anytime in{" "}
+                <Link to="/settings/templates" className="text-primary hover:underline">
+                  Settings → Templates
+                </Link>
+                . CLI:{" "}
+                <code className="rounded bg-muted px-1">npm run templates:sync</code>
+              </p>
+            </>
+          ) : (
+            <>
+              <p>No templates match your filters.</p>
+              <Button type="button" variant="outline" onClick={() => setSearch({
+                q: undefined,
+                category: undefined,
+                source: undefined,
+              })}>
+                Clear filters
+              </Button>
+            </>
+          )}
         </div>
       )}
 

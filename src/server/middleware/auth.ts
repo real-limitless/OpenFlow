@@ -11,10 +11,11 @@ export type AppEnv = { Variables: { userId: string } };
 
 const EXEMPT_PATHS = ["/health", "/api/v1/auth", "/api/v1/setup", "/webhook", "/form"];
 
-/** Public template marketplace reads (import still requires auth). */
+/** Public template marketplace reads (import/sync still require auth). */
 function isPublicTemplateGet(method: string, path: string): boolean {
   if (method !== "GET") return false;
   if (path === "/api/v1/templates" || path === "/api/v1/templates/facets") return true;
+  if (path === "/api/v1/template-sources/status") return true;
   // /api/v1/templates/:id or /api/v1/templates/:id/workflow
   const m = path.match(/^\/api\/v1\/templates\/([^/]+)(?:\/workflow)?$/);
   if (!m) return false;

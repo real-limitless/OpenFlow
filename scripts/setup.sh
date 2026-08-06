@@ -108,11 +108,37 @@ info "Applying migrations…"
 npx prisma migrate deploy
 ok "Migrations applied"
 
+# ── templates (optional; default library) ─────────────────
+# OPENFLOW_SKIP_TEMPLATE_SYNC=1 skips network clone of n8n-workflow-library
+if [[ "${OPENFLOW_SKIP_TEMPLATE_SYNC:-}" != "1" ]]; then
+  info "Seeding template marketplace from n8n-workflow-library (default source)…"
+  info "  (set OPENFLOW_SKIP_TEMPLATE_SYNC=1 to skip; add more repos later in Settings → Templates)"
+  set +e
+  # shellcheck disable=SC1091
+  if [[ -f .env ]]; then
+    set -a
+    # shellcheck disable=SC1091
+    source .env
+    set +a
+  fi
+  npx tsx scripts/templates/sync-from-library.ts --source n8n-community
+  sync_rc=$?
+  set -e
+  if [[ $sync_rc -eq 0 ]]; then
+    ok "Template library synced"
+  else
+    warn "Template sync skipped or failed (network/git). Run later: npm run templates:sync"
+  fi
+else
+  info "Skipping template sync (OPENFLOW_SKIP_TEMPLATE_SYNC=1)"
+fi
+
 echo ""
 echo -e "${GREEN}${BOLD}Setup complete.${NC}"
 echo ""
 echo -e "  Start the app:   ${BOLD}npm run dev${NC}"
 echo -e "  Open:            ${BOLD}http://localhost:3000${NC}"
+echo -e "  Templates:       ${BOLD}http://localhost:3000/templates${NC}"
 echo -e "  Full stack:      ${BOLD}docker compose up -d${NC}"
 echo -e "  Menu:            ${BOLD}npm run tui${NC}"
 echo ""
@@ -120,7 +146,9 @@ echo -e "${BOLD}Next steps${NC}"
 echo -e "  1. Run ${BOLD}npm run dev${NC} and open the UI"
 echo -e "  2. Choose ${BOLD}Run sample workflow${NC} on the home page"
 echo -e "  3. Click ${BOLD}Execute${NC} for your first successful run"
+echo -e "  4. Browse ${BOLD}/templates${NC} or add libraries in ${BOLD}Settings → Templates${NC}"
 echo ""
 echo -e "${DIM}Auth is disabled by default (AUTH_DISABLED=true). Not for public internet.${NC}"
 echo -e "${DIM}For auth-on local prod: set AUTH_DISABLED=false — first open uses /setup for the owner account.${NC}"
+echo -e "${DIM}Default template pack: https://github.com/real-limitless/n8n-workflow-library${NC}"
 echo ""
