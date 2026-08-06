@@ -37,6 +37,8 @@ export function startWorker(concurrency = 5): Worker<ExecutionJobData> {
         projectId: jobProjectId,
         environmentId: jobEnvironmentId,
         startNode: jobStartNode,
+        destinationNode: jobDestinationNode,
+        stopBeforeDestination: jobStopBefore,
       } = job.data;
 
       const wlog = log.child({
@@ -109,6 +111,8 @@ export function startWorker(concurrency = 5): Worker<ExecutionJobData> {
         dataTables,
         vars,
         startNode: jobStartNode,
+        destinationNode: jobDestinationNode,
+        stopBeforeDestination: jobStopBefore !== false,
         resolveSubWorkflow: resolveSubWorkflowFromDb,
         onProgress: async (partial) => {
           await prisma.execution.update({

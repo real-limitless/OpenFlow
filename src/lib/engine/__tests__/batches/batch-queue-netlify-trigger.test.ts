@@ -83,6 +83,7 @@ describe("batch-queue netlifyTrigger — n8n-nodes-base.netlifyTrigger", () => {
   });
 
   it("feeds NoOp downstream when webhook payload is injected via input items", async () => {
+    const payload = { id: "deploy-1", state: "ready", name: "prod" };
     const wf = makeWorkflow(
       [
         makeNode({
@@ -96,8 +97,11 @@ describe("batch-queue netlifyTrigger — n8n-nodes-base.netlifyTrigger", () => {
       ],
       { "Netlify Trigger": { main: [[{ node: "No Operation", type: "main", index: 0 }]] } },
     );
-    const result = await runWorkflowFixture(wf);
+    const result = await runWorkflowFixture(wf, {
+      pinData: { "Netlify Trigger": [{ json: payload }] },
+    });
     expect(result.success).toBe(true);
     expect(result.runData["No Operation"]?.status).toBe("success");
+    expect(result.runData["No Operation"]?.items?.[0][0].json).toEqual(payload);
   });
 });

@@ -109,8 +109,11 @@ describe("batch-queue errorTrigger — n8n-nodes-base.errorTrigger", () => {
       ],
       { "Error Trigger": { main: [[{ node: "No Operation", type: "main", index: 0 }]] } },
     );
-    const result = await runWorkflowFixture(wf);
+    const result = await runWorkflowFixture(wf, {
+      pinData: { "Error Trigger": [{ json: SHAPE_A }] },
+    });
     expect(result.success).toBe(true);
     expect(result.runData["No Operation"]?.status).toBe("success");
+    expect(result.runData["No Operation"]?.items?.[0][0].json).toEqual(SHAPE_A);
   });
 });

@@ -147,6 +147,31 @@ export function nodesReachableFrom(
 }
 
 /**
+ * All ancestors of `target` via main (and other) incoming edges, optionally
+ * including the target itself.
+ */
+export function nodesLeadingTo(
+  incoming: Map<string, IncomingEdge[]>,
+  target: string,
+  opts?: { includeTarget?: boolean },
+): Set<string> {
+  const visited = new Set<string>();
+  const queue = [target];
+  while (queue.length > 0) {
+    const n = queue.shift()!;
+    if (visited.has(n)) continue;
+    visited.add(n);
+    for (const edge of incoming.get(n) ?? []) {
+      if (!visited.has(edge.source)) queue.push(edge.source);
+    }
+  }
+  if (opts?.includeTarget === false) {
+    visited.delete(target);
+  }
+  return visited;
+}
+
+/**
  * Grow `reachable` to include the sub-nodes the reachable nodes depend on.
  *
  * Sub-nodes (a chat model, a tool, a memory) attach to their parent over a

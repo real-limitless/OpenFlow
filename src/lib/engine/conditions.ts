@@ -1,4 +1,5 @@
 import { evaluateExpression } from "../expressions/evaluate";
+import type { ExpressionContext } from "../expressions/evaluate";
 
 export interface ConditionRow {
   leftValue?: unknown;
@@ -9,13 +10,26 @@ export interface ConditionRow {
   value2?: unknown;
 }
 
+export type ConditionExprExtras = Pick<
+  ExpressionContext,
+  "vars" | "env" | "nodeData" | "allItems" | "envAllowlist"
+>;
+
 export function resolveConditionValue(
   raw: unknown,
   itemJson: Record<string, unknown>,
+  extras?: ConditionExprExtras,
 ): unknown {
   if (typeof raw !== "string") return raw;
   if (raw.startsWith("{{") || raw.startsWith("=")) {
-    const result = evaluateExpression(raw, { json: itemJson });
+    const result = evaluateExpression(raw, {
+      json: itemJson,
+      vars: extras?.vars,
+      env: extras?.env,
+      nodeData: extras?.nodeData,
+      allItems: extras?.allItems,
+      envAllowlist: extras?.envAllowlist,
+    });
     return result.ok ? result.value : raw;
   }
   return raw;
@@ -190,9 +204,10 @@ export function evaluateConditionRow(
   row: ConditionRow,
   itemJson: Record<string, unknown>,
   ignoreCase: boolean,
+  extras?: ConditionExprExtras,
 ): boolean {
-  const left = resolveConditionValue(row.leftValue ?? row.value1, itemJson);
-  const right = resolveConditionValue(row.rightValue ?? row.value2, itemJson);
+  const left = resolveConditionValue(row.leftValue ?? row.value1, itemJson, extras);
+  const right = resolveConditionValue(row.rightValue ?? row.value2, itemJson, extras);
   const op = normalizeOperator(row.operator ?? row.operation);
   return evaluateCondition(left, right, op, ignoreCase);
 }

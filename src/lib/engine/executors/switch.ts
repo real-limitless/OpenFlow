@@ -32,6 +32,7 @@ function evalRuleConditions(
   rule: RoutingRule,
   itemJson: Record<string, unknown>,
   ignoreCase: boolean,
+  extras?: Parameters<typeof evaluateConditionRow>[3],
 ): boolean {
   const container = rule.conditions;
   let rows: ConditionRow[] = [];
@@ -53,7 +54,7 @@ function evalRuleConditions(
 
   if (rows.length === 0) return false;
 
-  const results = rows.map((row) => evaluateConditionRow(row, itemJson, ignoreCase));
+  const results = rows.map((row) => evaluateConditionRow(row, itemJson, ignoreCase, extras));
   return combineConditionResults(results, combinator);
 }
 
@@ -63,6 +64,14 @@ export const switchExecutor: NodeExecutor = async (ctx, node) => {
   const options = (node.parameters.options as Record<string, unknown>) ?? {};
   const ignoreCase = options.ignoreCase !== false;
   const allMatchingOutputs = options.allMatchingOutputs === true;
+
+  const exprExtras = {
+    vars: ctx.vars,
+    env:
+      typeof process !== "undefined"
+        ? (process.env as Record<string, string>)
+        : undefined,
+  };
 
   const fallbackOutput = String(
     node.parameters.fallbackOutput ?? options.fallbackOutput ?? "none",
@@ -74,7 +83,7 @@ export const switchExecutor: NodeExecutor = async (ctx, node) => {
     const outputs: INodeExecutionData[][] = Array.from({ length: numberOutputs }, () => []);
 
     for (const item of inputItems) {
-      const result = evaluateExpression(outputExpr, { json: item.json });
+      const result = evaluateExpression(outputExpr, { json: item.json, ...exprExtras });
       const idx = result.ok && typeof result.value === "number" ? result.value : NaN;
       if (Number.isInteger(idx) && idx >= 0 && idx < numberOutputs) {
         outputs[idx].push(item);
@@ -96,7 +105,7 @@ export const switchExecutor: NodeExecutor = async (ctx, node) => {
     let matched = false;
     for (let i = 0; i < rules.length; i++) {
       const rule = rules[i];
-      const passes = evalRuleConditions(rule, item.json, Boolean(ignoreCase));
+      const passes = evalRuleConditions(rule, item.json, Boolean(ignoreCase), exprExtras);
       if (passes) {
         outputs[i].push(item);
         matched = true;

@@ -21,6 +21,10 @@ export interface ExecutionJobData {
   workflow?: Record<string, unknown>;
   /** Optional start trigger/node name for partial runs. */
   startNode?: string;
+  /** Optional destination for “execute previous nodes”. */
+  destinationNode?: string;
+  /** When true (default), destination itself is not executed. */
+  stopBeforeDestination?: boolean;
 }
 
 export const executionQueue = new Queue<ExecutionJobData>("workflow-execution", {

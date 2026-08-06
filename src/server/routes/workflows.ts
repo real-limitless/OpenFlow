@@ -417,6 +417,11 @@ export default function workflowsRoute(app: Hono<AppEnv>) {
       environmentId?: string;
       /** Trigger / node name to start from (partial run). */
       startNode?: string;
+      /** Run ancestors of this node (expression preview / execute previous). */
+      destinationNode?: string;
+      /** Alias for destinationNode with stop-before semantics. */
+      executePreviousOf?: string;
+      stopBeforeDestination?: boolean;
     } = {};
     try {
       body = await c.req.json();
@@ -428,6 +433,17 @@ export default function workflowsRoute(app: Hono<AppEnv>) {
       typeof body.startNode === "string" && body.startNode.trim()
         ? body.startNode.trim()
         : undefined;
+    const destinationNode =
+      (typeof body.executePreviousOf === "string" && body.executePreviousOf.trim()
+        ? body.executePreviousOf.trim()
+        : undefined) ||
+      (typeof body.destinationNode === "string" && body.destinationNode.trim()
+        ? body.destinationNode.trim()
+        : undefined);
+    const stopBeforeDestination =
+      body.executePreviousOf != null
+        ? true
+        : body.stopBeforeDestination !== false;
 
     let snapshot: IWorkflow | undefined = body.workflow
       ? { ...body.workflow, id: body.workflow.id || id }
@@ -544,6 +560,8 @@ export default function workflowsRoute(app: Hono<AppEnv>) {
       projectId,
       environmentId,
       startNode,
+      destinationNode,
+      stopBeforeDestination,
     );
 
     return c.json({ executionId: execution.id }, 202);

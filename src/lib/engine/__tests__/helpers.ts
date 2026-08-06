@@ -34,6 +34,7 @@ export function makeCtx(
   node: INode = makeNode(),
   continueOnFail = false,
   credentials: Record<string, Record<string, unknown>> = {},
+  extras?: { vars?: Record<string, unknown> },
 ): ExecutionContext {
   const normalized: INodeExecutionData[] = items.map((item) =>
     item && typeof item === "object" && "json" in item
@@ -51,6 +52,7 @@ export function makeCtx(
     // behaviour under test, which silently turns those tests into assertions
     // about the guard rather than about the node.
     getCredential: async (name: string) => credentials[name] ?? null,
+    vars: extras?.vars,
   });
 }
 
