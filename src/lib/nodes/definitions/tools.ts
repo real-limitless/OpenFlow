@@ -6070,3 +6070,82 @@ export const grafanaTool: INodeTypeDescription = {
   ],
 };
 
+export const emailSendTool: INodeTypeDescription = {
+  name: "n8n-nodes-base.emailSendTool",
+  displayName: "Send Email",
+  category: "AI Tool",
+  group: ["output"],
+  version: 1,
+  description: "Send an email (AI tool variant)",
+  defaults: { name: "Send Email" },
+  inputs: ["main"],
+  outputs: ["main"],
+  icon: "Mail",
+  usableAsTool: true,
+  properties: [],
+};
+
+export const githubTool: INodeTypeDescription = {
+  name: "n8n-nodes-base.githubTool",
+  displayName: "GitHub Tool",
+  category: "AI Tool",
+  group: ["input"],
+  version: 1,
+  description: "Consume the GitHub API (AI tool variant)",
+  defaults: { name: "GitHub Tool" },
+  inputs: ["main"],
+  outputs: ["main"],
+  icon: "Github",
+  usableAsTool: true,
+  credentials: [{ name: "githubApi", required: false }, { name: "githubOAuth2Api", required: false }],
+  properties: [],
+};
+
+export const hubspotTool: INodeTypeDescription = {
+  name: "n8n-nodes-base.hubspotTool",
+  displayName: "HubSpot (AI Tool)",
+  category: "AI Tool",
+  group: ["input"],
+  version: 1,
+  description: "Consume HubSpot API (AI tool variant)",
+  defaults: { name: "HubSpot Tool" },
+  inputs: ["main"],
+  outputs: ["main"],
+  icon: "Briefcase",
+  usableAsTool: true,
+  credentials: [{ name: "hubspotApi", required: false }, { name: "hubspotOAuth2Api", required: false }],
+  properties: [],
+};
+
+export const microsoftOutlookTool: INodeTypeDescription = {
+  name: "n8n-nodes-base.microsoftOutlookTool",
+  displayName: "Microsoft Outlook (AI Tool)",
+  category: "AI Tool",
+  group: ["input"],
+  version: 1,
+  description: "Consume Microsoft Outlook API (AI tool variant)",
+  defaults: { name: "Microsoft Outlook Tool" },
+  inputs: ["main"],
+  outputs: ["main"],
+  icon: "Mail",
+  usableAsTool: true,
+  credentials: [{ name: "microsoftOutlookOAuth2Api", required: false }],
+  properties: [],
+};
+
+export const twitterTool: INodeTypeDescription = {
+  name: "n8n-nodes-base.twitterTool",
+  displayName: "X (Twitter) Tool",
+  category: "AI Tool",
+  group: ["input"],
+  version: 1,
+  description: "Consume the X (Twitter) API (AI tool variant)",
+  defaults: { name: "X Tool" },
+  inputs: ["main"],
+  outputs: ["main"],
+  icon: "Twitter",
+  usableAsTool: true,
+  credentials: [{ name: "twitterOAuth2Api", required: false }],
+  properties: [],
+};
+

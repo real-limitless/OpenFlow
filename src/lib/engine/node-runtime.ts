@@ -2447,11 +2447,6 @@ export const BUILTIN_EXECUTOR_MODULES: Array<{
     exportName: "zulipExecutor",
   },
   {
-    type: "n8n-nodes-base.discourse",
-    modulePath: "./executors/discourse",
-    exportName: "discourseExecutor",
-  },
-  {
     type: "@n8n/n8n-nodes-langchain.anthropicTool",
     modulePath: "./executors/n8n-nodes-langchain.anthropicTool",
     exportName: "anthropicToolExecutor",
@@ -2640,11 +2635,6 @@ export const BUILTIN_EXECUTOR_MODULES: Array<{
     type: "n8n-nodes-base.customerIoTrigger",
     modulePath: "./executors/n8n-nodes-base.customerIoTrigger",
     exportName: "customerIoTriggerExecutor",
-  },
-  {
-    type: "n8n-nodes-base.discourse",
-    modulePath: "./executors/discourse",
-    exportName: "discourseExecutor",
   },
   {
     type: "n8n-nodes-base.disqus",
