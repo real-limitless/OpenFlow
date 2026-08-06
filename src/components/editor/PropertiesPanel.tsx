@@ -1,5 +1,5 @@
-import { useMemo, useState } from "react";
-import { Copy, PowerOff, Trash2, TriangleAlert, X } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { Copy, Play, PowerOff, Trash2, TriangleAlert, X } from "lucide-react";
 import { useWorkflowStore } from "@/store/workflow-store";
 import { getNodeType } from "@/lib/nodes/registry";
 import { ParameterField, shouldDisplay } from "./ParameterField";
@@ -11,11 +11,26 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { ExpressionContext } from "@/lib/expressions/evaluate";
+import type { ExecutionRunData } from "@/lib/engine/types";
+import type { INodeExecutionData } from "@/lib/workflow/types";
 import { CredentialPicker } from "@/components/credentials";
 import { FormTriggerUrls } from "./FormTriggerUrls";
 import { isFormTriggerNode } from "@/lib/forms/path";
+import { apiFetch } from "@/lib/auth/client";
+import { getSelectedEnvironmentId } from "@/lib/environments/client";
+import { buildIncoming } from "@/lib/engine/graph";
 
-export function PropertiesPanel({ embedded = false }: { embedded?: boolean }) {
+export function PropertiesPanel({
+  embedded = false,
+  runData = null,
+  onExecutePrevious,
+  isExecuting = false,
+}: {
+  embedded?: boolean;
+  runData?: ExecutionRunData | null;
+  onExecutePrevious?: (nodeName: string) => void;
+  isExecuting?: boolean;
+}) {
   const selected = useWorkflowStore((s) => s.selectedNode);
   const workflow = useWorkflowStore((s) => s.workflow);
   const {
@@ -30,6 +45,7 @@ export function PropertiesPanel({ embedded = false }: { embedded?: boolean }) {
   } = useWorkflowStore();
   const node = workflow.nodes.find((n) => n.name === selected);
   const [nameDraft, setNameDraft] = useState<string | null>(null);
+  const [vars, setVars] = useState<Record<string, unknown>>({});
   const shellClass = embedded
     ? "flex h-full min-h-0 w-full flex-col bg-sidebar"
     : "flex h-full w-[380px] shrink-0 flex-col border-l border-border bg-sidebar";
@@ -37,19 +53,61 @@ export function PropertiesPanel({ embedded = false }: { embedded?: boolean }) {
     ? "flex h-full min-h-0 w-full flex-col bg-sidebar"
     : "hidden h-full w-[380px] shrink-0 flex-col border-l border-border bg-sidebar xl:flex";
 
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      try {
+        const envId = getSelectedEnvironmentId();
+        const q = new URLSearchParams({ scope: "project", layer: "all" });
+        if (envId) q.set("environmentId", envId);
+        const res = await apiFetch(`/api/v1/variables?${q}`);
+        if (!res.ok || cancelled) return;
+        const rows = (await res.json()) as Array<{
+          key: string;
+          value?: unknown;
+          secret?: boolean;
+          environmentId?: string | null;
+        }>;
+        const base: Record<string, unknown> = {};
+        const env: Record<string, unknown> = {};
+        for (const r of rows) {
+          if (r.secret) continue;
+          const v = r.value;
+          if (r.environmentId == null || r.environmentId === "") {
+            base[r.key] = v;
+          } else if (envId && r.environmentId === envId) {
+            env[r.key] = v;
+          }
+        }
+        if (!cancelled) setVars({ ...base, ...env });
+      } catch {
+        if (!cancelled) setVars({});
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [workflow.id]);
+
+  const hasUpstream = useMemo(() => {
+    if (!node) return false;
+    const incoming = buildIncoming(workflow.connections ?? {});
+    return (incoming.get(node.name) ?? []).length > 0;
+  }, [workflow.connections, node]);
+
   const context: ExpressionContext = useMemo(() => {
-    const pin = workflow.pinData ?? {};
-    const nodeData = Object.fromEntries(
-      Object.entries(pin).map(([k, v]) => [k, v as Array<{ json: Record<string, unknown> }>]),
-    );
-    const incoming = node ? findIncomingSample(workflow, node.name, nodeData) : [{ json: {} }];
+    const nodeData = mergeNodeSampleData(workflow.pinData, runData);
+    const incoming = node
+      ? resolveIncomingItems(workflow, node.name, nodeData, runData)
+      : [{ json: {} }];
     return {
       json: incoming[0]?.json ?? {},
       allItems: incoming,
       nodeData,
       itemIndex: 0,
+      vars,
     };
-  }, [workflow, node]);
+  }, [workflow, node, runData, vars]);
 
   if (!node) {
     return (
@@ -91,7 +149,7 @@ export function PropertiesPanel({ embedded = false }: { embedded?: boolean }) {
         </Button>
       </div>
 
-      <div className="flex items-center gap-1 border-b border-border px-2 py-1.5">
+      <div className="flex flex-wrap items-center gap-1 border-b border-border px-2 py-1.5">
         <Button
           size="sm"
           variant="ghost"
@@ -116,6 +174,18 @@ export function PropertiesPanel({ embedded = false }: { embedded?: boolean }) {
         >
           <Trash2 className="mr-1 size-3.5" /> Delete
         </Button>
+        {hasUpstream && onExecutePrevious && (
+          <Button
+            size="sm"
+            variant="ghost"
+            className="h-7 text-[12px]"
+            disabled={isExecuting}
+            onClick={() => onExecutePrevious(node.name)}
+            title="Run upstream nodes to feed expression preview"
+          >
+            <Play className="mr-1 size-3.5" /> Previous
+          </Button>
+        )}
       </div>
 
       <Tabs defaultValue="parameters" className="flex min-h-0 flex-1 flex-col">
@@ -301,17 +371,52 @@ export function PropertiesPanel({ embedded = false }: { embedded?: boolean }) {
   );
 }
 
-function findIncomingSample(
+type SampleItem = { json: Record<string, unknown> };
+
+function itemsFromRunNode(
+  runData: ExecutionRunData | null | undefined,
+  nodeName: string,
+): SampleItem[] | undefined {
+  if (!runData?.[nodeName]) return undefined;
+  const entry = runData[nodeName];
+  if (entry.status !== "success" || !entry.items?.length) return undefined;
+  const flat = entry.items.flat().filter(Boolean) as INodeExecutionData[];
+  if (!flat.length) return undefined;
+  return flat.map((it) => ({ json: (it.json ?? {}) as Record<string, unknown> }));
+}
+
+function mergeNodeSampleData(
+  pinData: Record<string, INodeExecutionData[]> | undefined,
+  runData: ExecutionRunData | null | undefined,
+): Record<string, SampleItem[]> {
+  const out: Record<string, SampleItem[]> = {};
+  if (runData) {
+    for (const name of Object.keys(runData)) {
+      const items = itemsFromRunNode(runData, name);
+      if (items?.length) out[name] = items;
+    }
+  }
+  for (const [k, v] of Object.entries(pinData ?? {})) {
+    if (v?.length) {
+      out[k] = v.map((it) => ({ json: (it.json ?? {}) as Record<string, unknown> }));
+    }
+  }
+  return out;
+}
+
+function resolveIncomingItems(
   workflow: { connections: Record<string, Record<string, Array<Array<{ node: string }> | null>>> },
   nodeName: string,
-  pinData: Record<string, Array<{ json: Record<string, unknown> }>>,
-) {
+  nodeData: Record<string, SampleItem[]>,
+  runData?: ExecutionRunData | null,
+): SampleItem[] {
   for (const [source, channels] of Object.entries(workflow.connections ?? {})) {
     for (const outputs of Object.values(channels)) {
       for (const targets of outputs) {
-        if (targets?.some((t) => t.node === nodeName) && pinData[source]?.length) {
-          return pinData[source];
-        }
+        if (!targets?.some((t) => t.node === nodeName)) continue;
+        if (nodeData[source]?.length) return nodeData[source]!;
+        const fromRun = itemsFromRunNode(runData, source);
+        if (fromRun?.length) return fromRun;
       }
     }
   }

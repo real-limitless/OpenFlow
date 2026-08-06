@@ -79,7 +79,10 @@ function EditorPage() {
     setShowOnboardingBanner(false);
   };
 
-  const handleExecute = async (startNode?: string) => {
+  const handleExecute = async (
+    startNode?: string,
+    opts?: { executePreviousOf?: string },
+  ) => {
     setIsExecuting(true);
     setRunData(null);
     bumpHistory();
@@ -107,6 +110,7 @@ function EditorPage() {
           workflow: latest,
           environmentId: getSelectedEnvironmentId() ?? undefined,
           startNode: startNode || undefined,
+          executePreviousOf: opts?.executePreviousOf || undefined,
         }),
       });
       if (!res.ok) throw new Error("Failed to start execution");
@@ -317,7 +321,12 @@ function EditorPage() {
             </ResizablePanel>
           </ResizablePanelGroup>
         </div>
-        <EditorRightRail workflowId={id} />
+        <EditorRightRail
+          workflowId={id}
+          runData={runData}
+          isExecuting={isExecuting}
+          onExecutePrevious={(nodeName) => void handleExecute(undefined, { executePreviousOf: nodeName })}
+        />
       </div>
       <Toaster position="bottom-right" />
     </div>
