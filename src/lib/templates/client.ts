@@ -11,7 +11,10 @@ export type CompatLevel = "ready" | "partial" | "limited";
 
 export type TemplateListItem = {
   id: string;
-  externalId: number;
+  sourceId: string;
+  sourceName: string | null;
+  packId: string;
+  externalId: number | null;
   name: string;
   descriptionSnippet: string;
   imageUrl: string | null;
@@ -24,6 +27,7 @@ export type TemplateListItem = {
   authorUsername: string | null;
   authorAvatar: string | null;
   sourceUrl: string | null;
+  libraryUrl: string | null;
   readyToDemo: boolean;
   publishedAt: string | null;
   syncedAt: string;
@@ -47,11 +51,13 @@ export type TemplateDetail = TemplateListItem & {
 export type FacetsResponse = {
   total: number;
   categories: Array<{ name: string; count: number }>;
+  sources: Array<{ id: string; name: string; count: number }>;
 };
 
 export type ListParams = {
   q?: string;
   category?: string;
+  source?: string;
   sort?: "popular" | "recent";
   compat?: CompatLevel | "any";
   page?: number;
@@ -75,6 +81,7 @@ export async function fetchTemplates(params: ListParams = {}): Promise<{
   const sp = new URLSearchParams();
   if (params.q) sp.set("q", params.q);
   if (params.category) sp.set("category", params.category);
+  if (params.source) sp.set("source", params.source);
   if (params.sort) sp.set("sort", params.sort);
   if (params.compat && params.compat !== "any") sp.set("compat", params.compat);
   if (params.page) sp.set("page", String(params.page));

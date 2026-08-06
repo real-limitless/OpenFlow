@@ -18,8 +18,8 @@ export const Route = createFileRoute("/templates")({
       { title: "Templates — OpenFlow" },
       {
         name: "description",
-        content:
-          "Browse community workflow templates and import them into your OpenFlow project.",
+          content:
+          "Browse attributed community workflow templates and import them into your OpenFlow project.",
       },
     ],
   }),
@@ -28,12 +28,14 @@ export const Route = createFileRoute("/templates")({
     const out: {
       q?: string;
       category?: string;
+      source?: string;
       sort?: "popular" | "recent";
       compat?: CompatLevel | "any";
       page?: number;
     } = {};
     if (typeof s.q === "string" && s.q) out.q = s.q;
     if (typeof s.category === "string" && s.category) out.category = s.category;
+    if (typeof s.source === "string" && s.source) out.source = s.source;
     if (s.sort === "recent" || s.sort === "popular") out.sort = s.sort;
     if (s.compat === "ready" || s.compat === "partial" || s.compat === "limited" || s.compat === "any") {
       out.compat = s.compat;
@@ -56,6 +58,7 @@ function TemplatesMarketplace() {
   const [items, setItems] = useState<TemplateListItem[] | null>(null);
   const [total, setTotal] = useState(0);
   const [categories, setCategories] = useState<Array<{ name: string; count: number }>>([]);
+  const [sources, setSources] = useState<Array<{ id: string; name: string; count: number }>>([]);
   const [error, setError] = useState<string | null>(null);
   const pageSize = 24;
 
@@ -65,8 +68,14 @@ function TemplatesMarketplace() {
 
   useEffect(() => {
     void fetchTemplateFacets()
-      .then((f) => setCategories(f.categories.slice(0, 24)))
-      .catch(() => setCategories([]));
+      .then((f) => {
+        setCategories(f.categories.slice(0, 24));
+        setSources(f.sources ?? []);
+      })
+      .catch(() => {
+        setCategories([]);
+        setSources([]);
+      });
   }, []);
 
   const load = useCallback(() => {
@@ -75,6 +84,7 @@ function TemplatesMarketplace() {
     void fetchTemplates({
       q: search.q,
       category: search.category,
+      source: search.source,
       sort,
       compat,
       page,
@@ -88,7 +98,7 @@ function TemplatesMarketplace() {
         setError(e.message);
         setItems([]);
       });
-  }, [search.q, search.category, sort, compat, page]);
+  }, [search.q, search.category, search.source, sort, compat, page]);
 
   useEffect(() => {
     load();
@@ -97,6 +107,7 @@ function TemplatesMarketplace() {
   const setSearch = (patch: {
     q?: string | undefined;
     category?: string | undefined;
+    source?: string | undefined;
     sort?: "popular" | "recent" | undefined;
     compat?: CompatLevel | "any" | undefined;
     page?: number | undefined;
@@ -107,6 +118,7 @@ function TemplatesMarketplace() {
         const resetPage =
           patch.q !== undefined ||
           patch.category !== undefined ||
+          patch.source !== undefined ||
           patch.sort !== undefined ||
           patch.compat !== undefined;
         if (resetPage && patch.page === undefined) {
@@ -117,6 +129,7 @@ function TemplatesMarketplace() {
         if (next.compat === "any") delete next.compat;
         if (!next.q) delete next.q;
         if (!next.category) delete next.category;
+        if (!next.source) delete next.source;
         return next;
       },
     });
@@ -136,8 +149,9 @@ function TemplatesMarketplace() {
           </div>
           <h1 className="text-3xl font-semibold tracking-tight">Templates</h1>
           <p className="mt-1.5 max-w-xl text-[14px] text-muted-foreground">
-            Browse community workflows and add them to your project. Compatibility
-            badges show how many nodes OpenFlow already supports.
+            Browse workflows from configured template libraries (default: n8n
+            community pack). Compatibility badges show how many nodes OpenFlow
+            already supports.
           </p>
         </div>
         <p className="text-[12px] text-muted-foreground">
@@ -186,6 +200,22 @@ function TemplatesMarketplace() {
             <option value="partial">Partial</option>
             <option value="limited">Limited</option>
           </select>
+          {sources.length > 0 && (
+            <select
+              className="h-10 max-w-[14rem] rounded-md border border-input bg-background px-2 text-[12px]"
+              value={search.source ?? ""}
+              onChange={(e) =>
+                setSearch({ source: e.target.value || undefined })
+              }
+            >
+              <option value="">All libraries</option>
+              {sources.map((s) => (
+                <option key={s.id} value={s.id}>
+                  {s.name} ({s.count})
+                </option>
+              ))}
+            </select>
+          )}
           <Button type="submit" variant="secondary">
             Search
           </Button>
@@ -253,7 +283,9 @@ function TemplatesMarketplace() {
         <div className="mt-16 text-center text-sm text-muted-foreground">
           <p>No templates match your filters.</p>
           <p className="mt-2">
-            Sync scraped workflows with{" "}
+            Configure sources in{" "}
+            <code className="rounded bg-muted px-1">config/template-sources.json</code>{" "}
+            then run{" "}
             <code className="rounded bg-muted px-1">npm run templates:sync</code>
           </p>
         </div>

@@ -21,6 +21,9 @@ import {
 
 const LIST_SELECT = {
   id: true,
+  sourceId: true,
+  sourceName: true,
+  packId: true,
   externalId: true,
   name: true,
   description: true,
@@ -34,6 +37,7 @@ const LIST_SELECT = {
   authorUsername: true,
   authorAvatar: true,
   sourceUrl: true,
+  libraryUrl: true,
   readyToDemo: true,
   publishedAt: true,
   syncedAt: true,
@@ -46,9 +50,12 @@ function snippet(text: string | null | undefined, max = 160): string {
   return flat.slice(0, max - 1) + "…";
 }
 
-function mapListItem(row: {
+type ListRow = {
   id: string;
-  externalId: number;
+  sourceId: string;
+  sourceName: string | null;
+  packId: string;
+  externalId: number | null;
   name: string;
   description: string | null;
   imageUrl: string | null;
@@ -61,15 +68,21 @@ function mapListItem(row: {
   authorUsername: string | null;
   authorAvatar: string | null;
   sourceUrl: string | null;
+  libraryUrl: string | null;
   readyToDemo: boolean;
   publishedAt: Date | null;
   syncedAt: Date;
-}) {
+};
+
+function mapListItem(row: ListRow) {
   const nodeTypes = parseJsonStringArray(row.nodeTypes);
   const categories = parseJsonStringArray(row.categories);
   const compatibility = scoreTemplateCompatibility(nodeTypes);
   return {
     id: row.id,
+    sourceId: row.sourceId,
+    sourceName: row.sourceName,
+    packId: row.packId,
     externalId: row.externalId,
     name: row.name,
     descriptionSnippet: snippet(row.description),
@@ -83,6 +96,7 @@ function mapListItem(row: {
     authorUsername: row.authorUsername,
     authorAvatar: row.authorAvatar,
     sourceUrl: row.sourceUrl,
+    libraryUrl: row.libraryUrl,
     readyToDemo: row.readyToDemo,
     publishedAt: row.publishedAt?.toISOString() ?? null,
     syncedAt: row.syncedAt.toISOString(),
@@ -112,27 +126,60 @@ function stripCredentialIds(nodes: INode[]): INode[] {
   });
 }
 
+/** Resolve bare legacy ids or source:packId. */
+async function findTemplateByParam(idParam: string) {
+  const decoded = decodeURIComponent(idParam);
+  let row = await prisma.workflowTemplate.findUnique({ where: { id: decoded } });
+  if (row) return row;
+  // Legacy bare n8n id → default source
+  if (!decoded.includes(":")) {
+    row = await prisma.workflowTemplate.findUnique({
+      where: { id: `n8n-community:${decoded}` },
+    });
+    if (row) return row;
+    row = await prisma.workflowTemplate.findFirst({
+      where: { packId: decoded },
+    });
+  }
+  return row;
+}
+
 export default function templatesRoute(app: Hono<AppEnv>) {
   app.get("/api/v1/templates/facets", async (c) => {
     const rows = await prisma.workflowTemplate.findMany({
-      select: { categories: true },
+      select: { categories: true, sourceId: true, sourceName: true },
     });
-    const counts = new Map<string, number>();
+    const catCounts = new Map<string, number>();
+    const sourceCounts = new Map<string, { id: string; name: string; count: number }>();
     for (const r of rows) {
       for (const cat of parseJsonStringArray(r.categories)) {
-        counts.set(cat, (counts.get(cat) ?? 0) + 1);
+        catCounts.set(cat, (catCounts.get(cat) ?? 0) + 1);
+      }
+      const sid = r.sourceId || "unknown";
+      const prev = sourceCounts.get(sid);
+      if (prev) prev.count++;
+      else {
+        sourceCounts.set(sid, {
+          id: sid,
+          name: r.sourceName || sid,
+          count: 1,
+        });
       }
     }
-    const categories = [...counts.entries()]
+    const categories = [...catCounts.entries()]
       .map(([name, count]) => ({ name, count }))
       .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name));
+    const sources = [...sourceCounts.values()].sort(
+      (a, b) => b.count - a.count || a.name.localeCompare(b.name),
+    );
     const total = await prisma.workflowTemplate.count();
-    return c.json({ total, categories });
+    return c.json({ total, categories, sources });
   });
 
   app.get("/api/v1/templates", async (c) => {
     const q = (c.req.query("q") ?? "").trim();
     const category = (c.req.query("category") ?? "").trim();
+    const source = (c.req.query("source") ?? "").trim();
     const sort = c.req.query("sort") === "recent" ? "recent" : "popular";
     const compat = (c.req.query("compat") ?? "any") as CompatLevel | "any";
     const page = Math.max(1, parseInt(c.req.query("page") ?? "1", 10) || 1);
@@ -141,8 +188,6 @@ export default function templatesRoute(app: Hono<AppEnv>) {
       Math.max(1, parseInt(c.req.query("pageSize") ?? "24", 10) || 24),
     );
 
-    // When filtering by category or compat we may need a broader fetch then filter.
-    // Category is stored as JSON array string — use contains for simple match.
     const where: {
       AND?: Array<Record<string, unknown>>;
     } = {};
@@ -153,12 +198,15 @@ export default function templatesRoute(app: Hono<AppEnv>) {
           { name: { contains: q, mode: "insensitive" } },
           { description: { contains: q, mode: "insensitive" } },
           { nodeTypes: { contains: q } },
+          { packId: { contains: q } },
         ],
       });
     }
     if (category) {
-      // Match "CategoryName" inside JSON string array
       and.push({ categories: { contains: category } });
+    }
+    if (source) {
+      and.push({ sourceId: source });
     }
     if (and.length) where.AND = and;
 
@@ -167,8 +215,8 @@ export default function templatesRoute(app: Hono<AppEnv>) {
         ? [{ publishedAt: "desc" as const }, { syncedAt: "desc" as const }]
         : [{ views: "desc" as const }, { name: "asc" as const }];
 
-    // Compat filter requires post-filter; fetch more when needed
-    const needsCompatFilter = compat === "ready" || compat === "partial" || compat === "limited";
+    const needsCompatFilter =
+      compat === "ready" || compat === "partial" || compat === "limited";
 
     if (!needsCompatFilter) {
       const [total, rows] = await Promise.all([
@@ -189,7 +237,6 @@ export default function templatesRoute(app: Hono<AppEnv>) {
       });
     }
 
-    // Compat path: load candidates in batches (cap for safety)
     const CAP = 2000;
     const rows = await prisma.workflowTemplate.findMany({
       where,
@@ -206,10 +253,7 @@ export default function templatesRoute(app: Hono<AppEnv>) {
 
   app.get("/api/v1/templates/:id", async (c) => {
     const { id } = c.req.param();
-    const row = await prisma.workflowTemplate.findUnique({
-      where: { id },
-      select: { ...LIST_SELECT, description: true },
-    });
+    const row = await findTemplateByParam(id);
     if (!row) return c.json({ error: "Not found" }, 404);
     const base = mapListItem(row);
     const nodeTypes = parseJsonStringArray(row.nodeTypes);
@@ -231,10 +275,7 @@ export default function templatesRoute(app: Hono<AppEnv>) {
 
   app.get("/api/v1/templates/:id/workflow", async (c) => {
     const { id } = c.req.param();
-    const row = await prisma.workflowTemplate.findUnique({
-      where: { id },
-      select: { workflowJson: true, name: true },
-    });
+    const row = await findTemplateByParam(id);
     if (!row) return c.json({ error: "Not found" }, 404);
     try {
       return c.json(JSON.parse(row.workflowJson));
@@ -264,7 +305,7 @@ export default function templatesRoute(app: Hono<AppEnv>) {
     if (!access.ok) return c.json({ error: access.error }, access.status);
 
     const { id } = c.req.param();
-    const tpl = await prisma.workflowTemplate.findUnique({ where: { id } });
+    const tpl = await findTemplateByParam(id);
     if (!tpl) return c.json({ error: "Not found" }, 404);
 
     let raw: unknown;
@@ -301,6 +342,8 @@ export default function templatesRoute(app: Hono<AppEnv>) {
         ...(typeof wf.meta === "object" && wf.meta ? wf.meta : {}),
         templateId: tpl.id,
         templateSource: tpl.sourceUrl,
+        templateLibrary: tpl.libraryUrl,
+        templateSourceId: tpl.sourceId,
         importedFromTemplate: true,
       },
       ...Object.fromEntries(
