@@ -92,10 +92,10 @@ describe("NoOp Executor", () => {
     ]);
   });
 
-  it("returns empty item when no input", async () => {
+  it("returns empty output when no input", async () => {
     const node = makeNode();
     const result = await noopExecutor(makeCtx([], node), node);
-    expect(result).toEqual([[{ json: {} }]]);
+    expect(result).toEqual([[]]);
   });
 });
 

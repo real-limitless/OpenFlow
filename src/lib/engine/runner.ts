@@ -7,6 +7,7 @@ import {
   buildAdjacency,
   buildIncoming,
   filterAdjacency,
+  isTriggerNode,
   nodesReachableFrom,
   resolveStartNodes,
   topologicalSort,
@@ -194,6 +195,24 @@ export async function executeWorkflow(options: RunOptions): Promise<RunResult> {
       executedNodes.add(nodeName);
       await emitProgress();
       continue;
+    }
+
+    // IF/Switch empty branches: do not run downstream nodes with no main items.
+    // (Matches n8n — only the live branch executes.)
+    const mainIncoming = (incoming.get(nodeName) ?? []).filter((e) => e.channel === "main");
+    if (mainIncoming.length > 0 && !isTriggerNode(node)) {
+      const hasMainItems = mainIncoming.some((e) => {
+        const outs = nodeOutputs.get(e.source);
+        return (outs?.[e.sourceOutput]?.length ?? 0) > 0;
+      });
+      if (!hasMainItems) {
+        runData[nodeName].status = "skipped";
+        runData[nodeName].items = [[]];
+        nodeOutputs.set(nodeName, [[]]);
+        executedNodes.add(nodeName);
+        await emitProgress();
+        continue;
+      }
     }
 
     const nodeContinueOnFail = node.continueOnFail || node.onError === "continueRegularOutput";

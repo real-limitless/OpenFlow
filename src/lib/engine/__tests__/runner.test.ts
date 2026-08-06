@@ -127,6 +127,68 @@ describe("Runner", () => {
     expect(result.runData["Set"].status).toBe("success");
   });
 
+  it("skips IF false-branch children when condition passes", async () => {
+    const workflow = makeWorkflow(
+      [
+        {
+          id: "1",
+          name: "Start",
+          type: "n8n-nodes-base.manualTrigger",
+          typeVersion: 1,
+          position: [0, 0],
+          parameters: {},
+        },
+        {
+          id: "2",
+          name: "IF",
+          type: "n8n-nodes-base.if",
+          typeVersion: 2,
+          position: [200, 0],
+          parameters: {},
+        },
+        {
+          id: "3",
+          name: "TruePath",
+          type: "n8n-nodes-base.noOp",
+          typeVersion: 1,
+          position: [400, -80],
+          parameters: {},
+        },
+        {
+          id: "4",
+          name: "FalsePath",
+          type: "n8n-nodes-base.noOp",
+          typeVersion: 1,
+          position: [400, 80],
+          parameters: {},
+        },
+      ],
+      {
+        Start: { main: [[{ node: "IF", type: "main", index: 0 }]] },
+        IF: {
+          main: [
+            [{ node: "TruePath", type: "main", index: 0 }],
+            [{ node: "FalsePath", type: "main", index: 0 }],
+          ],
+        },
+      },
+    );
+
+    const result = await executeWorkflow({
+      workflow,
+      nodeExecutors: {
+        "n8n-nodes-base.manualTrigger": async () => [[{ json: { n: 1 } }]],
+        "n8n-nodes-base.if": async () => [[{ json: { n: 1 } }], []],
+        "n8n-nodes-base.noOp": async (ctx) => [ctx.getNodeInputItems(ctx.getNode().name, 0)],
+      },
+    });
+
+    expect(result.success).toBe(true);
+    expect(result.runData["TruePath"].status).toBe("success");
+    expect(result.runData["TruePath"].items?.[0]).toHaveLength(1);
+    expect(result.runData["FalsePath"].status).toBe("skipped");
+  });
+
   it("skips disabled nodes", async () => {
     const workflow = makeWorkflow(
       [

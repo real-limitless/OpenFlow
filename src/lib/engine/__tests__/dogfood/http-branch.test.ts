@@ -24,11 +24,11 @@ describe("dogfood WF1 http-branch", () => {
     expect(headlineItems[0].json.headline).toBe("openflow/demo is popular");
     expect(headlineItems[0].json.stargazers_count).toBe(5000);
 
-    // IF false output has no starred items (NoOp may still emit a blank item on empty input)
+    // False branch must stay empty and must not execute downstream nodes
     const ifFalse = result.runData["IF Stars"]?.items?.[1] ?? [];
     expect(ifFalse.length).toBe(0);
-    const low = result.runData["Low Stars"]?.items?.[0] ?? [];
-    expect(low.every((i) => i.json.stargazers_count == null)).toBe(true);
+    expect(result.runData["Low Stars"]?.status).toBe("skipped");
+    expect(result.runData["Build Headline"]?.status).toBe("success");
   });
 });
 
