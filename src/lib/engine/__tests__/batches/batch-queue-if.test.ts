@@ -302,4 +302,77 @@ describe("batch-queue if — n8n-nodes-base.if", () => {
     expect(canonical).toBeDefined();
     expect(getExecutor("nodes-base.if")).toBe(canonical);
   });
+
+  it("missing field equals empty string routes false (no nullish→\"\" coercion)", async () => {
+    const out = await runNode(
+      TYPE,
+      {
+        conditions: {
+          combinator: "and",
+          conditions: [
+            { leftValue: "={{ $json.missing }}", rightValue: "", operator: "equals" },
+          ],
+        },
+      },
+      [{ a: 1 }],
+    );
+    expect(out[0]).toHaveLength(0);
+    expect(out[1]).toHaveLength(1);
+  });
+
+  it("contains with empty right does not match every string", async () => {
+    const out = await runNode(
+      TYPE,
+      {
+        conditions: {
+          combinator: "and",
+          conditions: [
+            { leftValue: "={{ $json.text }}", rightValue: "", operator: "contains" },
+          ],
+        },
+      },
+      [{ text: "hello" }],
+    );
+    expect(out[0]).toHaveLength(0);
+    expect(out[1]).toHaveLength(1);
+  });
+
+  it("isTrue does not treat arbitrary non-empty strings as true", async () => {
+    const out = await runNode(
+      TYPE,
+      {
+        conditions: {
+          combinator: "and",
+          conditions: [{ leftValue: "={{ $json.flag }}", operator: "isTrue" }],
+        },
+      },
+      [{ flag: "false" }, { flag: true }, { flag: "true" }],
+    );
+    expect(out[0]).toHaveLength(2);
+    expect(out[0][0].json).toEqual({ flag: true });
+    expect(out[0][1].json).toEqual({ flag: "true" });
+    expect(out[1]).toHaveLength(1);
+    expect(out[1][0].json).toEqual({ flag: "false" });
+  });
+
+  it("accepts n8n boolean operator tokens true/false", async () => {
+    const out = await runNode(
+      TYPE,
+      {
+        conditions: {
+          combinator: "and",
+          conditions: [
+            {
+              leftValue: "={{ $json.ok }}",
+              operator: { type: "boolean", operation: "true", singleValue: true },
+            },
+          ],
+        },
+      },
+      [{ ok: true }, { ok: false }],
+    );
+    expect(out[0]).toHaveLength(1);
+    expect(out[0][0].json).toEqual({ ok: true });
+    expect(out[1]).toHaveLength(1);
+  });
 });
