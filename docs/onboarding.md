@@ -61,8 +61,18 @@ npm run dev      # http://localhost:3000
 | API only | `npm run dev:api` |
 | Full Docker stack | `docker compose up -d` or TUI → Start Stack |
 | Migrations | `npm run db:migrate` |
+| Template marketplace | Open `/templates` or `npm run templates:sync` |
 | Tests | `npm test` |
 | Secret hygiene | `bash scripts/check-no-secrets.sh` |
+
+### Template marketplace
+
+Default library: [real-limitless/n8n-workflow-library](https://github.com/real-limitless/n8n-workflow-library) (`config/template-sources.json`).
+
+- **`npm run setup`** seeds it automatically (skip with `OPENFLOW_SKIP_TEMPLATE_SYNC=1`).
+- **First-time `/setup`** can load it via the “Load community templates” checkbox.
+- **Empty `/templates`** has a **Load n8n-workflow-library** button.
+- **Settings → Templates** — add more git repos anytime after setup.
 
 ## First-run expectations
 

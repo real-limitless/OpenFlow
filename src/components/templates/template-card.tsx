@@ -68,6 +68,14 @@ export function TemplateCard({ item }: { item: TemplateListItem }) {
             <Boxes className="size-3 opacity-70" />
             {item.nodeCount}
           </span>
+          {item.sourceName ? (
+            <span
+              className="max-w-[9rem] truncate rounded-full border border-border/80 bg-background px-1.5 py-0.5 text-[10px] text-muted-foreground"
+              title={item.sourceId}
+            >
+              {item.sourceName}
+            </span>
+          ) : null}
           {cats.map((c) => (
             <span
               key={c}

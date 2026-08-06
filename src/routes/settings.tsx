@@ -11,6 +11,7 @@ const LINKS = [
   { to: "/settings/api-keys", label: "API keys" },
   { to: "/settings/environments", label: "Environments" },
   { to: "/settings/secret-providers", label: "Secret providers" },
+  { to: "/settings/templates", label: "Templates" },
   { to: "/settings/logs", label: "Logs" },
 ] as const;
 
@@ -68,6 +69,12 @@ function SettingsOverview() {
             Secret providers
           </Link>{" "}
           — Vault / AWS Secrets Manager backends
+        </li>
+        <li>
+          <Link to="/settings/templates" className="text-primary hover:underline">
+            Templates
+          </Link>{" "}
+          — marketplace libraries (default n8n-workflow-library + your repos)
         </li>
         <li>
           <Link to="/settings/logs" className="text-primary hover:underline">

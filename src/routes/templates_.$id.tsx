@@ -112,6 +112,11 @@ function TemplateDetailPage() {
               <Boxes className="size-3.5" />
               {tpl.nodeCount} nodes
             </span>
+            {tpl.sourceName && (
+              <span className="rounded-full border border-border px-2 py-0.5 text-[11px]">
+                {tpl.sourceName}
+              </span>
+            )}
             {tpl.authorName && (
               <span className="inline-flex items-center gap-1.5">
                 {tpl.authorAvatar && (
@@ -135,7 +140,17 @@ function TemplateDetailPage() {
               rel="noopener noreferrer"
               className="inline-flex items-center gap-1 text-[11px] text-muted-foreground hover:text-foreground"
             >
-              Public source <ExternalLink className="size-3" />
+              Upstream source <ExternalLink className="size-3" />
+            </a>
+          )}
+          {tpl.libraryUrl && (
+            <a
+              href={tpl.libraryUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1 text-[11px] text-muted-foreground hover:text-foreground"
+            >
+              Template library <ExternalLink className="size-3" />
             </a>
           )}
         </div>

@@ -223,7 +223,7 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) and [docs/onboarding.md](docs/onboarding.
 6. **Dogfood:** `npm run test:dogfood` · fixtures in `workflows/dogfood/` · `docs/dogfood.md`
 7. **Factory:** `npm run factory:batch -- 05` · see `scripts/factory/README.md`
 8. **Scrape → factory gaps:** `npm run factory:gaps` then `npm run factory:import-scraped -- enqueue --top 50`
-9. **Template marketplace:** `npm run templates:sync` then open `/templates`
+9. **Template marketplace:** multi-repo sources in `config/template-sources.json` (default: [n8n-workflow-library](https://github.com/real-limitless/n8n-workflow-library)). Add your own via `config/template-sources.local.json` or `OPENFLOW_TEMPLATE_SOURCES`, then `npm run templates:sync`. See `scripts/templates/README.md`.
 
 See [docs/clean-room.md](docs/clean-room.md) and [docs/sdk/OVERVIEW.md](docs/sdk/OVERVIEW.md).
 

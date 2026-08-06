@@ -37,7 +37,9 @@
     "factory:status": "bash scripts/factory/run_queue.sh status",
     "factory:gaps": "python3 scripts/factory/lib/import_scraped_nodes.py report",
     "factory:import-scraped": "python3 scripts/factory/lib/import_scraped_nodes.py",
-    "templates:sync": "npx tsx scripts/templates/sync-from-scraped.ts",
+    "templates:sync": "npx tsx scripts/templates/sync-from-library.ts",
+    "templates:sync:library": "npx tsx scripts/templates/sync-from-library.ts",
+    "templates:sync:scraped": "npx tsx scripts/templates/sync-from-scraped.ts",
     "tui": "bash scripts/tui.sh",
     "generate:executors": "node scripts/generate-executor-register.mjs",
     "screenshots": "node scripts/capture-screenshots.mjs"

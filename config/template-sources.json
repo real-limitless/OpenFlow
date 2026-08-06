@@ -1,0 +1,12 @@
+{
+  "sources": [
+    {
+      "id": "n8n-community",
+      "name": "n8n Community Library",
+      "url": "https://github.com/real-limitless/n8n-workflow-library.git",
+      "ref": "main",
+      "enabled": true,
+      "priority": 100
+    }
+  ]
+}

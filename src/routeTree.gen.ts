@@ -27,6 +27,7 @@ import { Route as SettingsApiKeysRouteImport } from './routes/settings.api-keys'
 import { Route as SettingsEnvironmentsRouteImport } from './routes/settings.environments'
 import { Route as SettingsLogsRouteImport } from './routes/settings.logs'
 import { Route as SettingsSecretProvidersRouteImport } from './routes/settings.secret-providers'
+import { Route as SettingsTemplatesRouteImport } from './routes/settings.templates'
 import { Route as TemplatesIdRouteImport } from './routes/templates_.$id'
 import { Route as WorkflowIdRouteImport } from './routes/workflow.$id'
 
@@ -120,6 +121,11 @@ const SettingsSecretProvidersRoute = SettingsSecretProvidersRouteImport.update({
   path: '/secret-providers',
   getParentRoute: () => SettingsRoute,
 } as any)
+const SettingsTemplatesRoute = SettingsTemplatesRouteImport.update({
+  id: '/templates',
+  path: '/templates',
+  getParentRoute: () => SettingsRoute,
+} as any)
 const TemplatesIdRoute = TemplatesIdRouteImport.update({
   id: '/templates_/$id',
   path: '/templates/$id',
@@ -150,6 +156,7 @@ export interface FileRoutesByFullPath {
   '/settings/environments': typeof SettingsEnvironmentsRoute
   '/settings/logs': typeof SettingsLogsRoute
   '/settings/secret-providers': typeof SettingsSecretProvidersRoute
+  '/settings/templates': typeof SettingsTemplatesRoute
   '/templates/$id': typeof TemplatesIdRoute
   '/workflow/$id': typeof WorkflowIdRoute
 }
@@ -172,6 +179,7 @@ export interface FileRoutesByTo {
   '/settings/environments': typeof SettingsEnvironmentsRoute
   '/settings/logs': typeof SettingsLogsRoute
   '/settings/secret-providers': typeof SettingsSecretProvidersRoute
+  '/settings/templates': typeof SettingsTemplatesRoute
   '/templates/$id': typeof TemplatesIdRoute
   '/workflow/$id': typeof WorkflowIdRoute
 }
@@ -195,6 +203,7 @@ export interface FileRoutesById {
   '/settings/environments': typeof SettingsEnvironmentsRoute
   '/settings/logs': typeof SettingsLogsRoute
   '/settings/secret-providers': typeof SettingsSecretProvidersRoute
+  '/settings/templates': typeof SettingsTemplatesRoute
   '/templates_/$id': typeof TemplatesIdRoute
   '/workflow/$id': typeof WorkflowIdRoute
 }
@@ -219,6 +228,7 @@ export interface FileRouteTypes {
     | '/settings/environments'
     | '/settings/logs'
     | '/settings/secret-providers'
+    | '/settings/templates'
     | '/templates/$id'
     | '/workflow/$id'
   fileRoutesByTo: FileRoutesByTo
@@ -241,6 +251,7 @@ export interface FileRouteTypes {
     | '/settings/environments'
     | '/settings/logs'
     | '/settings/secret-providers'
+    | '/settings/templates'
     | '/templates/$id'
     | '/workflow/$id'
   id:
@@ -263,6 +274,7 @@ export interface FileRouteTypes {
     | '/settings/environments'
     | '/settings/logs'
     | '/settings/secret-providers'
+    | '/settings/templates'
     | '/templates_/$id'
     | '/workflow/$id'
   fileRoutesById: FileRoutesById
@@ -413,6 +425,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SettingsSecretProvidersRouteImport
       parentRoute: typeof SettingsRoute
     }
+    '/settings/templates': {
+      id: '/settings/templates'
+      path: '/templates'
+      fullPath: '/settings/templates'
+      preLoaderRoute: typeof SettingsTemplatesRouteImport
+      parentRoute: typeof SettingsRoute
+    }
     '/templates_/$id': {
       id: '/templates_/$id'
       path: '/templates/$id'
@@ -447,6 +466,7 @@ interface SettingsRouteChildren {
   SettingsEnvironmentsRoute: typeof SettingsEnvironmentsRoute
   SettingsLogsRoute: typeof SettingsLogsRoute
   SettingsSecretProvidersRoute: typeof SettingsSecretProvidersRoute
+  SettingsTemplatesRoute: typeof SettingsTemplatesRoute
 }
 
 const SettingsRouteChildren: SettingsRouteChildren = {
@@ -454,6 +474,7 @@ const SettingsRouteChildren: SettingsRouteChildren = {
   SettingsEnvironmentsRoute: SettingsEnvironmentsRoute,
   SettingsLogsRoute: SettingsLogsRoute,
   SettingsSecretProvidersRoute: SettingsSecretProvidersRoute,
+  SettingsTemplatesRoute: SettingsTemplatesRoute,
 }
 
 const SettingsRouteWithChildren = SettingsRoute._addFileChildren(

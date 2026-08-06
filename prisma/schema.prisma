@@ -360,10 +360,18 @@ model DataTableRow {
 
 // ─── Public workflow templates (marketplace) ────────────
 
-/// Community templates synced from scraped public n8n.io workflows.
+/// Templates synced from one or more library git repos (see config/template-sources.json).
 model WorkflowTemplate {
+  /// Composite id: `${sourceId}:${packId}` (e.g. n8n-community:1957)
   id             String   @id
-  externalId     Int      @unique
+  /// Library source key from template-sources config
+  sourceId       String
+  /// Human label for the source repo
+  sourceName     String?
+  /// Id inside the pack (directory name / meta.id)
+  packId         String
+  /// Optional numeric external id (e.g. n8n workflow id); unique per source
+  externalId     Int?
   name           String
   description    String?  @db.Text
   imageUrl       String?
@@ -380,13 +388,19 @@ model WorkflowTemplate {
   /// Full workflow graph JSON (nodes + connections + …)
   workflowJson   String   @db.Text
   metaJson       String?  @db.Text
+  /// Upstream attribution URL (e.g. https://n8n.io/workflows/1957)
   sourceUrl      String?
+  /// Optional link to the pack git repository
+  libraryUrl     String?
   readyToDemo    Boolean  @default(false)
   publishedAt    DateTime?
   syncedAt       DateTime @default(now())
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
+  @@unique([sourceId, packId])
+  @@index([sourceId])
+  @@index([externalId])
   @@index([views])
   @@index([name])
   @@index([syncedAt])
