@@ -78,6 +78,13 @@ venv/
 # Scraped public workflow dumps (local only)
 .scraped/
 
+# Template library checkouts used by templates:sync
+vendor/n8n-workflow-library/
+vendor/template-sources/
+
+# Local template source overrides (operator-specific repos)
+config/template-sources.local.json
+
 # n8n scrape TUI job state / proxy dumps
 scripts/scrape-n8n-workflows/.jobs/
 
