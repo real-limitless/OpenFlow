@@ -56,8 +56,7 @@ Each input item is processed independently. The `from`, `to`, and `message` para
 
 For each input item, the node makes a single POST request to the Vonage SMS API (`https://rest.nexmo.com/sms/json`). The response from the Vonage API is forwarded as the output item JSON.
 
-Each output item contains:
-- The original `json` input merged with the Vonage API response fields (message-count, messages array with to/status/error-text/messageId/remainingBalance/messagePrice/network/clientRef).
+Each output item's `json` receives the Vonage SMS API response envelope. Per the documented response schema, each message in the response contains the following per-message fields: `message-id` (string), `to` (string), `status` (string, "0" for success), `remaining-balance` (string), `message-price` (string), `network` (string). Additional envelope-level fields (`message-count`, `messages` array) are forwarded as-is from the API.
 
 If `continueOnFail` is disabled and the Vonage API returns a non-zero status code (non-delivery), the node throws an error. If `continueOnFail` is enabled, the node produces an error item with `error: { message, description }` instead.
 
@@ -187,5 +186,5 @@ The `to` and `message` values are resolved from the input item. The node POSTs t
 ## OpenFlow mapping
 
 - **Definition group:** `core`
-- **Executor file:** `src/lib/engine/executors/VonageExecutor.ts`
+- **Executor file:** `src/lib/engine/executors/vonage.ts`
 - **SDK:** `defineNode` + native `ExecutionContext` only
