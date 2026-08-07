@@ -144,7 +144,9 @@ export function PropertiesPanel({
             onKeyDown={(e) => e.key === "Enter" && (e.target as HTMLInputElement).blur()}
             className="h-8 border-transparent bg-transparent px-1 text-[14px] font-medium hover:border-border focus:border-border"
           />
-          <p className="px-1 font-mono text-[10px] text-muted-foreground">{node.type}</p>
+          <p className="px-1 font-mono text-[10px] text-muted-foreground">
+            {toCanonicalType(node.type)}
+          </p>
         </div>
         <Button size="icon" variant="ghost" className="size-7" onClick={() => selectNode(null)}>
           <X className="size-4" />
@@ -345,7 +347,7 @@ export function PropertiesPanel({
                   <span className="font-mono break-all">{toCanonicalType(node.type)}</span>
                 </p>
                 <p>
-                  <span className="text-foreground">Wire id:</span>{" "}
+                  <span className="text-foreground">Alias ID:</span>{" "}
                   <span className="font-mono break-all">{toWireType(node.type)}</span>
                 </p>
                 <p className="pt-1">
