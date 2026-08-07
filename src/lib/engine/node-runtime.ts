@@ -42,9 +42,23 @@ export function registerExecutor(type: string, executor: NodeExecutor): void {
   }
 }
 
+/** Fill required UI fields so incomplete clean-room defs cannot crash the editor. */
+function normalizeDescription(description: INodeTypeDescription): INodeTypeDescription {
+  return {
+    ...description,
+    inputs: description.inputs ?? [],
+    outputs: description.outputs ?? [],
+    properties: description.properties ?? [],
+    sources: description.sources ?? [],
+    group: Array.isArray(description.group) ? description.group : ["transform"],
+    icon: description.icon || "Box",
+  };
+}
+
 export function registerDescription(description: INodeTypeDescription): void {
-  for (const key of dualKeys(description.name)) {
-    descriptions.set(key, description);
+  const normalized = normalizeDescription(description);
+  for (const key of dualKeys(normalized.name)) {
+    descriptions.set(key, normalized);
   }
 }
 

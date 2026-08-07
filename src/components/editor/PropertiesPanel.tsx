@@ -246,7 +246,7 @@ export function PropertiesPanel({
               ) : (
                 <>
                   {isFormTriggerNode(node) && <FormTriggerUrls node={node} />}
-                  {description.properties
+                  {(description.properties ?? [])
                     .filter((prop) => shouldDisplay(prop, parameters))
                     .map((prop) => (
                       <ParameterField
@@ -338,10 +338,10 @@ export function PropertiesPanel({
                   <span className="text-foreground">Node id:</span>{" "}
                   <span className="font-mono">{node.id}</span>
                 </p>
-                {description.sources.length > 0 && (
+                {(description.sources ?? []).length > 0 && (
                   <p className="pt-1">
                     Written from:{" "}
-                    {description.sources.map((s) => (
+                    {(description.sources ?? []).map((s) => (
                       <a
                         key={s}
                         href={s}

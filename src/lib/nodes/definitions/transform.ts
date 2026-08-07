@@ -1203,6 +1203,9 @@ export const toolWikipedia: INodeTypeDescription = {
   outputNames: ["Tool"],
   icon: "BookOpen",
   properties: [],
+  sources: [
+    "https://docs.n8n.io/integrations/builtin/cluster-nodes/sub-nodes/n8n-nodes-langchain.toolwikipedia/",
+  ],
 };
 
 export const openThesaurus: INodeTypeDescription = {
