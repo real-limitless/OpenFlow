@@ -70,6 +70,19 @@ function filledHandleSets(workflow: IWorkflow): {
   return { inputs, outputs };
 }
 
+/** Approximate size so MiniMap/layout work before RF measures the DOM node. */
+function flowNodeSize(node: INode): { initialWidth: number; initialHeight: number } {
+  const p = node.parameters as { width?: number; height?: number } | undefined;
+  if (node.type === STICKY_NOTE_TYPE) {
+    return { initialWidth: p?.width ?? 320, initialHeight: p?.height ?? 180 };
+  }
+  if (isCanvasInspectType(node.type)) {
+    return { initialWidth: p?.width ?? 360, initialHeight: p?.height ?? 240 };
+  }
+  // BaseNode shell is w-[228px]; height grows with handles.
+  return { initialWidth: 228, initialHeight: 56 };
+}
+
 /** Workflow model → React Flow nodes (a derived view, never a source of truth). */
 export function toFlowNodes(workflow: IWorkflow, selectedName?: string | null): OpenFlowNode[] {
   const filled = filledHandleSets(workflow);
@@ -77,6 +90,7 @@ export function toFlowNodes(workflow: IWorkflow, selectedName?: string | null): 
     id: node.name,
     type: flowNodeType(node.type),
     position: { x: node.position[0], y: node.position[1] },
+    ...flowNodeSize(node),
     data: {
       node,
       filledInputs: [...(filled.inputs.get(node.name) ?? [])],
