@@ -4,7 +4,7 @@
  */
 import type { NodeExecutor } from "@/sdk";
 import type { INodeTypeDescription } from "@/lib/nodes/types";
-import { toCanonicalType, typeKeys } from "@/lib/nodes/type-ids";
+import { openflowRepoBase, toCanonicalType, typeKeys } from "@/lib/nodes/type-ids";
 
 const executors = new Map<string, NodeExecutor>();
 const descriptions = new Map<string, INodeTypeDescription>();
@@ -121,6 +121,29 @@ export function hasBuiltinExecutor(type: string): boolean {
     if (builtinExecutorTypes.has(key) || executors.has(key)) return true;
   }
   return builtinExecutorTypes.has(type) || executors.has(type);
+}
+
+/**
+ * Repo-relative path to the builtin executor source for `type`, e.g.
+ * `src/lib/engine/executors/http-request.ts`. Safe for UI (reads the static
+ * manifest only — does not import executor modules).
+ */
+export function getBuiltinExecutorSourcePath(type: string): string | null {
+  const canonical = toCanonicalType(type);
+  const entry = BUILTIN_EXECUTOR_MODULES.find(
+    (e) => toCanonicalType(e.type) === canonical || typeKeys(e.type).includes(type),
+  );
+  if (!entry?.modulePath) return null;
+  // modulePath is like "./executors/http-request" relative to src/lib/engine/
+  const rel = entry.modulePath.replace(/^\.\//, "").replace(/\.ts$/i, "");
+  return `src/lib/engine/${rel}.ts`;
+}
+
+/** GitHub blob URL for the node executor source, or null if unregistered. */
+export function executorSourceBlobUrl(type: string, branch = "main"): string | null {
+  const path = getBuiltinExecutorSourcePath(type);
+  if (!path) return null;
+  return `${openflowRepoBase()}/blob/${branch}/${path}`;
 }
 
 /**

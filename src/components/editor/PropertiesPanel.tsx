@@ -1,5 +1,16 @@
 import { useEffect, useMemo, useState } from "react";
-import { BookOpen, Bug, Copy, ExternalLink, Play, PowerOff, Trash2, TriangleAlert, X } from "lucide-react";
+import {
+  BookOpen,
+  Bug,
+  Code2,
+  Copy,
+  ExternalLink,
+  Play,
+  PowerOff,
+  Trash2,
+  TriangleAlert,
+  X,
+} from "lucide-react";
 import { useWorkflowStore } from "@/store/workflow-store";
 import { getNodeType } from "@/lib/nodes/registry";
 import { ParameterField, shouldDisplay } from "./ParameterField";
@@ -20,6 +31,7 @@ import { apiFetch } from "@/lib/auth/client";
 import { getSelectedEnvironmentId } from "@/lib/environments/client";
 import { buildIncoming } from "@/lib/engine/graph";
 import { openNodeIssueUrl } from "@/lib/feedback/github-issue";
+import { executorSourceBlobUrl } from "@/lib/engine/node-runtime";
 import { specBlobUrl, toCanonicalType, toWireType } from "@/lib/nodes/type-ids";
 
 export function PropertiesPanel({
@@ -126,6 +138,7 @@ export function PropertiesPanel({
 
   const description = getNodeType(node.type);
   const parameters = node.parameters ?? {};
+  const sourceUrl = executorSourceBlobUrl(node.type);
 
   return (
     <aside className={shellClass}>
@@ -363,6 +376,21 @@ export function PropertiesPanel({
                     <ExternalLink className="size-3 shrink-0 opacity-70" />
                   </a>
                 </p>
+                {sourceUrl && (
+                  <p className="pt-1">
+                    <span className="text-foreground">OpenFlow node source: </span>
+                    <a
+                      href={sourceUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="inline-flex items-center gap-1 break-all text-primary underline-offset-2 hover:underline"
+                    >
+                      <Code2 className="size-3 shrink-0" />
+                      View executor source
+                      <ExternalLink className="size-3 shrink-0 opacity-70" />
+                    </a>
+                  </p>
+                )}
                 <div className="pt-2">
                   <Button
                     type="button"
