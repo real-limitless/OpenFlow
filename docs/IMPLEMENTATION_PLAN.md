@@ -5,9 +5,9 @@ updated: 2026-07-28
 current: 3.1
 ---
 
-# OpenFlow — Self-Hosted Continuation Plan (No Lovable Cloud)
+# OpenFlow — Self-Hosted Continuation Plan
 
-**Goal:** Self-hosted n8n-style drop-in from Phase 1 editor MVP — own API/DB/engine, not Lovable Cloud.
+**Goal:** Self-hosted n8n-style drop-in from Phase 1 editor MVP — own API/DB/engine.
 
 **Layout:** Single app first (`src/server/**` + React-free `src/lib/workflow|nodes|expressions`). Monorepo later if needed.
 
@@ -76,7 +76,7 @@ TODO ID: <e.g. 1.5.1>
 GOAL: <one sentence>
 REPO: /var/home/chchiu/Documents/GitHub/OpenFlow
 CONSTRAINTS:
-- No Lovable Cloud
+- Self-hosted only (no third-party editor/cloud platform deps)
 - No n8n source
 - Single-app layout; keep src/lib/workflow|nodes|expressions React-free
 - Do not start other todos
@@ -96,7 +96,7 @@ Return: (1) summary (2) files touched (3) commands you ran (4) residual risks
 
 | Decision | Choice |
 |----------|--------|
-| Backend host | Self-hosted Node/Bun — **no Lovable Cloud** |
+| Backend host | Self-hosted Node/Bun |
 | API | Hono (or Fastify if Hono fights TanStack Start) |
 | DB | Prisma + SQLite dev / Postgres prod |
 | Code node | `isolated-vm` |
@@ -136,7 +136,7 @@ isolated-vm for Code node
 
 ### Phase 1.5 — Backend scaffold [COMPLETE]
 
-- [ ] **1.5.1** ADR `docs/adr/001-self-hosted-no-lovable-cloud.md` ← CURRENT
+- [x] **1.5.1** ADR `docs/adr/001-self-hosted-backend.md`
 - [ ] **1.5.2** Hono (or equivalent) API entry + `GET /health` under `src/server/`
 - [ ] **1.5.3** Prisma schema: users, workflows, executions, credentials, api_keys, webhook_routes
 - [ ] **1.5.4** SQLite migrate + seed path; `DATABASE_URL`
@@ -240,7 +240,7 @@ isolated-vm for Code node
 - [ ] **10.2** Tags, variables → Phase E3
 - [ ] **10.3** Docker prod docs + backup
 - [ ] **10.4** REST polish + OpenAPI
-- [ ] **10.5** Strip Lovable hard deps when leaving platform
+- [x] **10.5** First-party Vite/TanStack/Nitro config (no third-party editor platform deps)
 - [ ] **10.6** Gate: compose up → login → import → activate → webhook
 
 ### Phase 11+ — Community / AI [PENDING]
@@ -362,10 +362,9 @@ isolated-vm for Code node
 
 ## Explicit non-goals (near term)
 
-- Lovable Cloud, Lovable Connectors, Worker-only runtime
+- Third-party editor/cloud platform deps or Worker-only runtime
 - Loading binary n8n community node packages
 - SSO / SAML / LDAP login (deferred; see Phase list)
 - Claiming “n8n-compatible” as a trademark phrase in marketing
 - Vendoring third-party workflow runtimes (`n8n-workflow`, etc.)
 
-*This document supersedes the handoff’s “Blocked until Lovable Cloud” section.*

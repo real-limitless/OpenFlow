@@ -1,14 +1,14 @@
-# ADR-001: Self-Hosted Backend (No Lovable Cloud)
+# ADR-001: Self-Hosted Backend
 
 **Status:** Accepted  
 **Date:** 2026-07-27
 
 ## Context
 
-OpenFlow is a visual workflow editor with a runtime executor. Early iterations considered using Lovable Cloud (Workers, Supabase-via-Lovable) for backend hosting. That path was rejected because:
+OpenFlow is a visual workflow editor with a runtime executor. Early iterations considered hosting the backend on a third-party editor/cloud platform (Workers-style edge runtimes and BaaS). That path was rejected because:
 
 - We need full control over the runtime environment for `isolated-vm` code execution.
-- Lovable Cloud imposes constraints on background processes, persistent state, and long-running tasks that conflict with our execution model.
+- Hosted edge/BaaS constraints on background processes, persistent state, and long-running tasks conflict with our execution model.
 - A self-hosted backend lets us ship the single-app layout (`src/server/**`) without introducing cloud-specific bindings early.
 
 We also decided not to reference or vendor any n8n source code (clean-room policy). All implementation decisions are based on public documentation only.
@@ -19,7 +19,7 @@ We adopt the following stack and conventions:
 
 | Concern | Choice | Notes |
 |---|---|---|
-| Runtime | Node/Bun (self-hosted) | Not Lovable Cloud / Workers / Supabase-via-Lovable |
+| Runtime | Node/Bun (self-hosted) | Not edge Workers or third-party BaaS |
 | HTTP framework | Hono | Fallback to Fastify if integration pain arises |
 | ORM / DB | Prisma + SQLite (dev) / Postgres (prod) | |
 | Code node sandbox | `isolated-vm` | |
@@ -27,6 +27,7 @@ We adopt the following stack and conventions:
 | Persistence interface | `WorkflowRepository` | Add `ApiWorkflowRepository` later |
 | Execution protocol | Orchestrator dispatches coder (`opencode/big-pickle`); light verify after each call; halt on coder break / no-response and wait for user | |
 | Source policy | Clean-room only — no n8n source; cite public docs | |
+| Frontend toolchain | First-party Vite + TanStack Start + Nitro | No third-party editor platform packages |
 
 ## Consequences
 
