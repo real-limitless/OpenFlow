@@ -1,6 +1,8 @@
 # OpenFlow — agent guide
 
-Self-hosted workflow automation engine with a visual editor and clean-room node runtime. Workflow JSON may use public wire type strings (e.g. `n8n-nodes-base.httpRequest`) as **identifiers only** — that is not affiliation or package compatibility.
+Self-hosted workflow automation engine with a visual editor and clean-room node runtime.
+
+**Type ids:** Canonical storage/UI uses `openflow-node-base.*` and `openflow-node-langchain.*`. Public wire strings (`n8n-nodes-base.*`, `@n8n/n8n-nodes-langchain.*`) remain **import/export aliases only** for JSON interop — not affiliation or package compatibility. See `src/lib/nodes/type-ids.ts`.
 
 ## Stack
 

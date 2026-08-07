@@ -3,7 +3,7 @@ import type { INodeTypeDescription } from "../types";
 const SHAREPOINT_DOCS = "https://docs.n8n.io/integrations/builtin/app-nodes/n8n-nodes-base.microsoftsharepoint/";
 
 export const microsoftSharePoint: INodeTypeDescription = {
-  name: "n8n-nodes-base.microsoftSharePoint",
+  name: "openflow-node-base.microsoftSharePoint",
   displayName: "Microsoft SharePoint",
   category: "Helpers",
   group: ["organization"],
@@ -292,7 +292,7 @@ export const microsoftSharePoint: INodeTypeDescription = {
 };
 
 export const microsoftSharePointTool: INodeTypeDescription = {
-  name: "n8n-nodes-base.microsoftSharePointTool",
+  name: "openflow-node-base.microsoftSharePointTool",
   displayName: "Microsoft SharePoint Tool",
   category: "Helpers",
   group: ["organization"],
@@ -581,7 +581,7 @@ export const microsoftSharePointTool: INodeTypeDescription = {
 };
 
 export const nextCloud: INodeTypeDescription = {
-  name: "n8n-nodes-base.nextCloud",
+  name: "openflow-node-base.nextCloud",
   displayName: "Nextcloud",
   category: "Helpers",
   group: ["data"],
@@ -735,7 +735,7 @@ export const nextCloud: INodeTypeDescription = {
 };
 
 export const box: INodeTypeDescription = {
-  name: "n8n-nodes-base.box",
+  name: "openflow-node-base.box",
   displayName: "Box",
   category: "Data & Storage",
   group: ["data"],

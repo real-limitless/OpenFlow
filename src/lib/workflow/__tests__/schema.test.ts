@@ -131,6 +131,6 @@ describe("schema round-trip", () => {
     const result = parseWorkflowJson(nested);
     expect(result.ok).toBe(true);
     expect(result.workflow!.name).toBe("Template title");
-    expect(result.workflow!.nodes[0].type).toBe("n8n-nodes-base.manualWorkflowTrigger");
+    expect(result.workflow!.nodes[0].type).toBe("openflow-node-base.manualWorkflowTrigger");
   });
 });

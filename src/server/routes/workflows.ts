@@ -314,7 +314,10 @@ export default function workflowsRoute(app: Hono<AppEnv>) {
     })();
 
     if (active) {
-      const webhookNodes = nodes.filter((n: any) => n.type === "n8n-nodes-base.webhook");
+      const webhookNodes = nodes.filter(
+        (n: any) =>
+          n.type === "n8n-nodes-base.webhook" || n.type === "openflow-node-base.webhook",
+      );
       for (const node of webhookNodes) {
         const path = node.parameters?.path ?? node.name.toLowerCase().replace(/\s+/g, "-");
         const method = (node.parameters?.httpMethod as string) ?? "POST";
@@ -325,7 +328,11 @@ export default function workflowsRoute(app: Hono<AppEnv>) {
         });
       }
 
-      const scheduleNodes = nodes.filter((n: any) => n.type === "n8n-nodes-base.scheduleTrigger");
+      const scheduleNodes = nodes.filter(
+        (n: any) =>
+          n.type === "n8n-nodes-base.scheduleTrigger" ||
+          n.type === "openflow-node-base.scheduleTrigger",
+      );
       for (const node of scheduleNodes) {
         const cronExpr = (node.parameters?.rule?.interval?.[0]?.field as string) ?? "0 * * * *";
         await prisma.scheduledTrigger.upsert({

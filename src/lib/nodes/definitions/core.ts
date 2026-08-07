@@ -7,7 +7,7 @@ const TIME_SAVED_DOCS = "https://docs.n8n.io/integrations/builtin/app-nodes/n8n-
 const WISE_DOCS = "https://docs.n8n.io/integrations/builtin/app-nodes/n8n-nodes-base.wise/";
 
 export const httpRequest: INodeTypeDescription = {
-  name: "n8n-nodes-base.httpRequest",
+  name: "openflow-node-base.httpRequest",
   displayName: "HTTP Request",
   category: "Actions",
   group: ["input"],
@@ -150,7 +150,7 @@ export const httpRequest: INodeTypeDescription = {
 };
 
 export const set: INodeTypeDescription = {
-  name: "n8n-nodes-base.set",
+  name: "openflow-node-base.set",
   displayName: "Edit Fields (Set)",
   category: "Transform",
   group: ["transform"],
@@ -314,7 +314,7 @@ export const set: INodeTypeDescription = {
 };
 
 export const code: INodeTypeDescription = {
-  name: "n8n-nodes-base.code",
+  name: "openflow-node-base.code",
   displayName: "Code",
   category: "Transform",
   group: ["transform"],
@@ -376,7 +376,7 @@ export const code: INodeTypeDescription = {
 };
 
 export const stopAndError: INodeTypeDescription = {
-  name: "n8n-nodes-base.stopAndError",
+  name: "openflow-node-base.stopAndError",
   displayName: "Stop and Error",
   category: "Flow",
   group: ["transform"],
@@ -417,7 +417,7 @@ export const stopAndError: INodeTypeDescription = {
 };
 
 export const executeCommand: INodeTypeDescription = {
-  name: "n8n-nodes-base.executeCommand",
+  name: "openflow-node-base.executeCommand",
   displayName: "Execute Command",
   category: "Development",
   group: ["organization"],
@@ -450,7 +450,7 @@ export const executeCommand: INodeTypeDescription = {
 };
 
 export const noOp: INodeTypeDescription = {
-  name: "n8n-nodes-base.noOp",
+  name: "openflow-node-base.noOp",
   displayName: "No Operation",
   category: "Helpers",
   group: ["organization"],
@@ -472,7 +472,7 @@ export const noOp: INodeTypeDescription = {
 };
 
 export const executeCommandTool: INodeTypeDescription = {
-  name: "n8n-nodes-base.executeCommandTool",
+  name: "openflow-node-base.executeCommandTool",
   displayName: "Execute Command (AI Tool)",
   category: "Action",
   group: ["organization"],
@@ -508,7 +508,7 @@ export const executeCommandTool: INodeTypeDescription = {
 };
 
 export const executionData: INodeTypeDescription = {
-  name: "n8n-nodes-base.executionData",
+  name: "openflow-node-base.executionData",
   displayName: "Execution Data",
   category: "Helpers",
   group: ["organization"],
@@ -567,7 +567,7 @@ export const executionData: INodeTypeDescription = {
 
 
 export const openWeatherMapTool: INodeTypeDescription = {
-  name: "n8n-nodes-base.openWeatherMapTool",
+  name: "openflow-node-base.openWeatherMapTool",
   displayName: "OpenWeatherMap (AI Tool)",
   category: "AI Tool",
   group: ["output"],
@@ -657,7 +657,7 @@ export const openWeatherMapTool: INodeTypeDescription = {
 };
 
 export const postBinTool: INodeTypeDescription = {
-  name: "n8n-nodes-base.postBinTool",
+  name: "openflow-node-base.postBinTool",
   displayName: "PostBin Tool",
   category: "Development",
   group: ["output"],
@@ -745,7 +745,7 @@ export const postBinTool: INodeTypeDescription = {
 };
 
 export const marketstack: INodeTypeDescription = {
-  name: "n8n-nodes-base.marketstack",
+  name: "openflow-node-base.marketstack",
   displayName: "Marketstack",
   category: "Finance",
   group: ["output"],
@@ -877,7 +877,7 @@ export const marketstack: INodeTypeDescription = {
 };
 
 export const microsoftGraphSecurity: INodeTypeDescription = {
-  name: "n8n-nodes-base.microsoftGraphSecurity",
+  name: "openflow-node-base.microsoftGraphSecurity",
   displayName: "Microsoft Graph Security",
   category: "Development",
   group: ["output"],
@@ -1036,7 +1036,7 @@ export const microsoftGraphSecurity: INodeTypeDescription = {
 };
 
 export const profitWell: INodeTypeDescription = {
-  name: "n8n-nodes-base.profitWell",
+  name: "openflow-node-base.profitWell",
   displayName: "ProfitWell",
   category: "Analytics",
   group: ["output"],
@@ -1122,7 +1122,7 @@ export const profitWell: INodeTypeDescription = {
 };
 
 export const wekanTool: INodeTypeDescription = {
-  name: "n8n-nodes-base.wekanTool",
+  name: "openflow-node-base.wekanTool",
   displayName: "Wekan (AI Tool)",
   category: "AI Tool",
   group: ["output"],
@@ -1486,7 +1486,7 @@ export const wekanTool: INodeTypeDescription = {
 };
 
 export const zohoCrmTool: INodeTypeDescription = {
-  name: "n8n-nodes-base.zohoCrmTool",
+  name: "openflow-node-base.zohoCrmTool",
   displayName: "Zoho CRM (AI Tool)",
   category: "AI Tool",
   group: ["output"],
@@ -1707,7 +1707,7 @@ export const zohoCrmTool: INodeTypeDescription = {
 };
 
 export const peekalink: INodeTypeDescription = {
-  name: "n8n-nodes-base.peekalink",
+  name: "openflow-node-base.peekalink",
   displayName: "Peekalink",
   category: "Development",
   group: ["output"],
@@ -1749,7 +1749,7 @@ export const peekalink: INodeTypeDescription = {
 };
 
 export const harvest: INodeTypeDescription = {
-  name: "n8n-nodes-base.harvest",
+  name: "openflow-node-base.harvest",
   displayName: "Harvest",
   category: "Productivity",
   group: ["output"],
@@ -1959,7 +1959,7 @@ export const harvest: INodeTypeDescription = {
 };
 
 export const mandrillTool: INodeTypeDescription = {
-  name: "n8n-nodes-base.mandrillTool",
+  name: "openflow-node-base.mandrillTool",
   displayName: "Mandrill (AI Tool)",
   category: "AI Tool",
   group: ["output"],
@@ -2070,7 +2070,7 @@ export const mandrillTool: INodeTypeDescription = {
 };
 
 export const mandrill: INodeTypeDescription = {
-  name: "n8n-nodes-base.mandrill",
+  name: "openflow-node-base.mandrill",
   displayName: "Mandrill",
   category: "Communication",
   group: ["communication"],
@@ -2178,7 +2178,7 @@ export const mandrill: INodeTypeDescription = {
 };
 
 export const travisCiTool: INodeTypeDescription = {
-  name: "n8n-nodes-base.travisCiTool",
+  name: "openflow-node-base.travisCiTool",
   displayName: "Travis CI Tool",
   category: "Development",
   group: ["output"],
@@ -2280,7 +2280,7 @@ export const travisCiTool: INodeTypeDescription = {
 };
 
 export const storyblok: INodeTypeDescription = {
-  name: "n8n-nodes-base.storyblok",
+  name: "openflow-node-base.storyblok",
   displayName: "Storyblok",
   category: "Data & Storage",
   group: ["output"],
@@ -2369,7 +2369,7 @@ export const storyblok: INodeTypeDescription = {
 };
 
 export const oktaTool: INodeTypeDescription = {
-  name: "n8n-nodes-base.oktaTool",
+  name: "openflow-node-base.oktaTool",
   displayName: "Okta (AI Tool)",
   category: "AI Tool",
   group: ["output"],
@@ -2464,7 +2464,7 @@ export const oktaTool: INodeTypeDescription = {
 };
 
 export const helpScout: INodeTypeDescription = {
-  name: "n8n-nodes-base.helpScout",
+  name: "openflow-node-base.helpScout",
   displayName: "Help Scout",
   category: "Communication",
   group: ["communication"],
@@ -3035,7 +3035,7 @@ export const helpScout: INodeTypeDescription = {
 };
 
 export const googleCloudNaturalLanguageTool: INodeTypeDescription = {
-  name: "n8n-nodes-base.googleCloudNaturalLanguageTool",
+  name: "openflow-node-base.googleCloudNaturalLanguageTool",
   displayName: "Google Cloud Natural Language (AI Tool)",
   category: "AI Tool",
   group: ["output"],
@@ -3129,7 +3129,7 @@ export const googleCloudNaturalLanguageTool: INodeTypeDescription = {
 };
 
 export const cortex: INodeTypeDescription = {
-  name: "n8n-nodes-base.cortex",
+  name: "openflow-node-base.cortex",
   displayName: "Cortex",
   category: "Development",
   group: ["output"],
@@ -3309,7 +3309,7 @@ export const cortex: INodeTypeDescription = {
 };
 
 export const oneSimpleApi: INodeTypeDescription = {
-  name: "n8n-nodes-base.oneSimpleApi",
+  name: "openflow-node-base.oneSimpleApi",
   displayName: "One Simple API",
   category: "Transform",
   group: ["transform"],
@@ -3465,7 +3465,7 @@ export const oneSimpleApi: INodeTypeDescription = {
 };
 
 export const emelia: INodeTypeDescription = {
-  name: "n8n-nodes-base.emelia",
+  name: "openflow-node-base.emelia",
   displayName: "Emelia",
   category: "Action",
   group: ["output"],
@@ -3630,7 +3630,7 @@ export const emelia: INodeTypeDescription = {
 };
 
 export const gong: INodeTypeDescription = {
-  name: "n8n-nodes-base.gong",
+  name: "openflow-node-base.gong",
   displayName: "Gong",
   category: "Development, Developer Tools",
   group: ["output"],
@@ -3739,7 +3739,7 @@ export const gong: INodeTypeDescription = {
       description: "Pagination offset",
     },
     {
-      displayName: "All parameter values support n8n expression strings (={{ }})",
+      displayName: "All parameter values support OpenFlow expression strings (={{ }})",
       name: "expressionNotice",
       type: "notice",
       default: "",
@@ -3748,7 +3748,7 @@ export const gong: INodeTypeDescription = {
 };
 
 export const agileCrm: INodeTypeDescription = {
-  name: "n8n-nodes-base.agileCrm",
+  name: "openflow-node-base.agileCrm",
   displayName: "Agile CRM",
   category: "Marketing & Sales",
   group: ["output"],
@@ -4024,7 +4024,7 @@ export const agileCrm: INodeTypeDescription = {
 };
 
 export const circleCiTool: INodeTypeDescription = {
-  name: "n8n-nodes-base.circleCiTool",
+  name: "openflow-node-base.circleCiTool",
   displayName: "CircleCI Tool",
   category: "Development",
   group: ["output"],
@@ -4157,7 +4157,7 @@ export const circleCiTool: INodeTypeDescription = {
 };
 
 export const awsSqs: INodeTypeDescription = {
-  name: "n8n-nodes-base.awsSqs",
+  name: "openflow-node-base.awsSqs",
   displayName: "AWS SQS",
   category: "Development",
   group: ["output"],
@@ -4289,7 +4289,7 @@ export const awsSqs: INodeTypeDescription = {
 };
 
 export const clearbitTool: INodeTypeDescription = {
-  name: "n8n-nodes-base.clearbitTool",
+  name: "openflow-node-base.clearbitTool",
   displayName: "Clearbit (AI Tool)",
   category: "AI Tool",
   group: ["output"],
@@ -4408,7 +4408,7 @@ export const clearbitTool: INodeTypeDescription = {
 };
 
 export const coinGecko: INodeTypeDescription = {
-  name: "n8n-nodes-base.coinGecko",
+  name: "openflow-node-base.coinGecko",
   displayName: "CoinGecko",
   category: "Finance & Accounting",
   group: ["output"],
@@ -4720,7 +4720,7 @@ export const coinGecko: INodeTypeDescription = {
 };
 
 export const filemaker: INodeTypeDescription = {
-  name: "n8n-nodes-base.filemaker",
+  name: "openflow-node-base.filemaker",
   displayName: "FileMaker",
   category: "Actions",
   group: ["output"],
@@ -4866,7 +4866,7 @@ export const filemaker: INodeTypeDescription = {
 const MAGENTO2_DOCS = "https://docs.n8n.io/integrations/builtin/app-nodes/n8n-nodes-base.magento2/";
 
 export const magento2: INodeTypeDescription = {
-  name: "n8n-nodes-base.magento2",
+  name: "openflow-node-base.magento2",
   displayName: "Magento 2",
   category: "Commerce",
   group: ["output"],
@@ -5221,7 +5221,7 @@ export const magento2: INodeTypeDescription = {
 const GOTOWEBINAR_DOCS = "https://docs.n8n.io/integrations/builtin/app-nodes/n8n-nodes-base.gotowebinar/";
 
 export const goToWebinar: INodeTypeDescription = {
-  name: "n8n-nodes-base.goToWebinar",
+  name: "openflow-node-base.goToWebinar",
   displayName: "GoToWebinar",
   category: "Communication",
   group: ["output"],
@@ -5527,7 +5527,7 @@ export const goToWebinar: INodeTypeDescription = {
 };
 
 export const microsoftOneDrive: INodeTypeDescription = {
-  name: "n8n-nodes-base.microsoftOneDrive",
+  name: "openflow-node-base.microsoftOneDrive",
   displayName: "Microsoft OneDrive",
   category: "Data & Storage",
   group: ["output"],
@@ -5549,7 +5549,7 @@ export const microsoftOneDrive: INodeTypeDescription = {
 };
 
 export const twitter: INodeTypeDescription = {
-  name: "n8n-nodes-base.twitter",
+  name: "openflow-node-base.twitter",
   displayName: "X (Formerly Twitter)",
   category: "Data & Storage",
   group: ["output"],
@@ -5773,7 +5773,7 @@ export const twitter: INodeTypeDescription = {
 };
 
 export const googleDrive: INodeTypeDescription = {
-  name: "n8n-nodes-base.googleDrive",
+  name: "openflow-node-base.googleDrive",
   displayName: "Google Drive",
   category: "Data & Storage",
   group: ["output"],
@@ -6093,7 +6093,7 @@ const AZURE_OPENAI_DOCS =
   "https://docs.n8n.io/integrations/builtin/cluster-nodes/sub-nodes/n8n-nodes-langchain.lmchatazureopenai.md";
 
 export const uptimeRobot: INodeTypeDescription = {
-  name: "n8n-nodes-base.uptimeRobot",
+  name: "openflow-node-base.uptimeRobot",
   displayName: "UptimeRobot",
   category: "Development",
   group: ["output"],
@@ -6615,7 +6615,7 @@ export const uptimeRobot: INodeTypeDescription = {
 };
 
 export const lmChatAzureOpenAi: INodeTypeDescription = {
-  name: "@n8n/n8n-nodes-langchain.lmChatAzureOpenAi",
+  name: "openflow-node-langchain.lmChatAzureOpenAi",
   displayName: "Azure OpenAI Chat Model",
   category: "Actions",
   group: ["input"],
@@ -6695,7 +6695,7 @@ export const lmChatAzureOpenAi: INodeTypeDescription = {
 };
 
 export const onfleet: INodeTypeDescription = {
-  name: "n8n-nodes-base.onfleet",
+  name: "openflow-node-base.onfleet",
   displayName: "Onfleet",
   category: "Miscellaneous",
   group: ["core"],
@@ -6940,7 +6940,7 @@ const SIGN_ALGORITHMS = [
 ];
 
 export const crypto: INodeTypeDescription = {
-  name: "n8n-nodes-base.crypto",
+  name: "openflow-node-base.crypto",
   displayName: "Crypto",
   category: "Transform",
   group: ["transform"],
@@ -7095,7 +7095,7 @@ export const crypto: INodeTypeDescription = {
 };
 
 export const mistralAi: INodeTypeDescription = {
-  name: "n8n-nodes-base.mistralAi",
+  name: "openflow-node-base.mistralAi",
   displayName: "Mistral AI",
   category: "Utility",
   group: ["output"],
@@ -7182,7 +7182,7 @@ export const mistralAi: INodeTypeDescription = {
 };
 
 export const s3: INodeTypeDescription = {
-  name: "n8n-nodes-base.s3",
+  name: "openflow-node-base.s3",
   displayName: "S3",
   category: "Actions",
   group: ["input"],
@@ -7558,7 +7558,7 @@ export const s3: INodeTypeDescription = {
 };
 
 export const ftp: INodeTypeDescription = {
-  name: "n8n-nodes-base.ftp",
+  name: "openflow-node-base.ftp",
   displayName: "FTP",
   category: "Actions",
   group: ["input"],
@@ -7691,7 +7691,7 @@ export const ftp: INodeTypeDescription = {
 };
 
 export const ssh: INodeTypeDescription = {
-  name: "n8n-nodes-base.ssh",
+  name: "openflow-node-base.ssh",
   displayName: "SSH",
   category: "Development",
   group: ["input"],
@@ -7848,7 +7848,7 @@ export const ssh: INodeTypeDescription = {
 };
 
 export const readBinaryFile: INodeTypeDescription = {
-  name: "n8n-nodes-base.readBinaryFile",
+  name: "openflow-node-base.readBinaryFile",
   displayName: "Read Binary File",
   category: "Files",
   group: ["input"],
@@ -7879,7 +7879,7 @@ export const readBinaryFile: INodeTypeDescription = {
 };
 
 export const readBinaryFiles: INodeTypeDescription = {
-  name: "n8n-nodes-base.readBinaryFiles",
+  name: "openflow-node-base.readBinaryFiles",
   displayName: "Read Binary Files",
   category: "Files",
   group: ["input"],
@@ -7938,7 +7938,7 @@ export const readBinaryFiles: INodeTypeDescription = {
 };
 
 export const readPDF: INodeTypeDescription = {
-  name: "n8n-nodes-base.readPDF",
+  name: "openflow-node-base.readPDF",
   displayName: "Extract from PDF",
   category: "Files",
   group: ["output"],
@@ -7962,7 +7962,7 @@ export const readPDF: INodeTypeDescription = {
 };
 
 export const writeBinaryFile: INodeTypeDescription = {
-  name: "n8n-nodes-base.writeBinaryFile",
+  name: "openflow-node-base.writeBinaryFile",
   displayName: "Write Binary File",
   category: "Files",
   group: ["output"],
@@ -8007,7 +8007,7 @@ export const writeBinaryFile: INodeTypeDescription = {
 };
 
 export const readWriteFile: INodeTypeDescription = {
-  name: "n8n-nodes-base.readWriteFile",
+  name: "openflow-node-base.readWriteFile",
   displayName: "Read/Write Files from Disk",
   category: "Actions",
   group: ["input"],
@@ -8112,7 +8112,7 @@ export const readWriteFile: INodeTypeDescription = {
 };
 
 export const httpRequestTool: INodeTypeDescription = {
-  name: "n8n-nodes-base.httpRequestTool",
+  name: "openflow-node-base.httpRequestTool",
   displayName: "HTTP Request Tool",
   category: "Actions",
   group: ["input"],
@@ -8395,7 +8395,7 @@ export const httpRequestTool: INodeTypeDescription = {
 };
 
 export const rssFeedRead: INodeTypeDescription = {
-  name: "n8n-nodes-base.rssFeedRead",
+  name: "openflow-node-base.rssFeedRead",
   displayName: "RSS Read",
   category: "Actions",
   group: ["input"],
@@ -8444,7 +8444,7 @@ export const rssFeedRead: INodeTypeDescription = {
 };
 
 export const rssFeedReadTool: INodeTypeDescription = {
-  name: "n8n-nodes-base.rssFeedReadTool",
+  name: "openflow-node-base.rssFeedReadTool",
   displayName: "RSS Feed Read (AI Tool)",
   category: "AI Tool",
   group: ["input"],
@@ -8484,7 +8484,7 @@ export const rssFeedReadTool: INodeTypeDescription = {
 };
 
 export const emailSend: INodeTypeDescription = {
-  name: "n8n-nodes-base.emailSend",
+  name: "openflow-node-base.emailSend",
   displayName: "Send Email",
   category: "Actions",
   group: ["input"],
@@ -8610,7 +8610,7 @@ export const emailSend: INodeTypeDescription = {
 };
 
 export const stickyNote: INodeTypeDescription = {
-  name: "n8n-nodes-base.stickyNote",
+  name: "openflow-node-base.stickyNote",
   displayName: "Sticky Note",
   category: "Helpers",
   group: ["organization"],
@@ -8648,7 +8648,7 @@ export const stickyNote: INodeTypeDescription = {
 };
 
 export const gitlab: INodeTypeDescription = {
-  name: "n8n-nodes-base.gitlab",
+  name: "openflow-node-base.gitlab",
   displayName: "GitLab",
   category: "Development",
   group: ["integration"],
@@ -8869,7 +8869,7 @@ export const gitlab: INodeTypeDescription = {
 };
 
 export const dropcontact: INodeTypeDescription = {
-  name: "n8n-nodes-base.dropcontact",
+  name: "openflow-node-base.dropcontact",
   displayName: "Dropcontact",
   category: "Sales",
   group: ["output"],
@@ -8989,7 +8989,7 @@ export const dropcontact: INodeTypeDescription = {
 };
 
 export const googleCloudNaturalLanguage: INodeTypeDescription = {
-  name: "n8n-nodes-base.googleCloudNaturalLanguage",
+  name: "openflow-node-base.googleCloudNaturalLanguage",
   displayName: "Google Cloud Natural Language",
   category: "Analytics",
   group: ["output"],
@@ -9073,7 +9073,7 @@ export const googleCloudNaturalLanguage: INodeTypeDescription = {
 };
 
 export const debugHelper: INodeTypeDescription = {
-  name: "n8n-nodes-base.debugHelper",
+  name: "openflow-node-base.debugHelper",
   displayName: "Debug Helper",
   category: "Development",
   group: ["output"],
@@ -9207,7 +9207,7 @@ const LANGCHAIN_CODE_CHANNELS = [
 ];
 
 export const langchainCode: INodeTypeDescription = {
-  name: "@n8n/n8n-nodes-langchain.code",
+  name: "openflow-node-langchain.code",
   displayName: "LangChain Code",
   category: "Actions",
   group: ["input"],
@@ -9286,7 +9286,7 @@ const LANGCHAIN_DOCS =
   "https://docs.n8n.io/integrations/builtin/cluster-nodes/sub-nodes/n8n-nodes-langchain.lmchatopenai.md";
 
 export const lmChatOpenAi: INodeTypeDescription = {
-  name: "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+  name: "openflow-node-langchain.lmChatOpenAi",
   displayName: "OpenAI Chat Model",
   category: "Actions",
   group: ["input"],
@@ -9439,7 +9439,7 @@ const GEMINI_DOCS =
   "https://docs.n8n.io/integrations/builtin/cluster-nodes/sub-nodes/n8n-nodes-langchain.lmchatgooglegemini.md";
 
 export const lmChatGoogleGemini: INodeTypeDescription = {
-  name: "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+  name: "openflow-node-langchain.lmChatGoogleGemini",
   displayName: "Google Gemini Chat Model",
   category: "Actions",
   group: ["input"],
@@ -9504,7 +9504,7 @@ export const lmChatGoogleGemini: INodeTypeDescription = {
 };
 
 export const asana: INodeTypeDescription = {
-  name: "n8n-nodes-base.asana",
+  name: "openflow-node-base.asana",
   displayName: "Asana",
   category: "Productivity",
   group: ["output"],
@@ -9816,7 +9816,7 @@ const ANTHROPIC_DOCS =
   "https://docs.n8n.io/integrations/builtin/cluster-nodes/sub-nodes/n8n-nodes-langchain.lmchatanthropic.md";
 
 export const lmChatAnthropic: INodeTypeDescription = {
-  name: "@n8n/n8n-nodes-langchain.lmChatAnthropic",
+  name: "openflow-node-langchain.lmChatAnthropic",
   displayName: "Anthropic Chat Model",
   category: "Actions",
   group: ["input"],
@@ -9878,7 +9878,7 @@ const OLLAMA_DOCS =
   "https://docs.n8n.io/integrations/builtin/cluster-nodes/sub-nodes/n8n-nodes-langchain.lmchatollama.md";
 
 export const lmChatOllama: INodeTypeDescription = {
-  name: "@n8n/n8n-nodes-langchain.lmChatOllama",
+  name: "openflow-node-langchain.lmChatOllama",
   displayName: "Ollama Chat Model",
   category: "Actions",
   group: ["input"],
@@ -9934,7 +9934,7 @@ const OPENROUTER_DOCS =
   "https://docs.n8n.io/integrations/builtin/cluster-nodes/sub-nodes/n8n-nodes-langchain.lmchatopenrouter.md";
 
 export const lmChatOpenRouter: INodeTypeDescription = {
-  name: "@n8n/n8n-nodes-langchain.lmChatOpenRouter",
+  name: "openflow-node-langchain.lmChatOpenRouter",
   displayName: "OpenRouter Chat Model",
   category: "Actions",
   group: ["input"],
@@ -10017,7 +10017,7 @@ const AGENT_DOCS =
   "https://docs.n8n.io/integrations/builtin/cluster-nodes/root-nodes/n8n-nodes-langchain.agent.md";
 
 export const langchainAgent: INodeTypeDescription = {
-  name: "@n8n/n8n-nodes-langchain.agent",
+  name: "openflow-node-langchain.agent",
   displayName: "AI Agent",
   category: "Actions",
   group: ["input"],
@@ -10113,7 +10113,7 @@ const CHAIN_RETRIEVAL_QA_DOCS =
   "https://docs.n8n.io/integrations/builtin/cluster-nodes/root-nodes/n8n-nodes-langchain.chainretrievalqa.md";
 
 export const chainRetrievalQa: INodeTypeDescription = {
-  name: "@n8n/n8n-nodes-langchain.chainRetrievalQa",
+  name: "openflow-node-langchain.chainRetrievalQa",
   displayName: "Question and Answer Chain",
   category: "Actions",
   group: ["input"],
@@ -10162,7 +10162,7 @@ const CHAIN_LLM_DOCS =
   "https://docs.n8n.io/integrations/builtin/cluster-nodes/root-nodes/n8n-nodes-langchain.chainllm.md";
 
 export const chainLlm: INodeTypeDescription = {
-  name: "@n8n/n8n-nodes-langchain.chainLlm",
+  name: "openflow-node-langchain.chainLlm",
   displayName: "Basic LLM Chain",
   category: "Actions",
   group: ["input"],
@@ -10283,7 +10283,7 @@ const CHAIN_SUMMARIZATION_DOCS =
   "https://docs.n8n.io/integrations/builtin/cluster-nodes/root-nodes/n8n-nodes-langchain.chainsummarization.md";
 
 export const chainSummarization: INodeTypeDescription = {
-  name: "@n8n/n8n-nodes-langchain.chainSummarization",
+  name: "openflow-node-langchain.chainSummarization",
   displayName: "Summarization Chain",
   category: "Actions",
   group: ["input"],
@@ -10405,7 +10405,7 @@ const INFO_EXTRACTOR_DOCS =
   "https://docs.n8n.io/integrations/builtin/cluster-nodes/root-nodes/n8n-nodes-langchain.information-extractor/";
 
 export const informationExtractor: INodeTypeDescription = {
-  name: "@n8n/n8n-nodes-langchain.informationExtractor",
+  name: "openflow-node-langchain.informationExtractor",
   displayName: "Information Extractor",
   category: "Actions",
   group: ["input"],
@@ -10510,7 +10510,7 @@ const MCP_CLIENT_TOOL_DOCS =
   "https://docs.n8n.io/integrations/builtin/cluster-nodes/sub-nodes/n8n-nodes-langchain.toolmcp.md";
 
 export const mcpClientTool: INodeTypeDescription = {
-  name: "@n8n/n8n-nodes-langchain.mcpClientTool",
+  name: "openflow-node-langchain.mcpClientTool",
   displayName: "MCP Client Tool",
   category: "Actions",
   group: ["input"],
@@ -10597,7 +10597,7 @@ export const mcpClientTool: INodeTypeDescription = {
 };
 
 export const toolSearXng: INodeTypeDescription = {
-  name: "@n8n/n8n-nodes-langchain.toolSearXng",
+  name: "openflow-node-langchain.toolSearXng",
   displayName: "SearXNG Tool",
   category: "AI Tool",
   group: ["input"],
@@ -10647,7 +10647,7 @@ export const toolSearXng: INodeTypeDescription = {
 };
 
 export const toolWolframAlpha: INodeTypeDescription = {
-  name: "@n8n/n8n-nodes-langchain.toolWolframAlpha",
+  name: "openflow-node-langchain.toolWolframAlpha",
   displayName: "Wolfram|Alpha Tool",
   category: "AI Tool",
   group: ["input"],
@@ -10663,14 +10663,14 @@ export const toolWolframAlpha: INodeTypeDescription = {
 };
 
 export const toolWorkflow: INodeTypeDescription = {
-  name: "@n8n/n8n-nodes-langchain.toolWorkflow",
-  displayName: "Call n8n Workflow Tool",
+  name: "openflow-node-langchain.toolWorkflow",
+  displayName: "Call Workflow Tool",
   category: "AI Tool",
   group: ["input"],
   version: [1, 2],
   description:
     "Exposes another n8n workflow as a callable tool to an AI Agent. When the agent invokes the tool it executes the target workflow and returns its output.",
-  defaults: { name: "Call n8n Workflow Tool" },
+  defaults: { name: "Call Workflow Tool" },
   inputs: [],
   outputs: ["ai_tool"],
   icon: "Workflow",
@@ -10751,7 +10751,7 @@ export const toolWorkflow: INodeTypeDescription = {
 };
 
 export const toolThink: INodeTypeDescription = {
-  name: "@n8n/n8n-nodes-langchain.toolThink",
+  name: "openflow-node-langchain.toolThink",
   displayName: "Think Tool",
   category: "AI Tool",
   group: ["input"],
@@ -10784,7 +10784,7 @@ export const toolThink: INodeTypeDescription = {
 };
 
 export const toolCalculator: INodeTypeDescription = {
-  name: "@n8n/n8n-nodes-langchain.toolCalculator",
+  name: "openflow-node-langchain.toolCalculator",
   displayName: "Calculator",
   category: "AI Tool",
   group: ["input"],
@@ -10809,7 +10809,7 @@ export const toolCalculator: INodeTypeDescription = {
 };
 
 export const git: INodeTypeDescription = {
-  name: "n8n-nodes-base.git",
+  name: "openflow-node-base.git",
   displayName: "Git",
   category: "Actions",
   group: ["input"],
@@ -10977,7 +10977,7 @@ export const git: INodeTypeDescription = {
 };
 
 export const graphql: INodeTypeDescription = {
-  name: "n8n-nodes-base.graphql",
+  name: "openflow-node-base.graphql",
   displayName: "GraphQL",
   category: "Actions",
   group: ["input"],
@@ -11117,7 +11117,7 @@ export const graphql: INodeTypeDescription = {
 };
 
 export const graphqlTool: INodeTypeDescription = {
-  name: "n8n-nodes-base.graphqlTool",
+  name: "openflow-node-base.graphqlTool",
   displayName: "GraphQL (AI Tool)",
   category: "AI Tool",
   group: ["output"],
@@ -11257,7 +11257,7 @@ export const graphqlTool: INodeTypeDescription = {
 const PUSHBULLET_DOCS = "https://docs.n8n.io/integrations/builtin/app-nodes/n8n-nodes-base.pushbullet.md";
 
 export const pushbullet: INodeTypeDescription = {
-  name: "n8n-nodes-base.pushbullet",
+  name: "openflow-node-base.pushbullet",
   displayName: "Pushbullet",
   category: "Communication",
   group: ["output"],
@@ -11433,7 +11433,7 @@ export const pushbullet: INodeTypeDescription = {
 const TOTP_DOCS = `${CORE}n8n-nodes-base.totp/`;
 
 export const totp: INodeTypeDescription = {
-  name: "n8n-nodes-base.totp",
+  name: "openflow-node-base.totp",
   displayName: "TOTP",
   category: "Transform",
   group: ["transform"],
@@ -11486,7 +11486,7 @@ const OPENAI_APP_DOCS =
   "https://docs.n8n.io/integrations/builtin/app-nodes/n8n-nodes-langchain.openai.md";
 
 export const openAi: INodeTypeDescription = {
-  name: "@n8n/n8n-nodes-langchain.openAi",
+  name: "openflow-node-langchain.openAi",
   displayName: "OpenAI",
   category: "Actions",
   group: ["input"],
@@ -11887,7 +11887,7 @@ export const openAi: INodeTypeDescription = {
 };
 
 export const googleBooks: INodeTypeDescription = {
-  name: "n8n-nodes-base.googleBooks",
+  name: "openflow-node-base.googleBooks",
   displayName: "Google Books",
   category: "Miscellaneous",
   group: ["output"],
@@ -12135,7 +12135,7 @@ const MEMORY_BUFFER_WINDOW_DOCS =
   "https://docs.n8n.io/integrations/builtin/cluster-nodes/sub-nodes/n8n-nodes-langchain.memorybufferwindow.md";
 
 export const memoryBufferWindow: INodeTypeDescription = {
-  name: "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+  name: "openflow-node-langchain.memoryBufferWindow",
   displayName: "Simple Memory",
   category: "Actions",
   group: ["input"],
@@ -12171,7 +12171,7 @@ const OUTPUT_PARSER_STRUCTURED_DOCS =
   "https://docs.n8n.io/integrations/builtin/cluster-nodes/sub-nodes/n8n-nodes-langchain.outputparserstructured.md";
 
 export const outputParserStructured: INodeTypeDescription = {
-  name: "@n8n/n8n-nodes-langchain.outputParserStructured",
+  name: "openflow-node-langchain.outputParserStructured",
   displayName: "Structured Output Parser",
   category: "Actions",
   group: ["input"],
@@ -12228,7 +12228,7 @@ const OUTPUT_PARSER_ITEM_LIST_DOCS =
   "https://docs.n8n.io/integrations/builtin/cluster-nodes/sub-nodes/n8n-nodes-langchain.outputparseritemlist.md";
 
 export const outputParserItemList: INodeTypeDescription = {
-  name: "@n8n/n8n-nodes-langchain.outputParserItemList",
+  name: "openflow-node-langchain.outputParserItemList",
   displayName: "Item List Output Parser",
   category: "Actions",
   group: ["input"],
@@ -12262,7 +12262,7 @@ const OUTPUT_PARSER_AUTOFIXING_DOCS =
   "https://docs.n8n.io/integrations/builtin/cluster-nodes/sub-nodes/n8n-nodes-langchain.outputparserautofixing.md";
 
 export const outputParserAutofixing: INodeTypeDescription = {
-  name: "@n8n/n8n-nodes-langchain.outputParserAutofixing",
+  name: "openflow-node-langchain.outputParserAutofixing",
   displayName: "Auto-fixing Output Parser",
   category: "Actions",
   group: ["input"],
@@ -12299,7 +12299,7 @@ const WHATSAPP_DOCS =
   "https://docs.n8n.io/integrations/builtin/app-nodes/n8n-nodes-base.whatsapp.md";
 
 export const vectorStoreInMemory: INodeTypeDescription = {
-  name: "@n8n/n8n-nodes-langchain.vectorStoreInMemory",
+  name: "openflow-node-langchain.vectorStoreInMemory",
   displayName: "Simple Vector Store",
   category: "AI",
   group: ["input"],
@@ -12408,7 +12408,7 @@ export const vectorStoreInMemory: INodeTypeDescription = {
 };
 
 export const vectorStoreMilvus: INodeTypeDescription = {
-  name: "@n8n/n8n-nodes-langchain.vectorStoreMilvus",
+  name: "openflow-node-langchain.vectorStoreMilvus",
   displayName: "Milvus Vector Store",
   category: "AI",
   group: ["input"],
@@ -12541,7 +12541,7 @@ export const vectorStoreMilvus: INodeTypeDescription = {
 };
 
 export const vectorStorePinecone: INodeTypeDescription = {
-  name: "@n8n/n8n-nodes-langchain.vectorStorePinecone",
+  name: "openflow-node-langchain.vectorStorePinecone",
   displayName: "Pinecone Vector Store",
   category: "AI",
   group: ["input"],
@@ -12692,7 +12692,7 @@ export const vectorStorePinecone: INodeTypeDescription = {
 };
 
 export const whatsApp: INodeTypeDescription = {
-  name: "n8n-nodes-base.whatsApp",
+  name: "openflow-node-base.whatsApp",
   displayName: "WhatsApp Business Cloud",
   category: "Actions",
   group: ["output"],
@@ -13066,7 +13066,7 @@ export const whatsApp: INodeTypeDescription = {
 const TWILIO_DOCS = "https://docs.n8n.io/integrations/builtin/app-nodes/n8n-nodes-base.twilio/";
 
 export const twilio: INodeTypeDescription = {
-  name: "n8n-nodes-base.twilio",
+  name: "openflow-node-base.twilio",
   displayName: "Twilio",
   category: "Actions",
   group: ["output"],
@@ -13200,7 +13200,7 @@ const DOCUMENT_DEFAULT_DATA_LOADER_DOCS =
   "https://docs.n8n.io/integrations/builtin/cluster-nodes/sub-nodes/n8n-nodes-langchain.documentdefaultdataloader.md";
 
 export const documentDefaultDataLoader: INodeTypeDescription = {
-  name: "@n8n/n8n-nodes-langchain.documentDefaultDataLoader",
+  name: "openflow-node-langchain.documentDefaultDataLoader",
   displayName: "Default Data Loader",
   category: "AI",
   group: ["input"],
@@ -13305,7 +13305,7 @@ const TEXT_SPLITTER_RECURSIVE_DOCS =
   "https://docs.n8n.io/integrations/builtin/cluster-nodes/sub-nodes/n8n-nodes-langchain.textsplitterrecursivecharactertextsplitter.md";
 
 export const textSplitterRecursiveCharacterTextSplitter: INodeTypeDescription = {
-  name: "@n8n/n8n-nodes-langchain.textSplitterRecursiveCharacterTextSplitter",
+  name: "openflow-node-langchain.textSplitterRecursiveCharacterTextSplitter",
   displayName: "Recursive Character Text Splitter",
   category: "AI",
   group: ["input"],
@@ -13359,7 +13359,7 @@ const EMBEDDINGS_COHERE_DOCS =
   "https://docs.n8n.io/integrations/builtin/cluster-nodes/sub-nodes/n8n-nodes-langchain.embeddingscohere.md";
 
 export const embeddingsCohere: INodeTypeDescription = {
-  name: "@n8n/n8n-nodes-langchain.embeddingsCohere",
+  name: "openflow-node-langchain.embeddingsCohere",
   displayName: "Embeddings Cohere",
   category: "AI",
   group: ["input"],
@@ -13391,7 +13391,7 @@ export const embeddingsCohere: INodeTypeDescription = {
 };
 
 export const embeddingsOpenAi: INodeTypeDescription = {
-  name: "@n8n/n8n-nodes-langchain.embeddingsOpenAi",
+  name: "openflow-node-langchain.embeddingsOpenAi",
   displayName: "Embeddings OpenAI",
   category: "AI",
   group: ["input"],
@@ -13455,7 +13455,7 @@ const TELEGRAM_DOCS =
   "https://docs.n8n.io/integrations/builtin/app-nodes/n8n-nodes-base.telegram.md";
 
 export const telegram: INodeTypeDescription = {
-  name: "n8n-nodes-base.telegram",
+  name: "openflow-node-base.telegram",
   displayName: "Telegram",
   category: "Communication",
   group: ["output"],
@@ -13990,7 +13990,7 @@ export const telegram: INodeTypeDescription = {
 };
 
 export const hubspot: INodeTypeDescription = {
-  name: "n8n-nodes-base.hubspot",
+  name: "openflow-node-base.hubspot",
   displayName: "HubSpot",
   category: "Sales",
   group: ["output"],
@@ -14349,7 +14349,7 @@ export const hubspot: INodeTypeDescription = {
 };
 
 export const mongoDb: INodeTypeDescription = {
-  name: "n8n-nodes-base.mongoDb",
+  name: "openflow-node-base.mongoDb",
   displayName: "MongoDB",
   category: "Database",
   group: ["output"],
@@ -14533,7 +14533,7 @@ export const mongoDb: INodeTypeDescription = {
 const SUPABASE_DOCS = "https://docs.n8n.io/integrations/builtin/app-nodes/n8n-nodes-base.supabase/";
 
 export const supabase: INodeTypeDescription = {
-  name: "n8n-nodes-base.supabase",
+  name: "openflow-node-base.supabase",
   displayName: "Supabase",
   category: "Actions",
   group: ["input"],
@@ -14743,7 +14743,7 @@ export const supabase: INodeTypeDescription = {
 };
 
 export const facebookGraphApi: INodeTypeDescription = {
-  name: "n8n-nodes-base.facebookGraphApi",
+  name: "openflow-node-base.facebookGraphApi",
   displayName: "Facebook Graph API",
   category: "Development",
   group: ["input"],
@@ -14835,7 +14835,7 @@ export const facebookGraphApi: INodeTypeDescription = {
 const WORDPRESS_DOCS = "https://docs.n8n.io/integrations/builtin/app-nodes/n8n-nodes-base.wordpress/";
 
 export const wordpress: INodeTypeDescription = {
-  name: "n8n-nodes-base.wordpress",
+  name: "openflow-node-base.wordpress",
   displayName: "WordPress",
   category: "Marketing",
   group: ["input"],
@@ -15362,13 +15362,13 @@ export const wordpress: INodeTypeDescription = {
 const n8n_DOCS = "https://docs.n8n.io/integrations/builtin/core-nodes/n8n-nodes-base.n8n.md";
 
 export const n8n: INodeTypeDescription = {
-  name: "n8n-nodes-base.n8n",
-  displayName: "n8n",
+  name: "openflow-node-base.n8n",
+  displayName: "n8n API",
   category: "Development",
   group: ["input"],
   version: [1],
   description: "Interact with the n8n API to manage workflows, executions, credentials, and audits.",
-  defaults: { name: "n8n" },
+  defaults: { name: "n8n API" },
   inputs: ["main"],
   outputs: ["main"],
   icon: "Box",
@@ -15600,7 +15600,7 @@ export const n8n: INodeTypeDescription = {
 };
 
 export const evaluation: INodeTypeDescription = {
-  name: "n8n-nodes-base.evaluation",
+  name: "openflow-node-base.evaluation",
   displayName: "Evaluation",
   category: "Utility",
   group: ["output"],
@@ -15717,7 +15717,7 @@ export const evaluation: INodeTypeDescription = {
 const LDAP_DOCS = `${CORE}n8n-nodes-base.ldap/`;
 
 export const quickChart: INodeTypeDescription = {
-  name: "n8n-nodes-base.quickChart",
+  name: "openflow-node-base.quickChart",
   displayName: "QuickChart",
   category: "Marketing",
   group: ["output"],
@@ -15832,7 +15832,7 @@ export const quickChart: INodeTypeDescription = {
 };
 
 export const ldap: INodeTypeDescription = {
-  name: "n8n-nodes-base.ldap",
+  name: "openflow-node-base.ldap",
   displayName: "LDAP",
   category: "Core",
   group: ["input"],
@@ -16010,7 +16010,7 @@ export const ldap: INodeTypeDescription = {
 const MCP_COMMUNITY_CLIENT_DOCS = "https://docs.n8n.io/integrations/builtin/core-nodes/n8n-nodes-mcp.mcpClientTool.md";
 
 export const mcpCommunityClient: INodeTypeDescription = {
-  name: "n8n-nodes-mcp.mcpClientTool",
+  name: "openflow-node-mcp.mcpClientTool",
   displayName: "MCP Client",
   category: "Actions",
   group: ["output"],
@@ -16094,7 +16094,7 @@ export const mcpCommunityClient: INodeTypeDescription = {
 const HN_DOCS = "https://docs.n8n.io/integrations/builtin/app-nodes/n8n-nodes-base.hackernews/";
 
 export const hackerNews: INodeTypeDescription = {
-  name: "n8n-nodes-base.hackerNews",
+  name: "openflow-node-base.hackerNews",
   displayName: "Hacker News",
   category: "Communication",
   group: ["input"],
@@ -16174,7 +16174,7 @@ export const hackerNews: INodeTypeDescription = {
 const MATTERMOST_DOCS = "https://docs.n8n.io/integrations/builtin/app-nodes/n8n-nodes-base.mattermost.md";
 
 export const mattermost: INodeTypeDescription = {
-  name: "n8n-nodes-base.mattermost",
+  name: "openflow-node-base.mattermost",
   displayName: "Mattermost",
   category: "Communication",
   group: ["output"],
@@ -16547,7 +16547,7 @@ export const mattermost: INodeTypeDescription = {
 };
 
 export const mattermostTool: INodeTypeDescription = {
-  name: "n8n-nodes-base.mattermostTool",
+  name: "openflow-node-base.mattermostTool",
   displayName: "Mattermost Tool",
   category: "AI Tool",
   group: ["output"],
@@ -16565,7 +16565,7 @@ export const mattermostTool: INodeTypeDescription = {
 const MATRIX_DOCS = "https://docs.n8n.io/integrations/builtin/app-nodes/n8n-nodes-base.matrix.md";
 
 export const matrix: INodeTypeDescription = {
-  name: "n8n-nodes-base.matrix",
+  name: "openflow-node-base.matrix",
   displayName: "Matrix",
   category: "Communication",
   group: ["output"],
@@ -16910,7 +16910,7 @@ export const matrix: INodeTypeDescription = {
 const ROCKETCHAT_DOCS = "https://docs.n8n.io/integrations/builtin/app-nodes/n8n-nodes-base.rocketchat.md";
 
 export const rocketchat: INodeTypeDescription = {
-  name: "n8n-nodes-base.rocketchat",
+  name: "openflow-node-base.rocketchat",
   displayName: "Rocket.Chat",
   category: "Communication",
   group: ["output"],
@@ -17173,7 +17173,7 @@ export const rocketchat: INodeTypeDescription = {
 const PUSHOVER_DOCS = "https://docs.n8n.io/integrations/builtin/app-nodes/n8n-nodes-base.pushover.md";
 
 export const pushover: INodeTypeDescription = {
-  name: "n8n-nodes-base.pushover",
+  name: "openflow-node-base.pushover",
   displayName: "Pushover",
   category: "Communication",
   group: ["output"],
@@ -17324,7 +17324,7 @@ export const pushover: INodeTypeDescription = {
 const PUSHOVER_TOOL_DOCS = "https://docs.n8n.io/integrations/builtin/app-nodes/n8n-nodes-base.pushover.md";
 
 export const pushoverTool: INodeTypeDescription = {
-  name: "n8n-nodes-base.pushoverTool",
+  name: "openflow-node-base.pushoverTool",
   displayName: "Pushover (AI Tool)",
   category: "AI Tool",
   group: ["output"],
@@ -17487,7 +17487,7 @@ const USER_OPERATIONS = [
 ];
 
 export const gSuiteAdmin: INodeTypeDescription = {
-  name: "n8n-nodes-base.gSuiteAdmin",
+  name: "openflow-node-base.gSuiteAdmin",
   displayName: "Google Workspace Admin",
   category: "Utility",
   group: ["transform"],
@@ -18049,7 +18049,7 @@ export const gSuiteAdmin: INodeTypeDescription = {
 const TRELLO_DOCS = "https://docs.n8n.io/integrations/builtin/app-nodes/n8n-nodes-base.trello/";
 
 export const trello: INodeTypeDescription = {
-  name: "n8n-nodes-base.trello",
+  name: "openflow-node-base.trello",
   displayName: "Trello",
   category: "Productivity",
   group: ["transform"],
@@ -18239,7 +18239,7 @@ const COLUMN_TYPES = [
 ];
 
 export const mondayCom: INodeTypeDescription = {
-  name: "n8n-nodes-base.mondayCom",
+  name: "openflow-node-base.mondayCom",
   displayName: "monday.com",
   category: "Productivity",
   group: ["output"],
@@ -18596,7 +18596,7 @@ export const mondayCom: INodeTypeDescription = {
 };
 
 export const linear: INodeTypeDescription = {
-  name: "n8n-nodes-base.linear",
+  name: "openflow-node-base.linear",
   displayName: "Linear",
   category: "Actions",
   group: ["input"],
@@ -18753,7 +18753,7 @@ export const linear: INodeTypeDescription = {
 const JENKINS_DOCS = "https://docs.n8n.io/integrations/builtin/app-nodes/n8n-nodes-base.jenkins/";
 
 export const jenkins: INodeTypeDescription = {
-  name: "n8n-nodes-base.jenkins",
+  name: "openflow-node-base.jenkins",
   displayName: "Jenkins",
   category: "App",
   group: ["integration"],
@@ -18891,7 +18891,7 @@ export const jenkins: INodeTypeDescription = {
 };
 
 export const circleCi: INodeTypeDescription = {
-  name: "n8n-nodes-base.circleCi",
+  name: "openflow-node-base.circleCi",
   displayName: "CircleCI",
   category: "App",
   group: ["integration"],
@@ -18994,7 +18994,7 @@ export const circleCi: INodeTypeDescription = {
 };
 
 export const wooCommerce: INodeTypeDescription = {
-  name: "n8n-nodes-base.wooCommerce",
+  name: "openflow-node-base.wooCommerce",
   displayName: "WooCommerce",
   category: "Actions",
   group: ["output"],
@@ -19091,7 +19091,7 @@ export const wooCommerce: INodeTypeDescription = {
 const SHOPIFY_DOCS = "https://docs.n8n.io/integrations/builtin/app-nodes/n8n-nodes-base.shopify/";
 
 export const shopify: INodeTypeDescription = {
-  name: "n8n-nodes-base.shopify",
+  name: "openflow-node-base.shopify",
   displayName: "Shopify",
   category: "Sales",
   group: ["output"],
@@ -19303,7 +19303,7 @@ const SOURCE_OPERATIONS = [
 const TOKEN_OPERATIONS = [{ name: "Create", value: "create" }];
 
 export const stripe: INodeTypeDescription = {
-  name: "n8n-nodes-base.stripe",
+  name: "openflow-node-base.stripe",
   displayName: "Stripe",
   category: "Finance & Accounting",
   group: ["integration"],
@@ -19592,7 +19592,7 @@ export const stripe: INodeTypeDescription = {
 };
 
 export const xero: INodeTypeDescription = {
-  name: "n8n-nodes-base.xero",
+  name: "openflow-node-base.xero",
   displayName: "Xero",
   category: "Finance & Accounting",
   group: ["integration"],
@@ -19775,7 +19775,7 @@ const GUARDRAILS_DOCS =
   "https://docs.n8n.io/integrations/builtin/core-nodes/n8n-nodes-langchain.guardrails.md";
 
 export const guardrails: INodeTypeDescription = {
-  name: "@n8n/n8n-nodes-langchain.guardrails",
+  name: "openflow-node-langchain.guardrails",
   displayName: "Guardrails",
   category: "AI",
   group: ["input"],
@@ -20022,7 +20022,7 @@ export const guardrails: INodeTypeDescription = {
 };
 
 export const gmailTool: INodeTypeDescription = {
-  name: "n8n-nodes-base.gmailTool",
+  name: "openflow-node-base.gmailTool",
   displayName: "Gmail (AI Tool)",
   category: "Actions",
   group: ["input"],
@@ -20075,7 +20075,7 @@ export const gmailTool: INodeTypeDescription = {
 };
 
 export const googleCalendarTool: INodeTypeDescription = {
-  name: "n8n-nodes-base.googleCalendarTool",
+  name: "openflow-node-base.googleCalendarTool",
   displayName: "Google Calendar (AI Tool)",
   category: "Actions",
   group: ["input"],
@@ -20136,7 +20136,7 @@ export const googleCalendarTool: INodeTypeDescription = {
 };
 
 export const googleSheetsTool: INodeTypeDescription = {
-  name: "n8n-nodes-base.googleSheetsTool",
+  name: "openflow-node-base.googleSheetsTool",
   displayName: "Google Sheets (AI Tool)",
   category: "Actions",
   group: ["input"],
@@ -20188,7 +20188,7 @@ export const googleSheetsTool: INodeTypeDescription = {
 };
 
 export const googleTasksTool: INodeTypeDescription = {
-  name: "n8n-nodes-base.googleTasksTool",
+  name: "openflow-node-base.googleTasksTool",
   displayName: "Google Tasks (AI Tool)",
   category: "Actions",
   group: ["input"],
@@ -20234,7 +20234,7 @@ export const googleTasksTool: INodeTypeDescription = {
 };
 
 export const wooCommerceTool: INodeTypeDescription = {
-  name: "n8n-nodes-base.wooCommerceTool",
+  name: "openflow-node-base.wooCommerceTool",
   displayName: "WooCommerce (AI Tool)",
   category: "Actions",
   group: ["input"],
@@ -20403,7 +20403,7 @@ const CIPHER_OPTIONS_TOOL = [
 ];
 
 export const cryptoTool: INodeTypeDescription = {
-  name: "n8n-nodes-base.cryptoTool",
+  name: "openflow-node-base.cryptoTool",
   displayName: "Crypto (AI Tool)",
   category: "AI Tool",
   group: ["input"],
@@ -20696,7 +20696,7 @@ export const cryptoTool: INodeTypeDescription = {
 };
 
 export const dateTimeTool: INodeTypeDescription = {
-  name: "n8n-nodes-base.dateTimeTool",
+  name: "openflow-node-base.dateTimeTool",
   displayName: "Date & Time Tool",
   category: "AI Tool",
   group: ["input"],
@@ -20923,7 +20923,7 @@ const MEMORY_MANAGER_DOCS =
   "https://docs.n8n.io/integrations/builtin/cluster-nodes/sub-nodes/n8n-nodes-langchain.memorymanager.md";
 
 export const memoryManager: INodeTypeDescription = {
-  name: "@n8n/n8n-nodes-langchain.memoryManager",
+  name: "openflow-node-langchain.memoryManager",
   displayName: "Chat Memory Manager",
   category: "Actions",
   group: ["input"],
@@ -21039,7 +21039,7 @@ const RETRIEVER_VECTOR_STORE_DOCS =
   "https://docs.n8n.io/integrations/builtin/cluster-nodes/sub-nodes/n8n-nodes-langchain.retrievervectorstore.md";
 
 export const retrieverVectorStore: INodeTypeDescription = {
-  name: "@n8n/n8n-nodes-langchain.retrieverVectorStore",
+  name: "openflow-node-langchain.retrieverVectorStore",
   displayName: "Vector Store Retriever",
   category: "Actions",
   group: ["input"],
@@ -21067,7 +21067,7 @@ export const retrieverVectorStore: INodeTypeDescription = {
 const HA_DOCS = "https://docs.n8n.io/integrations/builtin/app-nodes/n8n-nodes-base.homeassistant.md";
 
 export const homeAssistant: INodeTypeDescription = {
-  name: "n8n-nodes-base.homeAssistant",
+  name: "openflow-node-base.homeAssistant",
   displayName: "Home Assistant",
   category: "Helpers",
   group: ["output"],
@@ -21296,7 +21296,7 @@ export const homeAssistant: INodeTypeDescription = {
 };
 
 export const lmChatGroq: INodeTypeDescription = {
-  name: "@n8n/n8n-nodes-langchain.lmChatGroq",
+  name: "openflow-node-langchain.lmChatGroq",
   displayName: "Groq Chat Model",
   category: "Actions",
   group: ["input"],
@@ -21344,7 +21344,7 @@ const AGENT_TOOL_DOCS =
   "https://docs.n8n.io/integrations/builtin/cluster-nodes/sub-nodes/n8n-nodes-langchain.toolaiagent.md";
 
 export const langchainAgentTool: INodeTypeDescription = {
-  name: "@n8n/n8n-nodes-langchain.agentTool",
+  name: "openflow-node-langchain.agentTool",
   displayName: "AI Agent Tool",
   category: "Actions",
   group: ["output"],
@@ -21433,7 +21433,7 @@ export const langchainAgentTool: INodeTypeDescription = {
 };
 
 export const linkedIn: INodeTypeDescription = {
-  name: "n8n-nodes-base.linkedIn",
+  name: "openflow-node-base.linkedIn",
   displayName: "LinkedIn",
   category: "Data & Storage",
   group: ["output"],
@@ -21535,7 +21535,7 @@ export const linkedIn: INodeTypeDescription = {
 };
 
 export const github: INodeTypeDescription = {
-  name: "n8n-nodes-base.github",
+  name: "openflow-node-base.github",
   displayName: "GitHub",
   category: "Development",
   group: ["input"],
@@ -21889,7 +21889,7 @@ export const github: INodeTypeDescription = {
 };
 
 export const lmChatMistralCloud: INodeTypeDescription = {
-  name: "@n8n/n8n-nodes-langchain.lmChatMistralCloud",
+  name: "openflow-node-langchain.lmChatMistralCloud",
   displayName: "Mistral Cloud Chat Model",
   category: "Actions",
   group: ["input"],
@@ -21959,7 +21959,7 @@ export const lmChatMistralCloud: INodeTypeDescription = {
 };
 
 export const googleDocsTool: INodeTypeDescription = {
-  name: "n8n-nodes-base.googleDocsTool",
+  name: "openflow-node-base.googleDocsTool",
   displayName: "Google Docs (AI Tool)",
   category: "Actions",
   group: ["input"],
@@ -22045,7 +22045,7 @@ export const googleDocsTool: INodeTypeDescription = {
 
 
 export const n8nNodesLangchainChat: INodeTypeDescription = {
-  name: "@n8n/n8n-nodes-langchain.chat",
+  name: "openflow-node-langchain.chat",
   displayName: "Chat",
   category: "Core",
   group: ["output"],
@@ -22169,7 +22169,7 @@ export const n8nNodesLangchainChat: INodeTypeDescription = {
 };
 
 export const clearbit: INodeTypeDescription = {
-  name: "n8n-nodes-base.clearbit",
+  name: "openflow-node-base.clearbit",
   displayName: "Clearbit",
   category: "Sales",
   group: ["output"],
@@ -22315,7 +22315,7 @@ export const clearbit: INodeTypeDescription = {
 };
 
 export const hunter: INodeTypeDescription = {
-  name: "n8n-nodes-base.hunter",
+  name: "openflow-node-base.hunter",
   displayName: "Hunter",
   category: "Sales",
   group: ["output"],
@@ -22454,7 +22454,7 @@ export const hunter: INodeTypeDescription = {
 };
 
 export const zoom: INodeTypeDescription = {
-  name: "n8n-nodes-base.zoom",
+  name: "openflow-node-base.zoom",
   displayName: "Zoom",
   category: "Communication",
   group: ["output"],
@@ -22717,7 +22717,7 @@ export const zoom: INodeTypeDescription = {
 };
 
 export const jinaAi: INodeTypeDescription = {
-  name: "n8n-nodes-base.jinaAi",
+  name: "openflow-node-base.jinaAi",
   displayName: "Jina AI",
   category: "Miscellaneous",
   group: ["output"],
@@ -22943,7 +22943,7 @@ export const jinaAi: INodeTypeDescription = {
 };
 
 export const uproc: INodeTypeDescription = {
-  name: "n8n-nodes-base.uproc",
+  name: "openflow-node-base.uproc",
   displayName: "uProc",
   category: "Data & Storage",
   group: ["output"],
@@ -23107,7 +23107,7 @@ export const uproc: INodeTypeDescription = {
 };
 
 export const jinaAiTool: INodeTypeDescription = {
-  name: "n8n-nodes-base.jinaAiTool",
+  name: "openflow-node-base.jinaAiTool",
   displayName: "Jina AI (AI Tool)",
   category: "Miscellaneous",
   group: ["output"],
@@ -23318,7 +23318,7 @@ export const jinaAiTool: INodeTypeDescription = {
 };
 
 export const googleFirebaseCloudFirestore: INodeTypeDescription = {
-  name: "n8n-nodes-base.googleFirebaseCloudFirestore",
+  name: "openflow-node-base.googleFirebaseCloudFirestore",
   displayName: "Google Firebase Cloud Firestore",
   category: "Data & Storage",
   group: ["output"],
@@ -23486,7 +23486,7 @@ export const googleFirebaseCloudFirestore: INodeTypeDescription = {
 };
 
 export const timeSaved: INodeTypeDescription = {
-  name: "n8n-nodes-base.timeSaved",
+  name: "openflow-node-base.timeSaved",
   displayName: "Track Time Saved",
   category: "Core Nodes",
   group: ["organization"],
@@ -23527,7 +23527,7 @@ const GHOST = "https://docs.n8n.io/integrations/builtin/app-nodes/n8n-nodes-base
 const GHOST_CRED = "https://docs.n8n.io/integrations/builtin/credentials/ghost/";
 
 export const ghost: INodeTypeDescription = {
-  name: "n8n-nodes-base.ghost",
+  name: "openflow-node-base.ghost",
   displayName: "Ghost",
   category: "App",
   group: ["output"],
@@ -23725,7 +23725,7 @@ export const ghost: INodeTypeDescription = {
 const HUMANTIC_DOCS = "https://docs.n8n.io/integrations/builtin/app-nodes/n8n-nodes-base.humanticai/";
 
 export const humanticAi: INodeTypeDescription = {
-  name: "n8n-nodes-base.humanticAi",
+  name: "openflow-node-base.humanticAi",
   displayName: "Humantic AI",
   category: "Analytics",
   group: ["output"],
@@ -23808,7 +23808,7 @@ export const humanticAi: INodeTypeDescription = {
 const MEDIUM_DOCS = "https://docs.n8n.io/integrations/builtin/app-nodes/n8n-nodes-base.medium/";
 
 export const medium: INodeTypeDescription = {
-  name: "n8n-nodes-base.medium",
+  name: "openflow-node-base.medium",
   displayName: "Medium",
   category: "Action",
   group: ["core"],
@@ -23963,7 +23963,7 @@ export const medium: INodeTypeDescription = {
 };
 
 export const raindrop: INodeTypeDescription = {
-  name: "n8n-nodes-base.raindrop",
+  name: "openflow-node-base.raindrop",
   displayName: "Raindrop",
   category: "Productivity",
   group: ["output"],
@@ -24224,7 +24224,7 @@ const STRAPI_DOCS =
   "https://docs.n8n.io/integrations/builtin/app-nodes/n8n-nodes-base.strapi.md";
 
 export const strapi: INodeTypeDescription = {
-  name: "n8n-nodes-base.strapi",
+  name: "openflow-node-base.strapi",
   displayName: "Strapi",
   category: "Data & Storage",
   group: ["output"],
@@ -24339,7 +24339,7 @@ export const strapi: INodeTypeDescription = {
 };
 
 export const theHive: INodeTypeDescription = {
-  name: "n8n-nodes-base.theHive",
+  name: "openflow-node-base.theHive",
   displayName: "TheHive",
   category: "Development",
   group: ["output"],
@@ -24537,7 +24537,7 @@ export const theHive: INodeTypeDescription = {
 };
 
 export const theHiveTool: INodeTypeDescription = {
-  name: "n8n-nodes-base.theHiveTool",
+  name: "openflow-node-base.theHiveTool",
   displayName: "TheHive (AI Tool)",
   category: "AI Tool",
   group: ["output"],
@@ -24700,7 +24700,7 @@ export const theHiveTool: INodeTypeDescription = {
 const URLSCAN_DOCS = "https://docs.n8n.io/integrations/builtin/app-nodes/n8n-nodes-base.urlscanio/";
 
 export const urlScanIo: INodeTypeDescription = {
-  name: "n8n-nodes-base.urlScanIo",
+  name: "openflow-node-base.urlScanIo",
   displayName: "urlscan.io",
   category: "Utility",
   group: ["output"],
@@ -24819,7 +24819,7 @@ export const urlScanIo: INodeTypeDescription = {
 const CONVERTKIT_DOCS = "https://docs.n8n.io/integrations/builtin/app-nodes/n8n-nodes-base.convertkit/";
 
 export const convertKit: INodeTypeDescription = {
-  name: "n8n-nodes-base.convertKit",
+  name: "openflow-node-base.convertKit",
   displayName: "ConvertKit",
   category: "Marketing",
   group: ["marketing"],
@@ -25011,7 +25011,7 @@ export const convertKit: INodeTypeDescription = {
 };
 
 export const googleDriveSearch: INodeTypeDescription = {
-  name: "n8n-nodes-base.googleDriveSearch",
+  name: "openflow-node-base.googleDriveSearch",
   displayName: "Google Drive Search",
   category: "Data & Storage",
   group: ["output"],
@@ -25116,7 +25116,7 @@ export const googleDriveSearch: INodeTypeDescription = {
 };
 
 export const googleSlidesTool: INodeTypeDescription = {
-  name: "n8n-nodes-base.googleSlidesTool",
+  name: "openflow-node-base.googleSlidesTool",
   displayName: "Google Slides",
   category: "AI Tool",
   group: ["input"],
@@ -25274,7 +25274,7 @@ export const googleSlidesTool: INodeTypeDescription = {
 };
 
 export const signl4: INodeTypeDescription = {
-  name: "n8n-nodes-base.signl4",
+  name: "openflow-node-base.signl4",
   displayName: "SIGNL4",
   category: "Communication",
   group: ["output"],
@@ -25434,7 +25434,7 @@ export const signl4: INodeTypeDescription = {
 };
 
 export const keap: INodeTypeDescription = {
-  name: "n8n-nodes-base.keap",
+  name: "openflow-node-base.keap",
   displayName: "Keap",
   category: "CRM",
   group: ["output"],
@@ -25685,7 +25685,7 @@ export const keap: INodeTypeDescription = {
 const THEHIVE_PROJECT_DOCS = "https://docs.n8n.io/integrations/builtin/app-nodes/n8n-nodes-base.thehive5.md";
 
 export const theHiveProject: INodeTypeDescription = {
-  name: "n8n-nodes-base.theHiveProject",
+  name: "openflow-node-base.theHiveProject",
   displayName: "TheHive 5",
   category: "Development",
   group: ["output"],
@@ -25941,7 +25941,7 @@ export const theHiveProject: INodeTypeDescription = {
 };
 
 export const awsRekognition: INodeTypeDescription = {
-  name: "n8n-nodes-base.awsRekognition",
+  name: "openflow-node-base.awsRekognition",
   displayName: "AWS Rekognition",
   category: "Development",
   group: ["input"],
@@ -26054,7 +26054,7 @@ export const awsRekognition: INodeTypeDescription = {
 };
 
 export const awsSns: INodeTypeDescription = {
-  name: "n8n-nodes-base.awsSns",
+  name: "openflow-node-base.awsSns",
   displayName: "AWS SNS",
   category: "Development",
   group: ["output"],
@@ -26185,7 +26185,7 @@ export const awsSns: INodeTypeDescription = {
 };
 
 export const chargebee: INodeTypeDescription = {
-  name: "n8n-nodes-base.chargebee",
+  name: "openflow-node-base.chargebee",
   displayName: "Chargebee",
   category: "Finance & Accounting",
   group: ["output"],
@@ -26369,7 +26369,7 @@ export const chargebee: INodeTypeDescription = {
 };
 
 export const cheerio: INodeTypeDescription = {
-  name: "n8n-nodes-base.cheerio",
+  name: "openflow-node-base.cheerio",
   displayName: "HTML (Cheerio)",
   category: "Core Nodes",
   group: ["transform"],
@@ -26549,7 +26549,7 @@ export const cheerio: INodeTypeDescription = {
 };
 
 export const cloudflareTool: INodeTypeDescription = {
-  name: "n8n-nodes-base.cloudflareTool",
+  name: "openflow-node-base.cloudflareTool",
   displayName: "Cloudflare Tool",
   category: "Development",
   group: ["output"],
@@ -26670,7 +26670,7 @@ export const cloudflareTool: INodeTypeDescription = {
 const CONTENTFUL_DOCS = "https://docs.n8n.io/integrations/builtin/app-nodes/n8n-nodes-base.contentful/";
 
 export const contentful: INodeTypeDescription = {
-  name: "n8n-nodes-base.contentful",
+  name: "openflow-node-base.contentful",
   displayName: "Contentful",
   category: "Marketing",
   group: ["output"],
@@ -26858,7 +26858,7 @@ export const contentful: INodeTypeDescription = {
 };
 
 export const discourse: INodeTypeDescription = {
-  name: "n8n-nodes-base.discourse",
+  name: "openflow-node-base.discourse",
   displayName: "Discourse",
   category: "Communication",
   group: ["communication"],
@@ -27271,7 +27271,7 @@ export const discourse: INodeTypeDescription = {
 };
 
 export const elevenLabs: INodeTypeDescription = {
-  name: "n8n-nodes-base.elevenLabs",
+  name: "openflow-node-base.elevenLabs",
   displayName: "ElevenLabs",
   category: "Actions",
   group: ["output"],
@@ -27387,7 +27387,7 @@ export const elevenLabs: INodeTypeDescription = {
 };
 
 export const googleCustomSearch: INodeTypeDescription = {
-  name: "n8n-nodes-base.googleCustomSearch",
+  name: "openflow-node-base.googleCustomSearch",
   displayName: "Google Custom Search",
   category: "Core",
   group: ["transform"],
@@ -27495,7 +27495,7 @@ export const googleCustomSearch: INodeTypeDescription = {
 };
 
 export const googlePageSpeedInsights: INodeTypeDescription = {
-  name: "n8n-nodes-base.googlePageSpeedInsights",
+  name: "openflow-node-base.googlePageSpeedInsights",
   displayName: "Google PageSpeed Insights",
   category: "Core",
   group: ["output"],
@@ -27557,7 +27557,7 @@ export const googlePageSpeedInsights: INodeTypeDescription = {
 };
 
 export const googleSearchConsole: INodeTypeDescription = {
-  name: "n8n-nodes-base.googleSearchConsole",
+  name: "openflow-node-base.googleSearchConsole",
   displayName: "Google Search Console",
   category: "Core",
   group: ["output"],
@@ -27831,7 +27831,7 @@ export const googleSearchConsole: INodeTypeDescription = {
 };
 
 export const haloPSATool: INodeTypeDescription = {
-  name: "n8n-nodes-base.haloPSATool",
+  name: "openflow-node-base.haloPSATool",
   displayName: "HaloPSA (AI Tool)",
   category: "AI Tool",
   group: ["output"],
@@ -27926,7 +27926,7 @@ export const haloPSATool: INodeTypeDescription = {
       description: "Your HaloPSA instance base URL",
     },
     {
-      displayName: "All parameter values support n8n expression strings (={{ }}) and $fromAI() dynamic population for AI agent use.",
+      displayName: "All parameter values support OpenFlow expression strings (={{ }}) and $fromAI() dynamic population for AI agent use.",
       name: "expressionNotice",
       type: "notice",
       default: "",
@@ -27937,7 +27937,7 @@ export const haloPSATool: INodeTypeDescription = {
 const MOCEAN_DOCS = "https://docs.n8n.io/integrations/builtin/app-nodes/n8n-nodes-base.mocean.md";
 
 export const mocean: INodeTypeDescription = {
-  name: "n8n-nodes-base.mocean",
+  name: "openflow-node-base.mocean",
   displayName: "Mocean",
   category: "Communication",
   group: ["communication"],
@@ -28043,7 +28043,7 @@ export const mocean: INodeTypeDescription = {
 };
 
 export const monicaCrmTool: INodeTypeDescription = {
-  name: "n8n-nodes-base.monicaCrmTool",
+  name: "openflow-node-base.monicaCrmTool",
   displayName: "Monica CRM (AI Tool)",
   category: "Communication",
   group: ["output"],
@@ -28472,7 +28472,7 @@ export const monicaCrmTool: INodeTypeDescription = {
 };
 
 export const msg91: INodeTypeDescription = {
-  name: "n8n-nodes-base.msg91",
+  name: "openflow-node-base.msg91",
   displayName: "MSG91",
   category: "Communication",
   group: ["communication"],
@@ -28532,7 +28532,7 @@ export const msg91: INodeTypeDescription = {
 };
 
 export const oneSimpleApiTool: INodeTypeDescription = {
-  name: "n8n-nodes-base.oneSimpleApiTool",
+  name: "openflow-node-base.oneSimpleApiTool",
   displayName: "One Simple API Tool",
   category: "AI Tool",
   group: ["transform"],
@@ -28702,7 +28702,7 @@ export const oneSimpleApiTool: INodeTypeDescription = {
 };
 
 export const orbit: INodeTypeDescription = {
-  name: "n8n-nodes-base.orbit",
+  name: "openflow-node-base.orbit",
   displayName: "Orbit",
   category: "Analytics",
   group: ["output"],
@@ -28905,7 +28905,7 @@ export const orbit: INodeTypeDescription = {
 };
 
 export const oura: INodeTypeDescription = {
-  name: "n8n-nodes-base.oura",
+  name: "openflow-node-base.oura",
   displayName: "Oura",
   category: "Productivity",
   group: ["output"],
@@ -28963,7 +28963,7 @@ export const oura: INodeTypeDescription = {
 };
 
 export const postBin: INodeTypeDescription = {
-  name: "n8n-nodes-base.postBin",
+  name: "openflow-node-base.postBin",
   displayName: "PostBin",
   category: "Development, Data & Storage",
   group: ["output"],
@@ -29059,7 +29059,7 @@ export const postBin: INodeTypeDescription = {
 };
 
 export const profitWellTool: INodeTypeDescription = {
-  name: "n8n-nodes-base.profitWellTool",
+  name: "openflow-node-base.profitWellTool",
   displayName: "ProfitWell (AI Tool)",
   category: "AI Tool",
   group: ["output"],
@@ -29237,7 +29237,7 @@ export const profitWellTool: INodeTypeDescription = {
 };
 
 export const seaTable: INodeTypeDescription = {
-  name: "n8n-nodes-base.seaTable",
+  name: "openflow-node-base.seaTable",
   displayName: "SeaTable",
   category: "Data & Storage",
   group: ["output"],
@@ -29464,7 +29464,7 @@ export const seaTable: INodeTypeDescription = {
 const SSC = "https://docs.n8n.io/integrations/builtin/app-nodes/n8n-nodes-base.securityscorecard/";
 
 export const securityScorecard: INodeTypeDescription = {
-  name: "n8n-nodes-base.securityScorecard",
+  name: "openflow-node-base.securityScorecard",
   displayName: "SecurityScorecard",
   category: "Analytics",
   group: ["output"],
@@ -29942,7 +29942,7 @@ export const securityScorecard: INodeTypeDescription = {
 };
 
 export const sentryIo: INodeTypeDescription = {
-  name: "n8n-nodes-base.sentryIo",
+  name: "openflow-node-base.sentryIo",
   displayName: "Sentry.io",
   category: "Development",
   group: ["output"],
@@ -30199,7 +30199,7 @@ export const sentryIo: INodeTypeDescription = {
 };
 
 export const sendyTool: INodeTypeDescription = {
-  name: "n8n-nodes-base.sendyTool",
+  name: "openflow-node-base.sendyTool",
   displayName: "Sendy (AI Tool)",
   category: "AI Tool",
   group: ["output"],
@@ -30413,7 +30413,7 @@ export const sendyTool: INodeTypeDescription = {
 };
 
 export const strapiTool: INodeTypeDescription = {
-  name: "n8n-nodes-base.strapiTool",
+  name: "openflow-node-base.strapiTool",
   displayName: "Strapi Tool",
   category: "Data & Storage",
   group: ["output"],
@@ -30529,7 +30529,7 @@ export const strapiTool: INodeTypeDescription = {
 };
 
 export const tapfiliate: INodeTypeDescription = {
-  name: "n8n-nodes-base.tapfiliate",
+  name: "openflow-node-base.tapfiliate",
   displayName: "Tapfiliate",
   category: "Sales",
   group: ["output"],
@@ -30793,7 +30793,7 @@ export const tapfiliate: INodeTypeDescription = {
 };
 
 export const taiga: INodeTypeDescription = {
-  name: "n8n-nodes-base.taiga",
+  name: "openflow-node-base.taiga",
   displayName: "Taiga",
   category: "Development, Productivity",
 
@@ -30959,7 +30959,7 @@ export const taiga: INodeTypeDescription = {
 };
 
 export const twake: INodeTypeDescription = {
-  name: "n8n-nodes-base.twake",
+  name: "openflow-node-base.twake",
   displayName: "Twake",
   category: "Productivity",
   group: ["output"],
@@ -31021,7 +31021,7 @@ export const twake: INodeTypeDescription = {
 const TWIST_DOCS = "https://docs.n8n.io/integrations/builtin/app-nodes/n8n-nodes-base.twist/";
 
 export const twist: INodeTypeDescription = {
-  name: "n8n-nodes-base.twist",
+  name: "openflow-node-base.twist",
   displayName: "Twist",
   category: "Communication",
   group: ["communication"],
@@ -31346,7 +31346,7 @@ export const twist: INodeTypeDescription = {
 };
 
 export const twistTool: INodeTypeDescription = {
-  name: "n8n-nodes-base.twistTool",
+  name: "openflow-node-base.twistTool",
   displayName: "Twist (AI Tool)",
   category: "Communication",
   group: ["communication"],
@@ -31755,7 +31755,7 @@ export const twistTool: INodeTypeDescription = {
 };
 
 export const wise: INodeTypeDescription = {
-  name: "n8n-nodes-base.wise",
+  name: "openflow-node-base.wise",
   displayName: "Wise",
   category: "Finance & Accounting",
   group: ["output"],

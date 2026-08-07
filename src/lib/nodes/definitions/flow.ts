@@ -34,7 +34,7 @@ const conditionValues = [
 ];
 
 export const ifNode: INodeTypeDescription = {
-  name: "n8n-nodes-base.if",
+  name: "openflow-node-base.if",
   displayName: "IF",
   category: "Flow",
   group: ["transform"],
@@ -84,7 +84,7 @@ export const ifNode: INodeTypeDescription = {
 };
 
 export const switchNode: INodeTypeDescription = {
-  name: "n8n-nodes-base.switch",
+  name: "openflow-node-base.switch",
   displayName: "Switch",
   category: "Flow",
   group: ["transform"],
@@ -180,7 +180,7 @@ export const switchNode: INodeTypeDescription = {
 };
 
 export const merge: INodeTypeDescription = {
-  name: "n8n-nodes-base.merge",
+  name: "openflow-node-base.merge",
   displayName: "Merge",
   category: "Flow",
   group: ["transform"],
@@ -254,7 +254,7 @@ export const merge: INodeTypeDescription = {
 };
 
 export const splitInBatches: INodeTypeDescription = {
-  name: "n8n-nodes-base.splitInBatches",
+  name: "openflow-node-base.splitInBatches",
   displayName: "Loop Over Items",
   category: "Flow",
   group: ["transform"],
@@ -304,7 +304,7 @@ export const splitInBatches: INodeTypeDescription = {
 };
 
 export const airtopTool: INodeTypeDescription = {
-  name: "n8n-nodes-base.airtopTool",
+  name: "openflow-node-base.airtopTool",
   displayName: "Airtop Tool",
   category: "Productivity",
   group: ["transform"],
@@ -595,7 +595,7 @@ export const airtopTool: INodeTypeDescription = {
 };
 
 export const notionTool: INodeTypeDescription = {
-  name: "n8n-nodes-base.notionTool",
+  name: "openflow-node-base.notionTool",
   displayName: "Notion Tool",
   category: "Productivity",
   group: ["transform"],
@@ -831,7 +831,7 @@ export const notionTool: INodeTypeDescription = {
 };
 
 export const wait: INodeTypeDescription = {
-  name: "n8n-nodes-base.wait",
+  name: "openflow-node-base.wait",
   displayName: "Wait",
   category: "Actions",
   group: ["organization"],
@@ -894,7 +894,7 @@ export const wait: INodeTypeDescription = {
 };
 
 export const telegramTool: INodeTypeDescription = {
-  name: "n8n-nodes-base.telegramTool",
+  name: "openflow-node-base.telegramTool",
   displayName: "Telegram Tool",
   category: "AI Tool",
   group: ["transform"],
@@ -992,7 +992,7 @@ export const telegramTool: INodeTypeDescription = {
 };
 
 export const googleTranslateTool: INodeTypeDescription = {
-  name: "n8n-nodes-base.googleTranslateTool",
+  name: "openflow-node-base.googleTranslateTool",
   displayName: "Google Translate Tool",
   category: "AI",
   group: ["transform"],

@@ -321,12 +321,17 @@ export async function executeWorkflow(options: RunOptions): Promise<RunResult> {
           }
 
           const start =
-            child.nodes.find(
-              (n) =>
-                n.type === "n8n-nodes-base.executeWorkflowTrigger" ||
-                n.type === "n8n-nodes-base.manualTrigger" ||
-                n.type === "n8n-nodes-base.webhook",
-            ) ?? child.nodes[0];
+            child.nodes.find((n) => {
+              const t = n.type;
+              return (
+                t === "openflow-node-base.executeWorkflowTrigger" ||
+                t === "openflow-node-base.manualTrigger" ||
+                t === "openflow-node-base.webhook" ||
+                t === "n8n-nodes-base.executeWorkflowTrigger" ||
+                t === "n8n-nodes-base.manualTrigger" ||
+                t === "n8n-nodes-base.webhook"
+              );
+            }) ?? child.nodes[0];
 
           const childPin =
             start && subOpts.items.length > 0

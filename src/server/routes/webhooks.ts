@@ -56,18 +56,23 @@ export default function webhooksRoute(app: Hono<AppEnv>) {
       },
     });
 
+    const isWebhookType = (t: string) =>
+      t === "openflow-node-base.webhook" || t === "n8n-nodes-base.webhook";
+    const isRespondType = (t: string) =>
+      t === "openflow-node-base.respondToWebhook" || t === "n8n-nodes-base.respondToWebhook";
+
     const webhookNodeName = definition.nodes.find(
-      (n: { type: string }) => n.type === "n8n-nodes-base.webhook",
+      (n: { type: string }) => isWebhookType(n.type),
     )?.name;
 
     // Determine if workflow uses "Respond to Webhook" node
     const hasRespondNode = definition.nodes.some(
-      (n: { type: string }) => n.type === "n8n-nodes-base.respondToWebhook",
+      (n: { type: string }) => isRespondType(n.type),
     );
 
     // Check the webhook trigger's responseMode setting
     const webhookNode = definition.nodes.find(
-      (n: { type: string }) => n.type === "n8n-nodes-base.webhook",
+      (n: { type: string }) => isWebhookType(n.type),
     );
     const responseMode = (webhookNode?.parameters as Record<string, unknown>)?.responseMode as string | undefined;
     const shouldWait = hasRespondNode || responseMode === "lastNode" || responseMode === "responseNode";

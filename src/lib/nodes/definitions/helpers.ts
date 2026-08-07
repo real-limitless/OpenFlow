@@ -115,8 +115,8 @@ const fieldValues = [
 ];
 
 export const form: INodeTypeDescription = {
-  name: "n8n-nodes-base.form",
-  displayName: "n8n Form",
+  name: "openflow-node-base.form",
+  displayName: "Form",
   category: "Helpers",
   group: ["organization"],
   version: 1,

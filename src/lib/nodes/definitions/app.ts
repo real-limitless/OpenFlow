@@ -68,7 +68,7 @@ const QBO_OPERATIONS = [
 ];
 
 export const snowflake: INodeTypeDescription = {
-  name: "n8n-nodes-base.snowflake",
+  name: "openflow-node-base.snowflake",
   displayName: "Snowflake",
   category: "Data & Storage",
   group: ["input"],
@@ -128,7 +128,7 @@ export const snowflake: INodeTypeDescription = {
 };
 
 export const quickbooks: INodeTypeDescription = {
-  name: "n8n-nodes-base.quickbooks",
+  name: "openflow-node-base.quickbooks",
   displayName: "QuickBooks Online",
   category: "Finance & Accounting",
   group: ["output"],
@@ -226,7 +226,7 @@ export const quickbooks: INodeTypeDescription = {
 };
 
 export const payPal: INodeTypeDescription = {
-  name: "n8n-nodes-base.payPal",
+  name: "openflow-node-base.payPal",
   displayName: "PayPal",
   category: "Payments",
   group: ["output"],
@@ -329,7 +329,7 @@ export const payPal: INodeTypeDescription = {
 const BRANDFETCH_DOCS = "https://docs.n8n.io/integrations/builtin/app-nodes/n8n-nodes-base.brandfetch/";
 
 export const brandfetch: INodeTypeDescription = {
-  name: "n8n-nodes-base.Brandfetch",
+  name: "openflow-node-base.Brandfetch",
   displayName: "Brandfetch",
   category: "Utility",
   group: ["input"],
@@ -404,7 +404,7 @@ export const brandfetch: INodeTypeDescription = {
 const BASEROW_DOCS = "https://docs.n8n.io/integrations/builtin/app-nodes/n8n-nodes-base.baserow/";
 
 export const baserow: INodeTypeDescription = {
-  name: "n8n-nodes-base.baserow",
+  name: "openflow-node-base.baserow",
   displayName: "Baserow",
   category: "Data & Storage",
   group: ["app"],
@@ -489,7 +489,7 @@ const DROPBOX_DOCS = "https://docs.n8n.io/integrations/builtin/app-nodes/n8n-nod
 const DROPBOX_CRED_DOCS = "https://docs.n8n.io/integrations/builtin/credentials/dropbox.md";
 
 export const dropbox: INodeTypeDescription = {
-  name: "n8n-nodes-base.dropbox",
+  name: "openflow-node-base.dropbox",
   displayName: "Dropbox",
   category: "Data & Storage",
   group: ["storage"],
@@ -654,7 +654,7 @@ export const dropbox: INodeTypeDescription = {
 const QUESTDB_DOCS = "https://docs.n8n.io/integrations/builtin/app-nodes/n8n-nodes-base.questdb/";
 
 export const questDb: INodeTypeDescription = {
-  name: "n8n-nodes-base.questDb",
+  name: "openflow-node-base.questDb",
   displayName: "QuestDB",
   category: "Data & Storage",
   group: ["input"],
@@ -742,7 +742,7 @@ const AWS_S3_DOCS = "https://docs.n8n.io/integrations/builtin/app-nodes/n8n-node
 const AWS_CRED_DOCS = "https://docs.n8n.io/integrations/builtin/credentials/aws/";
 
 export const awsS3: INodeTypeDescription = {
-  name: "n8n-nodes-base.awsS3",
+  name: "openflow-node-base.awsS3",
   displayName: "AWS S3",
   category: "Data & Storage",
   group: ["storage"],
@@ -1100,7 +1100,7 @@ const perplexityOptions: Array<{
 ];
 
 export const perplexity: INodeTypeDescription = {
-  name: "n8n-nodes-base.perplexity",
+  name: "openflow-node-base.perplexity",
   displayName: "Perplexity",
   category: "AI",
   group: ["output"],
@@ -1290,7 +1290,7 @@ const ELASTIC_RESOURCES = [
 ];
 
 export const elasticSecurity: INodeTypeDescription = {
-  name: "n8n-nodes-base.elasticSecurityTool",
+  name: "openflow-node-base.elasticSecurityTool",
   displayName: "Elastic Security",
   category: "App",
   group: ["output"],
@@ -1567,7 +1567,7 @@ export const elasticSecurity: INodeTypeDescription = {
 };
 
 export const openWeatherMap: INodeTypeDescription = {
-  name: "n8n-nodes-base.openWeatherMap",
+  name: "openflow-node-base.openWeatherMap",
   displayName: "OpenWeatherMap",
   category: "Miscellaneous",
   group: ["output"],
@@ -1655,7 +1655,7 @@ export const openWeatherMap: INodeTypeDescription = {
 };
 
 export const deepL: INodeTypeDescription = {
-  name: "n8n-nodes-base.deepL",
+  name: "openflow-node-base.deepL",
   displayName: "DeepL",
   category: "Utility",
   group: ["transform"],
@@ -1758,7 +1758,7 @@ const BAMBOO_HR_DOCS =
   "https://docs.n8n.io/integrations/builtin/app-nodes/n8n-nodes-base.bamboohr/";
 
 export const bambooHr: INodeTypeDescription = {
-  name: "n8n-nodes-base.bambooHr",
+  name: "openflow-node-base.bambooHr",
   displayName: "BambooHR",
   category: "Sales",
   group: ["output"],
@@ -2201,7 +2201,7 @@ export const bambooHr: INodeTypeDescription = {
 };
 
 export const mailerLite: INodeTypeDescription = {
-  name: "n8n-nodes-base.mailerLite",
+  name: "openflow-node-base.mailerLite",
   displayName: "MailerLite",
   category: "App",
   group: ["output"],
@@ -2405,7 +2405,7 @@ const AWS_TRANSCRIBE_DOCS =
   "https://docs.n8n.io/integrations/builtin/app-nodes/n8n-nodes-base.awstranscribe/";
 
 export const awsTranscribe: INodeTypeDescription = {
-  name: "n8n-nodes-base.awsTranscribe",
+  name: "openflow-node-base.awsTranscribe",
   displayName: "AWS Transcribe",
   category: "Utility",
   group: ["output"],
@@ -2619,7 +2619,7 @@ export const awsTranscribe: INodeTypeDescription = {
 };
 
 export const awsTextract: INodeTypeDescription = {
-  name: "n8n-nodes-base.awsTextract",
+  name: "openflow-node-base.awsTextract",
   displayName: "AWS Textract",
   category: "Utility",
   group: ["output"],
@@ -2705,7 +2705,7 @@ const BITLY_DOCS = "https://docs.n8n.io/integrations/builtin/app-nodes/n8n-nodes
 const BITLY_CRED_DOCS = "https://docs.n8n.io/integrations/builtin/credentials/bitly.html";
 
 export const bitly: INodeTypeDescription = {
-  name: "n8n-nodes-base.bitly",
+  name: "openflow-node-base.bitly",
   displayName: "Bitly",
   category: "Utility",
   group: ["output"],
@@ -2816,7 +2816,7 @@ export const bitly: INodeTypeDescription = {
 const LINGVA_NEX_DOCS = "https://docs.n8n.io/integrations/builtin/app-nodes/n8n-nodes-base.lingvanex.md";
 
 export const lingvaNex: INodeTypeDescription = {
-  name: "n8n-nodes-base.lingvaNex",
+  name: "openflow-node-base.lingvaNex",
   displayName: "LingvaNex",
   category: "AI",
   group: ["transform"],
@@ -2888,7 +2888,7 @@ const CRATE_DB_DOCS = "https://docs.n8n.io/integrations/builtin/app-nodes/n8n-no
 const CRATE_DB_CRED_DOCS = "https://docs.n8n.io/integrations/builtin/credentials/cratedb/";
 
 export const crateDb: INodeTypeDescription = {
-  name: "n8n-nodes-base.crateDb",
+  name: "openflow-node-base.crateDb",
   displayName: "CrateDB",
   category: "Data & Storage",
   group: ["input"],
@@ -2999,7 +2999,7 @@ const AWS_CRED_DOCS_DYNAMO =
   "https://docs.n8n.io/integrations/builtin/credentials/aws/";
 
 export const awsDynamoDb: INodeTypeDescription = {
-  name: "n8n-nodes-base.awsDynamoDb",
+  name: "openflow-node-base.awsDynamoDb",
   displayName: "AWS DynamoDB",
   category: "Data & Storage",
   group: ["output"],
@@ -3319,7 +3319,7 @@ const DISQUS_DOCS = "https://docs.n8n.io/integrations/builtin/app-nodes/n8n-node
 const DISQUS_CRED_DOCS = "https://docs.n8n.io/integrations/builtin/credentials/disqus/";
 
 export const disqus: INodeTypeDescription = {
-  name: "n8n-nodes-base.disqus",
+  name: "openflow-node-base.disqus",
   displayName: "Disqus",
   category: "App",
   group: ["output"],
@@ -3387,7 +3387,7 @@ export const disqus: INodeTypeDescription = {
 };
 
 export const invoiceNinja: INodeTypeDescription = {
-  name: "n8n-nodes-base.invoiceNinja",
+  name: "openflow-node-base.invoiceNinja",
   displayName: "Invoice Ninja",
   category: "Finance & Accounting",
   group: ["output"],

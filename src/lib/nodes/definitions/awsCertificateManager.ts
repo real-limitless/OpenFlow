@@ -1,7 +1,7 @@
 import type { INodeTypeDescription } from "../types";
 
 export const awsCertificateManager: INodeTypeDescription = {
-  name: "n8n-nodes-base.awsCertificateManager",
+  name: "openflow-node-base.awsCertificateManager",
   displayName: "AWS Certificate Manager",
   category: "Development",
   group: ["input"],

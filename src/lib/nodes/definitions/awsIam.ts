@@ -1,7 +1,7 @@
 import type { INodeTypeDescription } from "../types";
 
 export const awsIam: INodeTypeDescription = {
-  name: "n8n-nodes-base.awsIam",
+  name: "openflow-node-base.awsIam",
   displayName: "AWS IAM",
   category: "Development",
   group: ["input"],

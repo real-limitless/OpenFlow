@@ -3,7 +3,7 @@ import type { INodeTypeDescription } from "../types";
 const CORE = "https://docs.n8n.io/integrations/builtin/core-nodes/";
 
 export const awsLambda: INodeTypeDescription = {
-  name: "n8n-nodes-base.awsLambda",
+  name: "openflow-node-base.awsLambda",
   displayName: "AWS Lambda",
   category: "Actions",
   group: ["input"],

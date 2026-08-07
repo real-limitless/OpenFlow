@@ -22,7 +22,7 @@ const USER_OPERATIONS = [
 ];
 
 export const microsoftEntra: INodeTypeDescription = {
-  name: "n8n-nodes-base.microsoftEntra",
+  name: "openflow-node-base.microsoftEntra",
   displayName: "Microsoft Entra ID",
   category: "Development",
   group: ["integration"],
@@ -352,7 +352,7 @@ const TASK_OPERATIONS = [
 ];
 
 export const microsoftToDo: INodeTypeDescription = {
-  name: "n8n-nodes-base.microsoftToDo",
+  name: "openflow-node-base.microsoftToDo",
   displayName: "Microsoft To Do",
   category: "Productivity",
   group: ["integration"],
@@ -579,7 +579,7 @@ const PRESENTATION_OPERATIONS = [
 ];
 
 export const googleSlides: INodeTypeDescription = {
-  name: "n8n-nodes-base.googleSlides",
+  name: "openflow-node-base.googleSlides",
   displayName: "Google Slides",
   category: "Marketing",
   group: ["integration"],
@@ -710,7 +710,7 @@ export const googleSlides: INodeTypeDescription = {
 const BQ_DOCS = "https://docs.n8n.io/integrations/builtin/app-nodes/n8n-nodes-base.googlebigquery/";
 
 export const googleBigQuery: INodeTypeDescription = {
-  name: "n8n-nodes-base.googleBigQuery",
+  name: "openflow-node-base.googleBigQuery",
   displayName: "Google BigQuery",
   category: "Data & Storage",
   group: ["integration"],
@@ -927,7 +927,7 @@ const GT_TASK_OPERATIONS = [
 ];
 
 export const googleTasks: INodeTypeDescription = {
-  name: "n8n-nodes-base.googleTasks",
+  name: "openflow-node-base.googleTasks",
   displayName: "Google Tasks",
   category: "Productivity",
   group: ["integration"],
@@ -1064,7 +1064,7 @@ export const googleTasks: INodeTypeDescription = {
 const GBP_DOCS = "https://docs.n8n.io/integrations/builtin/app-nodes/n8n-nodes-base.googlebusinessprofile/";
 
 export const googleBusinessProfile: INodeTypeDescription = {
-  name: "n8n-nodes-base.googleBusinessProfile",
+  name: "openflow-node-base.googleBusinessProfile",
   displayName: "Google Business Profile",
   category: "Productivity",
   group: ["integration"],
@@ -1456,7 +1456,7 @@ const MISP_WARNINGLIST_OPERATIONS = [
 ];
 
 export const mispTool: INodeTypeDescription = {
-  name: "n8n-nodes-base.mispTool",
+  name: "openflow-node-base.mispTool",
   displayName: "MISP Tool",
   category: "Integration",
   group: ["integration"],
@@ -1884,7 +1884,7 @@ const ODOO_OPERATIONS = [
 ];
 
 export const odoo: INodeTypeDescription = {
-  name: "n8n-nodes-base.odoo",
+  name: "openflow-node-base.odoo",
   displayName: "Odoo",
   category: "Sales",
   group: ["integration"],
@@ -1998,7 +1998,7 @@ const DHL_OPTIONS: INodeTypeDescription["properties"] = [
 ];
 
 export const dhl: INodeTypeDescription = {
-  name: "n8n-nodes-base.dhl",
+  name: "openflow-node-base.dhl",
   displayName: "DHL",
   category: "Integration",
   group: ["integration"],
@@ -2049,7 +2049,7 @@ export const dhl: INodeTypeDescription = {
 };
 
 export const dhlTool: INodeTypeDescription = {
-  name: "n8n-nodes-base.dhlTool",
+  name: "openflow-node-base.dhlTool",
   displayName: "DHL (AI Tool)",
   category: "Integration",
   group: ["integration"],
@@ -2118,7 +2118,7 @@ const OBJECT_OPERATIONS = [
 ];
 
 export const googleCloudStorage: INodeTypeDescription = {
-  name: "n8n-nodes-base.googleCloudStorage",
+  name: "openflow-node-base.googleCloudStorage",
   displayName: "Google Cloud Storage",
   category: "Data & Storage",
   group: ["integration"],
@@ -2435,7 +2435,7 @@ const CU_TIME_ENTRY_TAG_OPERATIONS = [
 ];
 
 export const clickUp: INodeTypeDescription = {
-  name: "n8n-nodes-base.clickUp",
+  name: "openflow-node-base.clickUp",
   displayName: "ClickUp",
   category: "Productivity",
   group: ["integration"],
@@ -3293,7 +3293,7 @@ const TODOIST_OPERATIONS = [
 ];
 
 export const todoist: INodeTypeDescription = {
-  name: "n8n-nodes-base.todoist",
+  name: "openflow-node-base.todoist",
   displayName: "Todoist",
   category: "Productivity",
   group: ["integration"],
@@ -3508,7 +3508,7 @@ const SF_CRUD_UPSERT_OPERATIONS = [
 ];
 
 export const salesforce: INodeTypeDescription = {
-  name: "n8n-nodes-base.salesforce",
+  name: "openflow-node-base.salesforce",
   displayName: "Salesforce",
   category: "Sales",
   group: ["integration"],
@@ -3865,7 +3865,7 @@ export const salesforce: INodeTypeDescription = {
 };
 
 export const pipedrive: INodeTypeDescription = {
-  name: "n8n-nodes-base.pipedrive",
+  name: "openflow-node-base.pipedrive",
   displayName: "Pipedrive",
   category: "Development",
   group: ["integration"],
@@ -3977,7 +3977,7 @@ export const pipedrive: INodeTypeDescription = {
 };
 
 export const zohoCrm: INodeTypeDescription = {
-  name: "n8n-nodes-base.zohoCrm",
+  name: "openflow-node-base.zohoCrm",
   displayName: "Zoho CRM",
   category: "App",
   group: ["integration"],
@@ -4094,7 +4094,7 @@ export const zohoCrm: INodeTypeDescription = {
 const HIGHLIGHT_DOCS = "https://docs.n8n.io/integrations/builtin/app-nodes/n8n-nodes-base.highlevel/";
 
 export const highLevel: INodeTypeDescription = {
-  name: "n8n-nodes-base.highLevel",
+  name: "openflow-node-base.highLevel",
   displayName: "HighLevel",
   category: "CRM",
   group: ["integration"],
@@ -4311,7 +4311,7 @@ export const highLevel: INodeTypeDescription = {
 };
 
 export const highLevelTool: INodeTypeDescription = {
-  name: "n8n-nodes-base.highLevelTool",
+  name: "openflow-node-base.highLevelTool",
   displayName: "HighLevel (AI Tool)",
   category: "AI Tool",
   group: ["input"],
@@ -4581,7 +4581,7 @@ export const highLevelTool: INodeTypeDescription = {
 const NOCO_DOCS = "https://docs.n8n.io/integrations/builtin/app-nodes/n8n-nodes-base.nocodb/";
 
 export const nocoDb: INodeTypeDescription = {
-  name: "n8n-nodes-base.nocoDb",
+  name: "openflow-node-base.nocoDb",
   displayName: "NocoDB",
   category: "Data & Storage",
   group: ["integration"],
@@ -4742,7 +4742,7 @@ export const nocoDb: INodeTypeDescription = {
 const MAUTIC_DOCS = "https://docs.n8n.io/integrations/builtin/app-nodes/n8n-nodes-base.mautic/";
 
 export const mautic: INodeTypeDescription = {
-  name: "n8n-nodes-base.mautic",
+  name: "openflow-node-base.mautic",
   displayName: "Mautic",
   category: "Marketing",
   group: ["integration"],
@@ -5015,7 +5015,7 @@ export const mautic: INodeTypeDescription = {
 };
 
 export const mindee: INodeTypeDescription = {
-  name: "n8n-nodes-base.mindee",
+  name: "openflow-node-base.mindee",
   displayName: "Mindee",
   category: "Utility",
   group: ["data-extraction"],
@@ -5116,7 +5116,7 @@ const ACTIVITY_OPERATIONS = [
 ];
 
 export const strava: INodeTypeDescription = {
-  name: "n8n-nodes-base.strava",
+  name: "openflow-node-base.strava",
   displayName: "Strava",
   category: "Productivity",
   group: ["integration"],

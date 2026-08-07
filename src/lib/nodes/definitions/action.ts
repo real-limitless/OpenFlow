@@ -6,7 +6,7 @@ const KM_CRED = "https://docs.n8n.io/integrations/builtin/credentials/kitemaker.
 const KM_API = "https://kitemakerhq.github.io/rest-docs/";
 
 export const kitemakerTool: INodeTypeDescription = {
-  name: "n8n-nodes-base.kitemakerTool",
+  name: "openflow-node-base.kitemakerTool",
   displayName: "Kitemaker Tool",
   category: "Actions",
   group: ["action"],
@@ -158,7 +158,7 @@ export const kitemakerTool: INodeTypeDescription = {
 };
 
 export const netlifyTool: INodeTypeDescription = {
-  name: "n8n-nodes-base.netlifyTool",
+  name: "openflow-node-base.netlifyTool",
   displayName: "Netlify Tool",
   category: "Action",
   group: ["action"],
@@ -293,7 +293,7 @@ export const netlifyTool: INodeTypeDescription = {
 };
 
 export const webSearch: INodeTypeDescription = {
-  name: "n8n-nodes-base.webSearch",
+  name: "openflow-node-base.webSearch",
   displayName: "Web Search",
   category: "Actions",
   group: ["action"],
@@ -360,7 +360,7 @@ export const webSearch: INodeTypeDescription = {
 };
 
 export const philipsHueTool: INodeTypeDescription = {
-  name: "n8n-nodes-base.philipsHueTool",
+  name: "openflow-node-base.philipsHueTool",
   displayName: "Philips Hue Tool",
   category: "Actions",
   group: ["action"],
@@ -464,7 +464,7 @@ export const philipsHueTool: INodeTypeDescription = {
 };
 
 export const salesmateTool: INodeTypeDescription = {
-  name: "n8n-nodes-base.salesmateTool",
+  name: "openflow-node-base.salesmateTool",
   displayName: "Salesmate Tool",
   category: "Actions",
   group: ["action"],
@@ -654,7 +654,7 @@ export const salesmateTool: INodeTypeDescription = {
 };
 
 export const philipsHue: INodeTypeDescription = {
-  name: "n8n-nodes-base.philipsHue",
+  name: "openflow-node-base.philipsHue",
   displayName: "Philips Hue",
   category: "Actions",
   group: ["action"],

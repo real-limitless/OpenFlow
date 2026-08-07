@@ -1,28 +1,31 @@
 import type { IConnections, INode, IWorkflow } from "../workflow/types";
 import { getNodeType } from "../nodes/registry";
+import { toCanonicalType, typesEqual } from "../nodes/type-ids";
 
 /** Known trigger type strings (fallback when description lookup is thin). */
-const TRIGGER_TYPES = new Set([
-  "n8n-nodes-base.manualTrigger",
-  "n8n-nodes-base.manualWorkflowTrigger",
-  "n8n-nodes-base.start",
-  "n8n-nodes-base.webhook",
-  "n8n-nodes-base.scheduleTrigger",
-  "n8n-nodes-base.executeWorkflowTrigger",
-  "n8n-nodes-base.errorTrigger",
-  "n8n-nodes-base.formTrigger",
-  "n8n-nodes-base.sseTrigger",
-  "n8n-nodes-base.localFileTrigger",
-  "n8n-nodes-base.workflowTrigger",
-  "n8n-nodes-base.activationTrigger",
-  "n8n-nodes-base.n8nTrigger",
-  "@n8n/n8n-nodes-langchain.chatTrigger",
-  "@n8n/n8n-nodes-langchain.mcpTrigger",
-]);
+const TRIGGER_TYPES = new Set(
+  [
+    "n8n-nodes-base.manualTrigger",
+    "n8n-nodes-base.manualWorkflowTrigger",
+    "n8n-nodes-base.start",
+    "n8n-nodes-base.webhook",
+    "n8n-nodes-base.scheduleTrigger",
+    "n8n-nodes-base.executeWorkflowTrigger",
+    "n8n-nodes-base.errorTrigger",
+    "n8n-nodes-base.formTrigger",
+    "n8n-nodes-base.sseTrigger",
+    "n8n-nodes-base.localFileTrigger",
+    "n8n-nodes-base.workflowTrigger",
+    "n8n-nodes-base.activationTrigger",
+    "n8n-nodes-base.n8nTrigger",
+    "@n8n/n8n-nodes-langchain.chatTrigger",
+    "@n8n/n8n-nodes-langchain.mcpTrigger",
+  ].map(toCanonicalType),
+);
 
 export function isTriggerNode(node: INode): boolean {
   if (node.disabled) return false;
-  if (TRIGGER_TYPES.has(node.type)) return true;
+  if (TRIGGER_TYPES.has(toCanonicalType(node.type))) return true;
   try {
     const desc = getNodeType(node.type);
     if (desc.group?.includes("trigger")) return true;
@@ -114,9 +117,9 @@ export function resolveStartNodes(workflow: IWorkflow, preferredStart?: string |
     // Prefer Manual Trigger when several exist and none was chosen
     const manual = triggers.find(
       (n) =>
-        n.type === "n8n-nodes-base.manualTrigger" ||
-        n.type === "n8n-nodes-base.manualWorkflowTrigger" ||
-        n.type === "n8n-nodes-base.start",
+        typesEqual(n.type, "n8n-nodes-base.manualTrigger") ||
+        typesEqual(n.type, "n8n-nodes-base.manualWorkflowTrigger") ||
+        typesEqual(n.type, "n8n-nodes-base.start"),
     );
     return [manual?.name ?? triggers[0]!.name];
   }

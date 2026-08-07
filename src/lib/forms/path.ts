@@ -1,10 +1,11 @@
 import type { INode } from "../workflow/types";
 import { evaluateExpression } from "../expressions/evaluate";
+import { toCanonicalType, typesEqual } from "../nodes/type-ids";
 
-export const FORM_TRIGGER_TYPE = "n8n-nodes-base.formTrigger";
+export const FORM_TRIGGER_TYPE = toCanonicalType("n8n-nodes-base.formTrigger");
 
 export function isFormTriggerNode(node: { type?: string }): boolean {
-  return node.type === FORM_TRIGGER_TYPE;
+  return Boolean(node.type && typesEqual(node.type, "n8n-nodes-base.formTrigger"));
 }
 
 export function slugify(input: string): string {

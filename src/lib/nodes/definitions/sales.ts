@@ -1,7 +1,7 @@
 import type { INodeTypeDescription } from "../types";
 
 export const affinity: INodeTypeDescription = {
-  name: "n8n-nodes-base.affinity",
+  name: "openflow-node-base.affinity",
   displayName: "Affinity",
   category: "Sales",
   group: ["sales"],
@@ -259,7 +259,7 @@ export const affinity: INodeTypeDescription = {
 };
 
 export const affinityTool: INodeTypeDescription = {
-  name: "n8n-nodes-base.affinityTool",
+  name: "openflow-node-base.affinityTool",
   displayName: "Affinity Tool",
   category: "Sales",
   group: ["sales"],
@@ -532,7 +532,7 @@ const AFFINITY_TRIGGER_DOCS =
   "https://docs.n8n.io/integrations/builtin/trigger-nodes/n8n-nodes-base.affinitytrigger/";
 
 export const affinityTrigger: INodeTypeDescription = {
-  name: "n8n-nodes-base.affinityTrigger",
+  name: "openflow-node-base.affinityTrigger",
   displayName: "Affinity Trigger",
   category: "Sales",
   group: ["trigger"],
@@ -590,7 +590,7 @@ const COPPER_TRIGGER_DOCS =
   "https://docs.n8n.io/integrations/builtin/trigger-nodes/n8n-nodes-base.coppertrigger/";
 
 export const copperTrigger: INodeTypeDescription = {
-  name: "n8n-nodes-base.copperTrigger",
+  name: "openflow-node-base.copperTrigger",
   displayName: "Copper Trigger",
   category: "Sales",
   group: ["trigger"],
@@ -693,7 +693,7 @@ export const copperTrigger: INodeTypeDescription = {
 };
 
 export const copper: INodeTypeDescription = {
-  name: "n8n-nodes-base.copper",
+  name: "openflow-node-base.copper",
   displayName: "Copper",
   category: "Sales",
   group: ["output"],
@@ -882,7 +882,7 @@ export const copper: INodeTypeDescription = {
 };
 
 export const freshworksCrm: INodeTypeDescription = {
-  name: "n8n-nodes-base.freshworksCrm",
+  name: "openflow-node-base.freshworksCrm",
   displayName: "Freshworks CRM",
   category: "Sales",
   group: ["sales"],
@@ -1156,7 +1156,7 @@ const PADDLE_DOCS =
   "https://docs.n8n.io/integrations/builtin/app-nodes/n8n-nodes-base.paddle/";
 
 export const paddle: INodeTypeDescription = {
-  name: "n8n-nodes-base.paddle",
+  name: "openflow-node-base.paddle",
   displayName: "Paddle",
   category: "Sales",
   group: ["sales"],
@@ -1310,7 +1310,7 @@ export const paddle: INodeTypeDescription = {
 };
 
 export const unleashedSoftware: INodeTypeDescription = {
-  name: "n8n-nodes-base.unleashedSoftware",
+  name: "openflow-node-base.unleashedSoftware",
   displayName: "Unleashed Software",
   category: "Sales",
   group: ["sales"],
@@ -1503,7 +1503,7 @@ export const unleashedSoftware: INodeTypeDescription = {
 };
 
 export const paddleTool: INodeTypeDescription = {
-  name: "n8n-nodes-base.paddleTool",
+  name: "openflow-node-base.paddleTool",
   displayName: "Paddle Tool",
   category: "Sales",
   group: ["sales"],
@@ -1650,7 +1650,7 @@ export const paddleTool: INodeTypeDescription = {
 };
 
 export const drift: INodeTypeDescription = {
-  name: "n8n-nodes-base.drift",
+  name: "openflow-node-base.drift",
   displayName: "Drift",
   category: "Sales",
   group: ["sales"],
@@ -1734,7 +1734,7 @@ export const drift: INodeTypeDescription = {
 const ODOO_DOCS = "https://docs.n8n.io/integrations/builtin/app-nodes/n8n-nodes-base.odoo/";
 
 export const odooTool: INodeTypeDescription = {
-  name: "n8n-nodes-base.odooTool",
+  name: "openflow-node-base.odooTool",
   displayName: "Odoo Tool",
   category: "Sales",
   group: ["sales"],
@@ -1864,7 +1864,7 @@ export const odooTool: INodeTypeDescription = {
 };
 
 export const salesmate: INodeTypeDescription = {
-  name: "n8n-nodes-base.salesmate",
+  name: "openflow-node-base.salesmate",
   displayName: "Salesmate",
   category: "Sales",
   group: ["sales"],
@@ -2095,7 +2095,7 @@ export const salesmate: INodeTypeDescription = {
 };
 
 export const uplead: INodeTypeDescription = {
-  name: "n8n-nodes-base.uplead",
+  name: "openflow-node-base.uplead",
   displayName: "UpLead",
   category: "Sales",
   group: ["sales"],
