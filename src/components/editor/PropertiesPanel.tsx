@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Copy, Play, PowerOff, Trash2, TriangleAlert, X } from "lucide-react";
+import { BookOpen, Bug, Copy, ExternalLink, Play, PowerOff, Trash2, TriangleAlert, X } from "lucide-react";
 import { useWorkflowStore } from "@/store/workflow-store";
 import { getNodeType } from "@/lib/nodes/registry";
 import { ParameterField, shouldDisplay } from "./ParameterField";
@@ -19,6 +19,8 @@ import { isFormTriggerNode } from "@/lib/forms/path";
 import { apiFetch } from "@/lib/auth/client";
 import { getSelectedEnvironmentId } from "@/lib/environments/client";
 import { buildIncoming } from "@/lib/engine/graph";
+import { openNodeIssueUrl } from "@/lib/feedback/github-issue";
+import { specBlobUrl, toCanonicalType, toWireType } from "@/lib/nodes/type-ids";
 
 export function PropertiesPanel({
   embedded = false,
@@ -330,7 +332,7 @@ export function PropertiesPanel({
                   placeholder="Why does this node exist?"
                 />
               </div>
-              <div className="space-y-1 rounded-md border border-border bg-background/40 p-3 text-[12px] text-muted-foreground">
+              <div className="space-y-2 rounded-md border border-border bg-background/40 p-3 text-[12px] text-muted-foreground">
                 <p>
                   <span className="text-foreground">Type version:</span> {node.typeVersion}
                 </p>
@@ -338,22 +340,52 @@ export function PropertiesPanel({
                   <span className="text-foreground">Node id:</span>{" "}
                   <span className="font-mono">{node.id}</span>
                 </p>
-                {(description.sources ?? []).length > 0 && (
-                  <p className="pt-1">
-                    Written from:{" "}
-                    {(description.sources ?? []).map((s) => (
-                      <a
-                        key={s}
-                        href={s}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="break-all text-primary underline-offset-2 hover:underline"
-                      >
-                        {s}
-                      </a>
-                    ))}
-                  </p>
-                )}
+                <p>
+                  <span className="text-foreground">Type:</span>{" "}
+                  <span className="font-mono break-all">{toCanonicalType(node.type)}</span>
+                </p>
+                <p>
+                  <span className="text-foreground">Wire id:</span>{" "}
+                  <span className="font-mono break-all">{toWireType(node.type)}</span>
+                </p>
+                <p className="pt-1">
+                  <span className="text-foreground">OpenFlow spec: </span>
+                  <a
+                    href={specBlobUrl(node.type)}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex items-center gap-1 break-all text-primary underline-offset-2 hover:underline"
+                  >
+                    <BookOpen className="size-3 shrink-0" />
+                    View behavioural spec
+                    <ExternalLink className="size-3 shrink-0 opacity-70" />
+                  </a>
+                </p>
+                <div className="pt-2">
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    className="h-8 w-full text-[12px]"
+                    onClick={() => {
+                      window.open(
+                        openNodeIssueUrl({
+                          nodeType: node.type,
+                          nodeName: node.name,
+                          nodeDisplayName: description.displayName,
+                          typeVersion: node.typeVersion,
+                          workflowId: workflow.id,
+                          workflowName: workflow.name,
+                        }),
+                        "_blank",
+                        "noopener,noreferrer",
+                      );
+                    }}
+                  >
+                    <Bug className="mr-1.5 size-3.5" />
+                    Report issue with this node
+                  </Button>
+                </div>
               </div>
             </div>
           </ScrollArea>

@@ -3,6 +3,14 @@
   "private": true,
   "sideEffects": false,
   "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/real-limitless/OpenFlow.git"
+  },
+  "bugs": {
+    "url": "https://github.com/real-limitless/OpenFlow/issues"
+  },
+  "homepage": "https://github.com/real-limitless/OpenFlow",
   "engines": {
     "node": ">=22"
   },
@@ -92,7 +100,9 @@
     "dagre": "^0.8.5",
     "date-fns": "^4.1.0",
     "embla-carousel-react": "^8.6.0",
+    "fflate": "^0.8.3",
     "hono": "^4.7.10",
+    "html2canvas": "^1.4.1",
     "input-otp": "^1.4.2",
     "ioredis": "^5.11.1",
     "isolated-vm": "^5.0.4",
@@ -130,6 +140,7 @@
     "@lovable.dev/vite-tanstack-config": "^2.7.7",
     "@types/bcryptjs": "^2.4.6",
     "@types/better-sqlite3": "^7.6.13",
+    "@types/html2canvas": "^0.5.35",
     "@types/node": "^22.16.5",
     "@types/nodemailer": "^8.0.1",
     "@types/pg": "^8.20.0",

@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import {
   Braces,
+  Bug,
   Check,
   Download,
   KeyRound,
@@ -17,7 +18,13 @@ import {
 import { toast } from "sonner";
 import { OpenFlowLogo } from "@/components/brand/openflow-logo";
 import { useWorkflowStore } from "@/store/workflow-store";
-import { parseWorkflowJson, serializeWorkflow } from "@/lib/workflow/schema";
+import {
+  parseWorkflowJson,
+  serializeWorkflow,
+  type WorkflowExportMode,
+} from "@/lib/workflow/schema";
+import { openGeneralIssueUrl } from "@/lib/feedback/github-issue";
+import { prepareIssueReport } from "@/lib/feedback/debug-bundle";
 import { autoLayout } from "@/lib/workflow/layout";
 import {
   collectWorkflowCredentials,
@@ -80,15 +87,43 @@ export function EditorTopBar({ actions }: { actions?: React.ReactNode }) {
     }
   };
 
-  const handleExport = () => {
-    const blob = new Blob([serializeWorkflow(workflow)], { type: "application/json" });
+  const handleExport = (mode: WorkflowExportMode = "openflow") => {
+    const blob = new Blob([serializeWorkflow(workflow, { mode })], {
+      type: "application/json",
+    });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `${workflow.name.replace(/[^a-z0-9-_ ]/gi, "").trim() || "workflow"}.json`;
+    const base = workflow.name.replace(/[^a-z0-9-_ ]/gi, "").trim() || "workflow";
+    a.download = mode === "n8n" ? `${base}.n8n.json` : `${base}.json`;
     a.click();
     URL.revokeObjectURL(url);
-    toast.success("Workflow exported");
+    toast.success(mode === "n8n" ? "Exported n8n-compatible JSON" : "Workflow exported");
+  };
+
+  const handleReportIssue = async () => {
+    try {
+      toast.message("Preparing debug bundle…");
+      const diagnostics = {
+        summary: `Issue report from workflow editor`,
+        workflowId: workflow.id,
+        workflowName: workflow.name,
+        extra: {
+          nodeCount: workflow.nodes.length,
+          nodeTypes: [...new Set(workflow.nodes.map((n) => n.type))].slice(0, 80),
+        },
+      };
+      const { bundleName } = await prepareIssueReport(diagnostics);
+      const url = openGeneralIssueUrl({
+        ...diagnostics,
+        summary: `Issue report from workflow editor (bundle: ${bundleName})`,
+      });
+      window.open(url, "_blank", "noopener,noreferrer");
+      toast.success(`Downloaded ${bundleName} — attach it on GitHub`);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Could not prepare report");
+      window.open(openGeneralIssueUrl({ workflowId: workflow.id, workflowName: workflow.name }), "_blank");
+    }
   };
 
   const handleImport = async (file: File) => {
@@ -131,11 +166,17 @@ export function EditorTopBar({ actions }: { actions?: React.ReactNode }) {
       <DropdownMenuItem onClick={() => fileInput.current?.click()}>
         <Upload className="mr-2 size-4" /> Import
       </DropdownMenuItem>
-      <DropdownMenuItem onClick={handleExport}>
-        <Download className="mr-2 size-4" /> Export
+      <DropdownMenuItem onClick={() => handleExport("openflow")}>
+        <Download className="mr-2 size-4" /> Export (OpenFlow)
+      </DropdownMenuItem>
+      <DropdownMenuItem onClick={() => handleExport("n8n")}>
+        <Download className="mr-2 size-4" /> Export (n8n-compatible)
       </DropdownMenuItem>
       <DropdownMenuItem onClick={() => setReportOpen(true)}>
-        <Check className="mr-2 size-4" /> Report
+        <Check className="mr-2 size-4" /> Migration report
+      </DropdownMenuItem>
+      <DropdownMenuItem onClick={() => void handleReportIssue()}>
+        <Bug className="mr-2 size-4" /> Report issue
       </DropdownMenuItem>
       <DropdownMenuItem onClick={() => setCredsOpen(true)}>
         <KeyRound className="mr-2 size-4" /> Credentials
@@ -206,16 +247,36 @@ export function EditorTopBar({ actions }: { actions?: React.ReactNode }) {
           >
             <Upload className="mr-1 size-4" /> Import
           </Button>
-          <Button variant="ghost" size="sm" className="h-8 text-[12px]" onClick={handleExport}>
-            <Download className="mr-1 size-4" /> Export
-          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="sm" className="h-8 text-[12px]">
+                <Download className="mr-1 size-4" /> Export
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-56">
+              <DropdownMenuItem onClick={() => handleExport("openflow")}>
+                OpenFlow JSON
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleExport("n8n")}>
+                n8n-compatible JSON
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
           <Button
             variant="ghost"
             size="sm"
             className="h-8 text-[12px]"
             onClick={() => setReportOpen(true)}
           >
-            <Check className="mr-1 size-4" /> Report
+            <Check className="mr-1 size-4" /> Migration
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-8 text-[12px]"
+            onClick={() => void handleReportIssue()}
+          >
+            <Bug className="mr-1 size-4" /> Report issue
           </Button>
           <Button
             variant="ghost"

@@ -43,6 +43,38 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
     reportLovableError(error, { boundary: "tanstack_root_error_component" });
   }, [error]);
 
+  const report = async () => {
+    try {
+      const { openGeneralIssueUrl } = await import("@/lib/feedback/github-issue");
+      const { prepareIssueReport } = await import("@/lib/feedback/debug-bundle");
+      const diagnostics = {
+        title: `[bug] ${error.message?.slice(0, 80) || "Unhandled error"}`,
+        summary: "Unhandled UI error boundary",
+        errorMessage: error.message,
+        errorStack: error.stack,
+      };
+      const { bundleName } = await prepareIssueReport(diagnostics);
+      window.open(
+        openGeneralIssueUrl({
+          ...diagnostics,
+          summary: `Unhandled UI error (bundle: ${bundleName})`,
+        }),
+        "_blank",
+        "noopener,noreferrer",
+      );
+    } catch {
+      const { openGeneralIssueUrl } = await import("@/lib/feedback/github-issue");
+      window.open(
+        openGeneralIssueUrl({
+          errorMessage: error.message,
+          errorStack: error.stack,
+        }),
+        "_blank",
+        "noopener,noreferrer",
+      );
+    }
+  };
+
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
       <div className="max-w-md text-center">
@@ -50,8 +82,14 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
           This page didn't load
         </h1>
         <p className="mt-2 text-sm text-muted-foreground">
-          Something went wrong on our end. You can try refreshing or head back home.
+          Something went wrong on our end. You can try refreshing, report the issue, or head back
+          home.
         </p>
+        {error.message && (
+          <p className="mt-3 break-all font-mono text-[11px] text-muted-foreground/80">
+            {error.message}
+          </p>
+        )}
         <div className="mt-6 flex flex-wrap justify-center gap-2">
           <button
             onClick={() => {
@@ -61,6 +99,13 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
             className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
           >
             Try again
+          </button>
+          <button
+            type="button"
+            onClick={() => void report()}
+            className="inline-flex items-center justify-center rounded-md border border-input bg-background px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-accent"
+          >
+            Report issue
           </button>
           <a
             href="/"

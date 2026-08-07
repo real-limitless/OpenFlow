@@ -1,0 +1,37 @@
+name: Node issue
+description: Report a problem with a specific OpenFlow node
+title: "[node] "
+labels: ["node", "bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Link the OpenFlow behavioural spec when possible (`docs/specs/nodes/...`).
+        **Do not** include credentials or secret values.
+  - type: input
+    id: node_type
+    attributes:
+      label: Node type (canonical)
+      placeholder: openflow-node-base.httpRequest
+    validations:
+      required: true
+  - type: input
+    id: wire_type
+    attributes:
+      label: Wire type (if known)
+      placeholder: n8n-nodes-base.httpRequest
+  - type: textarea
+    id: summary
+    attributes:
+      label: What is wrong?
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+  - type: input
+    id: spec
+    attributes:
+      label: Spec URL
+      description: GitHub blob link to docs/specs/nodes/...

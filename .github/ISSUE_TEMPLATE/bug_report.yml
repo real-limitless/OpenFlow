@@ -1,0 +1,55 @@
+name: Bug report
+description: Report a bug in OpenFlow
+title: "[bug] "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting an issue. If you used **Report issue** in the app, attach the downloaded `openflow-debug-*.zip` bundle.
+        **Do not** include credentials, API keys, or secret variable values.
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary
+      description: What went wrong?
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1.
+        2.
+        3.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+  - type: input
+    id: version
+    attributes:
+      label: OpenFlow version / commit
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: Browser, OS, Docker vs local, etc.
+  - type: textarea
+    id: node
+    attributes:
+      label: Node type (if applicable)
+      description: Canonical id e.g. openflow-node-base.httpRequest
+  - type: checkboxes
+    id: attachments
+    attributes:
+      label: Attachments
+      options:
+        - label: I attached the debug bundle or screenshots (if available)
