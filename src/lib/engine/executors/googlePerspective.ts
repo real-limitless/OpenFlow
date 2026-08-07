@@ -1,119 +1,131 @@
 import type { NodeExecutor, INodeExecutionData } from "@/sdk";
-import { sdkHttpRequest, ensureItems } from "@/sdk";
+import { ensureItems } from "@/sdk";
+import { evaluateExpression } from "@/lib/expressions/evaluate";
 
 const API_BASE = "https://commentanalyzer.googleapis.com/v1alpha1/comments:analyze";
 
-const ATTRIBUTE_NAMES = [
-  "flirtation",
-  "identity_attack",
-  "insult",
-  "profanity",
-  "severe_toxicity",
-  "sexually_explicit",
-  "threat",
-  "toxicity",
-] as const;
-
-interface RequestedAttribute {
-  attributeName: string;
-  scoreThreshold?: number;
+interface AttributeScore {
+  spanScores: Array<{ begin: number; end: number; score: { value: number; scoreType: string } }>;
+  summaryScore: { value: number; scoreType: string };
 }
 
-function resolveValue(
-  raw: unknown,
-  itemJson: Record<string, unknown>,
-  ctx: { evaluate: (expr: string, json: Record<string, unknown>) => unknown },
-): unknown {
+interface AnalyzeResponse {
+  attributeScores: Record<string, AttributeScore>;
+  languages: string[];
+}
+
+function resolveValue(raw: unknown, itemJson: Record<string, unknown>): unknown {
   if (typeof raw !== "string") return raw;
   if (raw.startsWith("=") || /\{\{[\s\S]*?\}\}/.test(raw)) {
-    return ctx.evaluate(raw, itemJson);
+    const result = evaluateExpression(raw, { json: itemJson });
+    return result.ok ? result.value : raw;
   }
   return raw;
 }
 
+function toNumber(v: unknown, fallback: number): number {
+  if (typeof v === "number") return v;
+  if (typeof v === "string") {
+    const n = parseFloat(v);
+    return isNaN(n) ? fallback : n;
+  }
+  return fallback;
+}
+
 export const googlePerspectiveExecutor: NodeExecutor = async (ctx) => {
   const items = ensureItems(ctx.getInputItems(0));
-  const continueOnFail = ctx.continueOnFail();
   const out: INodeExecutionData[] = [];
+  const continueOnFail = ctx.continueOnFail();
+  const params = ctx.getParams();
 
-  for (const item of items) {
+  const cred = await ctx.getCredential("googlePerspectiveOAuth2Api");
+
+  for (let idx = 0; idx < items.length; idx++) {
+    const item = items[idx];
+    const itemJson = item.json ?? {};
+    const pairedItem = item.pairedItem ?? { item: idx, input: 0 };
+
     try {
-      const text = String(
-        resolveValue(ctx.getParam("text"), item.json, ctx) ?? "",
-      );
+      const rawText = ctx.getParam<string>("text", "");
+      const text = String(resolveValue(rawText, itemJson) ?? "");
 
-      const requestedAttributesUi = ctx.getParam<{
-        requestedAttributesValues?: RequestedAttribute[];
-      }>("requestedAttributesUi", {});
-
-      const attributeValues = requestedAttributesUi?.requestedAttributesValues ?? [];
-
-      const attributes: Record<string, { scoreThreshold?: number }> = {};
-      for (const attr of attributeValues) {
-        if (ATTRIBUTE_NAMES.includes(attr.attributeName as typeof ATTRIBUTE_NAMES[number])) {
-          const threshold = attr.scoreThreshold ?? 0;
-          attributes[attr.attributeName] = threshold > 0 ? { scoreThreshold: threshold } : {};
-        }
+      if (!text.trim()) {
+        throw new Error("Google Perspective: text parameter is empty or whitespace-only");
       }
 
-      const options = ctx.getParam<Record<string, unknown>>("options", {}) ?? {};
-      const languagesRaw = resolveValue(options.languages, item.json, ctx);
-      const languages = typeof languagesRaw === "string" && languagesRaw.length > 0
-        ? [languagesRaw]
-        : undefined;
+      const requestedAttributes: Record<string, { scoreThreshold?: number }> = {};
+
+      const attrUi = params.requestedAttributesUi as Record<string, unknown> | undefined;
+      const attrValues = attrUi?.requestedAttributesValues as Array<Record<string, unknown>> | undefined;
+
+      if (attrValues && attrValues.length > 0) {
+        for (const a of attrValues) {
+          const name = String(resolveValue(a.attributeName, itemJson) ?? "toxicity");
+          const threshold = toNumber(resolveValue(a.scoreThreshold, itemJson), 0);
+          requestedAttributes[name] = threshold > 0 ? { scoreThreshold: threshold } : {};
+        }
+      } else {
+        requestedAttributes.toxicity = {};
+      }
+
+      const optionsParam = params.options as Record<string, unknown> | undefined;
+      const languagesRaw = optionsParam?.languages as string | undefined;
+      const languagesVal = languagesRaw ? String(resolveValue(languagesRaw, itemJson) ?? "") : "";
 
       const body: Record<string, unknown> = {
         comment: { text },
-        requestedAttributes: attributes,
+        requestedAttributes,
       };
 
-      if (languages) {
-        body.languages = languages;
+      if (languagesVal) {
+        body.languages = languagesVal.split(",").map((s: string) => s.trim()).filter(Boolean);
       }
 
-      const credential = await ctx.getCredential("googlePerspectiveOAuth2Api");
-      const accessToken =
-        credential?.accessToken ??
-        (credential?.data as Record<string, unknown>)?.accessToken ??
-        "";
+      const headers: Record<string, string> = {
+        "Content-Type": "application/json",
+      };
 
-      const res = await sdkHttpRequest({
+      if (cred && typeof cred === "object") {
+        const accessToken =
+          (cred as Record<string, unknown>).accessToken ??
+          ((cred as Record<string, unknown>).data as Record<string, unknown>)?.accessToken ??
+          "";
+        if (accessToken) {
+          headers["Authorization"] = `Bearer ${String(accessToken)}`;
+        }
+      }
+
+      const response = await fetch(API_BASE, {
         method: "POST",
-        url: API_BASE,
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${accessToken}`,
-        },
-        body,
+        headers,
+        body: JSON.stringify(body),
       });
 
-      if (res.status < 200 || res.status >= 300) {
-        const errBody = res.body as Record<string, unknown> | undefined;
-        const msg =
-          ((errBody?.error as Record<string, unknown>)?.message as string) ??
-          `HTTP ${res.status}`;
-        throw new Error(String(msg));
+      if (!response.ok) {
+        const errBody = await response.text();
+        let errMsg = `Google Perspective API: HTTP ${response.status}`;
+        try {
+          const parsed = JSON.parse(errBody);
+          errMsg = parsed.error?.message ?? errMsg;
+        } catch { /* ignore parse error */ }
+        throw new Error(errMsg);
       }
 
-      const apiResponse = res.body as Record<string, unknown>;
+      const data = (await response.json()) as AnalyzeResponse;
 
       out.push({
-        json: {
-          ...item.json,
-          perspective: apiResponse,
-        },
+        json: { ...itemJson, attributeScores: data.attributeScores },
+        pairedItem,
       });
     } catch (err) {
       if (continueOnFail) {
         out.push({
-          json: {
-            ...item.json,
-            error: err instanceof Error ? err.message : String(err),
-          },
+          json: { ...itemJson, error: err instanceof Error ? err.message : String(err) },
+          pairedItem,
         });
-      } else {
-        throw err;
+        continue;
       }
+      throw err;
     }
   }
 

@@ -1,273 +1,245 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
-import { createExecutionContext, type ExecutionContext } from "@/sdk";
-import type { INode, INodeExecutionData } from "@/lib/workflow/types";
 import { seedBuiltinExecutors } from "../../index";
-import { getExecutor } from "@/lib/engine/node-runtime";
-import { makeNode } from "../helpers";
+import { hasExecutor } from "@/lib/engine/node-runtime";
+import { getNodeType, seedBuiltinDescriptions } from "@/lib/nodes/registry";
+import { runNode } from "../helpers";
 
 seedBuiltinExecutors();
+seedBuiltinDescriptions();
 
 const TYPE = "n8n-nodes-base.googlePerspective";
-const CREDS = { googlePerspectiveOAuth2Api: { accessToken: "tok_perspective" } };
+const PERSPECTIVE_URL = "https://commentanalyzer.googleapis.com/v1alpha1/comments:analyze";
 
-function mockResponse(body: unknown, status = 200) {
-  const text = JSON.stringify(body ?? {});
+function mockAnalyzeResponse(extraAttrs: Record<string, unknown> = {}) {
+  return {
+    attributeScores: {
+      toxicity: {
+        spanScores: [{ begin: 0, end: 16, score: { value: 0.9, scoreType: "probability" } }],
+        summaryScore: { value: 0.9, scoreType: "probability" },
+      },
+      ...extraAttrs,
+    },
+    languages: ["en"],
+  };
+}
+
+function mockJsonResponse(body: unknown, status = 200) {
   return {
     status,
+    statusText: status === 200 ? "OK" : "Error",
     ok: status >= 200 && status < 300,
-    statusText: "OK",
-    headers: new Map(),
+    headers: { get: () => "application/json", forEach: () => {} },
     async json() {
-      return JSON.parse(text);
+      return body;
     },
     async text() {
-      return text;
+      return JSON.stringify(body);
     },
   };
 }
 
-type Handler = (
-  url: string,
-  method: string,
-  body?: unknown,
-) => ReturnType<typeof mockResponse>;
-let handler: Handler;
-let lastBody: unknown;
+let fetchCalls: Array<{ url: string; body?: string }> = [];
 
-function installFetch(h: Handler) {
-  handler = h;
-  lastBody = undefined;
+function installFetch(routes: Record<string, unknown>, status?: number) {
+  fetchCalls = [];
   vi.stubGlobal(
     "fetch",
-    vi.fn(async (url: string, init?: RequestInit) => {
-      let body: unknown;
-      if (init?.body && typeof init.body === "string") {
-        try {
-          body = JSON.parse(init.body);
-        } catch {
-          body = init.body;
-        }
+    vi.fn(async (url: string, opts?: RequestInit) => {
+      fetchCalls.push({ url, body: opts?.body as string | undefined });
+      if (url === PERSPECTIVE_URL && PERSPECTIVE_URL in routes) {
+        return mockJsonResponse(routes[PERSPECTIVE_URL], status ?? 200);
       }
-      lastBody = body;
-      return handler(String(url), init?.method ?? "GET", body);
+      if (url in routes) {
+        return mockJsonResponse(routes[url], status ?? 200);
+      }
+      return mockJsonResponse(null, 404);
     }),
   );
 }
 
-async function run(
-  parameters: Record<string, unknown>,
-  inputItems: Array<Record<string, unknown>> = [{}],
-  opts?: { continueOnFail?: boolean },
-) {
-  const node = makeNode({
-    name: "N",
-    type: TYPE,
-    parameters,
-    credentials: { googlePerspectiveOAuth2Api: { name: "googlePerspectiveOAuth2Api" } },
-  });
-  const items: INodeExecutionData[] = inputItems.map((j) => ({ json: j }));
-  const ctx: ExecutionContext = createExecutionContext({
-    node,
-    workflow: {
-      id: "wf",
-      name: "T",
-      active: false,
-      nodes: [node],
-      connections: {},
-      settings: {},
-    },
-    getNodeInputItems: () => items,
-    continueOnFail: opts?.continueOnFail ?? false,
-    getCredential: async (name) => CREDS[name as keyof typeof CREDS] ?? null,
-  });
-  return getExecutor(TYPE)!(ctx, node);
-}
-
 beforeEach(() => {
-  installFetch(() => mockResponse({}));
+  fetchCalls = [];
 });
+
 afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-describe("googlePerspective executor – acceptance tests", () => {
-  it("is registered", () => {
-    expect(getExecutor(TYPE)).toBeTypeOf("function");
+describe("batch-queue Google Perspective — n8n-nodes-base.googlePerspective", () => {
+  it("is registered as executor + description", () => {
+    expect(hasExecutor(TYPE)).toBe(true);
+    const desc = getNodeType(TYPE);
+    expect(desc.displayName).toBe("Google Perspective");
   });
 
-  it("analyze a toxic comment", async () => {
-    installFetch((url, method, body) => {
-      const b = body as Record<string, unknown>;
-      if (method === "POST" && url.includes("comments:analyze")) {
-        expect((b.comment as Record<string, unknown>).text).toBe("You are an idiot and everyone hates you.");
-        return mockResponse({
-          attributeScores: {
-            toxicity: {
-              summaryScore: { value: 0.95, type: "probability" },
-              spanScores: [{ begin: 0, end: 5, score: { value: 0.8, type: "probability" } }],
-            },
-          },
-          languages: ["en"],
-          detectedLanguages: ["en"],
-        });
-      }
-      return mockResponse({});
-    });
+  it("analyzes a comment and returns attributeScores", async () => {
+    installFetch({ [PERSPECTIVE_URL]: mockAnalyzeResponse() });
 
-    const out = await run({
-      operation: "analyzeComment",
-      text: "You are an idiot and everyone hates you.",
-      requestedAttributesUi: {
-        requestedAttributesValues: [
-          { attributeName: "toxicity", scoreThreshold: 0 },
-        ],
-      },
-    });
-
-    expect(out[0][0].json).toHaveProperty("perspective");
-    const result = out[0][0].json.perspective as Record<string, unknown>;
-    const attributeScores = result.attributeScores as Record<string, unknown>;
-    expect(attributeScores).toHaveProperty("toxicity");
-    const toxicity = attributeScores.toxicity as Record<string, unknown>;
-    const summaryScore = toxicity.summaryScore as Record<string, unknown>;
-    expect(summaryScore.value).toBeGreaterThan(0.5);
-  });
-
-  it("multiple attributes with threshold", async () => {
-    installFetch((url, method, body) => {
-      const b = body as Record<string, unknown>;
-      if (method === "POST" && url.includes("comments:analyze")) {
-        const reqAttrs = b.requestedAttributes as Record<string, unknown>;
-        expect(reqAttrs).toHaveProperty("toxicity");
-        expect(reqAttrs).toHaveProperty("threat");
-        expect(reqAttrs).toHaveProperty("flirtation");
-        return mockResponse({
-          attributeScores: {
-            toxicity: { summaryScore: { value: 0.85, type: "probability" } },
-            threat: { summaryScore: { value: 0.72, type: "probability" } },
-          },
-          languages: ["en"],
-          detectedLanguages: ["en"],
-        });
-      }
-      return mockResponse({});
-    });
-
-    const out = await run({
-      operation: "analyzeComment",
-      text: "I will find you and hurt you.",
-      requestedAttributesUi: {
-        requestedAttributesValues: [
-          { attributeName: "toxicity", scoreThreshold: 0.3 },
-          { attributeName: "threat", scoreThreshold: 0.3 },
-          { attributeName: "flirtation", scoreThreshold: 0.7 },
-        ],
-      },
-    });
-
-    const result = out[0][0].json.perspective as Record<string, unknown>;
-    const attributeScores = result.attributeScores as Record<string, unknown>;
-    expect(attributeScores).toHaveProperty("toxicity");
-    expect(attributeScores).toHaveProperty("threat");
-    expect(attributeScores).not.toHaveProperty("flirtation");
-  });
-
-  it("empty text returns scores with value 0", async () => {
-    installFetch((url, method, body) => {
-      const b = body as Record<string, unknown>;
-      if (method === "POST" && url.includes("comments:analyze")) {
-        expect((b.comment as Record<string, unknown>).text).toBe("");
-        return mockResponse({
-          attributeScores: {
-            toxicity: { summaryScore: { value: 0, type: "probability" } },
-          },
-          languages: ["en"],
-          detectedLanguages: ["en"],
-        });
-      }
-      return mockResponse({});
-    });
-
-    const out = await run({
-      operation: "analyzeComment",
-      text: "",
-      requestedAttributesUi: {
-        requestedAttributesValues: [
-          { attributeName: "toxicity", scoreThreshold: 0 },
-        ],
-      },
-    });
-
-    const result = out[0][0].json.perspective as Record<string, unknown>;
-    const attributeScores = result.attributeScores as Record<string, unknown>;
-    const toxicity = attributeScores.toxicity as Record<string, unknown>;
-    const summaryScore = toxicity.summaryScore as Record<string, unknown>;
-    expect(summaryScore.value).toBe(0);
-  });
-
-  it("language option is passed to API", async () => {
-    installFetch((url, method, body) => {
-      const b = body as Record<string, unknown>;
-      if (method === "POST" && url.includes("comments:analyze")) {
-        expect(b.languages).toEqual(["es"]);
-        return mockResponse({
-          attributeScores: {
-            toxicity: { summaryScore: { value: 0.7, type: "probability" } },
-          },
-          languages: ["es"],
-          detectedLanguages: ["es"],
-        });
-      }
-      return mockResponse({});
-    });
-
-    const out = await run({
-      operation: "analyzeComment",
-      text: "Eres un idiota.",
-      requestedAttributesUi: {
-        requestedAttributesValues: [
-          { attributeName: "toxicity", scoreThreshold: 0 },
-        ],
-      },
-      options: {
-        languages: "es",
-      },
-    });
-
-    const result = out[0][0].json.perspective as Record<string, unknown>;
-    expect(result).toHaveProperty("attributeScores");
-  });
-
-  it("throws on API error", async () => {
-    installFetch(() => mockResponse({ error: { message: "API quota exceeded" } }, 403));
-    await expect(
-      run({
+    const [output] = await runNode(
+      TYPE,
+      {
         operation: "analyzeComment",
-        text: "test",
+        text: "={{ $json.comment }}",
         requestedAttributesUi: {
-          requestedAttributesValues: [
-            { attributeName: "toxicity", scoreThreshold: 0 },
-          ],
+          requestedAttributesValues: [{ attributeName: "toxicity", scoreThreshold: 0 }],
+        },
+      },
+      [{ json: { comment: "You are an idiot" } }],
+    );
+
+    expect(output).toHaveLength(1);
+    expect(output[0].json.attributeScores).toBeDefined();
+    expect(output[0].json.attributeScores.toxicity).toBeDefined();
+    expect(output[0].json.attributeScores.toxicity.summaryScore.value).toBeGreaterThan(0);
+    expect(output[0].json.attributeScores.toxicity.summaryScore.value).toBeLessThanOrEqual(1);
+  });
+
+  it("analyzes with multiple attributes", async () => {
+    installFetch({
+      [PERSPECTIVE_URL]: mockAnalyzeResponse({
+        insult: {
+          spanScores: [{ begin: 0, end: 30, score: { value: 0.1, scoreType: "probability" } }],
+          summaryScore: { value: 0.1, scoreType: "probability" },
+        },
+        profanity: {
+          spanScores: [{ begin: 0, end: 30, score: { value: 0.05, scoreType: "probability" } }],
+          summaryScore: { value: 0.05, scoreType: "probability" },
+        },
+        threat: {
+          spanScores: [{ begin: 0, end: 30, score: { value: 0.01, scoreType: "probability" } }],
+          summaryScore: { value: 0.01, scoreType: "probability" },
         },
       }),
-    ).rejects.toThrow("API quota exceeded");
+    });
+
+    const [output] = await runNode(
+      TYPE,
+      {
+        operation: "analyzeComment",
+        text: "={{ $json.comment }}",
+        requestedAttributesUi: {
+          requestedAttributesValues: [
+            { attributeName: "toxicity" },
+            { attributeName: "insult" },
+            { attributeName: "profanity" },
+            { attributeName: "threat" },
+          ],
+        },
+      },
+      [{ json: { comment: "I really enjoyed this article" } }],
+    );
+
+    expect(output).toHaveLength(1);
+    expect(output[0].json.attributeScores.toxicity).toBeDefined();
+    expect(output[0].json.attributeScores.insult).toBeDefined();
+    expect(output[0].json.attributeScores.profanity).toBeDefined();
+    expect(output[0].json.attributeScores.threat).toBeDefined();
   });
 
-  it("continueOnFail emits error item", async () => {
-    installFetch(() => mockResponse({ error: { message: "API error" } }, 500));
-    const out = await run(
+  it("resolves expression-based attribute selection", async () => {
+    installFetch({ [PERSPECTIVE_URL]: mockAnalyzeResponse() });
+
+    const [output] = await runNode(
+      TYPE,
+      {
+        operation: "analyzeComment",
+        text: "Bad comment",
+        requestedAttributesUi: {
+          requestedAttributesValues: [{ attributeName: "={{ $json.attr }}" }],
+        },
+      },
+      [{ json: { attr: "toxicity" } }],
+    );
+
+    expect(output).toHaveLength(1);
+    expect(output[0].json.attributeScores.toxicity).toBeDefined();
+    expect(output[0].json.attributeScores.toxicity.summaryScore.value).toBeGreaterThan(0);
+  });
+
+  it("defaults to toxicity when no attributes specified", async () => {
+    installFetch({ [PERSPECTIVE_URL]: mockAnalyzeResponse() });
+
+    const [output] = await runNode(
+      TYPE,
+      {
+        operation: "analyzeComment",
+        text: "Some comment",
+        requestedAttributesUi: { requestedAttributesValues: [] },
+      },
+      [{ json: {} }],
+    );
+
+    expect(output).toHaveLength(1);
+    expect(output[0].json.attributeScores.toxicity).toBeDefined();
+  });
+
+  it("throws on empty text", async () => {
+    installFetch({ [PERSPECTIVE_URL]: mockAnalyzeResponse() });
+
+    await expect(
+      runNode(
+        TYPE,
+        { operation: "analyzeComment", text: "" },
+        [{ json: { comment: "" } }],
+      ),
+    ).rejects.toThrow(/empty/i);
+  });
+
+  it("throws on whitespace-only text", async () => {
+    installFetch({ [PERSPECTIVE_URL]: mockAnalyzeResponse() });
+
+    await expect(
+      runNode(
+        TYPE,
+        { operation: "analyzeComment", text: "   " },
+        [{ json: {} }],
+      ),
+    ).rejects.toThrow(/empty/i);
+  });
+
+  it("handles API error with continueOnFail", async () => {
+    installFetch(
+      { [PERSPECTIVE_URL]: { error: { message: "API quota exceeded" } } },
+      403,
+    );
+
+    const [output] = await runNode(
+      TYPE,
       {
         operation: "analyzeComment",
         text: "test",
         requestedAttributesUi: {
-          requestedAttributesValues: [
-            { attributeName: "toxicity", scoreThreshold: 0 },
-          ],
+          requestedAttributesValues: [{ attributeName: "toxicity" }],
         },
       },
-      [{}],
+      [{ json: { comment: "test" } }],
       { continueOnFail: true },
     );
-    expect(out[0][0].json).toMatchObject({ error: expect.any(String) });
+
+    expect(output).toHaveLength(1);
+    expect(output[0].json.error).toBeDefined();
+  });
+
+  it("includes pairedItem on output items", async () => {
+    installFetch({ [PERSPECTIVE_URL]: mockAnalyzeResponse() });
+
+    const [output] = await runNode(
+      TYPE,
+      {
+        operation: "analyzeComment",
+        text: "={{ $json.comment }}",
+        requestedAttributesUi: {
+          requestedAttributesValues: [{ attributeName: "toxicity" }],
+        },
+      },
+      [
+        { json: { comment: "First" } },
+        { json: { comment: "Second" } },
+      ],
+    );
+
+    expect(output).toHaveLength(2);
+    expect(output[0].pairedItem).toEqual({ item: 0, input: 0 });
+    expect(output[1].pairedItem).toEqual({ item: 1, input: 0 });
   });
 });

@@ -836,6 +836,40 @@ export const localFileTrigger: INodeTypeDescription = {
   ],
 };
 
+const WUFOO_DOCS =
+  "https://docs.n8n.io/integrations/builtin/trigger-nodes/n8n-nodes-base.wufootrigger/";
+
+export const wufooTrigger: INodeTypeDescription = {
+  name: "n8n-nodes-base.wufooTrigger",
+  displayName: "Wufoo Trigger",
+  category: "Communication",
+  group: ["trigger"],
+  version: 1,
+  description: "Starts the workflow when a new Wufoo form entry is submitted (webhook-based).",
+  defaults: { name: "Wufoo Trigger" },
+  inputs: [],
+  outputs: ["main"],
+  icon: "Webhook",
+  credentials: [
+    { name: "wufooApi", required: true },
+  ],
+  sources: [WUFOO_DOCS],
+  properties: [
+    {
+      displayName: "Form",
+      name: "form",
+      type: "options",
+      default: "",
+      required: true,
+      noDataExpression: true,
+      description: "The Wufoo form to watch for new entries.",
+      typeOptions: {
+        loadOptionsMethod: "getForms",
+      },
+    },
+  ],
+};
+
 export const sseTrigger: INodeTypeDescription = {
   name: "n8n-nodes-base.sseTrigger",
   displayName: "SSE Trigger",
@@ -1331,6 +1365,44 @@ const CONVERTKIT_TRIGGER_DOCS =
 
 const CUSTOMER_IO_TRIGGER_DOCS =
   "https://docs.n8n.io/integrations/builtin/trigger-nodes/n8n-nodes-base.customeriotrigger/";
+
+export const mailjetTrigger: INodeTypeDescription = {
+  name: "n8n-nodes-base.mailjetTrigger",
+  displayName: "Mailjet Trigger",
+  category: "Triggers",
+  group: ["trigger"],
+  version: 1,
+  description: "Starts the workflow when a Mailjet webhook event is received (blocked, bounce, open, sent, spam, unsub).",
+  defaults: { name: "Mailjet Trigger" },
+  inputs: [],
+  outputs: ["main"],
+  icon: "Webhook",
+  credentials: [
+    { name: "mailjetEmailApi", required: true },
+  ],
+  sources: [
+    "https://docs.n8n.io/integrations/builtin/trigger-nodes/n8n-nodes-base.mailjettrigger/",
+  ],
+  properties: [
+    {
+      displayName: "Event",
+      name: "event",
+      type: "options",
+      default: "open",
+      required: true,
+      noDataExpression: true,
+      description: "Which Mailjet event type to subscribe to.",
+      options: [
+        { name: "email.blocked", value: "blocked" },
+        { name: "email.bounce", value: "bounce" },
+        { name: "email.open", value: "open" },
+        { name: "email.sent", value: "sent" },
+        { name: "email.spam", value: "spam" },
+        { name: "email.unsub", value: "unsub" },
+      ],
+    },
+  ],
+};
 
 const CUSTOMER_IO_EVENT_OPTIONS: INodePropertyOption[] = [
   { name: "Customer Subscribed", value: "customer.subscribed" },
@@ -3464,6 +3536,34 @@ export const lemlistTrigger: INodeTypeDescription = {
   ],
 };
 
+const THE_HIVE_PROJECT_TRIGGER_DOCS =
+  "https://docs.n8n.io/integrations/builtin/trigger-nodes/n8n-nodes-base.thehivetrigger/";
+
+export const theHiveProjectTrigger: INodeTypeDescription = {
+  name: "n8n-nodes-base.theHiveProjectTrigger",
+  displayName: "TheHive Project Trigger",
+  category: "Triggers",
+  group: ["trigger"],
+  version: 1,
+  description: "Starts the workflow when a TheHive webhook event is received (Alert, Case, Log, Observable, or Task created/deleted/updated).",
+  defaults: { name: "TheHive Project Trigger" },
+  inputs: [],
+  outputs: ["main"],
+  icon: "Webhook",
+  credentials: [
+    { name: "theHiveApi", required: true },
+  ],
+  sources: [THE_HIVE_PROJECT_TRIGGER_DOCS],
+  properties: [
+    {
+      displayName: "The webhook URL (testing and production) appears after workflow activation. Configure it manually in TheHive's application.conf.",
+      name: "notice",
+      type: "notice",
+      default: "",
+    },
+  ],
+};
+
 export const figmaTrigger: INodeTypeDescription = {
   name: "n8n-nodes-base.figmaTrigger",
   displayName: "Figma Trigger (Beta)",
@@ -3533,6 +3633,117 @@ export const figmaTrigger: INodeTypeDescription = {
         show: { event: ["libraryPublish"] },
       },
       description: "Figma team ID (required for library publish).",
+    },
+  ],
+};
+
+const SURVEYMONKEY_DOCS =
+  "https://docs.n8n.io/integrations/builtin/trigger-nodes/n8n-nodes-base.surveymonkeytrigger/";
+
+export const surveyMonkeyTrigger: INodeTypeDescription = {
+  name: "n8n-nodes-base.surveyMonkeyTrigger",
+  displayName: "SurveyMonkey Trigger",
+  category: "Communication",
+  group: ["trigger"],
+  version: 1,
+  description: "Starts the workflow when a SurveyMonkey webhook event is received (collector, response, survey events).",
+  defaults: { name: "SurveyMonkey Trigger" },
+  inputs: [],
+  outputs: ["main"],
+  icon: "Webhook",
+  credentials: [
+    { name: "surveyMonkeyApi", required: false },
+    { name: "surveyMonkeyOAuth2Api", required: false },
+  ],
+  sources: [SURVEYMONKEY_DOCS],
+  properties: [
+    {
+      displayName: "Authentication",
+      name: "authentication",
+      type: "options",
+      default: "accessToken",
+      noDataExpression: true,
+      options: [
+        { name: "Access Token", value: "accessToken" },
+        { name: "OAuth2", value: "oAuth2" },
+      ],
+    },
+    {
+      displayName: "Object Type",
+      name: "objectType",
+      type: "options",
+      default: "",
+      required: true,
+      noDataExpression: true,
+      description: "The SurveyMonkey object type to listen for events on.",
+      options: [
+        { name: "Survey", value: "survey" },
+        { name: "Collector", value: "collector" },
+      ],
+    },
+    {
+      displayName: "Event",
+      name: "event",
+      type: "options",
+      default: "",
+      noDataExpression: true,
+      displayOptions: { show: { objectType: ["survey", "collector"] } },
+      description: "Which event type(s) to trigger on. Leave empty for no filter.",
+      options: [
+        { name: "Collector Created", value: "collector_created" },
+        { name: "Collector Deleted", value: "collector_deleted" },
+        { name: "Collector Updated", value: "collector_updated" },
+        { name: "Response Completed", value: "response_completed" },
+        { name: "Response Created", value: "response_created" },
+        { name: "Response Deleted", value: "response_deleted" },
+        { name: "Response Disqualified", value: "response_disqualified" },
+        { name: "Response Overquota", value: "response_overquota" },
+        { name: "Response Updated", value: "response_updated" },
+        { name: "Survey Created", value: "survey_created" },
+        { name: "Survey Deleted", value: "survey_deleted" },
+        { name: "Survey Updated", value: "survey_updated" },
+      ],
+    },
+    {
+      displayName: "Survey IDs",
+      name: "surveyIds",
+      type: "multiOptions",
+      default: [],
+      displayOptions: { show: { objectType: ["survey"] }, hide: { event: ["survey_created"] } },
+      description: "Filter to specific surveys by ID; empty = all surveys. Loaded dynamically from the authenticated account.",
+    },
+    {
+      displayName: "Survey ID",
+      name: "surveyId",
+      type: "options",
+      default: "",
+      noDataExpression: true,
+      displayOptions: { show: { objectType: ["collector"] } },
+      description: "The survey whose collectors to monitor.",
+    },
+    {
+      displayName: "Collector IDs",
+      name: "collectorIds",
+      type: "multiOptions",
+      default: [],
+      displayOptions: { show: { objectType: ["collector"] } },
+      description: "Filter to specific collectors by ID; empty = all collectors on the selected survey.",
+    },
+    {
+      displayName: "Resolve Data",
+      name: "resolveData",
+      type: "boolean",
+      default: true,
+      displayOptions: { show: { event: ["response_completed"] } },
+      description: "When true, the node resolves the full response data instead of emitting only the webhook notification ID envelope.",
+    },
+    {
+      displayName: "Only Answers",
+      name: "onlyAnswers",
+      type: "boolean",
+      default: true,
+      displayOptions: { show: { resolveData: [true], event: ["response_completed"] } },
+      description: "When true and Resolve Data is also true, emit only the answers portion of the resolved response.",
     },
   ],
 };
@@ -5973,6 +6184,439 @@ export const flowTrigger: INodeTypeDescription = {
       placeholder: "555",
       displayOptions: { show: { resource: ["task"] } },
       description: "Comma-separated Flow task IDs to watch. Required when resource is Task.",
+    },
+  ],
+};
+
+const HELP_SCOUT_DOCS =
+  "https://docs.n8n.io/integrations/builtin/trigger-nodes/n8n-nodes-base.helpscouttrigger/";
+
+const HELP_SCOUT_EVENT_OPTIONS: INodePropertyOption[] = [
+  { name: "Conversation - Assigned", value: "convo.assigned" },
+  { name: "Conversation - Created", value: "convo.created" },
+  { name: "Conversation - Deleted", value: "convo.deleted" },
+  { name: "Conversation - Merged", value: "convo.merged" },
+  { name: "Conversation - Moved", value: "convo.moved" },
+  { name: "Conversation - Status", value: "convo.status" },
+  { name: "Conversation - Tags", value: "convo.tags" },
+  { name: "Conversation Agent Reply - Created", value: "convo.agent.reply.created" },
+  { name: "Conversation Customer Reply - Created", value: "convo.customer.reply.created" },
+  { name: "Conversation Note - Created", value: "convo.note.created" },
+  { name: "Customer - Created", value: "customer.created" },
+  { name: "Rating - Received", value: "satisfaction.ratings" },
+];
+
+export const helpScoutTrigger: INodeTypeDescription = {
+  name: "n8n-nodes-base.helpScoutTrigger",
+  displayName: "Help Scout Trigger",
+  category: "Communication",
+  group: ["trigger"],
+  version: 1,
+  description: "Starts the workflow when a Help Scout webhook event is received.",
+  defaults: { name: "Help Scout Trigger" },
+  inputs: [],
+  outputs: ["main"],
+  icon: "Webhook",
+  credentials: [
+    { name: "helpScoutOAuth2Api", required: true },
+  ],
+  sources: [HELP_SCOUT_DOCS],
+  properties: [
+    {
+      displayName: "Events",
+      name: "events",
+      type: "multiOptions",
+      default: [],
+      required: true,
+      noDataExpression: true,
+      description: "One or more Help Scout webhook event types to subscribe to.",
+      options: HELP_SCOUT_EVENT_OPTIONS,
+    },
+  ],
+};
+
+const INVOICE_NINJA_DOCS =
+  "https://docs.n8n.io/integrations/builtin/trigger-nodes/n8n-nodes-base.invoiceninjatrigger/";
+
+export const invoiceNinjaTrigger: INodeTypeDescription = {
+  name: "n8n-nodes-base.invoiceNinjaTrigger",
+  displayName: "Invoice Ninja Trigger",
+  category: "Finance & Accounting",
+  group: ["trigger"],
+  version: [1, 2],
+  defaultVersion: 2,
+  description: "Starts the workflow when an Invoice Ninja webhook event is received (create_client, create_invoice, create_payment, create_quote, create_vendor).",
+  defaults: { name: "Invoice Ninja Trigger" },
+  inputs: [],
+  outputs: ["main"],
+  icon: "Webhook",
+  credentials: [
+    { name: "invoiceNinjaApi", required: true },
+  ],
+  sources: [INVOICE_NINJA_DOCS],
+  properties: [
+    {
+      displayName: "API Version",
+      name: "apiVersion",
+      type: "options",
+      default: "v5",
+      noDataExpression: false,
+      description: "The Invoice Ninja API version the target instance is running.",
+      options: [
+        { name: "v4", value: "v4" },
+        { name: "v5", value: "v5" },
+      ],
+    },
+    {
+      displayName: "Event",
+      name: "event",
+      type: "options",
+      default: "",
+      required: true,
+      noDataExpression: false,
+      description: "The webhook event to subscribe to.",
+      options: [
+        { name: "Client Created", value: "create_client" },
+        { name: "Invoice Created", value: "create_invoice" },
+        { name: "Payment Created", value: "create_payment" },
+        { name: "Quote Created", value: "create_quote" },
+        { name: "Vendor Created", value: "create_vendor" },
+      ],
+    },
+  ],
+};
+
+const KEAP_TRIGGER_DOCS =
+  "https://docs.n8n.io/integrations/builtin/trigger-nodes/n8n-nodes-base.keaptrigger/";
+
+export const keapTrigger: INodeTypeDescription = {
+  name: "n8n-nodes-base.keapTrigger",
+  displayName: "Keap Trigger",
+  category: "Triggers",
+  group: ["trigger"],
+  version: 1,
+  description:
+    "Starts the workflow when a Keap webhook event is received (contact.add, contact.update, invoice.add, subscription.add, etc.).",
+  defaults: { name: "Keap Trigger" },
+  inputs: [],
+  outputs: ["main"],
+  icon: "Webhook",
+  credentials: [{ name: "keapOAuth2Api", required: true }],
+  sources: [KEAP_TRIGGER_DOCS],
+  properties: [
+    {
+      displayName: "Event ID",
+      name: "eventId",
+      type: "options",
+      default: "",
+      required: true,
+      noDataExpression: true,
+      description:
+        "The Keap webhook event type to subscribe to. Dynamically loaded from the Keap API.",
+      options: [
+        { name: "Contact.Add", value: "contact.add" },
+        { name: "Contact.Update", value: "contact.update" },
+        { name: "Invoice.Add", value: "invoice.add" },
+        { name: "Invoice.Update", value: "invoice.update" },
+        { name: "Invoice.Paid", value: "invoice.paid" },
+        { name: "Subscription.Add", value: "subscription.add" },
+        { name: "Subscription.Update", value: "subscription.update" },
+        { name: "Subscription.Cancel", value: "subscription.cancel" },
+        { name: "Order.Add", value: "order.add" },
+        { name: "Order.Update", value: "order.update" },
+        { name: "Payment.Add", value: "payment.add" },
+        { name: "LeadSourceChange", value: "leadSourceChange" },
+      ],
+    },
+    {
+      displayName: "Raw Data",
+      name: "rawData",
+      type: "boolean",
+      default: false,
+      description:
+        "When true, emit the raw Keap webhook payload envelope unchanged. When false, extract the inner data object.",
+    },
+  ],
+};
+
+const MAILERLITE_TRIGGER_DOCS =
+  "https://docs.n8n.io/integrations/builtin/trigger-nodes/n8n-nodes-base.mailerlitetrigger/";
+
+const MAILERLITE_V1_EVENTS = [
+  { name: "Campaign Sent", value: "campaign.sent" },
+  { name: "Subscriber Added to Group", value: "subscriber.added_to_group" },
+  { name: "Subscriber Automation Completed", value: "subscriber.automation_completed" },
+  { name: "Subscriber Automation Triggered", value: "subscriber.automation_triggered" },
+  { name: "Subscriber Bounced", value: "subscriber.bounced" },
+  { name: "Subscriber Created", value: "subscriber.created" },
+  { name: "Subscriber Spam Reported", value: "subscriber.spam_reported" },
+  { name: "Subscriber Removed from Group", value: "subscriber.removed_from_group" },
+  { name: "Subscriber Unsubscribed", value: "subscriber.unsubscribed" },
+  { name: "Subscriber Updated", value: "subscriber.updated" },
+];
+
+const MAILERLITE_V2_EVENTS = [
+  ...MAILERLITE_V1_EVENTS,
+  { name: "Subscriber Active", value: "subscriber.active" },
+  { name: "Campaign Open", value: "campaign.open" },
+  { name: "Campaign Click", value: "campaign.click" },
+  { name: "Subscriber Deleted", value: "subscriber.deleted" },
+];
+
+export const mailerLiteTrigger: INodeTypeDescription = {
+  name: "n8n-nodes-base.mailerLiteTrigger",
+  displayName: "MailerLite Trigger",
+  category: "Communication",
+  group: ["trigger"],
+  version: [1, 2],
+  description:
+    "Starts the workflow when a MailerLite webhook event is received. V1 targets the Classic API; V2 targets the modern API.",
+  defaults: { name: "MailerLite Trigger" },
+  inputs: [],
+  outputs: ["main"],
+  icon: "Webhook",
+  credentials: [
+    { name: "mailerLiteApi", required: true },
+  ],
+  sources: [MAILERLITE_TRIGGER_DOCS],
+  properties: [
+    {
+      displayName: "Events",
+      name: "events",
+      type: "multiOptions",
+      default: [],
+      required: true,
+      noDataExpression: true,
+      description: "One or more MailerLite webhook event types to subscribe to.",
+      options: MAILERLITE_V2_EVENTS,
+    },
+    {
+      displayName: "API Version",
+      name: "apiVersion",
+      type: "options",
+      default: "v2",
+      noDataExpression: true,
+      description: "Which MailerLite API version to target.",
+      options: [
+        { name: "V1 (Classic API)", value: "v1" },
+        { name: "V2 (Modern API)", value: "v2" },
+      ],
+    },
+  ],
+};
+
+const PAYPAL_TRIGGER_DOCS =
+  "https://docs.n8n.io/integrations/builtin/trigger-nodes/n8n-nodes-base.paypaltrigger/";
+
+export const payPalTrigger: INodeTypeDescription = {
+  name: "n8n-nodes-base.payPalTrigger",
+  displayName: "PayPal Trigger",
+  category: "Finance & Accounting",
+  group: ["trigger"],
+  version: 1,
+  description: "Starts the workflow when a PayPal webhook event is received (payment capture, billing subscription, checkout order, etc.).",
+  defaults: { name: "PayPal Trigger" },
+  inputs: [],
+  outputs: ["main"],
+  icon: "Webhook",
+  credentials: [
+    { name: "payPalApi", required: true },
+  ],
+  sources: [PAYPAL_TRIGGER_DOCS],
+  properties: [
+    {
+      displayName: "Event Names",
+      name: "eventNames",
+      type: "multiOptions",
+      default: [],
+      noDataExpression: true,
+      description: "One or more PayPal webhook event type names. Leave empty to subscribe to all events.",
+      options: [
+        { name: "All Events", value: "*" },
+        { name: "Billing Plan Created", value: "BILLING.PLAN.CREATED" },
+        { name: "Billing Plan Updated", value: "BILLING.PLAN.UPDATED" },
+        { name: "Billing Subscription Cancelled", value: "BILLING.SUBSCRIPTION.CANCELLED" },
+        { name: "Billing Subscription Created", value: "BILLING.SUBSCRIPTION.CREATED" },
+        { name: "Billing Subscription Updated", value: "BILLING.SUBSCRIPTION.UPDATED" },
+        { name: "Checkout Order Approved", value: "CHECKOUT.ORDER.APPROVED" },
+        { name: "Checkout Order Completed", value: "CHECKOUT.ORDER.COMPLETED" },
+        { name: "Customer Dispute Created", value: "CUSTOMER.DISPUTE.CREATED" },
+        { name: "Customer Dispute Resolved", value: "CUSTOMER.DISPUTE.RESOLVED" },
+        { name: "Identity Authorization Consent Revoked", value: "IDENTITY.AUTHORIZATION-CONSENT.REVOKED" },
+        { name: "Invoice Paid", value: "INVOICING.INVOICE.PAID" },
+        { name: "Invoice Refunded", value: "INVOICING.INVOICE.REFUNDED" },
+        { name: "Payment Capture Completed", value: "PAYMENT.CAPTURE.COMPLETED" },
+        { name: "Payment Capture Denied", value: "PAYMENT.CAPTURE.DENIED" },
+        { name: "Payment Capture Refunded", value: "PAYMENT.CAPTURE.REFUNDED" },
+        { name: "Payment Sale Completed", value: "PAYMENT.SALE.COMPLETED" },
+        { name: "Vault Credit Card Created", value: "VAULT.CREDIT-CARD.CREATED" },
+        { name: "Vault Credit Card Deleted", value: "VAULT.CREDIT-CARD.DELETED" },
+      ],
+    },
+  ],
+};
+
+const PUSHCUT_TRIGGER_DOCS =
+  "https://docs.n8n.io/integrations/builtin/trigger-nodes/n8n-nodes-base.pushcuttrigger/";
+
+export const pushcutTrigger: INodeTypeDescription = {
+  name: "n8n-nodes-base.pushcutTrigger",
+  displayName: "Pushcut Trigger",
+  category: "Communication",
+  group: ["trigger"],
+  version: 1,
+  description: "Starts the workflow when a Pushcut integration trigger HTTP request is received from the Pushcut iOS app.",
+  defaults: { name: "Pushcut Trigger" },
+  inputs: [],
+  outputs: ["main"],
+  icon: "Webhook",
+  credentials: [
+    { name: "pushcutApi", required: true },
+  ],
+  sources: [PUSHCUT_TRIGGER_DOCS],
+  properties: [
+    {
+      displayName: "Action Name",
+      name: "actionName",
+      type: "string",
+      default: "",
+      required: true,
+      description: "A user-defined label for the integration trigger action. Must match the action label configured in the Pushcut iOS app under Notifications > Add Action > Server > Integration > Integration Trigger.",
+    },
+  ],
+};
+
+const STRAVA_TRIGGER_DOCS =
+  "https://docs.n8n.io/integrations/builtin/trigger-nodes/n8n-nodes-base.stravatrigger/";
+
+export const stravaTrigger: INodeTypeDescription = {
+  name: "n8n-nodes-base.stravaTrigger",
+  displayName: "Strava Trigger",
+  category: "Productivity",
+  group: ["trigger"],
+  version: 1,
+  description: "Starts the workflow when a Strava webhook event is received (activity/athlete create, update, delete).",
+  defaults: { name: "Strava Trigger" },
+  inputs: [],
+  outputs: ["main"],
+  icon: "Webhook",
+  credentials: [
+    { name: "stravaOAuth2Api", required: true },
+  ],
+  sources: [STRAVA_TRIGGER_DOCS],
+  properties: [
+    {
+      displayName: "Filter",
+      name: "filter",
+      type: "options",
+      default: "[All]",
+      noDataExpression: true,
+      description: "Which object types to receive events for.",
+      options: [
+        { name: "All", value: "[All]" },
+        { name: "Activity", value: "Activity" },
+        { name: "Athlete", value: "Athlete" },
+      ],
+    },
+    {
+      displayName: "Trigger On",
+      name: "triggerOn",
+      type: "options",
+      default: "[All]",
+      noDataExpression: true,
+      description: "Which aspect types to receive events for.",
+      options: [
+        { name: "All", value: "[All]" },
+        { name: "Created", value: "Created" },
+        { name: "Updated", value: "Updated" },
+        { name: "Deleted", value: "Deleted" },
+      ],
+    },
+  ],
+};
+
+const WISE_DOCS =
+  "https://docs.n8n.io/integrations/builtin/trigger-nodes/n8n-nodes-base.wisetrigger/";
+
+export const wiseTrigger: INodeTypeDescription = {
+  name: "n8n-nodes-base.wiseTrigger",
+  displayName: "Wise Trigger",
+  category: "Finance & Accounting",
+  group: ["trigger"],
+  version: 1,
+  description: "Starts the workflow when a Wise webhook event is received (balance credit, balance credit/debit, transfer active case update, transfer status update).",
+  defaults: { name: "Wise Trigger" },
+  inputs: [],
+  outputs: ["main"],
+  icon: "Webhook",
+  credentials: [
+    { name: "wiseApi", required: true },
+  ],
+  sources: [WISE_DOCS],
+  properties: [
+    {
+      displayName: "Event",
+      name: "event",
+      type: "options",
+      default: "",
+      required: true,
+      noDataExpression: true,
+      description: "Which Wise event type to subscribe to.",
+      options: [
+        { name: "Balance credit", value: "balance-credit" },
+        { name: "Balance credit or debit", value: "balance-credit-debit" },
+        { name: "Transfer active case update", value: "transfers#active-cases-update" },
+        { name: "Transfer status update", value: "transfers#status-update" },
+      ],
+    },
+  ],
+};
+
+const THE_HIVE_DOCS =
+  "https://docs.n8n.io/integrations/builtin/trigger-nodes/n8n-nodes-base.thehivetrigger/";
+
+const THE_HIVE_EVENTS = [
+  { name: "Alert Created", value: "alert.create" },
+  { name: "Alert Deleted", value: "alert.delete" },
+  { name: "Alert Updated", value: "alert.update" },
+  { name: "Case Created", value: "case.create" },
+  { name: "Case Deleted", value: "case.delete" },
+  { name: "Case Updated", value: "case.update" },
+  { name: "Log Created", value: "log.create" },
+  { name: "Log Deleted", value: "log.delete" },
+  { name: "Log Updated", value: "log.update" },
+  { name: "Observable Created", value: "observable.create" },
+  { name: "Observable Deleted", value: "observable.delete" },
+  { name: "Observable Updated", value: "observable.update" },
+  { name: "Task Created", value: "task.create" },
+  { name: "Task Deleted", value: "task.delete" },
+  { name: "Task Updated", value: "task.update" },
+];
+
+export const theHiveTrigger: INodeTypeDescription = {
+  name: "n8n-nodes-base.theHiveTrigger",
+  displayName: "TheHive Trigger",
+  category: "Development",
+  group: ["trigger"],
+  version: 1,
+  description:
+    "Starts the workflow when a TheHive webhook event is received (alert, case, log, observable, task)",
+  defaults: { name: "TheHive Trigger" },
+  inputs: [],
+  outputs: ["main"],
+  icon: "Webhook",
+  credentials: [{ name: "theHiveApi", required: true }],
+  sources: [THE_HIVE_DOCS],
+  properties: [
+    {
+      displayName: "Events",
+      name: "events",
+      type: "multiOptions",
+      default: [],
+      noDataExpression: true,
+      description:
+        "One or more TheHive event specifiers of the form {Resource}.{Action}. Leave empty to subscribe to all events.",
+      options: THE_HIVE_EVENTS,
     },
   ],
 };

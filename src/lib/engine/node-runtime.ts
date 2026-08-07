@@ -517,6 +517,11 @@ export const BUILTIN_EXECUTOR_MODULES: Array<{
     exportName: "xmlExecutor",
   },
   {
+    type: "n8n-nodes-base.x",
+    modulePath: "./executors/xml",
+    exportName: "xmlExecutor",
+  },
+  {
     type: "n8n-nodes-base.html",
     modulePath: "./executors/html",
     exportName: "htmlExecutor",
@@ -876,6 +881,11 @@ export const BUILTIN_EXECUTOR_MODULES: Array<{
     exportName: "quickChartExecutor",
   },
   {
+    type: "n8n-nodes-base.quickChartTool",
+    modulePath: "./executors/quickChartTool",
+    exportName: "quickChartToolExecutor",
+  },
+  {
     type: "n8n-nodes-mcp.mcpClientTool",
     modulePath: "./executors/mcp-community-client",
     exportName: "mcpCommunityClientExecutor",
@@ -949,6 +959,11 @@ export const BUILTIN_EXECUTOR_MODULES: Array<{
     type: "n8n-nodes-base.sms77",
     modulePath: "./executors/n8n-nodes-base.sms77",
     exportName: "sms77Executor",
+  },
+  {
+    type: "n8n-nodes-base.sms77Tool",
+    modulePath: "./executors/sms77Tool",
+    exportName: "sms77ToolExecutor",
   },
   {
     type: "n8n-nodes-base.sendGrid",
@@ -1265,6 +1280,11 @@ export const BUILTIN_EXECUTOR_MODULES: Array<{
     exportName: "stripeTriggerExecutor",
   },
   {
+    type: "n8n-nodes-base.quickbaseTool",
+    modulePath: "./executors/quickbaseTool",
+    exportName: "quickbaseToolExecutor",
+  },
+  {
     type: "n8n-nodes-base.quickbooks",
     modulePath: "./executors/n8n-nodes-base.quickbooks",
     exportName: "quickbooksExecutor",
@@ -1470,6 +1490,11 @@ export const BUILTIN_EXECUTOR_MODULES: Array<{
     type: "@n8n/n8n-nodes-langchain.informationExtractor",
     modulePath: "./executors/langchain-information-extractor",
     exportName: "langchainInformationExtractorExecutor",
+  },
+  {
+    type: "n8n-nodes-base.salesmateTool",
+    modulePath: "./executors/salesmateTool",
+    exportName: "salesmateToolExecutor",
   },
   {
     type: "n8n-nodes-base.googleSheetsTrigger",
@@ -1752,6 +1777,11 @@ export const BUILTIN_EXECUTOR_MODULES: Array<{
     exportName: "microsoftOutlookTriggerExecutor",
   },
   {
+    type: "n8n-nodes-base.splunkTool",
+    modulePath: "./executors/n8n-nodes-base.splunkTool",
+    exportName: "splunkToolExecutor",
+  },
+  {
     type: "n8n-nodes-base.openWeatherMap",
     modulePath: "./executors/n8n-nodes-base.openWeatherMap",
     exportName: "openWeatherMapExecutor",
@@ -1760,6 +1790,11 @@ export const BUILTIN_EXECUTOR_MODULES: Array<{
     type: "n8n-nodes-base.openWeatherMapTool",
     modulePath: "./executors/n8n-nodes-base.openWeatherMapTool",
     exportName: "openWeatherMapToolExecutor",
+  },
+  {
+    type: "n8n-nodes-base.raindropTool",
+    modulePath: "./executors/n8n-nodes-base.raindropTool",
+    exportName: "raindropToolExecutor",
   },
   {
     type: "n8n-nodes-base.htmlExtract",
@@ -1830,6 +1865,11 @@ export const BUILTIN_EXECUTOR_MODULES: Array<{
     type: "n8n-nodes-base.twilioTrigger",
     modulePath: "./executors/n8n-nodes-base.twilioTrigger",
     exportName: "twilioTriggerExecutor",
+  },
+  {
+    type: "n8n-nodes-base.telegramBot",
+    modulePath: "./executors/telegram",
+    exportName: "telegramExecutor",
   },
   {
     type: "n8n-nodes-base.apiTemplateIo",
@@ -2472,6 +2512,11 @@ export const BUILTIN_EXECUTOR_MODULES: Array<{
     exportName: "vectorStoreSupabaseInsertExecutor",
   },
   {
+    type: "n8n-nodes-base.rundeck",
+    modulePath: "./executors/rundeck",
+    exportName: "rundeckExecutor",
+  },
+  {
     type: "n8n-nodes-base.acuitySchedulingTrigger",
     modulePath: "./executors/acuitySchedulingTrigger",
     exportName: "acuitySchedulingTriggerExecutor",
@@ -2760,6 +2805,352 @@ export const BUILTIN_EXECUTOR_MODULES: Array<{
     type: "n8n-nodes-base.googleTranslateTool",
     modulePath: "./executors/googleTranslateTool",
     exportName: "googleTranslateToolExecutor",
+  },
+  {
+    type: "n8n-nodes-base.plivoTool",
+    modulePath: "./executors/PlivoTool",
+    exportName: "plivoToolExecutor",
+  },
+  {
+    type: "n8n-nodes-base.postBinTool",
+    modulePath: "./executors/postBinTool",
+    exportName: "postBinToolExecutor",
+  },
+  {
+    type: "n8n-nodes-base.postHogTool",
+    modulePath: "./executors/postHogTool",
+    exportName: "postHogToolExecutor",
+  },
+  {
+    type: "n8n-nodes-base.profitWell",
+    modulePath: "./executors/profitWell",
+    exportName: "profitWellExecutor",
+  },
+  {
+    type: "n8n-nodes-base.profitWellTool",
+    modulePath: "./executors/profitWellTool",
+    exportName: "profitWellToolExecutor",
+  },
+  {
+    type: "n8n-nodes-base.pushcut",
+    modulePath: "./executors/pushcut",
+    exportName: "pushcutExecutor",
+  },
+  {
+    type: "n8n-nodes-base.pushcutTrigger",
+    modulePath: "./executors/pushcutTrigger",
+    exportName: "pushcutTriggerExecutor",
+  },
+  {
+    type: "n8n-nodes-base.pushoverTool",
+    modulePath: "./executors/pushoverTool",
+    exportName: "pushoverToolExecutor",
+  },
+  {
+    type: "n8n-nodes-base.questDb",
+    modulePath: "./executors/n8n-nodes-base.questDb",
+    exportName: "questDbExecutor",
+  },
+  {
+    type: "n8n-nodes-base.quickbase",
+    modulePath: "./executors/QuickBase",
+    exportName: "quickBaseExecutor",
+  },
+  {
+    type: "n8n-nodes-base.salesmate",
+    modulePath: "./executors/salesmate",
+    exportName: "salesmateExecutor",
+  },
+  {
+    type: "n8n-nodes-base.seaTable",
+    modulePath: "./executors/seaTable",
+    exportName: "seaTableExecutor",
+  },
+  {
+    type: "n8n-nodes-base.securityScorecard",
+    modulePath: "./executors/securityScorecard",
+    exportName: "securityScorecardExecutor",
+  },
+  {
+    type: "n8n-nodes-base.sendy",
+    modulePath: "./executors/n8n-nodes-base.sendy",
+    exportName: "sendyExecutor",
+  },
+  {
+    type: "n8n-nodes-base.sendyTool",
+    modulePath: "./executors/sendyTool",
+    exportName: "sendyToolExecutor",
+  },
+  {
+    type: "n8n-nodes-base.sentryIo",
+    modulePath: "./executors/sentryIo",
+    exportName: "sentryIoExecutor",
+  },
+  {
+    type: "n8n-nodes-base.sentryIoTool",
+    modulePath: "./executors/sentryIoTool",
+    exportName: "sentryIoToolExecutor",
+  },
+  {
+    type: "n8n-nodes-base.signl4Tool",
+    modulePath: "./executors/signl4Tool",
+    exportName: "signl4ToolExecutor",
+  },
+  {
+    type: "n8n-nodes-base.sms77Tool",
+    modulePath: "./executors/sms77Tool",
+    exportName: "sms77ToolExecutor",
+  },
+  {
+    type: "n8n-nodes-base.spontit",
+    modulePath: "./executors/spontit",
+    exportName: "spontitExecutor",
+  },
+  {
+    type: "n8n-nodes-base.storyblok",
+    modulePath: "./executors/n8n-nodes-base.storyblok",
+    exportName: "storyblokExecutor",
+  },
+  {
+    type: "n8n-nodes-base.strapiTool",
+    modulePath: "./executors/StrapiTool",
+    exportName: "strapiToolExecutor",
+  },
+  {
+    type: "n8n-nodes-base.stravaTool",
+    modulePath: "./executors/stravaTool",
+    exportName: "stravaToolExecutor",
+  },
+  {
+    type: "n8n-nodes-base.stravaTrigger",
+    modulePath: "./executors/stravaTrigger",
+    exportName: "stravaTriggerExecutor",
+  },
+  {
+    type: "n8n-nodes-base.surveyMonkeyTrigger",
+    modulePath: "./executors/surveyMonkeyTrigger",
+    exportName: "surveyMonkeyTriggerExecutor",
+  },
+  {
+    type: "n8n-nodes-base.tapfiliate",
+    modulePath: "./executors/tapfiliate",
+    exportName: "tapfiliateExecutor",
+  },
+  {
+    type: "n8n-nodes-base.taiga",
+    modulePath: "./executors/n8n-nodes-base.taiga",
+    exportName: "taigaExecutor",
+  },
+  {
+    type: "n8n-nodes-base.theHiveProjectTrigger",
+    modulePath: "./executors/theHiveProjectTrigger",
+    exportName: "theHiveProjectTriggerExecutor",
+  },
+  {
+    type: "n8n-nodes-base.theHiveTrigger",
+    modulePath: "./executors/theHiveTrigger",
+    exportName: "theHiveTriggerExecutor",
+  },
+  {
+    type: "n8n-nodes-base.theHiveTool",
+    modulePath: "./executors/theHiveTool",
+    exportName: "theHiveToolExecutor",
+  },
+  {
+    type: "n8n-nodes-base.timescaleDb",
+    modulePath: "./executors/timescaleDb",
+    exportName: "timescaleDbExecutor",
+  },
+  {
+    type: "n8n-nodes-base.travisCiTool",
+    modulePath: "./executors/n8n-nodes-base.travisCiTool",
+    exportName: "travisCiToolExecutor",
+  },
+  {
+    type: "n8n-nodes-base.twake",
+    modulePath: "./executors/n8n-nodes-base.twake",
+    exportName: "twakeExecutor",
+  },
+  {
+    type: "n8n-nodes-base.twilioTool",
+    modulePath: "./executors/n8n-nodes-base.twilioTool",
+    exportName: "twilioToolExecutor",
+  },
+  {
+    type: "n8n-nodes-base.twist",
+    modulePath: "./executors/twist",
+    exportName: "twistExecutor",
+  },
+  {
+    type: "n8n-nodes-base.unleashedSoftware",
+    modulePath: "./executors/unleashedSoftware",
+    exportName: "unleashedSoftwareExecutor",
+  },
+  {
+    type: "n8n-nodes-base.uplead",
+    modulePath: "./executors/n8n-nodes-base.uplead",
+    exportName: "upleadExecutor",
+  },
+  {
+    type: "n8n-nodes-base.urlScanIoTool",
+    modulePath: "./executors/n8n-nodes-base.urlScanIoTool",
+    exportName: "urlScanIoToolExecutor",
+  },
+  {
+    type: "n8n-nodes-base.uptimeRobotTool",
+    modulePath: "./executors/uptimeRobotTool",
+    exportName: "uptimeRobotToolExecutor",
+  },
+  {
+    type: "n8n-nodes-base.venafiTlsProtectCloudTool",
+    modulePath: "./executors/venafiTlsProtectCloud",
+    exportName: "venafiTlsProtectCloudToolExecutor",
+  },
+  {
+    type: "n8n-nodes-base.venafiTlsProtectDatacenterTool",
+    modulePath: "./executors/venafiTlsProtectDatacenterTool",
+    exportName: "venafiTlsProtectDatacenterToolExecutor",
+  },
+  {
+    type: "n8n-nodes-base.vero",
+    modulePath: "./executors/n8n-nodes-base.vero",
+    exportName: "veroExecutor",
+  },
+  {
+    type: "n8n-nodes-base.wise",
+    modulePath: "./executors/wise",
+    exportName: "wiseExecutor",
+  },
+  {
+    type: "n8n-nodes-base.wekanTool",
+    modulePath: "./executors/wekanTool",
+    exportName: "wekanToolExecutor",
+  },
+  {
+    type: "n8n-nodes-base.wiseTrigger",
+    modulePath: "./executors/wiseTrigger",
+    exportName: "wiseTriggerExecutor",
+  },
+{
+    type: "n8n-nodes-base.vonage",
+    modulePath: "./executors/vonage",
+    exportName: "vonageExecutor",
+  },
+  {
+    type: "n8n-nodes-base.yourlsTool",
+    modulePath: "./executors/yourlsTool",
+    exportName: "yourlsToolExecutor",
+  },
+  {
+    type: "n8n-nodes-base.zohoCrmTool",
+    modulePath: "./executors/n8n-nodes-base.zohoCrmTool",
+    exportName: "zohoCrmToolExecutor",
+  },
+  // Partial-job repairs: alternate ids + missing registrations
+  {
+    type: "n8n-nodes-base.discourseTool",
+    modulePath: "./executors/n8n-nodes-base.discourseTool",
+    exportName: "discourseToolExecutor",
+  },
+  {
+    type: "n8n-nodes-base.egoiTool",
+    modulePath: "./executors/egoiTool",
+    exportName: "egoiToolExecutor",
+  },
+  {
+    type: "n8n-nodes-base.humanticAiTool",
+    modulePath: "./executors/humantic-ai-tool",
+    exportName: "humanticAiToolExecutor",
+  },
+  {
+    type: "n8n-nodes-base.iCal",
+    modulePath: "./executors/iCalendar",
+    exportName: "iCalendarExecutor",
+  },
+  {
+    type: "n8n-nodes-base.mandrill",
+    modulePath: "./executors/mandrill",
+    exportName: "mandrillExecutor",
+  },
+  {
+    type: "n8n-nodes-base.mattermostTool",
+    modulePath: "./executors/n8n-nodes-base.mattermostTool",
+    exportName: "mattermostToolExecutor",
+  },
+  {
+    type: "n8n-nodes-base.microsoftGraphSecurity",
+    modulePath: "./executors/microsoftGraphSecurityExecutor",
+    exportName: "microsoftGraphSecurityExecutor",
+  },
+  {
+    type: "n8n-nodes-base.microsoftGraphSecurityTool",
+    modulePath: "./executors/microsoftGraphSecurityExecutor",
+    exportName: "microsoftGraphSecurityExecutor",
+  },
+  {
+    type: "n8n-nodes-base.microsoftOneDriveTool",
+    modulePath: "./executors/microsoft-one-drive",
+    exportName: "microsoftOneDriveExecutor",
+  },
+  {
+    type: "n8n-nodes-base.mocean",
+    modulePath: "./executors/mocean",
+    exportName: "moceanExecutor",
+  },
+  {
+    type: "n8n-nodes-base.monicaCrmTool",
+    modulePath: "./executors/n8n-nodes-base.monicaCrmTool",
+    exportName: "monicaCrmToolExecutor",
+  },
+  {
+    type: "n8n-nodes-base.ouraTool",
+    modulePath: "./executors/ouraTool",
+    exportName: "ouraExecutor",
+  },
+  {
+    type: "n8n-nodes-base.postHog",
+    modulePath: "./executors/postHogTool",
+    exportName: "postHogToolExecutor",
+  },
+  {
+    type: "n8n-nodes-base.schedule",
+    modulePath: "./executors/schedule-trigger",
+    exportName: "scheduleTriggerExecutor",
+  },
+  {
+    type: "n8n-nodes-base.sendEmail",
+    modulePath: "./executors/email-send",
+    exportName: "emailSendExecutor",
+  },
+  {
+    type: "n8n-nodes-base.twistTool",
+    modulePath: "./executors/twist",
+    exportName: "twistExecutor",
+  },
+  {
+    type: "n8n-nodes-base.venafiTlsProtectCloud",
+    modulePath: "./executors/venafiTlsProtectCloud",
+    exportName: "venafiTlsProtectCloudToolExecutor",
+  },
+  {
+    type: "n8n-nodes-base.wordPress",
+    modulePath: "./executors/wordpress",
+    exportName: "wordpressExecutor",
+  },
+  {
+    type: "n8n-nodes-base.mandrillTool",
+    modulePath: "./executors/n8n-nodes-base.mandrillTool",
+    exportName: "mandrillToolExecutor",
+  },
+  {
+    type: "n8n-nodes-base.moceanTool",
+    modulePath: "./executors/moceanTool",
+    exportName: "moceanToolExecutor",
+  },
+  {
+    type: "n8n-nodes-base.oura",
+    modulePath: "./executors/ouraTool",
+    exportName: "ouraExecutor",
   },
 ];
 

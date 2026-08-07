@@ -1376,6 +1376,496 @@ export const googleBusinessProfile: INodeTypeDescription = {
   ],
 };
 
+const MISP_DOCS = "https://docs.n8n.io/integrations/builtin/app-nodes/n8n-nodes-base.misp/";
+
+const MISP_ATTRIBUTE_OPERATIONS = [
+  { name: "Create", value: "create" },
+  { name: "Delete", value: "delete" },
+  { name: "Get", value: "get" },
+  { name: "Get All", value: "getAll" },
+  { name: "Search", value: "search" },
+  { name: "Update", value: "update" },
+];
+
+const MISP_EVENT_OPERATIONS = [
+  { name: "Create", value: "create" },
+  { name: "Delete", value: "delete" },
+  { name: "Get", value: "get" },
+  { name: "Get All", value: "getAll" },
+  { name: "Publish", value: "publish" },
+  { name: "Search", value: "search" },
+  { name: "Unpublish", value: "unpublish" },
+  { name: "Update", value: "update" },
+];
+
+const MISP_EVENT_TAG_OPERATIONS = [
+  { name: "Add", value: "add" },
+  { name: "Remove", value: "remove" },
+];
+
+const MISP_FEED_OPERATIONS = [
+  { name: "Create", value: "create" },
+  { name: "Disable", value: "disable" },
+  { name: "Enable", value: "enable" },
+  { name: "Get", value: "get" },
+  { name: "Get All", value: "getAll" },
+  { name: "Update", value: "update" },
+];
+
+const MISP_GALAXY_OPERATIONS = [
+  { name: "Delete", value: "delete" },
+  { name: "Get", value: "get" },
+  { name: "Get All", value: "getAll" },
+];
+
+const MISP_NOTICELIST_OPERATIONS = [
+  { name: "Get", value: "get" },
+  { name: "Get All", value: "getAll" },
+];
+
+const MISP_OBJECT_OPERATIONS = [
+  { name: "Search", value: "search" },
+];
+
+const MISP_ORGANISATION_OPERATIONS = [
+  { name: "Create", value: "create" },
+  { name: "Delete", value: "delete" },
+  { name: "Get", value: "get" },
+  { name: "Get All", value: "getAll" },
+  { name: "Update", value: "update" },
+];
+
+const MISP_TAG_OPERATIONS = [
+  { name: "Create", value: "create" },
+  { name: "Delete", value: "delete" },
+  { name: "Get All", value: "getAll" },
+  { name: "Update", value: "update" },
+];
+
+const MISP_USER_OPERATIONS = [
+  { name: "Create", value: "create" },
+  { name: "Delete", value: "delete" },
+  { name: "Get", value: "get" },
+  { name: "Get All", value: "getAll" },
+  { name: "Update", value: "update" },
+];
+
+const MISP_WARNINGLIST_OPERATIONS = [
+  { name: "Get", value: "get" },
+  { name: "Get All", value: "getAll" },
+];
+
+export const mispTool: INodeTypeDescription = {
+  name: "n8n-nodes-base.mispTool",
+  displayName: "MISP Tool",
+  category: "Integration",
+  group: ["integration"],
+  version: 1,
+  description: "AI agent tool variant of the MISP node. Exposes MISP threat intelligence operations as callable tools.",
+  defaults: { name: "MISP Tool" },
+  inputs: ["main"],
+  outputs: ["main"],
+  icon: "Shield",
+  credentials: [{ name: "mispApi", required: true }],
+  sources: [MISP_DOCS],
+  usableAsTool: true,
+  properties: [
+    {
+      displayName: "Resource",
+      name: "resource",
+      type: "options",
+      default: "event",
+      required: true,
+      noDataExpression: true,
+      options: [
+        { name: "Attribute", value: "attribute" },
+        { name: "Event", value: "event" },
+        { name: "Event Tag", value: "eventTag" },
+        { name: "Feed", value: "feed" },
+        { name: "Galaxy", value: "galaxy" },
+        { name: "Noticelist", value: "noticelist" },
+        { name: "Object", value: "object" },
+        { name: "Organisation", value: "organisation" },
+        { name: "Tag", value: "tag" },
+        { name: "User", value: "user" },
+        { name: "Warninglist", value: "warninglist" },
+      ],
+    },
+    {
+      displayName: "Operation",
+      name: "operation",
+      type: "options",
+      default: "create",
+      required: true,
+      noDataExpression: true,
+      displayOptions: { show: { resource: ["attribute"] } },
+      options: MISP_ATTRIBUTE_OPERATIONS,
+    },
+    {
+      displayName: "Operation",
+      name: "operation",
+      type: "options",
+      default: "create",
+      required: true,
+      noDataExpression: true,
+      displayOptions: { show: { resource: ["event"] } },
+      options: MISP_EVENT_OPERATIONS,
+    },
+    {
+      displayName: "Operation",
+      name: "operation",
+      type: "options",
+      default: "add",
+      required: true,
+      noDataExpression: true,
+      displayOptions: { show: { resource: ["eventTag"] } },
+      options: MISP_EVENT_TAG_OPERATIONS,
+    },
+    {
+      displayName: "Operation",
+      name: "operation",
+      type: "options",
+      default: "getAll",
+      required: true,
+      noDataExpression: true,
+      displayOptions: { show: { resource: ["feed"] } },
+      options: MISP_FEED_OPERATIONS,
+    },
+    {
+      displayName: "Operation",
+      name: "operation",
+      type: "options",
+      default: "get",
+      required: true,
+      noDataExpression: true,
+      displayOptions: { show: { resource: ["galaxy"] } },
+      options: MISP_GALAXY_OPERATIONS,
+    },
+    {
+      displayName: "Operation",
+      name: "operation",
+      type: "options",
+      default: "getAll",
+      required: true,
+      noDataExpression: true,
+      displayOptions: { show: { resource: ["noticelist"] } },
+      options: MISP_NOTICELIST_OPERATIONS,
+    },
+    {
+      displayName: "Operation",
+      name: "operation",
+      type: "options",
+      default: "search",
+      required: true,
+      noDataExpression: true,
+      displayOptions: { show: { resource: ["object"] } },
+      options: MISP_OBJECT_OPERATIONS,
+    },
+    {
+      displayName: "Operation",
+      name: "operation",
+      type: "options",
+      default: "getAll",
+      required: true,
+      noDataExpression: true,
+      displayOptions: { show: { resource: ["organisation"] } },
+      options: MISP_ORGANISATION_OPERATIONS,
+    },
+    {
+      displayName: "Operation",
+      name: "operation",
+      type: "options",
+      default: "getAll",
+      required: true,
+      noDataExpression: true,
+      displayOptions: { show: { resource: ["tag"] } },
+      options: MISP_TAG_OPERATIONS,
+    },
+    {
+      displayName: "Operation",
+      name: "operation",
+      type: "options",
+      default: "getAll",
+      required: true,
+      noDataExpression: true,
+      displayOptions: { show: { resource: ["user"] } },
+      options: MISP_USER_OPERATIONS,
+    },
+    {
+      displayName: "Operation",
+      name: "operation",
+      type: "options",
+      default: "getAll",
+      required: true,
+      noDataExpression: true,
+      displayOptions: { show: { resource: ["warninglist"] } },
+      options: MISP_WARNINGLIST_OPERATIONS,
+    },
+    // Attribute: create/update fields
+    {
+      displayName: "Event ID",
+      name: "eventId",
+      type: "string",
+      default: "",
+      required: true,
+      displayOptions: { show: { resource: ["attribute"], operation: ["create", "update", "get", "delete", "search"] } },
+    },
+    {
+      displayName: "Attribute Type",
+      name: "type",
+      type: "string",
+      default: "",
+      displayOptions: { show: { resource: ["attribute"], operation: ["create", "update"] } },
+    },
+    {
+      displayName: "Value",
+      name: "value",
+      type: "string",
+      default: "",
+      displayOptions: { show: { resource: ["attribute"], operation: ["create", "update"] } },
+    },
+    {
+      displayName: "Category",
+      name: "category",
+      type: "string",
+      default: "",
+      displayOptions: { show: { resource: ["attribute"], operation: ["create", "update"] } },
+    },
+    // Event: create/update fields
+    {
+      displayName: "Info",
+      name: "info",
+      type: "string",
+      default: "",
+      required: true,
+      displayOptions: { show: { resource: ["event"], operation: ["create", "update"] } },
+    },
+    {
+      displayName: "Date",
+      name: "date",
+      type: "string",
+      default: "",
+      displayOptions: { show: { resource: ["event"], operation: ["create", "update"] } },
+    },
+    {
+      displayName: "Analysis",
+      name: "analysis",
+      type: "options",
+      default: "0",
+      displayOptions: { show: { resource: ["event"], operation: ["create", "update"] } },
+      options: [
+        { name: "Initial", value: "0" },
+        { name: "Ongoing", value: "1" },
+        { name: "Completed", value: "2" },
+      ],
+    },
+    {
+      displayName: "Threat Level ID",
+      name: "threatLevelId",
+      type: "options",
+      default: "1",
+      displayOptions: { show: { resource: ["event"], operation: ["create", "update"] } },
+      options: [
+        { name: "Low", value: "1" },
+        { name: "Medium", value: "2" },
+        { name: "High", value: "3" },
+        { name: "Undefined", value: "4" },
+      ],
+    },
+    {
+      displayName: "Distribution",
+      name: "distribution",
+      type: "options",
+      default: "0",
+      displayOptions: { show: { resource: ["event"], operation: ["create", "update"] } },
+      options: [
+        { name: "Your Organisation Only", value: "0" },
+        { name: "This Community Only", value: "1" },
+        { name: "Connected Communities", value: "2" },
+        { name: "All Communities", value: "3" },
+      ],
+    },
+    // Event: get/delete/publish/unpublish by ID
+    {
+      displayName: "Event ID",
+      name: "eventId",
+      type: "string",
+      default: "",
+      required: true,
+      displayOptions: { show: { resource: ["event"], operation: ["get", "delete", "publish", "unpublish", "update"] } },
+    },
+    // Event: search
+    {
+      displayName: "Tags",
+      name: "tags",
+      type: "string",
+      default: "",
+      displayOptions: { show: { resource: ["event"], operation: ["search"] } },
+    },
+    // Event Tag: eventId + tagId
+    {
+      displayName: "Event ID",
+      name: "eventId",
+      type: "string",
+      default: "",
+      required: true,
+      displayOptions: { show: { resource: ["eventTag"], operation: ["add", "remove"] } },
+    },
+    {
+      displayName: "Tag ID",
+      name: "tagId",
+      type: "string",
+      default: "",
+      required: true,
+      displayOptions: { show: { resource: ["eventTag"], operation: ["add", "remove"] } },
+    },
+    // Feed: create/update fields
+    {
+      displayName: "Feed ID",
+      name: "feedId",
+      type: "string",
+      default: "",
+      required: true,
+      displayOptions: { show: { resource: ["feed"], operation: ["get", "update", "disable", "enable", "delete"] } },
+    },
+    {
+      displayName: "Name",
+      name: "name",
+      type: "string",
+      default: "",
+      required: true,
+      displayOptions: { show: { resource: ["feed"], operation: ["create"] } },
+    },
+    {
+      displayName: "URL",
+      name: "url",
+      type: "string",
+      default: "",
+      required: true,
+      displayOptions: { show: { resource: ["feed"], operation: ["create"] } },
+    },
+    {
+      displayName: "Source Format",
+      name: "sourceFormat",
+      type: "options",
+      default: "misp",
+      displayOptions: { show: { resource: ["feed"], operation: ["create"] } },
+      options: [
+        { name: "MISP", value: "misp" },
+        { name: "CSV", value: "csv" },
+        { name: "Text", value: "text" },
+      ],
+    },
+    // Galaxy: get/delete
+    {
+      displayName: "Galaxy ID",
+      name: "galaxyId",
+      type: "string",
+      default: "",
+      displayOptions: { show: { resource: ["galaxy"], operation: ["get", "delete"] } },
+    },
+    // Organisation: create/update fields
+    {
+      displayName: "Organisation ID",
+      name: "organisationId",
+      type: "string",
+      default: "",
+      required: true,
+      displayOptions: { show: { resource: ["organisation"], operation: ["get", "delete", "update"] } },
+    },
+    {
+      displayName: "Name",
+      name: "name",
+      type: "string",
+      default: "",
+      displayOptions: { show: { resource: ["organisation"], operation: ["create", "update"] } },
+    },
+    // Tag: create/update fields
+    {
+      displayName: "Tag ID",
+      name: "tagId",
+      type: "string",
+      default: "",
+      required: true,
+      displayOptions: { show: { resource: ["tag"], operation: ["delete", "update"] } },
+    },
+    {
+      displayName: "Name",
+      name: "name",
+      type: "string",
+      default: "",
+      displayOptions: { show: { resource: ["tag"], operation: ["create", "update"] } },
+    },
+    {
+      displayName: "Colour",
+      name: "colour",
+      type: "string",
+      default: "",
+      displayOptions: { show: { resource: ["tag"], operation: ["create", "update"] } },
+    },
+    // User: create/update fields
+    {
+      displayName: "User ID",
+      name: "userId",
+      type: "string",
+      default: "",
+      required: true,
+      displayOptions: { show: { resource: ["user"], operation: ["get", "delete", "update"] } },
+    },
+    {
+      displayName: "Email",
+      name: "email",
+      type: "string",
+      default: "",
+      displayOptions: { show: { resource: ["user"], operation: ["create", "update"] } },
+    },
+    {
+      displayName: "Role ID",
+      name: "roleId",
+      type: "string",
+      default: "",
+      displayOptions: { show: { resource: ["user"], operation: ["create", "update"] } },
+    },
+    // Return All / Limit for getAll operations
+    {
+      displayName: "Return All",
+      name: "returnAll",
+      type: "boolean",
+      default: false,
+      displayOptions: {
+        show: {
+          resource: ["attribute", "event", "feed", "galaxy", "noticelist", "organisation", "tag", "user", "warninglist"],
+          operation: ["getAll"],
+        },
+      },
+    },
+    {
+      displayName: "Limit",
+      name: "limit",
+      type: "number",
+      default: 50,
+      displayOptions: {
+        show: {
+          resource: ["attribute", "event", "feed", "galaxy", "noticelist", "organisation", "tag", "user", "warninglist"],
+          operation: ["getAll"],
+          returnAll: [false],
+        },
+      },
+    },
+    {
+      displayName: "Additional Fields",
+      name: "additionalFields",
+      type: "collection",
+      default: {},
+      displayOptions: { show: { resource: ["attribute", "event", "feed", "organisation", "tag", "user"], operation: ["create", "update"] } },
+      options: [
+        { displayName: "Sharing Group ID", name: "sharingGroupId", type: "string", default: "" },
+        { displayName: "Published", name: "published", type: "boolean", default: false },
+      ],
+    },
+  ],
+};
+
 const ODOO_DOCS = "https://docs.n8n.io/integrations/builtin/app-nodes/n8n-nodes-base.odoo/";
 
 const ODOO_RESOURCES = [

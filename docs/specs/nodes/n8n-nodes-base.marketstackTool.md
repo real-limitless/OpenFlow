@@ -1,21 +1,23 @@
 ---
 type: n8n-nodes-base.marketstackTool
-displayName: Marketstack Tool
-category: Finance & Accounting
+displayName: Marketstack (AI Tool)
+category: AI Tool
 versions: [1]
 priority: medium
 status: specced
 ---
 
-# Marketstack Tool
+# Marketstack (AI Tool)
+
+An AI agent tool variant of the Marketstack node. When connected to an AI Agent, the agent model can dynamically populate parameters using `$fromAI()` or the "let model fill" toggle. Wraps the same underlying Marketstack REST API endpoints as the base `marketstack` node but is surfaced as a distinct type string for the AI Agent tool-selection system.
 
 ## Sources
 
 | URL | Source class |
-|-----|----------------|
-| https://docs.n8n.io/integrations/builtin/app-nodes/n8n-nodes-base.marketstack/ | Public docs only |
-| https://docs.n8n.io/integrations/builtin/credentials/marketstack/ | Public docs only |
-| https://marketstack.com/documentation | Public docs only |
+|-----|--------------|
+| https://docs.n8n.io/integrations/builtin/app-nodes/n8n-nodes-base.marketstack.md | Public docs only |
+| https://docs.n8n.io/integrations/builtin/credentials/marketstack.md | Public docs only |
+| https://docs.n8n.io/build/integrate-ai/ai-examples/use-ai-for-parameters.md | Public docs only |
 | https://docs.n8n.io/build/integrate-ai/understand-ai-components/how-tools-work.md | Public docs only |
 
 ## Wire format
@@ -24,196 +26,240 @@ status: specced
 - **Aliases:** (none)
 - **Inputs:** `main` × 1
 - **Outputs:** `main` × 1
-- **Credentials:** `marketstackApi` (required)
-
-This is the AI agent tool variant of the Marketstack node. The base Marketstack node declares `usableAsTool: true`, which causes n8n to auto-generate a `*Tool` type string. As a tool, all parameters may be populated dynamically by the AI model via `$fromAI()` when connected to an AI Agent root node.
+- **Credentials:** `marketstackApi` (required) — API key authentication. Key obtained from marketstack.com dashboard. Optional `useHTTPS` toggle (off for free plans, on for paid plans).
 
 ## Parameters
 
-All parameters are identical to the base `n8n-nodes-base.marketstack` node. The node provides 3 resources, each with a single operation:
+The node exposes an operation selector that determines which Marketstack API endpoint to call. When used as an AI tool, parameters can be populated by the AI model at inference time.
 
-### Resource: End-of-Day Data (operation: Get Many)
+### Operation / Resource pair (required)
 
-| name | type | default | required | notes |
-|------|------|---------|----------|-------|
-| resource | string: `endOfDayData` | `endOfDayData` | yes | Selects the end-of-day data resource |
-| operation | string: `getAll` | `getAll` | yes | Retrieves multiple stock closing records |
-| symbols | string | `""` | yes | Comma-separated stock ticker symbols (e.g. `AAPL,MSFT`) |
-| returnAll | boolean | `false` | — | Return all results vs limited set |
-| limit | number | `50` | — | Max results when returnAll is false |
-| filters.exchange | string | `""` | — | Filter by Market Identifier Code (e.g. `XNAS`) |
-| filters.latest | boolean | `false` | — | Fetch only the most recent data |
-| filters.sort | string: `ASC` or `DESC` | `DESC` | — | Sort order by date |
-| filters.specificDate | dateTime | `""` | — | Retrieve data for a specific date (YYYY-MM-DD) |
-| filters.dateFrom | dateTime | `""` | — | Timeframe start (inclusive) |
-| filters.dateTo | dateTime | `""` | — | Timeframe end (inclusive) |
+| Resource | Operation | Description |
+|----------|-----------|-------------|
+| `EndOfDayData` | `getAll` | Fetch end-of-day (EOD) stock data for a ticker, optionally filtered by date range, exchange, or time zone |
+| `Exchange` | `get` | Retrieve details about a stock exchange by its MIC code |
+| `Ticker` | `get` | Retrieve ticker-level information including name, symbol, exchange, and type |
 
-### Resource: Exchange (operation: Get)
+### End-of-Day Data — Get All
 
-| name | type | default | required | notes |
-|------|------|---------|----------|-------|
-| resource | string: `exchange` | `endOfDayData` | yes | Selects the exchange resource |
-| operation | string: `get` | `get` | yes | Retrieves a single exchange |
-| exchange | string | `""` | yes | Market Identifier Code (e.g. `XNAS`) |
+| name | type | required | notes |
+|------|------|----------|-------|
+| `symbol` | string | yes | Stock ticker symbol(s), comma-separated for multiple (e.g. `AAPL` or `AAPL,MSFT,GOOGL`) |
+| `dateFrom` | string | no | Start date in YYYY-MM-DD format. When omitted, returns the most recent available session. |
+| `dateTo` | string | no | End date in YYYY-MM-DD format. |
+| `latest` | boolean | no | When true, returns only the most recent trading day's data for the given symbol(s). Overrides date range. |
+| `exchange` | string | no | MIC code to filter results to a specific exchange (e.g. `XNAS` for Nasdaq, `XNYS` for NYSE). |
+| `sort` | options | no | Sort order: `ASC` or `DESC` (default depends on plan). |
+| `limit` | number | no | Maximum number of results per page. Depends on plan (free: 100, paid: up to 1000). |
+| `offset` | number | no | Number of results to skip for pagination. |
 
-### Resource: Ticker (operation: Get)
+### Exchange — Get
 
-| name | type | default | required | notes |
-|------|------|---------|----------|-------|
-| resource | string: `ticker` | `endOfDayData` | yes | Selects the ticker resource |
-| operation | string: `get` | `get` | yes | Retrieves a single ticker symbol |
-| symbol | string | `""` | yes | Stock ticker symbol (e.g. `AAPL`) |
+| name | type | required | notes |
+|------|------|----------|-------|
+| `exchange` | string | yes | Exchange MIC code (e.g. `XNAS`, `XNYS`, `XLON`). |
 
-All parameters accept expression strings. The `noDataExpression` flag is set on resource and operation selectors.
+### Ticker — Get
+
+| name | type | required | notes |
+|------|------|----------|-------|
+| `symbol` | string | yes | Stock ticker symbol (e.g. `AAPL`). |
+
+All parameters accept expressions and `$fromAI()` dynamic population for AI agent use.
 
 ## Runtime behavior
 
 ### Input
 
-Each incoming item is processed independently. The node uses the item's parameters (fixed or expression-evaluated) to construct and execute one request to the Marketstack REST API per item.
+The node accepts items on the `main` input. Each input item can provide values for parameters via expressions. The node processes items sequentially — each input item produces one output item.
 
 ### Output
 
-Produces one output item per input item. The output JSON wraps the Marketstack API response, typically under an `eod` (end-of-day data array) or direct object fields:
+The node passes through the raw Marketstack REST API response as the output `json` data. The response shape varies by operation:
 
-- **End-of-Day Data GetAll**: emits items with properties matching the Marketstack EOD response — each result contains `symbol`, `date`, `open`, `high`, `low`, `close`, `volume`, `exchange`, `split_factor`. When `returnAll` is true, the node paginates automatically.
-- **Exchange Get**: emits an object with exchange metadata (`mic`, `acronym`, `name`, `country_code`, `city`, `website`).
-- **Ticker Get**: emits an object with ticker metadata (`symbol`, `name`, `has_eod`, `has_intraday`, `country`, `stock_exchange`).
-
-### Errors
-
-- API errors (non-2xx responses, invalid symbols, rate limits) produce an error for that item. When `continueOnFail` is enabled, the item is passed to output with an error property instead of halting.
-- Missing required parameters (symbols, exchange, symbol) produce a validation error before any request is made.
-
-### Expressions
-
-All scalar parameters accept expressions. Resource and operation selectors do not (they have `noDataExpression: true`).
-
-## Acceptance tests
-
-### Test: end-of-day data with filter
-
-**Given** input items:
-
-```json
-[{ "json": {} }]
-```
-
-**Parameters:**
+#### End-of-Day Data — Get All
 
 ```json
 {
-  "resource": "endOfDayData",
-  "operation": "getAll",
-  "symbols": "AAPL,MSFT",
-  "returnAll": false,
-  "limit": 5,
-  "filters": {
-    "exchange": "XNAS",
-    "sort": "DESC"
+  "pagination": {
+    "limit": 100,
+    "offset": 0,
+    "count": 1,
+    "total": 1
+  },
+  "data": [
+    {
+      "open": 150.25,
+      "high": 152.10,
+      "low": 149.80,
+      "close": 151.50,
+      "volume": 75000000,
+      "adj_high": null,
+      "adj_low": null,
+      "adj_close": 151.50,
+      "adj_open": 150.25,
+      "adj_volume": null,
+      "split_factor": 1.0,
+      "dividend": 0.0,
+      "symbol": "AAPL",
+      "exchange": "XNAS",
+      "date": "2024-06-14T00:00:00+0000"
+    }
+  ]
+}
+```
+
+#### Exchange — Get
+
+```json
+{
+  "data": {
+    "name": "Nasdaq Stock Market",
+    "acronym": "NASDAQ",
+    "mic": "XNAS",
+    "country": "US",
+    "country_code": "US",
+    "city": "New York",
+    "website": "www.nasdaq.com",
+    "timezone": "America/New_York"
   }
 }
 ```
 
-**Expect** output[0]:
-- Has exactly one item
-- Item contains an `eod` array with up to 5 records (fewer if none found)
-- Each record in `eod` has `symbol`, `date`, `open`, `high`, `low`, `close`, `volume` (numeric types)
-- `exchange` field equals `XNAS`
-
-### Test: exchange lookup
-
-**Given** input items:
-
-```json
-[{ "json": {} }]
-```
-
-**Parameters:**
+#### Ticker — Get
 
 ```json
 {
-  "resource": "exchange",
-  "operation": "get",
-  "exchange": "XNAS"
+  "data": {
+    "name": "Apple Inc.",
+    "symbol": "AAPL",
+    "has_intraday": false,
+    "has_eod": true,
+    "country": "US",
+    "stock_exchange": {
+      "name": "Nasdaq Stock Market",
+      "acronym": "NASDAQ",
+      "mic": "XNAS",
+      "country": "US",
+      "country_code": "US",
+      "city": "New York",
+      "website": "www.nasdaq.com",
+      "timezone": "America/New_York"
+    }
+  }
 }
 ```
 
-**Expect** output[0]:
-- Single item with `mic` = `"XNAS"`, `acronym`, `name`, `country_code`, `city`, `website`
+### Errors
 
-### Test: ticker lookup
+- **Authentication errors** (invalid/missing API key, missing HTTPS for free plan): Thrown as `NodeApiError`.
+- **Invalid symbol** (unrecognized ticker): API returns error; surfaced as `NodeApiError`.
+- **Invalid exchange** (unrecognized MIC code): API returns error; surfaced as `NodeApiError`.
+- **Rate limiting:** Marketstack enforces plan-based limits (free: 100 requests/month, paid plans vary). Node surfaces HTTP 429 as `NodeApiError`.
+- **`continueOnFail` behavior:** When enabled, failed items emit `{ error: <message> }` instead of throwing.
+
+### Expressions
+
+All string parameters (`symbol`, `dateFrom`, `dateTo`, `exchange`, `sort`) accept expression strings. Numeric parameters (`limit`, `offset`) and boolean parameters (`latest`) accept expressions that resolve to the correct type.
+
+## Acceptance tests
+
+### Test: End-of-day data for a single ticker
 
 **Given** input items:
-
 ```json
 [{ "json": {} }]
 ```
-
 **Parameters:**
-
 ```json
 {
-  "resource": "ticker",
-  "operation": "get",
-  "symbol": "AAPL"
+  "resource": "EndOfDayData",
+  "operation": "getAll",
+  "symbol": "AAPL",
+  "latest": true,
+  "limit": 1
 }
 ```
+**Expect** output[0] contains a `json` object with `pagination` and `data` array where each entry has `open`, `high`, `low`, `close`, `volume`, `symbol`, `exchange`, `date`.
 
-**Expect** output[0]:
-- Single item with `symbol` = `"AAPL"`, `name`, `has_eod`, `has_intraday`, and a `stock_exchange` object containing `mic`, `name`, `acronym`
-
-### Test: invalid symbol returns error
+### Test: Exchange lookup by MIC code
 
 **Given** input items:
-
 ```json
 [{ "json": {} }]
 ```
-
 **Parameters:**
-
 ```json
 {
-  "resource": "ticker",
+  "resource": "Exchange",
+  "operation": "get",
+  "exchange": "XNYS"
+}
+```
+**Expect** output[0] contains a `json` object with `data` containing `name`, `mic`, `country`, `city`.
+
+### Test: Ticker information lookup
+
+**Given** input items:
+```json
+[{ "json": {} }]
+```
+**Parameters:**
+```json
+{
+  "resource": "Ticker",
+  "operation": "get",
+  "symbol": "MSFT"
+}
+```
+**Expect** output[0] contains a `json` object with `data` containing `name`, `symbol`, `country`, `stock_exchange`.
+
+### Test: $fromAI() parameter population
+
+**Given** input items:
+```json
+[{ "json": { "ticker": "GOOGL" } }]
+```
+**Parameters:**
+```json
+{
+  "resource": "Ticker",
+  "operation": "get",
+  "symbol": "={{ $json.ticker }}"
+}
+```
+**Expect** output[0] contains a `json` object with `data.symbol` equal to `"GOOGL"`.
+
+### Test: Invalid symbol error
+
+**Given** input items:
+```json
+[{ "json": {} }]
+```
+**Parameters:**
+```json
+{
+  "resource": "Ticker",
   "operation": "get",
   "symbol": "NONEXISTENT"
 }
 ```
-
-**Expect**: Execution error or, if `continueOnFail` is enabled, item is passed through with an `error` property.
-
-### Test: missing required symbol
-
-**Given** input items:
-
-```json
-[{ "json": {} }]
-```
-
-**Parameters:**
-
-```json
-{
-  "resource": "endOfDayData",
-  "operation": "getAll",
-  "symbols": ""
-}
-```
-
-**Expect**: Validation error — empty `symbols` parameter rejected before API call.
+**Expect** a `NodeApiError` is thrown. Under `continueOnFail`, output[0] contains `{ error: <error message> }`.
 
 ## Gaps / confidence
 
 | Topic | documented / inferred | Notes |
 |-------|----------------------|-------|
-| Tool parameter mapping | documented | `usableAsTool: true` on base node; $fromAI() dynamic population is the standard n8n AI tool pattern |
-| Response shape details | inferred | Exact field names and nesting inferred from schema descriptors in package metadata; the API may return additional fields |
-| API endpoint URLs | documented | Marketstack API docs at marketstack.com/documentation cover REST endpoints |
-| Pagination strategy | inferred | Return All paginates automatically; exact page size and cursor mechanism unspecified |
+| Core operations (3) | documented | Public n8n docs confirm EOD (Get All), Exchange (Get), Ticker (Get) |
+| Parameter names | inferred | Based on Marketstack API semantics and typical n8n node patterns; exact internal names may vary |
+| Resource/Operation split | inferred | Tool variants typically mirror the resource/operation structure of the base node |
+| Output shape | external | Marketstack API response format is documented at marketstack.com |
+| Tool mode (`$fromAI()` support) | documented | n8n docs confirm this node appears under "can be used as an AI tool" |
+| Credentials | documented | Marketstack API key with optional HTTPS toggle |
+| Rate limits | external | Marketstack enforces plan-based limits (free: 100 req/month) |
 
 ## OpenFlow mapping
 
-- **Definition group:** `transform`
-- **Executor file:** `src/lib/engine/executors/marketstackTool.ts`
+- **Definition group:** `core` (AI tool)
+- **Executor file:** `src/lib/engine/executors/n8n-nodes-base.marketstackTool.ts`
 - **SDK:** `defineNode` + native `ExecutionContext` only

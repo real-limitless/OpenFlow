@@ -1,9 +1,9 @@
 ---
 type: n8n-nodes-base.zohoCrm
 displayName: Zoho CRM
-category: App
+category: Communication, Sales
 versions: [1]
-priority: high
+priority: medium
 status: specced
 ---
 
@@ -12,194 +12,185 @@ status: specced
 ## Sources
 
 | URL | Source class |
-|-----|--------------|
-| https://docs.n8n.io/integrations/builtin/app-nodes/n8n-nodes-base.zohocrm.md | Public docs only |
-| https://docs.n8n.io/integrations/builtin/credentials/zoho.md | Public docs only |
-| https://www.zoho.com/crm/developer/docs/api/v8/get-records.html | Third-party service API docs |
-| https://www.zoho.com/crm/developer/docs/api/v8/insert-records.html | Third-party service API docs |
-| https://www.zoho.com/crm/developer/docs/api/v8/update-records.html | Third-party service API docs |
-| https://www.zoho.com/crm/developer/docs/api/v8/delete-records.html | Third-party service API docs |
-
-The node documentation and credential documentation were used as the primary
-sources. The Zoho API pages define the external REST contract. No third-party
-node implementation or package source was consulted.
+|-----|----------------|
+| https://docs.n8n.io/integrations/builtin/app-nodes/n8n-nodes-base.zohocrm/ | Public docs only |
+| https://docs.n8n.io/integrations/builtin/credentials/zoho/ | Public docs only |
+| https://www.zoho.com/crm/developer/docs/api/v3/ | Public docs only |
 
 ## Wire format
 
 - **Type string:** `n8n-nodes-base.zohoCrm`
-- **Aliases:** none required
-- **Inputs:** `main` x 1
-- **Outputs:** `main` x 1
-- **Credentials:** Zoho OAuth2 credential (`ZohoOAuth2Api`); the credential uses OAuth2 and a region-specific Zoho authorization/token endpoint.
-- **AI tool use:** The public node documentation identifies this node as usable by an AI agent. This changes how parameter values may be supplied, not the CRM operation contract.
+- **Aliases:** (none)
+- **Inputs:** `main` × 1
+- **Outputs:** `main` × 1
+- **Credentials:** `zohoOAuth2Api` (OAuth2 with region-specific access token URL — AU, CN, EU, IN, US)
 
 ## Parameters
 
-Parameters are exposed at a level that lets a workflow select a CRM module and
-operation without requiring a copy of Zoho's complete module schema. Field
-names and values in record data must use the API names supported by the chosen
-Zoho module.
+### Resource & Operation
 
 | name | type | default | required | displayOptions | notes |
 |------|------|---------|----------|----------------|-------|
-| module | string/selection | none | yes | all operations | One of the modules exposed by the node: Account, Contact, Deal, Invoice, Lead, Product, Purchase Order, Quote, Sales Order, or Vendor. |
-| operation | selection | none | yes | all operations | Create, upsert, delete, get, get all, or update. Lead also supports getting field metadata. |
-| recordId | string | none | for single-record get, update, and delete | operation requires one record | The Zoho record identifier. Delete may accept multiple IDs where the external API supports it. |
-| recordData | object or list of objects | none | for create, upsert, and update | write operations | Data to send to Zoho, using module field API names. Batch writes preserve the input order in Zoho's response. |
-| retrievalOptions | object | none | no | get all | Optional fields, page/page token, page size, custom view, sorting, and related retrieval filters supported by Zoho. Mutually exclusive combinations must be rejected by Zoho or the node before the request. |
-| deleteOptions | object | none | no | delete | Optional control for whether CRM workflow automation is triggered during deletion. |
-| operationOptions | object | none | no | create/update/upsert | Optional service-level controls such as workflow/approval/blueprint triggers, layout or validation-rule execution, and skipping supported automations. These are passed only when supported by the selected operation. |
+| resource | enum | `lead` | yes | — | One of: `account`, `contact`, `deal`, `invoice`, `lead`, `product`, `purchaseOrder`, `quote`, `salesOrder`, `vendor` |
+| operation | enum | — | yes | depends on resource | Per resource: `create`, `get`, `getAll`, `update`, `delete`, `upsert`. `lead` additionally supports `getFields`. |
 
-Expressions are allowed for values supplied through normal OpenFlow parameter
-resolution, including module, record identifiers, retrieval options, and record
-data. The node must resolve expressions before constructing the Zoho request.
+All resources share the same set of operations except that `lead` adds `getFields`.
+
+### Common CRUD parameters
+
+| name | type | default | required | displayOptions | notes |
+|------|------|---------|----------|----------------|-------|
+| {resource}Id | string | — | yes | create/update/get/delete | The Zoho CRM record ID. Dynamically named per resource (e.g. `contactId`, `dealId`, `leadId`). |
+| returnAll | boolean | false | — | getAll | Return all matching records vs. paginated result |
+| limit | number | — | — | getAll, returnAll=false | Max items per page |
+| additionalFields | collection | `{}` | — | create/update/upsert | Object of field-name/value pairs determined by the resource's Zoho CRM layout (loaded dynamically) |
+| filters | collection | `{}` | — | getAll | Filter options: `fields` (select list), `sortBy` (field name), `sortOrder` (asc/desc) |
+
+### Resource-specific additional fields
+
+For create/update/upsert operations, each resource accepts:
+- **Standard fields** matching the Zoho CRM module's layout (dynamically loaded at design time via `get{X}Fields`)
+- **Custom fields** (loaded via `getCustom{X}Fields`) — represented as a configurable list of `fieldId` + `value` pairs
+- **Address fields** for resources that support them (`Account`, `Contact`, `Deal`, etc.): sub-objects like `Billing_Address`, `Shipping_Address`, `Mailing_Address` containing street/city/state/zip/country
+- **Product_Details** for transactional modules (Invoice, Purchase Order, Quote, Sales Order): array of `{ id: string, quantity: number }` entries
+- **Related entity lookups** via `Account`, `Contact`, `Deal` subfields with `id` + `name`
+
+### Picklist parameters
+
+Picklist fields (e.g. `Account Type`, `Deal Stage`, `Purchase Order Status`, `Sales Order Status`, `Quote Stage`) are dynamically populated at design time from the Zoho CRM instance via loadOptions methods.
+
+### Get Fields operation (Lead only)
+
+| name | type | default | required | notes |
+|------|------|---------|----------|-------|
+| operation | fixed | `getFields` | yes | Only for lead resource |
+
+Returns the Zoho CRM field metadata for the Lead module (field labels, API names, types, picklist values).
 
 ## Runtime behavior
 
 ### Input
 
-The node consumes `main` items. Each item supplies values for the selected
-operation, either directly through node parameters or through expressions. A
-record write may contain one record or a service-supported batch. The executor
-must not invent field names or silently reshape arbitrary module data.
-
-The selected module is translated to its Zoho module API name. The selected
-operation determines the corresponding service action:
-
-- Create sends new record data.
-- Upsert creates a record or updates an existing record according to Zoho's
-  duplicate/unique-field rules.
-- Get retrieves one record by ID.
-- Get all retrieves a page or pages of records using the supplied retrieval
-  options.
-- Update changes one or more existing records and requires each target ID.
-- Delete removes one or more records by ID.
-- Get lead fields retrieves field metadata for the Lead module.
+Inbound items are passed through. Item-level data can be used in expressions for any parameter. Binary data is passed through unchanged.
 
 ### Output
 
-For a successful service call, emit `main` items containing JSON-compatible
-Zoho result data. The result must retain enough information for downstream
-nodes to identify created, updated, retrieved, or deleted records, including
-record IDs when Zoho supplies them. A list retrieval must preserve the records
-and pagination information needed to continue a paged query. For a batch
-request, result entries remain correlated with the corresponding input record
-by position.
+Each operation produces output items containing the JSON response from the Zoho CRM REST API v3:
 
-The specification intentionally does not require a byte-for-byte copy of
-Zoho's response envelope. It does require preserving service success/error
-status and the useful record or metadata payload.
+- **create/upsert:** Returns the created record object with `id`, `Created_By`, `Created_Time`, `Modified_By`, `Modified_Time` metadata fields.
+- **get:** Returns a single record object with all module fields and system metadata.
+- **getAll:** Returns one output item per record. Each item contains the full record object. Supports pagination via `returnAll`/`limit`.
+- **update:** Returns the updated record object (same shape as get).
+- **delete:** Returns a success confirmation object.
+- **getFields (lead):** Returns an array of field descriptor objects with `field_label`, `api_name`, `custom_field`, and `pick_list_values`.
 
 ### Errors
 
-Fail the item or execution when credentials are absent/invalid, the selected
-module or operation is unsupported, a required ID or field is missing, the
-request violates Zoho validation or pagination rules, or Zoho returns an
-authentication, authorization, rate/limit, or server error. Preserve Zoho's
-error code/message and HTTP status when available.
+Zoho CRM API errors (4xx/5xx) are surfaced as node errors. The `throwOnErrorStatus` utility inspects the Zoho response's `data[].status` field for non-success statuses. Authentication failures (invalid/expired OAuth2 token) trigger the OAuth2 credential refresh flow automatically. `continueOnFail` is supported for graceful error handling.
 
-For a Zoho multi-status response, preserve the per-record success or failure
-results in input order rather than treating the whole batch as uniformly
-successful. `continueOnFail` follows the OpenFlow execution convention: when
-enabled, an item-level service failure is represented as an error item and
-processing may continue; otherwise the error stops the node according to the
-engine's normal failure policy.
+### Expressions
+
+All string/number/boolean parameters accept expressions.
 
 ## Acceptance tests
 
-### Test: create a contact
+### Test: create a lead
 
 **Given** input items:
 
 ```json
-[{ "json": { "email": "ada@example.test" } }]
+[{ "json": {} }]
 ```
 
 **Parameters:**
 
 ```json
 {
-  "module": "Contact",
+  "resource": "lead",
   "operation": "create",
-  "recordData": { "Last_Name": "Lovelace", "Email": "={{$json.email}}" }
+  "additionalFields": {
+    "Last_Name": "Doe",
+    "Company": "Acme Corp"
+  }
 }
 ```
 
-**Expect** output[0] to contain a successful Zoho result with the newly
-created record identifier and success status.
+**Expect** output[0] to contain a JSON object with `id` (string), `Created_Time` (ISO date string), and the provided fields.
 
-### Test: retrieve one lead
-
-**Given** a known Zoho lead ID `LEAD_ID`.
+### Test: get a lead by ID
 
 **Parameters:**
 
 ```json
 {
-  "module": "Lead",
+  "resource": "lead",
   "operation": "get",
-  "recordId": "LEAD_ID"
+  "leadId": "{{ $json.id }}"
 }
 ```
 
-**Expect** one successful result containing the lead record data and its ID.
+**Expect** output[0] to contain a single lead object with `id`, `Last_Name`, `Company`, and system metadata fields (`Created_Time`, `Modified_Time`, `Owner`).
 
-### Test: list accounts with pagination
+### Test: upsert a contact
 
 **Parameters:**
 
 ```json
 {
-  "module": "Account",
+  "resource": "contact",
+  "operation": "upsert",
+  "additionalFields": {
+    "Last_Name": "Smith",
+    "Email": "smith@example.com"
+  }
+}
+```
+
+**Expect** output[0] to contain a contact object with `id`, confirming either a new record was created or an existing one was updated.
+
+### Test: list all deals with pagination
+
+**Parameters:**
+
+```json
+{
+  "resource": "deal",
   "operation": "getAll",
-  "retrievalOptions": { "fields": ["Account_Name"], "page": 1, "perPage": 2 }
+  "returnAll": false,
+  "limit": 5
 }
 ```
 
-**Expect** at most two account records plus pagination state when Zoho reports
-that more records are available.
+**Expect** output array to contain at most 5 deal objects, each with `id`, `Deal_Name`, `Amount`, `Stage`, and `Closing_Date`.
 
-### Test: update and delete a product
+### Test: delete an invoice
 
 **Parameters:**
 
 ```json
 {
-  "module": "Product",
-  "operation": "update",
-  "recordId": "PRODUCT_ID",
-  "recordData": { "Product_Name": "Updated product" }
+  "resource": "invoice",
+  "operation": "delete",
+  "invoiceId": "{{ $json.id }}"
 }
 ```
 
-**Expect** a successful update result identifying `PRODUCT_ID`. A subsequent
-delete with the same module and ID must return a successful deletion result;
-using an unknown ID must instead preserve Zoho's error code and message.
-
-### Test: invalid credentials
-
-**Parameters:**
-
-```json
-{ "module": "Lead", "operation": "get", "recordId": "LEAD_ID" }
-```
-
-**Expect** the node to fail with an authentication/authorization error and not
-emit a successful lead result.
+**Expect** output[0] to contain a confirmation object.
 
 ## Gaps / confidence
 
 | Topic | documented / inferred | Notes |
 |-------|----------------------|-------|
-| Node type, supported modules, and operation families | documented | Taken from the public Zoho CRM node page; the page lists the ten module groups and their operations. |
-| OAuth2 credential and regional token endpoint selection | documented | Taken from the public Zoho credential page. |
-| REST verbs, IDs, field API names, pagination, batch limits, and service errors | documented | Taken from Zoho CRM V8 API documentation. |
-| Per-input-item execution and OpenFlow item conversion | inferred | Required by the OpenFlow wire contract and common node execution model; exact original batching details are intentionally unspecified. |
-| Exact UI parameter names, defaults, and display conditions | intentionally unspecified | They are not needed to satisfy the external service contract and are not reconstructed from package metadata. |
-| Current API version and module availability | medium confidence | Zoho's public API pages are versioned and may evolve; the executor should use the configured/current service endpoint rather than hard-code undocumented behavior. |
+| Resources & operations | Documented | Public n8n docs list 10 resources with CRUD + upsert + lead getFields |
+| Additional field structures | Inferred | From published package type descriptors; Zoho CRM layouts vary by instance |
+| Credential shape | Documented | Zoho OAuth2 with region selection from public n8n credentials docs |
+| Zoho CRM API contract | Documented | Zoho CRM v3 API docs define endpoints, request shapes, and response shapes |
+| Pagination | Inferred | Standard n8n pattern confirmed via schema descriptors |
+| Dynamic field loading | Inferred | Via getFields/getCustomFields loadOptions; Zoho CRM API provides layout metadata |
+| Address/product detail payloads | Inferred | From type declarations showing address sub-objects and Product_Details arrays |
 
 ## OpenFlow mapping
 
-- **Definition group:** `app`
-- **Executor file:** `src/lib/engine/executors/zoho-crm.ts`
+- **Definition group:** `core`
+- **Executor file:** `src/lib/engine/executors/n8n-nodes-base.zohoCrm.ts`
 - **SDK:** `defineNode` + native `ExecutionContext` only

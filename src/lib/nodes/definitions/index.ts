@@ -21,3 +21,7 @@ export * from "./action";
 export * from "./sales";
 export * from "./awsCertificateManager";
 export * from "./data";
+export * from "./legacy-type-ids";
+
+// Disambiguate names exported from both core and communication (export * drops them).
+export { discourse, mandrill, mocean } from "./core";

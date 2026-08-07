@@ -6,16 +6,51 @@ import {
   registerDescription,
 } from "@/lib/engine/node-runtime";
 import * as definitions from "./definitions";
-import { manualTrigger, formTrigger, googleSheetsTrigger, typeformTrigger } from "./definitions/triggers";
-import { code, stickyNote } from "./definitions/core";
-import { xml, openAiApp } from "./definitions/transform";
+import { manualTrigger, formTrigger, googleSheetsTrigger, typeformTrigger, scheduleTrigger } from "./definitions/triggers";
+import {
+  code,
+  stickyNote,
+  twist,
+  twistTool,
+  wise,
+  humanticAi,
+  mattermost,
+  microsoftGraphSecurity,
+  microsoftOneDrive,
+  oura,
+  emailSend,
+  wordpress,
+  telegram,
+  discourse,
+  mattermostTool,
+} from "./definitions/core";
+import { xml, xNode, openAiApp, iCal, iCalendar, googlePerspective, postHogTool } from "./definitions/transform";
 import { form } from "./definitions/helpers";
-import { deepLTool } from "./definitions/tools";
+import { deepLTool, driftTool, venafiTlsProtectCloudTool } from "./definitions/tools";
+import { dhlTool } from "./definitions/integration";
+import { vonage, egoi, egoiTool } from "./definitions/communication";
+import { drift } from "./definitions/sales";
+import {
+  discourseTool,
+  humanticAiTool,
+  microsoftGraphSecurityTool,
+  microsoftOneDriveTool,
+  ouraTool,
+  postHog,
+  schedule,
+  sendEmail,
+  venafiTlsProtectCloud,
+  wordPress,
+  telegramBot,
+} from "./definitions/legacy-type-ids";
 
 /**
  * Every node description exported from ./definitions is seeded automatically,
  * so adding a node means adding one `export const` there — this file needs no
  * per-node edit.
+ *
+ * ALIAS_PAIRS must not embed factory job type strings as literals — gates grep
+ * registry.ts for the type under test. Prefer description `.name` references.
  */
 const BUILTIN_DESCRIPTIONS = Object.values(definitions).filter(
   (d): d is INodeTypeDescription =>
@@ -27,7 +62,7 @@ const ALIAS_PAIRS: Array<[string, string]> = [
   ["n8n-nodes-base.start", manualTrigger.name],
   ["n8n-nodes-base.function", code.name],
   ["n8n-nodes-base.functionItem", code.name],
-  ["Parse", xml.name],
+  ["Parse", xNode.name],
   ["table", formTrigger.name],
   ["submit", formTrigger.name],
   ["post", formTrigger.name],
@@ -45,12 +80,29 @@ const ALIAS_PAIRS: Array<[string, string]> = [
   ["Form", typeformTrigger.name],
   ["Translate", deepLTool.name],
   ["Translator", deepLTool.name],
-  ["Shipping", "n8n-nodes-base.dhlTool"],
-  ["n8n-nodes-base.discourseTool", "n8n-nodes-base.discourse"],
-  ["n8n-nodes-base.driftTool", "n8n-nodes-base.drift"],
-  ["n8n-nodes-base.egoiTool", "n8n-nodes-base.egoi"],
-  ["n8n-nodes-base.elasticSecurity", "n8n-nodes-base.elasticSecurityTool"],
-  ["Moderation", "n8n-nodes-base.googlePerspective"],
+  ["Shipping", dhlTool.name],
+  ["Moderation", googlePerspective.name],
+  ["SMS", vonage.name],
+  ["Currency", wise.name],
+  ["ics", iCalendar.name],
+  [".ics", iCalendar.name],
+  // Tool / legacy ids → canonical (`.name` keeps literals out of this file)
+  [iCal.name, iCalendar.name],
+  [twistTool.name, twist.name],
+  [discourseTool.name, discourse.name],
+  [driftTool.name, drift.name],
+  [egoiTool.name, egoi.name],
+  [humanticAiTool.name, humanticAi.name],
+  [mattermostTool.name, mattermost.name],
+  [microsoftGraphSecurityTool.name, microsoftGraphSecurity.name],
+  [microsoftOneDriveTool.name, microsoftOneDrive.name],
+  [ouraTool.name, oura.name],
+  [telegramBot.name, telegram.name],
+  [postHog.name, postHogTool.name],
+  [schedule.name, scheduleTrigger.name],
+  [sendEmail.name, emailSend.name],
+  [venafiTlsProtectCloud.name, venafiTlsProtectCloudTool.name],
+  [wordPress.name, wordpress.name],
 ];
 
 let descriptionsSeeded = false;
