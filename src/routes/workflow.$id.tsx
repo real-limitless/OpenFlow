@@ -1,19 +1,13 @@
 import { createFileRoute, notFound } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
+import type { DockviewApi } from "dockview";
 import { Toaster } from "@/components/ui/sonner";
-import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
 import { getRepository } from "@/lib/storage/repository";
 import { useWorkflowStore } from "@/store/workflow-store";
 import { EditorTopBar } from "@/components/editor/EditorTopBar";
-import { NodePalette } from "@/components/editor/NodePalette";
-import { WorkflowCanvas } from "@/components/editor/WorkflowCanvas";
-import { EditorRightRail } from "@/components/editor/EditorRightRail";
-import { DataPanel } from "@/components/editor/DataPanel";
-import { DataTablesPanel } from "@/components/editor/DataTablesPanel";
-import { ExecutionHistory } from "@/components/editor/ExecutionHistory";
+import { EditorDockHost } from "@/components/editor/dock/EditorDockHost";
 import { ExecuteTriggerButton } from "@/components/editor/ExecuteTriggerButton";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { ExecutionRunData } from "@/lib/engine/types";
 import type { IWorkflow } from "@/lib/workflow/types";
 import {
@@ -58,6 +52,7 @@ function EditorPage() {
   const [runData, setRunData] = useState<ExecutionRunData | null>(null);
   const [historyKey, setHistoryKey] = useState(0);
   const eventSourceRef = useRef<EventSource | null>(null);
+  const dockApiRef = useRef<DockviewApi | null>(null);
 
   const bumpHistory = () => setHistoryKey((k) => k + 1);
 
@@ -246,6 +241,7 @@ function EditorPage() {
   return (
     <div className="flex h-screen flex-col overflow-hidden bg-background">
       <EditorTopBar
+        dockApiRef={dockApiRef}
         actions={
           <ExecuteTriggerButton
             workflow={workflow}
@@ -269,64 +265,30 @@ function EditorPage() {
           </button>
         </div>
       )}
-      <div className="flex min-h-0 flex-1">
-        <NodePalette
-          onAdd={(type) =>
-            addNode(type, {
-              x: 120 + workflow.nodes.length * 40,
-              y: 120 + (workflow.nodes.length % 4) * 40,
-            })
-          }
-        />
-        <div className="flex min-h-0 min-w-0 flex-1 flex-col">
-          <ResizablePanelGroup orientation="vertical" className="min-h-0 flex-1">
-            <ResizablePanel defaultSize={70} minSize={10} className="min-h-0">
-              <WorkflowCanvas runData={runData} refreshKey={historyKey} />
-            </ResizablePanel>
-            <ResizableHandle withHandle className="bg-border" />
-            <ResizablePanel defaultSize={30} minSize={8} className="min-h-0">
-              <div className="flex h-full min-h-0 border-t border-border">
-                <div className="min-h-0 min-w-0 flex-1">
-                  <Tabs defaultValue="execution" className="flex h-full min-h-0 flex-col">
-                    <TabsList className="mx-2 mt-1.5 h-8 w-auto shrink-0 self-start">
-                      <TabsTrigger value="execution" className="text-[11px]">
-                        Execution data
-                      </TabsTrigger>
-                      <TabsTrigger value="tables" className="text-[11px]">
-                        Data tables
-                      </TabsTrigger>
-                    </TabsList>
-                    <TabsContent
-                      value="execution"
-                      className="mt-0 min-h-0 flex-1 data-[state=inactive]:hidden"
-                    >
-                      <DataPanel runData={runData} />
-                    </TabsContent>
-                    <TabsContent
-                      value="tables"
-                      className="mt-0 min-h-0 flex-1 data-[state=inactive]:hidden"
-                    >
-                      <DataTablesPanel refreshKey={historyKey} />
-                    </TabsContent>
-                  </Tabs>
-                </div>
-                <div className="flex h-full min-h-0 w-64 shrink-0 flex-col border-l border-border bg-sidebar">
-                  <ExecutionHistory
-                    workflowId={id}
-                    refreshKey={historyKey}
-                    onSelectExecution={(rd) => setRunData(rd as ExecutionRunData)}
-                  />
-                </div>
-              </div>
-            </ResizablePanel>
-          </ResizablePanelGroup>
-        </div>
-        <EditorRightRail
-          workflowId={id}
-          runData={runData}
-          isExecuting={isExecuting}
-          onExecutePrevious={(nodeName) => void handleExecute(undefined, { executePreviousOf: nodeName })}
-        />
+      <div className="flex min-h-0 min-w-0 flex-1">
+        {status === "ready" ? (
+          <EditorDockHost
+            workflowId={id}
+            runData={runData}
+            historyKey={historyKey}
+            isExecuting={isExecuting}
+            onExecutePrevious={(nodeName) =>
+              void handleExecute(undefined, { executePreviousOf: nodeName })
+            }
+            onAddNode={(type) =>
+              addNode(type, {
+                x: 120 + workflow.nodes.length * 40,
+                y: 120 + (workflow.nodes.length % 4) * 40,
+              })
+            }
+            onSelectExecution={(rd) => setRunData(rd)}
+            dockApiRef={dockApiRef}
+          />
+        ) : (
+          <div className="flex flex-1 items-center justify-center text-sm text-muted-foreground">
+            Loading workflow…
+          </div>
+        )}
       </div>
       <Toaster position="bottom-right" />
     </div>

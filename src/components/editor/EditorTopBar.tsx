@@ -1,13 +1,16 @@
 import { useEffect, useRef, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import {
+  AppWindow,
   Braces,
   Bug,
   Check,
   Download,
   KeyRound,
   LayoutGrid,
+  LayoutTemplate,
   MoreHorizontal,
+  PanelRight,
   Redo2,
   Save,
   Share2,
@@ -15,6 +18,7 @@ import {
   Undo2,
   Upload,
 } from "lucide-react";
+import type { DockviewApi } from "dockview";
 import { toast } from "sonner";
 import { OpenFlowLogo } from "@/components/brand/openflow-logo";
 import { useWorkflowStore } from "@/store/workflow-store";
@@ -47,8 +51,21 @@ import { projectHeaders } from "@/lib/projects/client";
 import type { IWorkflow } from "@/lib/workflow/types";
 import { EnvironmentSwitcher } from "./EnvironmentSwitcher";
 import { cn } from "@/lib/utils";
+import { EDITOR_PANELS, type EditorPanelId } from "@/components/editor/dock/panel-registry";
+import {
+  floatEditorPanel,
+  openEditorPanel,
+  popoutEditorPanel,
+  resetEditorDockLayout,
+} from "@/components/editor/dock/EditorDockHost";
 
-export function EditorTopBar({ actions }: { actions?: React.ReactNode }) {
+export function EditorTopBar({
+  actions,
+  dockApiRef,
+}: {
+  actions?: React.ReactNode;
+  dockApiRef?: React.MutableRefObject<DockviewApi | null>;
+}) {
   const workflow = useWorkflowStore((s) => s.workflow);
   const dirty = useWorkflowStore((s) => s.dirty);
   const { setName, setActive, commit, persist, undo, redo, load } = useWorkflowStore();
@@ -157,11 +174,34 @@ export function EditorTopBar({ actions }: { actions?: React.ReactNode }) {
     toast.success("Workflow saved");
   };
 
+  const dockApi = () => dockApiRef?.current ?? null;
+
+  const viewPanelItems = EDITOR_PANELS.filter((p) => p.viewMenu).map((p) => (
+    <DropdownMenuItem
+      key={p.id}
+      onClick={() => {
+        openEditorPanel(dockApi(), p.id as EditorPanelId);
+      }}
+    >
+      <PanelRight className="mr-2 size-4" />
+      {p.title}
+    </DropdownMenuItem>
+  ));
+
   const secondaryItems = (
     <>
       <DropdownMenuItem onClick={() => commit((wf) => autoLayout(wf))}>
         <LayoutGrid className="mr-2 size-4" /> Tidy
       </DropdownMenuItem>
+      {dockApiRef && (
+        <>
+          <DropdownMenuSeparator />
+          {viewPanelItems}
+          <DropdownMenuItem onClick={() => resetEditorDockLayout(dockApi())}>
+            <LayoutTemplate className="mr-2 size-4" /> Reset layout
+          </DropdownMenuItem>
+        </>
+      )}
       <DropdownMenuSeparator />
       <DropdownMenuItem onClick={() => fileInput.current?.click()}>
         <Upload className="mr-2 size-4" /> Import
@@ -228,6 +268,44 @@ export function EditorTopBar({ actions }: { actions?: React.ReactNode }) {
         <Button variant="ghost" size="icon" className="size-8 shrink-0" onClick={redo} aria-label="Redo">
           <Redo2 className="size-4" />
         </Button>
+
+        {dockApiRef && (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="sm" className="h-8 shrink-0 text-[12px]">
+                <LayoutTemplate className="mr-1 size-4" /> View
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-52">
+              {viewPanelItems}
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                onClick={() => {
+                  const api = dockApi();
+                  const active = api?.activePanel?.id as EditorPanelId | undefined;
+                  if (active && active !== "canvas") floatEditorPanel(api, active);
+                  else toast.message("Select a panel tab first, then float it");
+                }}
+              >
+                <AppWindow className="mr-2 size-4" /> Float active panel
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => {
+                  const api = dockApi();
+                  const active = api?.activePanel?.id as EditorPanelId | undefined;
+                  if (active && active !== "canvas") void popoutEditorPanel(api, active);
+                  else toast.message("Select a panel tab first, then pop out");
+                }}
+              >
+                <AppWindow className="mr-2 size-4" /> Pop out active panel
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={() => resetEditorDockLayout(dockApi())}>
+                <LayoutTemplate className="mr-2 size-4" /> Reset layout
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )}
 
         <div className="hidden items-center gap-1 xl:flex">
           <Button

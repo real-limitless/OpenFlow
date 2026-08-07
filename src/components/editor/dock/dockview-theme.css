@@ -1,0 +1,82 @@
+/* OpenFlow skin for dockview (extends dockview-theme-dark). */
+.dockview-theme-openflow {
+  --dv-paneview-header-border-color: var(--border);
+  --dv-tabs-and-actions-container-background-color: var(--sidebar);
+  --dv-tabs-and-actions-container-font-size: 12px;
+  --dv-tabs-and-actions-container-height: 36px;
+  --dv-tab-background-color: transparent;
+  --dv-tab-divider-color: transparent;
+  --dv-activegroup-visiblepanel-tab-background-color: var(--surface);
+  --dv-activegroup-hiddenpanel-tab-background-color: transparent;
+  --dv-inactivegroup-visiblepanel-tab-background-color: var(--surface-raised, var(--surface));
+  --dv-inactivegroup-hiddenpanel-tab-background-color: transparent;
+  --dv-tab-text-color: var(--muted-foreground);
+  --dv-activegroup-visiblepanel-tab-color: var(--foreground);
+  --dv-activegroup-hiddenpanel-tab-color: var(--muted-foreground);
+  --dv-inactivegroup-visiblepanel-tab-color: var(--foreground);
+  --dv-inactivegroup-hiddenpanel-tab-color: var(--muted-foreground);
+  --dv-group-view-background-color: var(--background);
+  --dv-tabs-container-scrollbar-color: var(--border);
+  --dv-icon-hover-background-color: var(--accent);
+  --dv-floating-box-shadow: 0 12px 40px oklch(0 0 0 / 0.45);
+  --dv-overlay-z-index: 50;
+  --dv-tab-border-radius: 6px;
+  --dv-sash-color: transparent;
+  --dv-active-sash-color: var(--primary);
+  --dv-border-radius: 0;
+  --dv-drag-over-background-color: color-mix(in oklch, var(--primary) 18%, transparent);
+  --dv-drag-over-border-color: var(--primary);
+  --dv-separator-border: var(--border);
+  background: var(--background);
+  color: var(--foreground);
+  height: 100%;
+  width: 100%;
+}
+
+.dockview-theme-openflow .dv-groupview {
+  border: 1px solid var(--border);
+  background: var(--background);
+}
+
+.dockview-theme-openflow .dv-tabs-and-actions-container {
+  border-bottom: 1px solid var(--border);
+  padding: 0 4px;
+}
+
+.dockview-theme-openflow .dv-tab {
+  border-radius: 6px 6px 0 0;
+  margin: 4px 2px 0;
+  padding: 0 10px;
+}
+
+.dockview-theme-openflow .dv-tab.dv-active-tab {
+  box-shadow: inset 0 -2px 0 var(--primary);
+}
+
+.dockview-theme-openflow .dv-resize-container {
+  background: var(--border);
+}
+
+.dockview-theme-openflow .dv-resize-container:hover,
+.dockview-theme-openflow .dv-resize-container.dv-resize-handle-active {
+  background: var(--primary);
+}
+
+/* Panel bodies fill the group */
+.dockview-theme-openflow .dv-content-container,
+.dockview-theme-openflow .dv-render-overlay,
+.dockview-theme-openflow .dv-groupview > .dv-content-container {
+  min-height: 0;
+  min-width: 0;
+}
+
+.of-dock-panel {
+  display: flex;
+  height: 100%;
+  min-height: 0;
+  min-width: 0;
+  width: 100%;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--sidebar);
+}

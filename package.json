@@ -99,6 +99,8 @@
     "cmdk": "^1.1.1",
     "dagre": "^0.8.5",
     "date-fns": "^4.1.0",
+    "dockview": "^7.0.4",
+    "dockview-react": "^7.0.4",
     "embla-carousel-react": "^8.6.0",
     "fflate": "^0.8.3",
     "hono": "^4.7.10",

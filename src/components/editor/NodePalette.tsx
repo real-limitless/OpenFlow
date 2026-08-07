@@ -97,7 +97,7 @@ export function NodePalette({ onAdd }: Props) {
   };
 
   return (
-    <aside className="flex h-full w-[260px] shrink-0 flex-col border-r border-border bg-sidebar">
+    <aside className="flex h-full w-full min-w-0 shrink-0 flex-col border-r border-border bg-sidebar">
       <div className="border-b border-border p-3">
         <div className="relative">
           <Search className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
