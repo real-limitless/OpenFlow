@@ -3152,6 +3152,242 @@ export const BUILTIN_EXECUTOR_MODULES: Array<{
     modulePath: "./executors/ouraTool",
     exportName: "ouraExecutor",
   },
+  // Previously defined in palette but missing from the executor manifest
+  {
+    type: "n8n-nodes-base.haloPSATool",
+    modulePath: "./executors/n8n-nodes-base.haloPSATool",
+    exportName: "haloPSAToolExecutor",
+  },
+  {
+    type: "n8n-nodes-base.harvest",
+    modulePath: "./executors/harvest",
+    exportName: "harvestExecutor",
+  },
+  {
+    type: "n8n-nodes-base.helpScout",
+    modulePath: "./executors/helpScout",
+    exportName: "helpScoutExecutor",
+  },
+  {
+    type: "n8n-nodes-base.helpScoutTrigger",
+    modulePath: "./executors/n8n-nodes-base.helpScoutTrigger",
+    exportName: "helpScoutTriggerExecutor",
+  },
+  {
+    type: "n8n-nodes-base.hubGPT",
+    modulePath: "./executors/hub-gpt",
+    exportName: "hubGPTExecutor",
+  },
+  {
+    type: "n8n-nodes-base.invoiceNinja",
+    modulePath: "./executors/invoice-ninja",
+    exportName: "invoiceNinjaExecutor",
+  },
+  {
+    type: "n8n-nodes-base.invoiceNinjaTrigger",
+    modulePath: "./executors/invoice-ninja-trigger",
+    exportName: "invoiceNinjaTriggerExecutor",
+  },
+  {
+    type: "n8n-nodes-base.iterable",
+    modulePath: "./executors/iterable",
+    exportName: "iterableExecutor",
+  },
+  {
+    type: "n8n-nodes-base.iterableTool",
+    modulePath: "./executors/n8n-nodes-base.iterableTool",
+    exportName: "iterableToolExecutor",
+  },
+  {
+    type: "n8n-nodes-base.keapTrigger",
+    modulePath: "./executors/n8n-nodes-base.keapTrigger",
+    exportName: "keapTriggerExecutor",
+  },
+  {
+    type: "n8n-nodes-base.kitemakerTool",
+    modulePath: "./executors/kitemakerTool",
+    exportName: "kitemakerToolExecutor",
+  },
+  {
+    type: "n8n-nodes-base.koBoToolboxTool",
+    modulePath: "./executors/koBoToolboxTool",
+    exportName: "koBoToolboxToolExecutor",
+  },
+  {
+    type: "n8n-nodes-base.magento2",
+    modulePath: "./executors/magento2",
+    exportName: "magento2Executor",
+  },
+  {
+    type: "n8n-nodes-base.mailcheck",
+    modulePath: "./executors/mailcheck",
+    exportName: "mailcheckExecutor",
+  },
+  {
+    type: "n8n-nodes-base.mailcheckTool",
+    modulePath: "./executors/mailcheckTool",
+    exportName: "mailcheckToolExecutor",
+  },
+  {
+    type: "n8n-nodes-base.mailerLite",
+    modulePath: "./executors/mailerLite",
+    exportName: "mailerLiteExecutor",
+  },
+  {
+    type: "n8n-nodes-base.mailerLiteTool",
+    modulePath: "./executors/n8n-nodes-base.mailerLiteTool",
+    exportName: "mailerLiteToolExecutor",
+  },
+  {
+    type: "n8n-nodes-base.mailerLiteTrigger",
+    modulePath: "./executors/mailerLiteTrigger",
+    exportName: "mailerLiteTriggerExecutor",
+  },
+  {
+    type: "n8n-nodes-base.mailjetTrigger",
+    modulePath: "./executors/n8n-nodes-base.mailjetTrigger",
+    exportName: "mailjetTriggerExecutor",
+  },
+  {
+    type: "n8n-nodes-base.marketstack",
+    modulePath: "./executors/n8n-nodes-base.marketstack",
+    exportName: "marketstackExecutor",
+  },
+  {
+    type: "n8n-nodes-base.matrixTool",
+    modulePath: "./executors/matrixTool",
+    exportName: "matrixToolExecutor",
+  },
+  {
+    type: "n8n-nodes-base.mauticTool",
+    modulePath: "./executors/n8n-nodes-base.mauticTool",
+    exportName: "mauticToolExecutor",
+  },
+  {
+    type: "n8n-nodes-base.microsoftDynamicsCrmTool",
+    modulePath: "./executors/n8n-nodes-base.microsoftDynamicsCrmTool",
+    exportName: "microsoftDynamicsCrmToolExecutor",
+  },
+  {
+    type: "n8n-nodes-base.microsoftEntraTool",
+    modulePath: "./executors/n8n-nodes-base.microsoftEntraTool",
+    exportName: "microsoftEntraToolExecutor",
+  },
+  {
+    type: "n8n-nodes-base.microsoftExcelTool",
+    modulePath: "./executors/n8n-nodes-base.microsoftExcelTool",
+    exportName: "microsoftExcelToolExecutor",
+  },
+  {
+    type: "n8n-nodes-base.microsoftSharePointTool",
+    modulePath: "./executors/microsoftSharePointTool",
+    exportName: "microsoftSharePointToolExecutor",
+  },
+  {
+    type: "n8n-nodes-base.mispTool",
+    modulePath: "./executors/n8n-nodes-base.mispTool",
+    exportName: "mispToolExecutor",
+  },
+  {
+    type: "n8n-nodes-base.mondayComTool",
+    modulePath: "./executors/n8n-nodes-base.mondayComTool",
+    exportName: "mondayComToolExecutor",
+  },
+  {
+    type: "n8n-nodes-base.msg91",
+    modulePath: "./executors/n8n-nodes-base.msg91",
+    exportName: "msg91Executor",
+  },
+  {
+    type: "n8n-nodes-base.netlifyTool",
+    modulePath: "./executors/netlifyTool",
+    exportName: "netlifyToolExecutor",
+  },
+  {
+    type: "n8n-nodes-base.nextCloudTool",
+    modulePath: "./executors/n8n-nodes-base.nextCloudTool",
+    exportName: "nextCloudToolExecutor",
+  },
+  {
+    type: "n8n-nodes-base.npmTool",
+    modulePath: "./executors/n8n-nodes-base.npmTool",
+    exportName: "npmToolExecutor",
+  },
+  {
+    type: "n8n-nodes-base.odooTool",
+    modulePath: "./executors/n8n-nodes-base.odooTool",
+    exportName: "odooToolExecutor",
+  },
+  {
+    type: "n8n-nodes-base.oktaTool",
+    modulePath: "./executors/okta",
+    exportName: "oktaToolExecutor",
+  },
+  {
+    type: "n8n-nodes-base.oneSimpleApiTool",
+    modulePath: "./executors/oneSimpleApiTool",
+    exportName: "oneSimpleApiToolExecutor",
+  },
+  {
+    type: "n8n-nodes-base.onfleetTool",
+    modulePath: "./executors/n8n-nodes-base.onfleetTool",
+    exportName: "onfleetToolExecutor",
+  },
+  {
+    type: "n8n-nodes-base.orbit",
+    modulePath: "./executors/n8n-nodes-base.orbit",
+    exportName: "orbitExecutor",
+  },
+  {
+    type: "n8n-nodes-base.paddle",
+    modulePath: "./executors/paddle",
+    exportName: "paddleExecutor",
+  },
+  {
+    type: "n8n-nodes-base.paddleTool",
+    modulePath: "./executors/n8n-nodes-base.paddleTool",
+    exportName: "paddleToolExecutor",
+  },
+  {
+    type: "n8n-nodes-base.payPalTrigger",
+    modulePath: "./executors/n8n-nodes-base.payPalTrigger",
+    exportName: "payPalTriggerExecutor",
+  },
+  {
+    type: "n8n-nodes-base.peekalink",
+    modulePath: "./executors/peekalink",
+    exportName: "peekalinkExecutor",
+  },
+  {
+    type: "n8n-nodes-base.phantombusterTool",
+    modulePath: "./executors/n8n-nodes-base.phantombusterTool",
+    exportName: "phantombusterToolExecutor",
+  },
+  {
+    type: "n8n-nodes-base.philipsHue",
+    modulePath: "./executors/n8n-nodes-base.philipsHue",
+    exportName: "philipsHueExecutor",
+  },
+  {
+    type: "n8n-nodes-base.philipsHueTool",
+    modulePath: "./executors/n8n-nodes-base.philipsHueTool",
+    exportName: "philipsHueToolExecutor",
+  },
+  {
+    type: "n8n-nodes-base.plivo",
+    modulePath: "./executors/plivo",
+    exportName: "plivoExecutor",
+  },
+  {
+    type: "n8n-nodes-base.postBin",
+    modulePath: "./executors/postBin",
+    exportName: "postBinExecutor",
+  },
+  {
+    type: "n8n-nodes-base.wufooTrigger",
+    modulePath: "./executors/wufooTrigger",
+    exportName: "wufooTriggerExecutor",
+  },
 ];
 
 /** Types OpenFlow ships an executor for. Derived, so it needs no maintenance. */
