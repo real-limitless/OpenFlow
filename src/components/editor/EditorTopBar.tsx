@@ -188,20 +188,11 @@ export function EditorTopBar({
     </DropdownMenuItem>
   ));
 
-  const secondaryItems = (
+  const moreItems = (
     <>
       <DropdownMenuItem onClick={() => commit((wf) => autoLayout(wf))}>
-        <LayoutGrid className="mr-2 size-4" /> Tidy
+        <LayoutGrid className="mr-2 size-4" /> Tidy layout
       </DropdownMenuItem>
-      {dockApiRef && (
-        <>
-          <DropdownMenuSeparator />
-          {viewPanelItems}
-          <DropdownMenuItem onClick={() => resetEditorDockLayout(dockApi())}>
-            <LayoutTemplate className="mr-2 size-4" /> Reset layout
-          </DropdownMenuItem>
-        </>
-      )}
       <DropdownMenuSeparator />
       <DropdownMenuItem onClick={() => fileInput.current?.click()}>
         <Upload className="mr-2 size-4" /> Import
@@ -212,6 +203,7 @@ export function EditorTopBar({
       <DropdownMenuItem onClick={() => handleExport("n8n")}>
         <Download className="mr-2 size-4" /> Export (n8n-compatible)
       </DropdownMenuItem>
+      <DropdownMenuSeparator />
       <DropdownMenuItem onClick={() => setReportOpen(true)}>
         <Check className="mr-2 size-4" /> Migration report
       </DropdownMenuItem>
@@ -231,26 +223,32 @@ export function EditorTopBar({
       </DropdownMenuItem>
       <DropdownMenuSeparator />
       <DropdownMenuItem asChild>
-        <Link to="/credentials">Vault</Link>
+        <Link to="/credentials">
+          <KeyRound className="mr-2 size-4" /> Vault
+        </Link>
       </DropdownMenuItem>
       <DropdownMenuItem asChild>
         <Link to="/variables">
-          <Braces className="mr-2 size-4" /> Vars
+          <Braces className="mr-2 size-4" /> Variables
         </Link>
       </DropdownMenuItem>
       <DropdownMenuItem asChild>
         <Link to="/data-tables">
-          <Table2 className="mr-2 size-4" /> Tables
+          <Table2 className="mr-2 size-4" /> Data tables
         </Link>
       </DropdownMenuItem>
     </>
   );
 
   return (
-    <header className="flex h-14 shrink-0 items-center gap-2 border-b border-border bg-sidebar px-3">
-      <Link to="/" className="flex items-center gap-2 pr-2 text-primary" aria-label="All workflows">
+    <header className="flex h-12 shrink-0 items-center gap-1.5 overflow-hidden border-b border-border bg-sidebar px-2 sm:gap-2 sm:px-3">
+      <Link
+        to="/"
+        className="flex shrink-0 items-center gap-1.5 pr-1 text-primary"
+        aria-label="All workflows"
+      >
         <OpenFlowLogo className="size-5" withPlate />
-        <span className="hidden font-mono text-[13px] font-semibold tracking-tight text-foreground sm:inline">
+        <span className="hidden font-mono text-[13px] font-semibold tracking-tight text-foreground lg:inline">
           OpenFlow
         </span>
       </Link>
@@ -258,25 +256,45 @@ export function EditorTopBar({
       <Input
         value={workflow.name}
         onChange={(e) => setName(e.target.value)}
-        className="h-9 min-w-0 w-32 border-transparent bg-transparent text-[14px] font-medium hover:border-border focus:border-border sm:w-44 md:w-56"
+        title={workflow.name}
+        className="h-8 min-w-0 max-w-[10rem] flex-1 border-transparent bg-transparent px-1.5 text-[13px] font-medium hover:border-border focus:border-border sm:max-w-[14rem] md:max-w-[18rem]"
       />
 
-      <div className="ml-auto flex min-w-0 items-center gap-1">
-        <Button variant="ghost" size="icon" className="size-8 shrink-0" onClick={undo} aria-label="Undo">
+      {/* Left tools — may shrink; never push Execute/Save off-screen */}
+      <div className="flex min-w-0 shrink items-center gap-0.5">
+        <Button
+          variant="ghost"
+          size="icon"
+          className="size-8 shrink-0"
+          onClick={undo}
+          aria-label="Undo"
+        >
           <Undo2 className="size-4" />
         </Button>
-        <Button variant="ghost" size="icon" className="size-8 shrink-0" onClick={redo} aria-label="Redo">
+        <Button
+          variant="ghost"
+          size="icon"
+          className="size-8 shrink-0"
+          onClick={redo}
+          aria-label="Redo"
+        >
           <Redo2 className="size-4" />
         </Button>
 
         {dockApiRef && (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="sm" className="h-8 shrink-0 text-[12px]">
-                <LayoutTemplate className="mr-1 size-4" /> View
+              <Button
+                variant="ghost"
+                size="icon"
+                className="size-8 shrink-0"
+                aria-label="View panels"
+                title="View panels"
+              >
+                <LayoutTemplate className="size-4" />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-52">
+            <DropdownMenuContent align="start" className="w-52">
               {viewPanelItems}
               <DropdownMenuSeparator />
               <DropdownMenuItem
@@ -307,148 +325,74 @@ export function EditorTopBar({
           </DropdownMenu>
         )}
 
-        <div className="hidden items-center gap-1 xl:flex">
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-8 text-[12px]"
-            onClick={() => commit((wf) => autoLayout(wf))}
-          >
-            <LayoutGrid className="mr-1 size-4" /> Tidy
-          </Button>
-          <span className="mx-1 h-5 w-px bg-border" />
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-8 text-[12px]"
-            onClick={() => fileInput.current?.click()}
-          >
-            <Upload className="mr-1 size-4" /> Import
-          </Button>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="sm" className="h-8 text-[12px]">
-                <Download className="mr-1 size-4" /> Export
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-56">
-              <DropdownMenuItem onClick={() => handleExport("openflow")}>
-                OpenFlow JSON
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handleExport("n8n")}>
-                n8n-compatible JSON
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-8 text-[12px]"
-            onClick={() => setReportOpen(true)}
-          >
-            <Check className="mr-1 size-4" /> Migration
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-8 text-[12px]"
-            onClick={() => void handleReportIssue()}
-          >
-            <Bug className="mr-1 size-4" /> Report issue
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-8 text-[12px]"
-            onClick={() => setCredsOpen(true)}
-          >
-            <KeyRound className="mr-1 size-4" /> Credentials
-            {missingCount > 0 && (
-              <span className="ml-1 rounded bg-destructive/15 px-1.5 py-0.5 text-[10px] font-medium text-destructive">
-                {missingCount}
-              </span>
-            )}
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-8 text-[12px]"
-            onClick={() => setShareOpen(true)}
-          >
-            <Share2 className="mr-1 size-4" /> Share
-          </Button>
-          <Button variant="ghost" size="sm" className="h-8 text-[12px]" asChild>
-            <Link to="/credentials">Vault</Link>
-          </Button>
-          <Button variant="ghost" size="sm" className="h-8 text-[12px]" asChild>
-            <Link to="/variables">
-              <Braces className="mr-1 size-4" /> Vars
-            </Link>
-          </Button>
-          <Button variant="ghost" size="sm" className="h-8 text-[12px]" asChild>
-            <Link to="/data-tables">
-              <Table2 className="mr-1 size-4" /> Tables
-            </Link>
-          </Button>
-        </div>
-
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button
               variant="ghost"
               size="icon"
-              className="size-8 shrink-0 xl:hidden"
+              className="relative size-8 shrink-0"
               aria-label="More actions"
+              title="More"
             >
               <MoreHorizontal className="size-4" />
+              {missingCount > 0 && (
+                <span className="absolute right-1 top-1 size-1.5 rounded-full bg-destructive" />
+              )}
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-52">
-            {secondaryItems}
+          <DropdownMenuContent align="start" className="w-56">
+            {moreItems}
           </DropdownMenuContent>
         </DropdownMenu>
+      </div>
 
-        <input
-          ref={fileInput}
-          type="file"
-          accept="application/json,.json"
-          hidden
-          onChange={(e) => {
-            const file = e.target.files?.[0];
-            if (file) void handleImport(file);
-            e.target.value = "";
-          }}
-        />
+      <input
+        ref={fileInput}
+        type="file"
+        accept="application/json,.json"
+        hidden
+        onChange={(e) => {
+          const file = e.target.files?.[0];
+          if (file) void handleImport(file);
+          e.target.value = "";
+        }}
+      />
 
-        <span className="mx-1 hidden h-5 w-px bg-border sm:block" />
-
-        <div className="hidden sm:block">
+      {/* Core right cluster — always visible, never shrinks */}
+      <div className="ml-auto flex shrink-0 items-center gap-1 sm:gap-1.5">
+        <div className="hidden min-w-0 max-w-[9rem] sm:block">
           <EnvironmentSwitcher />
         </div>
 
-        <span className="mx-1 hidden h-5 w-px bg-border md:block" />
+        <span className="mx-0.5 hidden h-5 w-px bg-border sm:block" />
 
-        {actions}
+        <div className="flex shrink-0 items-center">{actions}</div>
 
-        <label className="flex items-center gap-1.5 pr-0.5 text-[11px] text-muted-foreground sm:gap-2 sm:pr-1 sm:text-[12px]">
-          <span className="hidden xs:inline sm:inline">Active</span>
+        <label
+          className="flex shrink-0 items-center gap-1 text-[11px] text-muted-foreground"
+          title="Active workflow"
+        >
+          <span className="hidden md:inline">Active</span>
           <Switch checked={workflow.active} onCheckedChange={handleActiveChange} />
         </label>
 
         <Button
           size="sm"
           variant={dirty ? "default" : "outline"}
-          className={cn("h-8 shrink-0 text-[12px]", !dirty && "text-muted-foreground")}
+          className={cn("h-8 shrink-0 px-2.5 text-[12px]", !dirty && "text-muted-foreground")}
           disabled={!dirty}
           onClick={handleSave}
         >
           {dirty ? (
             <>
-              <Save className="mr-1 size-4" /> Save
+              <Save className="mr-1 size-3.5" />
+              <span>Save</span>
             </>
           ) : (
             <>
-              <Check className="mr-1 size-4" /> Saved
+              <Check className="mr-1 size-3.5" />
+              <span className="hidden sm:inline">Saved</span>
+              <span className="sm:hidden">OK</span>
             </>
           )}
         </Button>

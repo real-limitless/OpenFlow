@@ -2,8 +2,10 @@ import { useCallback, useEffect, useState } from "react";
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import {
   Braces,
+  ChevronDown,
   FolderKanban,
   KeyRound,
+  Layers,
   LogOut,
   Settings,
   Share2,
@@ -12,6 +14,14 @@ import {
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { OpenFlowLogo } from "@/components/brand/openflow-logo";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import {
   fetchProjects,
   getSelectedProjectId,
@@ -29,6 +39,7 @@ import {
   logout,
   type AuthUser,
 } from "@/lib/auth/client";
+import { cn } from "@/lib/utils";
 
 type Props = {
   /** Compact bar for editor */
@@ -108,46 +119,56 @@ export function AppHeader({ compact, actions, hideNav }: Props) {
       </Link>
 
       {projects.length > 0 && (
-        <select
-          className="h-8 max-w-[10rem] rounded-md border border-input bg-background px-2 text-[12px] text-foreground"
-          value={projectId ?? ""}
-          onChange={(e) => {
-            const id = e.target.value || null;
+        <ScopeDropdown
+          label="Project"
+          icon={<FolderKanban className="size-3.5 shrink-0 opacity-70" />}
+          valueLabel={projects.find((p) => p.id === projectId)?.name ?? "Project"}
+          title={
+            (() => {
+              const p = projects.find((x) => x.id === projectId);
+              if (!p) return "Select project";
+              return `${p.name}${p.type === "personal" ? " · personal" : ""} · ${p.role}`;
+            })()
+          }
+          items={projects.map((p) => ({
+            id: p.id,
+            primary: p.name,
+            secondary: `${p.type === "personal" ? "personal" : "team"} · ${p.role}`,
+          }))}
+          selectedId={projectId}
+          onSelect={(id) => {
             setSelectedProjectId(id);
             setProjectId(id);
             void loadScope();
             window.dispatchEvent(new CustomEvent("openflow:scope-change"));
           }}
-          aria-label="Project"
-        >
-          {projects.map((p) => (
-            <option key={p.id} value={p.id}>
-              {p.name}
-              {p.type === "personal" ? " · personal" : ""} · {p.role}
-            </option>
-          ))}
-        </select>
+        />
       )}
 
       {environments.length > 0 && (
-        <select
-          className="h-8 max-w-[9rem] rounded-md border border-input bg-background px-2 text-[12px] text-foreground"
-          value={environmentId ?? ""}
-          onChange={(e) => {
-            const id = e.target.value || null;
+        <ScopeDropdown
+          label="Environment"
+          icon={<Layers className="size-3.5 shrink-0 opacity-70" />}
+          valueLabel={environments.find((e) => e.id === environmentId)?.name ?? "Env"}
+          title={
+            (() => {
+              const e = environments.find((x) => x.id === environmentId);
+              if (!e) return "Select environment";
+              return `${e.name}${e.isDefault ? " (default)" : ""}`;
+            })()
+          }
+          items={environments.map((e) => ({
+            id: e.id,
+            primary: e.name,
+            secondary: e.isDefault ? "default" : undefined,
+          }))}
+          selectedId={environmentId}
+          onSelect={(id) => {
             setSelectedEnvironmentId(id);
             setEnvironmentId(id);
             window.dispatchEvent(new CustomEvent("openflow:scope-change"));
           }}
-          aria-label="Environment"
-        >
-          {environments.map((e) => (
-            <option key={e.id} value={e.id}>
-              {e.name}
-              {e.isDefault ? " ★" : ""}
-            </option>
-          ))}
-        </select>
+        />
       )}
 
       {!hideNav && (
@@ -209,6 +230,63 @@ export function AppHeader({ compact, actions, hideNav }: Props) {
         </Button>
       </div>
     </header>
+  );
+}
+
+function ScopeDropdown({
+  label,
+  icon,
+  valueLabel,
+  title,
+  items,
+  selectedId,
+  onSelect,
+}: {
+  label: string;
+  icon: React.ReactNode;
+  valueLabel: string;
+  title: string;
+  items: Array<{ id: string; primary: string; secondary?: string }>;
+  selectedId: string | null;
+  onSelect: (id: string) => void;
+}) {
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button
+          variant="outline"
+          size="sm"
+          className="h-8 max-w-[9rem] shrink gap-1 px-2 text-[12px] font-normal sm:max-w-[12rem] md:max-w-[14rem]"
+          aria-label={label}
+          title={title}
+        >
+          {icon}
+          <span className="min-w-0 flex-1 truncate text-left">{valueLabel}</span>
+          <ChevronDown className="size-3.5 shrink-0 opacity-50" />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="start" className="min-w-[12rem] max-w-[20rem]">
+        <DropdownMenuLabel className="text-[11px] text-muted-foreground">{label}</DropdownMenuLabel>
+        <DropdownMenuSeparator />
+        {items.map((item) => (
+          <DropdownMenuItem
+            key={item.id}
+            className={cn(
+              "flex flex-col items-start gap-0.5 py-2",
+              item.id === selectedId && "bg-accent",
+            )}
+            onClick={() => onSelect(item.id)}
+          >
+            <span className="w-full truncate text-[13px] font-medium">{item.primary}</span>
+            {item.secondary && (
+              <span className="w-full truncate text-[11px] text-muted-foreground">
+                {item.secondary}
+              </span>
+            )}
+          </DropdownMenuItem>
+        ))}
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }
 

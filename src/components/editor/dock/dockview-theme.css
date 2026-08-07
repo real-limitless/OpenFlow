@@ -1,14 +1,14 @@
-/* OpenFlow skin for dockview (extends dockview-theme-dark). */
+/* OpenFlow skin for dockview — compact IDE tabs */
 .dockview-theme-openflow {
   --dv-paneview-header-border-color: var(--border);
   --dv-tabs-and-actions-container-background-color: var(--sidebar);
-  --dv-tabs-and-actions-container-font-size: 12px;
-  --dv-tabs-and-actions-container-height: 36px;
+  --dv-tabs-and-actions-container-font-size: 11px;
+  --dv-tabs-and-actions-container-height: 30px;
   --dv-tab-background-color: transparent;
   --dv-tab-divider-color: transparent;
-  --dv-activegroup-visiblepanel-tab-background-color: var(--surface);
+  --dv-activegroup-visiblepanel-tab-background-color: transparent;
   --dv-activegroup-hiddenpanel-tab-background-color: transparent;
-  --dv-inactivegroup-visiblepanel-tab-background-color: var(--surface-raised, var(--surface));
+  --dv-inactivegroup-visiblepanel-tab-background-color: transparent;
   --dv-inactivegroup-hiddenpanel-tab-background-color: transparent;
   --dv-tab-text-color: var(--muted-foreground);
   --dv-activegroup-visiblepanel-tab-color: var(--foreground);
@@ -20,7 +20,7 @@
   --dv-icon-hover-background-color: var(--accent);
   --dv-floating-box-shadow: 0 12px 40px oklch(0 0 0 / 0.45);
   --dv-overlay-z-index: 50;
-  --dv-tab-border-radius: 6px;
+  --dv-tab-border-radius: 0;
   --dv-sash-color: transparent;
   --dv-active-sash-color: var(--primary);
   --dv-border-radius: 0;
@@ -40,17 +40,72 @@
 
 .dockview-theme-openflow .dv-tabs-and-actions-container {
   border-bottom: 1px solid var(--border);
-  padding: 0 4px;
+  padding: 0;
+  min-height: 30px;
+  height: 30px;
+}
+
+.dockview-theme-openflow .dv-tabs-container {
+  gap: 0;
 }
 
 .dockview-theme-openflow .dv-tab {
-  border-radius: 6px 6px 0 0;
-  margin: 4px 2px 0;
-  padding: 0 10px;
+  border-radius: 0;
+  margin: 0;
+  padding: 0;
+  border-right: 1px solid transparent;
+  background: transparent !important;
+  color: var(--muted-foreground);
+}
+
+.dockview-theme-openflow .dv-tab:hover {
+  background: color-mix(in oklch, var(--accent) 55%, transparent) !important;
+  color: var(--foreground);
 }
 
 .dockview-theme-openflow .dv-tab.dv-active-tab {
-  box-shadow: inset 0 -2px 0 var(--primary);
+  color: var(--foreground);
+  background: color-mix(in oklch, var(--surface) 80%, transparent) !important;
+  box-shadow: inset 0 -2px 0 0 var(--primary);
+}
+
+.dockview-theme-openflow .dv-tab.dv-active-tab .of-dock-tab-close {
+  opacity: 0.55;
+}
+
+.dockview-theme-openflow .dv-void-container {
+  min-width: 8px;
+}
+
+/* Hide stock default-tab chrome when custom tab is used; keep fallback tidy */
+.dockview-theme-openflow .dv-default-tab {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  height: 100%;
+  padding: 0 8px;
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.dockview-theme-openflow .dv-default-tab-action {
+  opacity: 0.45;
+  display: grid;
+  place-items: center;
+}
+
+.dockview-theme-openflow .dv-default-tab-action:hover {
+  opacity: 1;
+}
+
+.dockview-theme-openflow .dv-default-tab-action svg {
+  width: 9px;
+  height: 9px;
+}
+
+/* Single-tab groups: still show title bar but tighter */
+.dockview-theme-openflow .dv-single-tab .dv-tab {
+  max-width: none;
 }
 
 .dockview-theme-openflow .dv-resize-container {
@@ -62,7 +117,6 @@
   background: var(--primary);
 }
 
-/* Panel bodies fill the group */
 .dockview-theme-openflow .dv-content-container,
 .dockview-theme-openflow .dv-render-overlay,
 .dockview-theme-openflow .dv-groupview > .dv-content-container {
@@ -79,4 +133,8 @@
   flex-direction: column;
   overflow: hidden;
   background: var(--sidebar);
+}
+
+.of-dock-tab {
+  height: 100%;
 }

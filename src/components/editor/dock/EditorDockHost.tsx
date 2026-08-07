@@ -14,6 +14,7 @@ import { applyDefaultDockLayout, ensurePanel } from "./default-layout";
 import { clearDockLayout, loadDockLayout, saveDockLayout } from "./layout-storage";
 import { EDITOR_PANEL_BY_ID, type EditorPanelId } from "./panel-registry";
 import { dockComponents } from "./dock-panels";
+import { DockTab } from "./DockTab";
 
 export function EditorDockHost({
   workflowId,
@@ -150,6 +151,7 @@ export function EditorDockHost({
         <DockviewReact
           className="h-full w-full"
           components={dockComponents}
+          defaultTabComponent={DockTab}
           onReady={onReady}
           disableFloatingGroups={false}
           singleTabMode="fullwidth"
