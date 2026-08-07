@@ -10,9 +10,13 @@ export const xmlExecutor: NodeExecutor = async (ctx) => {
   const mode = ctx.getParam<string>("mode", "xmlToJson");
   const dataPropertyName = ctx.getParam<string>("dataPropertyName", "data");
   const options = ctx.getParam<Record<string, unknown>>("options", {}) ?? {};
+  const continueOnFail = ctx.continueOnFail();
 
-  return [
-    items.map((item, idx) => {
+  const resultItems: INodeExecutionData[] = [];
+
+  for (let idx = 0; idx < items.length; idx++) {
+    const item = items[idx];
+    try {
       const json = { ...item.json };
       const value = json[dataPropertyName];
 
@@ -31,13 +35,20 @@ export const xmlExecutor: NodeExecutor = async (ctx) => {
         json[dataPropertyName] = xmlToJson(value, options);
       }
 
-      return {
+      resultItems.push({
         json,
         binary: item.binary,
         pairedItem: item.pairedItem ?? { item: idx, input: 0 },
-      };
-    }),
-  ];
+      });
+    } catch (err) {
+      if (continueOnFail) {
+        continue;
+      }
+      throw err;
+    }
+  }
+
+  return [resultItems];
 };
 
 // ---------------------------------------------------------------------------
@@ -54,6 +65,16 @@ interface JsonToXmlOptions {
 }
 
 function jsonToXml(value: unknown, rawOptions: Record<string, unknown>): string {
+  if (typeof value === "string") {
+    try {
+      value = JSON.parse(value);
+    } catch {
+      throw new Error("XML node: invalid JSON string for jsonToxml mode");
+    }
+  }
+  if (value === null || value === undefined) {
+    throw new Error("XML node: value is null or undefined for jsonToxml mode");
+  }
   const options: JsonToXmlOptions = {
     attrkey: (rawOptions.attrkey as string) ?? "$",
     charkey: (rawOptions.charkey as string) ?? "_",
@@ -186,7 +207,9 @@ function xmlToJson(xmlString: string, rawOptions: Record<string, unknown>): unkn
   const parser = new XmlParser(xmlString);
   const root = parser.parse();
 
-  if (!root) return {};
+  if (!root) {
+    throw new Error(`XML node: invalid or unparseable XML content in property "${options.attrkey || "data"}"`);
+  }
 
   const inner = nodeToJson(root, options);
 

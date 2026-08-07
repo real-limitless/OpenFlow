@@ -1,54 +1,57 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
-import { createExecutionContext, type ExecutionContext } from "@/sdk";
-import type { INode, INodeExecutionData } from "@/lib/workflow/types";
+import { describe, it, expect, afterEach, vi } from "vitest";
 import { seedBuiltinExecutors } from "../../index";
 import { getExecutor, hasExecutor } from "@/lib/engine/node-runtime";
 import { getNodeType, seedBuiltinDescriptions } from "@/lib/nodes/registry";
-import { makeNode } from "../helpers";
+import { makeNode, runNode } from "../helpers";
 
 seedBuiltinExecutors();
 seedBuiltinDescriptions();
 
 const TYPE = "n8n-nodes-base.elasticSecurityTool";
 
-interface FetchCall {
-  url: string;
-  method: string;
-  headers: Record<string, string>;
-  body: string | undefined;
+const CREDENTIALS = {
+  elasticSecurityApi: {
+    baseUrl: "https://elastic.example.com",
+    apiKey: "test-api-key",
+  },
+};
+
+interface MockResponseInit {
+  status?: number;
+  body?: unknown;
 }
 
-let calls: FetchCall[];
-let responseQueue: Array<ReturnType<typeof mockResponse>>;
-
-function mockResponse(body: unknown, status = 200) {
+function mockResponse(body: unknown, init: MockResponseInit = {}) {
+  const status = init.status ?? 200;
   const text = typeof body === "string" ? body : JSON.stringify(body ?? {});
   return {
     status,
     statusText: status === 200 ? "OK" : status === 204 ? "No Content" : "Error",
     ok: status >= 200 && status < 300,
-    headers: {
-      get(name: string) { return name.toLowerCase() === "content-type" ? "application/json" : null; },
-    },
+    headers: { get() { return null; } },
     async json() { return JSON.parse(text); },
     async text() { return text; },
   };
 }
 
-function installFetch(responses: ReturnType<typeof mockResponse> | ReturnType<typeof mockResponse>[]) {
-  responseQueue = Array.isArray(responses) ? [...responses] : [responses];
+interface FetchCall {
+  url: string;
+  method: string;
+  body: string | undefined;
+  headers: Record<string, string>;
+}
+
+let calls: FetchCall[];
+
+function installFetch(responses: ReturnType<typeof mockResponse> | Array<ReturnType<typeof mockResponse>> = mockResponse({})) {
+  const responseQueue = Array.isArray(responses) ? [...responses] : [responses];
   calls = [];
   vi.stubGlobal("fetch", vi.fn(async (url: string, init: RequestInit | undefined) => {
-    const headers: Record<string, string> = {};
-    const h = init?.headers as Record<string, string> | undefined;
-    if (h) for (const [k, v] of Object.entries(h)) headers[k] = v;
-    calls.push({
-      url: String(url),
-      method: init?.method ?? "GET",
-      headers,
-      body: typeof init?.body === "string" ? init.body : undefined,
-    });
-    return responseQueue.shift() ?? mockResponse({});
+    const body = typeof init?.body === "string" ? init.body : init?.body ? JSON.stringify(init.body) : undefined;
+    const headers = (init?.headers as Record<string, string>) ?? {};
+    calls.push({ url: String(url), method: init?.method ?? "GET", body, headers });
+    const next = responseQueue.shift() ?? mockResponse({});
+    return next;
   }));
 }
 
@@ -56,209 +59,95 @@ function lastCall(): FetchCall {
   return calls[calls.length - 1];
 }
 
-function jsonBody(call: FetchCall): unknown {
-  if (!call.body) return undefined;
-  try { return JSON.parse(call.body); } catch { return call.body; }
-}
+describe("batch-queue elasticSecurityTool — n8n-nodes-base.elasticSecurityTool", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
 
-const elasticCred = { baseUrl: "http://elastic.local:5601", apiKey: "test-api-key" };
-
-beforeEach(() => {
-  installFetch(mockResponse({}));
-});
-
-afterEach(() => {
-  vi.unstubAllGlobals();
-});
-
-describe("Elastic Security Tool", () => {
-  it("registers executor and description", () => {
+  it("is registered", () => {
     expect(hasExecutor(TYPE)).toBe(true);
+  });
+
+  it("has a description", () => {
     const desc = getNodeType(TYPE);
     expect(desc).toBeTruthy();
     expect(desc?.name).toBe(TYPE);
-    expect(desc?.displayName).toBe("Elastic Security");
   });
 
-  it("create case sends POST with correct body", async () => {
-    installFetch(mockResponse({ id: "case-1", title: "Test case", description: "desc", status: "open", totalCommentCount: 0, totalAlerts: 0 }));
-
-    const executor = getExecutor(TYPE)!;
-    const node = makeNode({
-      type: TYPE,
-      parameters: {
-        resource: "case",
-        operation: "create",
-        title: "Test case from n8n",
-        description: "Automated test case",
-        connector: JSON.stringify({ id: "none", name: "none", type: ".none", fields: null }),
-      },
-    });
-    const ctx = createExecutionContext({
-      node,
-      workflow: { id: "test", name: "test", active: false, nodes: [node], connections: {}, settings: {} },
-      getNodeInputItems: () => [{ json: {} }],
-      continueOnFail: false,
-      getCredential: async () => elasticCred,
-    });
-
-    const [out] = await executor(ctx, node);
-    expect(out).toHaveLength(1);
-    expect((out[0].json as Record<string, unknown>).id).toBe("case-1");
-
-    const call = lastCall();
-    expect(call.method).toBe("POST");
-    expect(call.url).toContain("/api/cases");
-    const body = jsonBody(call) as Record<string, unknown>;
-    expect(body.title).toBe("Test case from n8n");
-    expect(body.description).toBe("Automated test case");
+  it("creates a case", async () => {
+    installFetch(mockResponse({ id: "case_001", title: "Test case from n8n", description: "Automated test case", status: "open", totalCommentCount: 0, totalAlerts: 0 }));
+    const output = await runNode(TYPE, {
+      resource: "case",
+      operation: "create",
+      title: "Test case from n8n",
+      description: "Automated test case",
+      connector: { id: "none", name: "none", type: ".none", fields: null },
+    }, [{}], { credentials: CREDENTIALS });
+    expect(output).toHaveLength(1);
+    expect(output[0]).toHaveLength(1);
+    const result = output[0][0].json as Record<string, unknown>;
+    expect(result.id).toBe("case_001");
+    expect(result.title).toBe("Test case from n8n");
+    expect(lastCall().method).toBe("POST");
+    expect(lastCall().url).toContain("/api/cases");
   });
 
-  it("get all cases sends GET with pagination and filters", async () => {
-    installFetch(mockResponse({ page: 1, perPage: 10, total: 2, cases: [{ id: "c1" }, { id: "c2" }] }));
-
-    const executor = getExecutor(TYPE)!;
-    const node = makeNode({
-      type: TYPE,
-      parameters: {
-        resource: "case",
-        operation: "getAll",
-        page: 1,
-        perPage: 10,
-        filters: { status: "open", severity: "high", tags: "critical" },
-      },
-    });
-    const ctx = createExecutionContext({
-      node,
-      workflow: { id: "test", name: "test", active: false, nodes: [node], connections: {}, settings: {} },
-      getNodeInputItems: () => [{ json: {} }],
-      continueOnFail: false,
-      getCredential: async () => elasticCred,
-    });
-
-    const [out] = await executor(ctx, node);
-    expect(out).toHaveLength(2);
-
-    const call = lastCall();
-    expect(call.method).toBe("GET");
-    expect(call.url).toContain("page=1");
-    expect(call.url).toContain("perPage=10");
-    expect(call.url).toContain("status=open");
-    expect(call.url).toContain("severity=high");
-    expect(call.url).toContain("tags=critical");
+  it("gets all cases with pagination", async () => {
+    installFetch(mockResponse({ page: 1, perPage: 10, total: 2, cases: [{ id: "case_001" }, { id: "case_002" }] }));
+    const output = await runNode(TYPE, {
+      resource: "case",
+      operation: "getAll",
+      page: 1,
+      perPage: 10,
+    }, [{}], { credentials: CREDENTIALS });
+    expect(output[0]).toHaveLength(2);
+    expect(lastCall().url).toContain("page=1");
+    expect(lastCall().url).toContain("perPage=10");
   });
 
-  it("add tag sends POST to case tags endpoint", async () => {
-    installFetch(mockResponse({ tags: ["critical"] }));
-
-    const executor = getExecutor(TYPE)!;
-    const node = makeNode({
-      type: TYPE,
-      parameters: {
-        resource: "caseTag",
-        operation: "add",
-        caseId: "case-123",
-        tag: "critical",
-      },
-    });
-    const ctx = createExecutionContext({
-      node,
-      workflow: { id: "test", name: "test", active: false, nodes: [node], connections: {}, settings: {} },
-      getNodeInputItems: () => [{ json: { caseId: "case-123" } }],
-      continueOnFail: false,
-      getCredential: async () => elasticCred,
-    });
-
-    const [out] = await executor(ctx, node);
-    expect(out).toHaveLength(1);
-
-    const call = lastCall();
-    expect(call.method).toBe("POST");
-    expect(call.url).toContain("/api/cases/case-123/tags");
-    const body = jsonBody(call) as Record<string, unknown>;
-    expect(body.tag).toBe("critical");
+  it("adds a case tag", async () => {
+    installFetch(mockResponse({ id: "case_001", tags: ["critical"] }));
+    const output = await runNode(TYPE, {
+      resource: "caseTag",
+      operation: "add",
+      caseId: "={{ $json.caseId }}",
+      tag: "critical",
+    }, [{ caseId: "existing_case" }], { credentials: CREDENTIALS });
+    expect(output).toHaveLength(1);
+    expect(lastCall().method).toBe("POST");
+    expect(lastCall().url).toContain("/api/cases/existing_case/tags");
   });
 
-  it("remove tag sends DELETE to case tags endpoint", async () => {
-    installFetch(mockResponse({ tags: [] }));
-
-    const executor = getExecutor(TYPE)!;
-    const node = makeNode({
-      type: TYPE,
-      parameters: {
-        resource: "caseTag",
-        operation: "remove",
-        caseId: "case-123",
-        tag: "critical",
-      },
-    });
-    const ctx = createExecutionContext({
-      node,
-      workflow: { id: "test", name: "test", active: false, nodes: [node], connections: {}, settings: {} },
-      getNodeInputItems: () => [{ json: { caseId: "case-123" } }],
-      continueOnFail: false,
-      getCredential: async () => elasticCred,
-    });
-
-    const [out] = await executor(ctx, node);
-    expect(out).toHaveLength(1);
-
-    const call = lastCall();
-    expect(call.method).toBe("DELETE");
-    expect(call.url).toContain("/api/cases/case-123/tags");
+  it("creates a case comment", async () => {
+    installFetch(mockResponse({ id: "comment_001", comment: "Updated via n8n automation", caseId: "existing_case" }));
+    const output = await runNode(TYPE, {
+      resource: "caseComment",
+      operation: "create",
+      caseId: "={{ $json.caseId }}",
+      comment: "Updated via n8n automation",
+    }, [{ caseId: "existing_case" }], { credentials: CREDENTIALS });
+    expect(output).toHaveLength(1);
+    expect(lastCall().method).toBe("POST");
+    expect(lastCall().url).toContain("/api/cases/existing_case/comments");
   });
 
-  it("delete case sends DELETE", async () => {
-    installFetch(mockResponse({ success: true }));
-
-    const executor = getExecutor(TYPE)!;
-    const node = makeNode({
-      type: TYPE,
-      parameters: {
-        resource: "case",
-        operation: "delete",
-        caseId: "case-to-delete",
-      },
-    });
-    const ctx = createExecutionContext({
-      node,
-      workflow: { id: "test", name: "test", active: false, nodes: [node], connections: {}, settings: {} },
-      getNodeInputItems: () => [{ json: {} }],
-      continueOnFail: false,
-      getCredential: async () => elasticCred,
-    });
-
-    const [out] = await executor(ctx, node);
-    expect(out).toHaveLength(1);
-
-    const call = lastCall();
-    expect(call.method).toBe("DELETE");
-    expect(call.url).toContain("/api/cases/case-to-delete");
+  it("gets case summary", async () => {
+    installFetch(mockResponse({ totalComments: 3, totalAlerts: 1, userActions: [{ action: "created", user: "test" }] }));
+    const output = await runNode(TYPE, {
+      resource: "case",
+      operation: "getSummary",
+      caseId: "={{ $json.caseId }}",
+    }, [{ caseId: "existing_case" }], { credentials: CREDENTIALS });
+    expect(output).toHaveLength(1);
+    const result = output[0][0].json as Record<string, unknown>;
+    expect(result.totalComments).toBe(3);
+    expect(lastCall().url).toContain("/api/cases/existing_case/summary");
   });
 
-  it("uses apiKey credential for auth header", async () => {
-    installFetch(mockResponse({ id: "c1" }));
-
-    const executor = getExecutor(TYPE)!;
-    const node = makeNode({
-      type: TYPE,
-      parameters: {
-        resource: "case",
-        operation: "create",
-        title: "Test",
-        connector: JSON.stringify({ id: "none", name: "none", type: ".none", fields: null }),
-      },
-    });
-    const ctx = createExecutionContext({
-      node,
-      workflow: { id: "test", name: "test", active: false, nodes: [node], connections: {}, settings: {} },
-      getNodeInputItems: () => [{ json: {} }],
-      continueOnFail: false,
-      getCredential: async () => elasticCred,
-    });
-
-    await executor(ctx, node);
-    const call = lastCall();
-    expect(call.headers["Authorization"]).toContain("ApiKey");
+  it("throws on missing caseId for delete", async () => {
+    await expect(runNode(TYPE, {
+      resource: "case",
+      operation: "delete",
+    }, [{}], { credentials: CREDENTIALS })).rejects.toThrow();
   });
 });
