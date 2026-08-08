@@ -201,16 +201,27 @@ export function NodePalette({ onAdd }: Props) {
                 <button
                   key={`sem-${it.type}`}
                   type="button"
+                  draggable
+                  onDragStart={(e) => {
+                    e.dataTransfer.setData("application/openflow-node", it.type);
+                    e.dataTransfer.effectAllowed = "move";
+                  }}
                   onClick={() => onAdd(it.type)}
-                  className="flex w-full items-start gap-2 rounded-md px-2 py-1.5 text-left hover:bg-accent/60"
+                  className="flex w-full items-start gap-2.5 rounded-md border border-transparent p-2 text-left transition hover:border-border hover:bg-surface"
                 >
-                  <NodeIcon
-                    name={d?.name ?? it.type}
-                    className={cn("mt-0.5 size-7 shrink-0 rounded-md", accentText[accent])}
-                  />
+                  <span
+                    className={cn(
+                      "mt-0.5 grid size-7 shrink-0 place-items-center rounded",
+                      accentText[accent],
+                    )}
+                  >
+                    <NodeIcon name={d?.icon ?? "Box"} className="size-4" />
+                  </span>
                   <span className="min-w-0 flex-1">
                     <span className="flex items-center gap-1.5">
-                      <span className="truncate text-sm font-medium">{it.displayName}</span>
+                      <span className="truncate text-[13px] font-medium text-foreground">
+                        {it.displayName}
+                      </span>
                       {it.rankTier && (
                         <Badge
                           variant="outline"
@@ -223,7 +234,7 @@ export function NodePalette({ onAdd }: Props) {
                         </Badge>
                       )}
                     </span>
-                    <span className="line-clamp-2 text-[11px] text-muted-foreground">
+                    <span className="line-clamp-2 text-[11px] leading-snug text-muted-foreground">
                       {it.description || it.type}
                     </span>
                   </span>
@@ -270,16 +281,27 @@ export function NodePalette({ onAdd }: Props) {
                         <button
                           key={d.name}
                           type="button"
+                          draggable
+                          onDragStart={(e) => {
+                            e.dataTransfer.setData("application/openflow-node", d.name);
+                            e.dataTransfer.effectAllowed = "move";
+                          }}
                           onClick={() => onAdd(d.name)}
-                          className="flex w-full items-start gap-2 rounded-md px-2 py-1.5 text-left hover:bg-accent/60"
+                          className="flex w-full items-start gap-2.5 rounded-md border border-transparent p-2 text-left transition hover:border-border hover:bg-surface"
                         >
-                          <NodeIcon
-                            name={d.name}
-                            className={cn("mt-0.5 size-7 shrink-0 rounded-md", accentText[accent])}
-                          />
-                          <span className="min-w-0 flex-1">
-                            <span className="block truncate text-sm font-medium">{d.displayName}</span>
-                            <span className="line-clamp-2 text-[11px] text-muted-foreground">
+                          <span
+                            className={cn(
+                              "mt-0.5 grid size-7 shrink-0 place-items-center rounded",
+                              accentText[accent],
+                            )}
+                          >
+                            <NodeIcon name={d.icon} className="size-4" />
+                          </span>
+                          <span className="min-w-0">
+                            <span className="block truncate text-[13px] font-medium text-foreground">
+                              {d.displayName}
+                            </span>
+                            <span className="block text-[11px] leading-snug text-muted-foreground">
                               {d.description}
                             </span>
                           </span>
@@ -291,8 +313,16 @@ export function NodePalette({ onAdd }: Props) {
               </Collapsible>
             );
           })}
+          {!grouped.length && (
+            <p className="px-2 py-4 text-sm text-muted-foreground">No nodes match “{query}”.</p>
+          )}
         </div>
       </div>
+
+      <p className="border-t border-border p-3 text-[11px] leading-snug text-muted-foreground">
+        Drag onto the canvas, or click to place. Unsupported imported types keep their parameters as
+        placeholder nodes.
+      </p>
     </aside>
   );
 }
