@@ -1,13 +1,21 @@
-# OpenFlow toolbox — agentic scripting, git, and catalog RAG reindex.
-# Not the API server. Use:
-#   docker compose --profile tools up -d toolbox
-#   docker compose exec toolbox bash
-#   docker compose run --rm toolbox catalog-reindex
+# OpenFlow toolbox — git/shell tools + baked-in app for catalog RAG reindex.
+# Shares /data/workspace with api for agent clones (that dir starts empty).
 #
-# Shares /data/workspace with the api service for clone/script workdirs.
+#   docker compose up -d toolbox
+#   docker compose exec toolbox bash
+#   docker compose exec toolbox catalog-reindex
+#   docker compose exec toolbox catalog-reindex-hash
+
+FROM node:22-bookworm-slim AS deps
+RUN apt-get update \
+  && apt-get install -y --no-install-recommends python3 make g++ \
+  && rm -rf /var/lib/apt/lists/*
+WORKDIR /app
+COPY package.json package-lock.json ./
+COPY scripts/postinstall-prisma.mjs scripts/postinstall-prisma.mjs
+RUN npm ci
 
 FROM node:22-bookworm-slim
-
 RUN apt-get update \
   && apt-get install -y --no-install-recommends \
     bash \
@@ -32,20 +40,32 @@ RUN apt-get update \
   && ln -sf /usr/bin/fdfind /usr/local/bin/fd \
   && rm -rf /var/lib/apt/lists/*
 
-WORKDIR /workspace
+WORKDIR /app
 
-# Lightweight helpers for operators (no full app install required for shell work).
+# App source + deps (Dokploy has no reliable host bind-mount of the monorepo)
+COPY --from=deps /app/node_modules ./node_modules
+COPY package.json package-lock.json ./
+COPY prisma ./prisma
+COPY prisma.config.ts ./
+COPY tsconfig.json ./
+COPY src ./src
+COPY docs/specs ./docs/specs
+COPY scripts ./scripts
+
 COPY scripts/toolbox/ /usr/local/lib/openflow-toolbox/
 COPY scripts/toolbox-entrypoint.sh /usr/local/bin/openflow-toolbox
 RUN chmod +x /usr/local/bin/openflow-toolbox \
   && ln -sf /usr/local/bin/openflow-toolbox /usr/local/bin/catalog-reindex \
+  && ln -sf /usr/local/bin/openflow-toolbox /usr/local/bin/catalog-reindex-hash \
   && ln -sf /usr/local/bin/openflow-toolbox /usr/local/bin/catalog-eval \
-  && mkdir -p /data/workspace /data/catalog
+  && mkdir -p /data/workspace /data/catalog \
+  && npx prisma generate
 
-ENV NODE_ENV=development \
+ENV NODE_ENV=production \
+    OPENFLOW_APP_DIR=/app \
     OPENFLOW_WORKSPACE_DIR=/data/workspace \
     OPENFLOW_CATALOG_RAG_ENABLED=true \
-    PATH="/workspace/node_modules/.bin:${PATH}"
+    PATH="/app/node_modules/.bin:${PATH}"
 
 VOLUME ["/data/workspace", "/data/catalog"]
 

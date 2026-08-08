@@ -2,10 +2,9 @@
 #   docker compose up -d
 #   open http://localhost:3000
 #
-# Toolbox (git/shell/RAG reindex) — optional profile:
-#   docker compose --profile tools up -d
+# Toolbox (git/shell/RAG reindex) starts with the stack:
 #   docker compose exec toolbox bash
-#   docker compose run --rm toolbox catalog-reindex
+#   docker compose exec toolbox catalog-reindex-hash
 #
 # No .env required. Optional: cp .env.example .env and edit.
 # Production: docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
@@ -76,23 +75,21 @@ services:
       redis:
         condition: service_healthy
 
-  # Optional toolbox: git, bash, python, jq, rg, catalog reindex/eval.
-  #   docker compose --profile tools up -d toolbox
-  #   docker compose exec toolbox bash
-  #   docker compose run --rm toolbox catalog-reindex
+  # Toolbox: git/bash/python + baked-in app for catalog RAG.
+  # App lives at /app (in the image). /data/workspace is agent scratch (shared with api).
   toolbox:
-    profiles: ["tools"]
     build:
       context: .
       dockerfile: Dockerfile.toolbox
     image: openflow-toolbox:local
-    working_dir: /workspace
+    working_dir: /app
     env_file:
       - path: .env
         required: false
     environment:
       DATABASE_URL: postgresql://openflow:openflow@db:5432/openflow
       REDIS_URL: redis://redis:6379
+      OPENFLOW_APP_DIR: /app
       OPENFLOW_WORKSPACE_DIR: /data/workspace
       OPENFLOW_CATALOG_RAG_ENABLED: ${OPENFLOW_CATALOG_RAG_ENABLED:-true}
       OPENFLOW_CATALOG_EMBED_API_KEY: ${OPENFLOW_CATALOG_EMBED_API_KEY:-${OPENFLOW_ASSISTANT_API_KEY:-}}
@@ -106,9 +103,7 @@ services:
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
       OPENAI_BASE_URL: ${OPENAI_BASE_URL:-}
     volumes:
-      # App source for catalog:reindex / factory scripts
-      - .:/workspace
-      # Shared agent workspace with api (clones, patches, scripts)
+      # Agent scratch only — NOT the OpenFlow source tree
       - workspace-data:/data/workspace
       - catalog-data:/data/catalog
     depends_on:

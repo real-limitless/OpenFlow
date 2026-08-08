@@ -7,7 +7,7 @@ New to the project? Start with [onboarding.md](onboarding.md) (guided TUI wizard
 | Goal | Command |
 | --- | --- |
 | Try OpenFlow | `docker compose up -d` → http://localhost:3000 → **Run sample workflow** |
-| Toolbox (git/shell/RAG) | `docker compose --profile tools up -d toolbox` → [toolbox.md](toolbox.md) |
+| Toolbox (git/shell/RAG) | included in `docker compose up -d` → [toolbox.md](toolbox.md) |
 | One-line TUI install | `curl -fsSL …/scripts/get-openflow.sh \| bash` |
 | Non-interactive try-out | `…/get-openflow.sh \| bash -s -- --yes` |
 | Install with auth (owner setup) | `…/get-openflow.sh \| bash -s -- --yes --mode production` |
@@ -53,10 +53,10 @@ curl -s http://localhost:3000/health/ready
 docker compose down          # keep volumes
 docker compose down -v       # wipe database + secrets (destructive)
 
-# Optional toolbox (git/shell/catalog RAG reindex) — profile: tools
-docker compose --profile tools up -d toolbox
+# Toolbox (git/shell/catalog RAG) — starts with the stack
+docker compose up -d --build toolbox
 docker compose exec toolbox bash
-docker compose run --rm toolbox catalog-reindex-hash
+docker compose exec toolbox catalog-reindex-hash
 # see docs/toolbox.md and docs/catalog-rag.md
 ```
 

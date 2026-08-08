@@ -30,8 +30,6 @@ services:
       - "127.0.0.1:6379:6379"
     restart: unless-stopped
 
-  # Toolbox is optional in prod (profile: tools). Prefer:
-  #   docker compose -f docker-compose.yml -f docker-compose.prod.yml --profile tools up -d toolbox
   toolbox:
     restart: unless-stopped
     environment:

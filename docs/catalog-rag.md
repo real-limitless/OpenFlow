@@ -74,13 +74,13 @@ Node palette: multi-word / longer queries call semantic suggest and show a **Sug
 
 ## Docker toolbox
 
-Compose ships a **toolbox** profile (git, bash, python, jq, rg, `psql`) that shares `/data/workspace` with `api` and can rebuild the catalog index:
+Compose includes a **toolbox** service (no profile). App is baked at `/app`; `/data/workspace` is empty agent scratch shared with `api`.
 
 ```sh
-docker compose --profile tools up -d toolbox
-docker compose run --rm toolbox catalog-reindex        # API embeddings
-docker compose run --rm toolbox catalog-reindex-hash   # offline
-docker compose run --rm toolbox catalog-eval
+docker compose up -d --build toolbox
+docker compose exec toolbox catalog-reindex        # API embeddings
+docker compose exec toolbox catalog-reindex-hash   # offline
+docker compose exec toolbox catalog-eval
 ```
 
 See [toolbox.md](toolbox.md). The `db` service uses `pgvector/pgvector:pg16` so the optional `vector` column / HNSW index can activate.

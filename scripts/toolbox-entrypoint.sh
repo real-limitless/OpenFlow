@@ -1,48 +1,67 @@
 #!/usr/bin/env bash
 # OpenFlow toolbox entrypoint.
-# Usage:
-#   openflow-toolbox wait              # stay up for docker compose exec
-#   openflow-toolbox bash              # interactive shell
-#   openflow-toolbox catalog-reindex   # npm run catalog:reindex
-#   openflow-toolbox catalog-reindex-hash
-#   openflow-toolbox catalog-eval
-#   openflow-toolbox help
+#   catalog-reindex | catalog-reindex-hash | catalog-eval | bash | wait | help
+#
+# App code lives in OPENFLOW_APP_DIR (/app) baked into the image.
+# OPENFLOW_WORKSPACE_DIR (/data/workspace) is shared agent scratch (starts empty).
 
 set -euo pipefail
 
+APP_DIR="${OPENFLOW_APP_DIR:-/app}"
 WORKSPACE="${OPENFLOW_WORKSPACE_DIR:-/data/workspace}"
 mkdir -p "$WORKSPACE" /data/catalog 2>/dev/null || true
 
+# Prefer baked-in app; fall back to /workspace bind-mount (local compose override)
+resolve_app_dir() {
+  if [[ -f "${APP_DIR}/package.json" && -d "${APP_DIR}/src/lib/catalog" ]]; then
+    echo "$APP_DIR"
+    return
+  fi
+  if [[ -f /workspace/package.json && -d /workspace/src/lib/catalog ]]; then
+    echo /workspace
+    return
+  fi
+  echo ""
+}
+
 banner() {
+  local app
+  app="$(resolve_app_dir)"
   cat <<EOF
 OpenFlow toolbox
-  workspace : ${WORKSPACE}
+  app       : ${app:-"(missing — rebuild toolbox image)"}
+  workspace : ${WORKSPACE}   ← agent clones/scripts (often empty until used)
   cwd       : $(pwd)
   database  : ${DATABASE_URL:-"(unset)"}
   catalog   : OPENFLOW_CATALOG_RAG_ENABLED=${OPENFLOW_CATALOG_RAG_ENABLED:-on}
 
 Commands:
-  wait | sleep          Keep container alive (compose default)
-  bash | sh             Interactive shell
-  catalog-reindex       Embed + upsert node catalog (API embeddings when key set)
-  catalog-reindex-hash  Offline hash embeddings (CI / no API key)
-  catalog-eval          Golden-intent ranking checks
-  npm … / npx …         Forward to package scripts when /workspace is the app
-  help                  This text
+  wait | sleep              Keep container alive
+  bash | sh                 Interactive shell (starts in app dir)
+  catalog-reindex           Embed + upsert node catalog
+  catalog-reindex-hash      Offline hash embeddings
+  catalog-eval              Golden-intent checks
+  help
+
+Note: /data/workspace is NOT the OpenFlow source tree.
+      Catalog scripts run from the baked-in app at /app.
 EOF
 }
 
 run_in_app() {
-  if [[ ! -f /workspace/package.json ]]; then
-    echo "error: /workspace/package.json missing — mount the OpenFlow repo:" >&2
-    echo "  docker compose run --rm -v \"\$PWD:/workspace\" toolbox $*" >&2
+  local app
+  app="$(resolve_app_dir)"
+  if [[ -z "$app" ]]; then
+    echo "error: OpenFlow app not found in ${APP_DIR} or /workspace" >&2
+    echo "Rebuild the toolbox image (includes src + scripts + node_modules)." >&2
     exit 1
   fi
-  if [[ ! -d /workspace/node_modules ]]; then
-    echo "[toolbox] node_modules missing — running npm ci (first run may take a while)…"
-    (cd /workspace && npm ci)
+  if [[ ! -d "${app}/node_modules" ]]; then
+    echo "[toolbox] node_modules missing in ${app} — running npm ci…"
+    (cd "$app" && npm ci && npx prisma generate)
   fi
-  (cd /workspace && "$@")
+  echo "[toolbox] running in ${app}: $*"
+  (cd "$app" && "$@")
 }
 
 cmd="${1:-wait}"
@@ -54,11 +73,16 @@ case "$cmd" in
     ;;
   wait|sleep|idle)
     banner
-    echo "[toolbox] idle — docker compose exec toolbox bash"
+    echo "[toolbox] idle — exec: docker compose exec toolbox bash"
+    echo "[toolbox] reindex: docker compose exec toolbox catalog-reindex-hash"
     exec sleep infinity
     ;;
   bash|sh)
     banner
+    app="$(resolve_app_dir)"
+    if [[ -n "$app" ]]; then
+      cd "$app"
+    fi
     exec bash "$@"
     ;;
   catalog-reindex|reindex)
@@ -71,11 +95,13 @@ case "$cmd" in
     run_in_app npx tsx scripts/catalog-eval.ts "$@"
     ;;
   npm|npx|node|python|python3|git|jq|rg|curl)
-    # Allow common tools as the command itself
+    app="$(resolve_app_dir)"
+    if [[ -n "$app" && -d "$app" ]]; then
+      cd "$app"
+    fi
     exec "$cmd" "$@"
     ;;
   *)
-    # Arbitrary command (compose run toolbox <cmd>)
     exec "$cmd" "$@"
     ;;
 esac
