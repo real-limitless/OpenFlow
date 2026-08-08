@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/collapsible";
 import { NodeIcon, accentFor } from "./BaseNode";
 import { cn } from "@/lib/utils";
+import { apiFetch } from "@/lib/auth/client";
 
 interface Props {
   onAdd: (type: string) => void;
@@ -112,19 +113,30 @@ export function NodePalette({ onAdd }: Props) {
     let cancelled = false;
     setSemanticLoading(true);
     const t = window.setTimeout(() => {
-      void fetch("/api/v1/catalog/suggest-nodes", {
+      void apiFetch("/api/v1/catalog/suggest-nodes", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ intent: q, limit: 12 }),
       })
         .then(async (res) => {
           if (!res.ok) throw new Error(String(res.status));
-          return res.json() as Promise<{ mode?: string; items?: SuggestItem[] }>;
+          return res.json() as Promise<{
+            mode?: string;
+            items?: SuggestItem[];
+            note?: string;
+            indexed?: boolean;
+          }>;
         })
         .then((data) => {
           if (cancelled) return;
-          setSemantic(Array.isArray(data.items) ? data.items : []);
-          setSemanticMode(data.mode ?? "hybrid");
+          const items = Array.isArray(data.items) ? data.items : [];
+          setSemantic(items);
+          // Treat empty keyword-only cold start as unavailable for badge clarity
+          if (items.length === 0 && data.mode === "keyword" && data.indexed === false) {
+            setSemanticMode(null);
+          } else {
+            setSemanticMode(data.mode ?? (items.length ? "hybrid" : null));
+          }
         })
         .catch(() => {
           if (!cancelled) {
