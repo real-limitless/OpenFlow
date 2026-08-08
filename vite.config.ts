@@ -12,7 +12,7 @@ import tsconfigPaths from "vite-tsconfig-paths";
  * unless the feature is used. Do NOT list core deps like `pg` / `ioredis` here —
  * the Docker runner image does not install a full node_modules tree.
  */
-const NODE_EXTERNALS = ["mqtt", "@elastic/elasticsearch", "amqplib", "kafkajs"];
+const NODE_EXTERNALS = ["mqtt", "@elastic/elasticsearch", "amqplib", "kafkajs", "pyodide"];
 
 export default defineConfig(({ command }) => {
   const plugins: PluginOption[] = [

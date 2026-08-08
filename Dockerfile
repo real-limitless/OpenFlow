@@ -38,6 +38,8 @@ COPY scripts/docker-entrypoint.sh /usr/local/bin/openflow-entrypoint.sh
 RUN chmod +x /usr/local/bin/openflow-entrypoint.sh
 COPY --from=build /app/.output ./.output
 COPY --from=deps /app/node_modules/isolated-vm ./node_modules/isolated-vm
+# Code node Python (Pyodide WASM runtime + data files)
+COPY --from=deps /app/node_modules/pyodide ./node_modules/pyodide
 # FTP/SFTP runtime clients (may be externalized by Nitro)
 COPY --from=deps /app/node_modules/basic-ftp ./node_modules/basic-ftp
 COPY --from=deps /app/node_modules/ssh2 ./node_modules/ssh2

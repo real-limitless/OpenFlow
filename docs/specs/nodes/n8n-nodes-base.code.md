@@ -4,7 +4,7 @@ displayName: Code
 category: Transform
 versions: [1, 2]
 priority: high
-status: specced
+status: implemented
 ---
 
 # Code
@@ -95,12 +95,13 @@ Consume the upstream `main` item list: `{ json, binary?, pairedItem? }[]`.
 - Prefer bracket access (`item["json"]["field"]`), not Pyodide-style attribute sugar (**documented**).
 - Insecure built-ins denied by default; library imports depend on runner allowlist / hosting (**documented**). Cloud Python: no library imports (**documented**).
 - `print()` for debug (**documented** notice text).
+- **OpenFlow:** restricted host `python3` subprocess (`code-python-native.ts`); no `__import__` / `open` / `exec` / `eval`; timeout + stdout cap.
 
 #### Python Pyodide legacy (`language=python`)
 
 - WebAssembly CPython port; **legacy / removed on product v2** (**documented**).
 - Full `_variable` / `_method()` helper style analogous to JS `$` helpers when supported (**documented**).
-- OpenFlow may refuse this language with a clear error, or map only if a sandbox is provided later (**inferred** product choice — mark gap).
+- **OpenFlow:** Pyodide in-process (`code-python-pyodide.ts`); helpers `_items`, `_item`, `_json`, `_input.all/first/last/item`. No micropip / network installs in v1.
 
 ### Built-in helpers (JavaScript Code node)
 
@@ -334,7 +335,7 @@ If OpenFlow ships JS-only initially, skip with documented gap and still accept t
 ## OpenFlow mapping
 
 - **Definition group:** `transform` / `core`
-- **Executor file:** `src/lib/engine/executors/code.ts`
+- **Executor file:** `src/lib/engine/executors/code.ts` (+ `code-python-native.ts`, `code-python-pyodide.ts`, `code-result.ts`)
 - **Definition:** `src/lib/nodes/definitions/core.ts` (`n8n-nodes-base.code`)
-- **SDK:** `defineNode` + native `ExecutionContext` only; sandboxed JS runner; optional Python later
+- **SDK:** `defineNode` + native `ExecutionContext` only; sandboxed JS (`isolated-vm`); `pythonNative` via host python3; `python` via Pyodide
 - **Do not** load third-party node packages

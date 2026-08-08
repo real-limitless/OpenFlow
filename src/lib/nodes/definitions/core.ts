@@ -319,7 +319,7 @@ export const code: INodeTypeDescription = {
   category: "Transform",
   group: ["transform"],
   version: 2,
-  description: "Runs custom JavaScript against the incoming items.",
+  description: "Runs custom JavaScript or Python against the incoming items.",
   defaults: { name: "Code" },
   inputs: ["main"],
   outputs: ["main"],
@@ -346,6 +346,7 @@ export const code: INodeTypeDescription = {
       options: [
         { name: "JavaScript", value: "javaScript" },
         { name: "Python", value: "pythonNative" },
+        { name: "Python (legacy Pyodide)", value: "python" },
       ],
     },
     {
@@ -361,13 +362,15 @@ export const code: INodeTypeDescription = {
       displayName: "Python",
       name: "pythonCode",
       type: "string",
-      default: "# for item in _items:\n#   pass",
+      default:
+        'return [{"json": {"n": i["json"].get("x")}} for i in _items]',
       noDataExpression: true,
       typeOptions: { editor: "code", rows: 16 },
       displayOptions: { show: { language: ["pythonNative", "python"] } },
     },
     {
-      displayName: "Code runs in a sandbox. Network access is disabled by default in this build.",
+      displayName:
+        "Code runs in a sandbox. Python (native) uses restricted host python3; legacy Python uses Pyodide. Network/imports disabled by default.",
       name: "notice",
       type: "notice",
       default: "",
