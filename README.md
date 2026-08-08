@@ -53,14 +53,16 @@ The **Install wizard** walks through path choice, prerequisites, `.env` / `CREDE
 | --- | --- |
 | <img src="website/assets/screenshots/app-ansible-credentials.png" alt="Ansible SSH credential fields" width="420" /> | <img src="website/assets/screenshots/app-ansible-architecture.png" alt="OpenFlow and ansible-flow-mcp architecture" width="420" /> |
 
-More product shots live under [`website/assets/screenshots/`](website/assets/screenshots/). Regenerate:
+More product shots live under [`website/assets/screenshots/`](website/assets/screenshots/). Regenerate with **Playwright against a live app**:
 
 ```sh
-# Product UI (app must be running)
-npm run screenshots
+npx playwright install chromium
 
-# Ansible feature illustrations (no app required)
-npm run screenshots:ansible
+# General product UI
+APP_URL=https://your-openflow.example npm run screenshots
+
+# Ansible gallery / form / playbook / credentials (real editor)
+APP_URL=https://your-openflow.example npm run screenshots:ansible
 ```
 
 ## Quick start (Docker)
@@ -172,8 +174,8 @@ Or step through setup interactively: **`npm run tui`**.
 | `npm run docker:up` | Full stack in Docker |
 | `npm run db:migrate` | Prisma migrate (dev) |
 | `npm run db:studio` | Prisma Studio |
-| `npm run screenshots` | Capture product / marketing PNGs (Playwright) |
-| `npm run screenshots:ansible` | Ansible feature illustration PNGs |
+| `npm run screenshots` | Capture product / marketing PNGs (Playwright → live app) |
+| `npm run screenshots:ansible` | Ansible gallery/form/playbook/creds (Playwright → live app) |
 
 Copy `.env.example` → `.env` if you skip `setup` (it generates `CREDENTIALS_KEY` for you).
 
