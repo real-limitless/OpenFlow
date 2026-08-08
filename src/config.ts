@@ -207,7 +207,7 @@ export const config = {
     get backend(): "builtin" | "opencode" {
       return process.env.OPENFLOW_ASSISTANT_BACKEND === "opencode" ? "opencode" : "builtin";
     },
-    maxSteps: Math.max(1, parseInt(process.env.OPENFLOW_ASSISTANT_MAX_STEPS ?? "24", 10) || 24),
+    maxSteps: Math.max(1, parseInt(process.env.OPENFLOW_ASSISTANT_MAX_STEPS ?? "48", 10) || 48),
     llm: {
       get baseUrl() {
         return (

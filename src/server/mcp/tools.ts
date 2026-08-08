@@ -119,7 +119,8 @@ export const OPENFLOW_MCP_TOOLS: McpToolDef[] = [
   },
   {
     name: "get_workflow",
-    description: "Get the current workflow graph: nodes, connections, settings.",
+    description:
+      "Get the current workflow graph: nodes (with parameters), connections, settings. Use before large edits and as a Definition-of-Done audit: confirm a trigger exists, main path is wired, required params are non-empty, AI model edges exist, credentials bound. Do not claim done or execute until this looks runnable.",
     inputSchema: {
       type: "object",
       properties: { workflowId: workflowIdProp },
@@ -130,7 +131,7 @@ export const OPENFLOW_MCP_TOOLS: McpToolDef[] = [
   {
     name: "list_node_types",
     description:
-      "Keyword search the OpenFlow node type catalog. Prefer suggest_nodes for natural-language intents. Returns type name, displayName, description.",
+      "Keyword search the OpenFlow node type catalog. Returns type name, displayName, description, inputs/outputs only — NOT full parameter schema. Prefer suggest_nodes for NL intents. After picking a type, always call get_node_type before configuring.",
     inputSchema: {
       type: "object",
       properties: {
@@ -144,7 +145,7 @@ export const OPENFLOW_MCP_TOOLS: McpToolDef[] = [
   {
     name: "suggest_nodes",
     description:
-      'Which OpenFlow node should I use?" — semantic catalog RAG. Call BEFORE add_node for capability intents. Examples: intent="clone a git repository" → openflow-node-base.git; "list GitHub issues" → github; "send email smtp" → emailSend. Domain/core rank above executeCommand (shell still returned, tier shell-fallback). Each hit includes type, rankTier, reason, usageSnippet, whenToUse. Then get_node_type(type) and add_node.',
+      'Which OpenFlow node should I use?" — semantic catalog RAG. Call BEFORE add_node for capability intents. Examples: intent="clone a git repository" → openflow-node-base.git; "list GitHub issues" → github; "send email smtp" → emailSend. Domain/core rank above executeCommand (shell still returned, tier shell-fallback). Hits include type, rankTier, reason, usageSnippet, whenToUse — still call get_node_type(type) for full properties/credentials, then add_node + update_node.',
     inputSchema: {
       type: "object",
       properties: {
@@ -166,7 +167,8 @@ export const OPENFLOW_MCP_TOOLS: McpToolDef[] = [
   },
   {
     name: "get_node_type",
-    description: "Get full parameter schema and defaults for one node type string.",
+    description:
+      "Authoritative node schema for one type string: properties (name, type, default, required, options, displayOptions), credentials, inputs/outputs, defaults. ALWAYS call before update_node. Drive parameters keys exactly from properties[].name; honor required and displayOptions (e.g. fields shown only for operation=clone). Schema is pull-based — not auto-injected.",
     inputSchema: {
       type: "object",
       properties: {
@@ -182,7 +184,8 @@ export const OPENFLOW_MCP_TOOLS: McpToolDef[] = [
   },
   {
     name: "add_node",
-    description: "Add a node to the workflow canvas. Returns the created node name.",
+    description:
+      "Add a node shell to the canvas (type, optional name/position only). Does NOT accept parameters — defaults only. Immediately after: update_node with parameters/credentials from get_node_type. Returns created node name. Never batch bare add_node calls and configure later.",
     inputSchema: {
       type: "object",
       properties: {
@@ -199,7 +202,7 @@ export const OPENFLOW_MCP_TOOLS: McpToolDef[] = [
   {
     name: "update_node",
     description:
-      "Update a node: merge parameters, set credentials by id/name, notes, disabled, or position.",
+      "Configure a node: merge parameters, bind credentials by id/name, notes, disabled, position. Required after almost every add_node. Parameter keys must match get_node_type properties[].name (e.g. operation, repository, clonePath, url, command, model, text, jsCode). credentials map: { \"openAiApi\": { \"id\": \"…\", \"name\": \"…\" } }.",
     inputSchema: {
       type: "object",
       properties: {
@@ -284,7 +287,8 @@ export const OPENFLOW_MCP_TOOLS: McpToolDef[] = [
   },
   {
     name: "execute_workflow",
-    description: "Run the current workflow. Returns executionId; poll get_execution for results.",
+    description:
+      "Run the current workflow. Needs a trigger (e.g. manualTrigger) and a configured connected graph — audit with get_workflow first. Returns executionId; poll get_execution for results and fix from runData on failure.",
     inputSchema: {
       type: "object",
       properties: { workflowId: workflowIdProp },
@@ -294,7 +298,8 @@ export const OPENFLOW_MCP_TOOLS: McpToolDef[] = [
   },
   {
     name: "get_execution",
-    description: "Get execution status and runData for an executionId.",
+    description:
+      "Get execution status and per-node runData for an executionId. On error, read the failing node output, update_node/reconnect, re-execute.",
     inputSchema: {
       type: "object",
       properties: { executionId: { type: "string" } },
@@ -319,7 +324,7 @@ export const OPENFLOW_MCP_TOOLS: McpToolDef[] = [
   {
     name: "list_credentials",
     description:
-      "List credential ids/names/types (never secrets). Use ids when setting node credentials.",
+      "List credential ids/names/types (never secrets). Match type to get_node_type.credentials, then update_node credentials: { \"<slot>\": { \"id\", \"name\" } }. Never echo secret values.",
     inputSchema: {
       type: "object",
       properties: {
@@ -333,7 +338,7 @@ export const OPENFLOW_MCP_TOOLS: McpToolDef[] = [
   {
     name: "list_credential_types",
     description:
-      "List credential type schemas (field keys/labels) for create_credential. Requires openflow:credentials.",
+      "List credential type schemas (field keys/labels) for create_credential. Call after get_node_type shows required credentials and list_credentials has no match. Requires openflow:credentials.",
     inputSchema: {
       type: "object",
       properties: {

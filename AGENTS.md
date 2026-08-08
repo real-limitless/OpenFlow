@@ -38,6 +38,24 @@ Full policy: `docs/clean-room.md`, `docs/sdk/NON_GOALS.md`, `docs/sdk/OVERVIEW.m
 Pasteable prompts: `docs/prompts/01-spec-from-public-docs.md`, `docs/prompts/02-implement-from-spec.md`.  
 Factory batches: `scripts/factory/README.md`.
 
+## Editor workflow assistant (chatbot)
+
+Right-rail / MCP assistant that **builds and runs workflows** via OpenFlow MCP tools (not host shell).
+
+| Piece | Path |
+| --- | --- |
+| System prompt (builtin + OpenCode inject) | `src/server/assistant/system-prompt.ts` |
+| OpenCode agent prompts | `.opencode/assistant/prompts/` |
+| OpenCode skill / recipes | `.opencode/assistant/skills/openflow-workflow/SKILL.md` |
+| Assistant AGENTS | `.opencode/assistant/AGENTS.md` |
+| Docs | `docs/assistant.md`, `docs/mcp.md` |
+
+When changing assistant behavior, update **system-prompt.ts** and the OpenCode skill/prompts/AGENTS together so builtin and opencode backends stay aligned.
+
+**Operator manual:** `.opencode/assistant/AGENTS.md` — schema is pull-based (`get_node_type`); `add_node` is shell-only (always `update_node`); every runnable graph needs a trigger; DoD audit before execute.
+
+Capability bar: multi-step graphs (git/HTTP/code/merge), AI clusters (`chainLlm` / `agent` + `lmChat*`), credential bind by id, `execute_workflow` + `get_execution` debug, and data-flow fixes (Merge when chain drops fields; Code has no `$('Node')`).
+
 ## Node pipeline
 
 ```

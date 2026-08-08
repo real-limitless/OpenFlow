@@ -81,7 +81,7 @@ async function handleRpc(
           capabilities: { tools: { listChanged: false } },
           serverInfo: { name: "openflow", version: "1.0.0" },
           instructions:
-            "OpenFlow workflow MCP. Use list_workflows / open_workflow, then canvas tools (get_workflow, add_node, connect_nodes, execute_workflow). Never invent node type strings. For capability intents call suggest_nodes first (semantic RAG catalog), then get_node_type, then add_node. Prefer domain OpenFlow nodes (git, github, httpRequest, emailSend, …) before custom shell/scripts; Execute Command stays available but ranked low when a catalog node fits.",
+            "OpenFlow workflow MCP — build runnable graphs end-to-end. Schema is pull-based: suggest_nodes/list_node_types discover types; get_node_type returns full properties/credentials (ALWAYS before configure). add_node creates a shell only (no parameters arg) — immediately update_node with required fields from the schema, then connect_nodes. Every runnable workflow needs a trigger (manualTrigger default). Ritual: get_workflow → trigger → per step (get_node_type → add_node → update_node → connect) → list_credentials bind by id → get_workflow audit → execute_workflow → get_execution → fix. Prefer openflow-node-base.* / openflow-node-langchain.*. Domain nodes before executeCommand. chainLlm returns {output} only — Merge combineByPosition before Code; Code has $input/$json only. Never echo secrets. Never leave bare unconfigured nodes.",
         });
       case "notifications/initialized":
       case "notifications/cancelled":

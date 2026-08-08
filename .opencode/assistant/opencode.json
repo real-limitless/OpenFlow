@@ -12,7 +12,7 @@
   "agent": {
     "openflow-assistant": {
       "mode": "primary",
-      "description": "OpenFlow workflow canvas assistant — edit nodes only via openflow MCP tools",
+      "description": "OpenFlow workflow canvas assistant — multi-step build/run via openflow MCP (git, AI chains, credentials, execute/debug)",
       "prompt": "{file:./prompts/openflow-assistant.txt}",
       "permission": {
         "edit": "deny",
