@@ -16,6 +16,11 @@ import {
   useExecutionEntries,
   type ExecutionLayoutMode,
 } from "@/components/editor/execution";
+import {
+  mergeNodeSampleData,
+  resolveIncomingItems,
+  type SampleItem,
+} from "@/lib/editor/sample-data";
 
 function readStoredLayout(): ExecutionLayoutMode {
   if (typeof window === "undefined") return "list";
@@ -44,11 +49,28 @@ export function DataPanel({ runData }: { runData?: ExecutionRunData | null }) {
   const hasRunData = entries.length > 0;
   const stats = useMemo(() => executionStats(entries), [entries]);
 
+  const inputItems = useMemo((): SampleItem[] => {
+    if (!selected) return [];
+    const nodeData = mergeNodeSampleData(workflow.pinData, runData);
+    return resolveIncomingItems(workflow.connections, selected, nodeData, runData);
+  }, [selected, workflow.pinData, workflow.connections, runData]);
+
+  const hasInput = inputItems.length > 0;
+  const selectedOutput = selected ? runData?.[selected] : undefined;
+
   const columns = useMemo(() => {
     const keys = new Set<string>();
     (pinned ?? []).forEach((item) => Object.keys(item.json ?? {}).forEach((k) => keys.add(k)));
     return [...keys];
   }, [pinned]);
+
+  const inputColumns = useMemo(() => {
+    const keys = new Set<string>();
+    inputItems.forEach((item) => Object.keys(item.json ?? {}).forEach((k) => keys.add(k)));
+    return [...keys];
+  }, [inputItems]);
+
+  const defaultDetailTab = hasInput ? "input" : pinned?.length ? "table" : selectedOutput ? "output" : "table";
 
   useEffect(() => {
     if (hasRunData) {
@@ -171,16 +193,23 @@ export function DataPanel({ runData }: { runData?: ExecutionRunData | null }) {
                   </span>
                 </div>
               )}
-              <Tabs defaultValue="table" className="flex min-h-0 flex-1 flex-col">
+              <Tabs
+                key={`${selected}-${defaultDetailTab}`}
+                defaultValue={defaultDetailTab}
+                className="flex min-h-0 flex-1 flex-col"
+              >
                 <div className="flex shrink-0 items-center gap-2 px-3 py-2">
                   <TabsList className="h-8">
+                    <TabsTrigger value="input" className="h-6 text-[12px]">
+                      Input{hasInput ? ` (${inputItems.length})` : ""}
+                    </TabsTrigger>
                     <TabsTrigger value="table" className="h-6 text-[12px]">
-                      Table
+                      Pin
                     </TabsTrigger>
                     <TabsTrigger value="json" className="h-6 text-[12px]">
-                      JSON
+                      Pin JSON
                     </TabsTrigger>
-                    {selected && runData?.[selected] && (
+                    {selectedOutput && (
                       <TabsTrigger value="output" className="h-6 text-[12px]">
                         Output
                       </TabsTrigger>
@@ -200,6 +229,41 @@ export function DataPanel({ runData }: { runData?: ExecutionRunData | null }) {
                     <PinOff className="mr-1 size-3.5" /> Unpin
                   </Button>
                 </div>
+
+                <TabsContent value="input" className="mt-0 min-h-0 flex-1 overflow-y-auto">
+                  {hasInput ? (
+                    <table className="w-full text-left text-[12px]">
+                      <thead>
+                        <tr className="border-b border-border text-[10px] uppercase tracking-wider text-muted-foreground">
+                          <th className="px-3 py-1.5">#</th>
+                          {inputColumns.map((c) => (
+                            <th key={c} className="px-3 py-1.5 font-mono">
+                              {c}
+                            </th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {inputItems.map((item, i) => (
+                          <tr key={i} className="border-b border-border/50">
+                            <td className="px-3 py-1.5 text-muted-foreground">{i}</td>
+                            {inputColumns.map((c) => (
+                              <td key={c} className="max-w-[14rem] truncate px-3 py-1.5 font-mono">
+                                {formatCell(item.json?.[c])}
+                              </td>
+                            ))}
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  ) : (
+                    <p className="p-4 text-[13px] text-muted-foreground">
+                      No input from previous nodes yet. Run the workflow, use{" "}
+                      <strong>Previous</strong> on this node, or pin sample output on the upstream
+                      node.
+                    </p>
+                  )}
+                </TabsContent>
 
                 <TabsContent value="table" className="mt-0 min-h-0 flex-1 overflow-y-auto">
                   {pinned?.length ? (
@@ -229,8 +293,8 @@ export function DataPanel({ runData }: { runData?: ExecutionRunData | null }) {
                     </table>
                   ) : (
                     <p className="p-4 text-[13px] text-muted-foreground">
-                      No pinned data for this node. Switch to the JSON tab and paste an array of
-                      items.
+                      No pinned data for this node. Switch to Pin JSON and paste an array of items,
+                      or pin upstream output from a prior run.
                     </p>
                   )}
                 </TabsContent>
@@ -262,13 +326,13 @@ export function DataPanel({ runData }: { runData?: ExecutionRunData | null }) {
                   />
                 </TabsContent>
 
-                {selected && runData?.[selected] && (
+                {selectedOutput && (
                   <TabsContent
                     value="output"
                     className="mt-0 min-h-0 flex-1 overflow-y-auto px-3 pb-3"
                   >
                     <pre className="rounded bg-muted p-2 font-mono text-[11px]">
-                      {JSON.stringify(runData[selected], null, 2)}
+                      {JSON.stringify(selectedOutput, null, 2)}
                     </pre>
                   </TabsContent>
                 )}

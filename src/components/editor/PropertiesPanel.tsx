@@ -23,7 +23,6 @@ import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { ExpressionContext } from "@/lib/expressions/evaluate";
 import type { ExecutionRunData } from "@/lib/engine/types";
-import type { INodeExecutionData } from "@/lib/workflow/types";
 import { CredentialPicker } from "@/components/credentials";
 import { FormTriggerUrls } from "./FormTriggerUrls";
 import { isFormTriggerNode } from "@/lib/forms/path";
@@ -33,6 +32,7 @@ import { buildIncoming } from "@/lib/engine/graph";
 import { openNodeIssueUrl } from "@/lib/feedback/github-issue";
 import { executorSourceBlobUrl } from "@/lib/engine/node-runtime";
 import { specBlobUrl, toCanonicalType, toWireType } from "@/lib/nodes/type-ids";
+import { mergeNodeSampleData, resolveIncomingItems } from "@/lib/editor/sample-data";
 
 export function PropertiesPanel({
   embedded = false,
@@ -111,9 +111,10 @@ export function PropertiesPanel({
 
   const context: ExpressionContext = useMemo(() => {
     const nodeData = mergeNodeSampleData(workflow.pinData, runData);
-    const incoming = node
-      ? resolveIncomingItems(workflow, node.name, nodeData, runData)
-      : [{ json: {} }];
+    const resolved = node
+      ? resolveIncomingItems(workflow.connections, node.name, nodeData, runData)
+      : [];
+    const incoming = resolved.length ? resolved : [{ json: {} }];
     return {
       json: incoming[0]?.json ?? {},
       allItems: incoming,
@@ -433,54 +434,4 @@ export function PropertiesPanel({
   );
 }
 
-type SampleItem = { json: Record<string, unknown> };
 
-function itemsFromRunNode(
-  runData: ExecutionRunData | null | undefined,
-  nodeName: string,
-): SampleItem[] | undefined {
-  if (!runData?.[nodeName]) return undefined;
-  const entry = runData[nodeName];
-  if (entry.status !== "success" || !entry.items?.length) return undefined;
-  const flat = entry.items.flat().filter(Boolean) as INodeExecutionData[];
-  if (!flat.length) return undefined;
-  return flat.map((it) => ({ json: (it.json ?? {}) as Record<string, unknown> }));
-}
-
-function mergeNodeSampleData(
-  pinData: Record<string, INodeExecutionData[]> | undefined,
-  runData: ExecutionRunData | null | undefined,
-): Record<string, SampleItem[]> {
-  const out: Record<string, SampleItem[]> = {};
-  if (runData) {
-    for (const name of Object.keys(runData)) {
-      const items = itemsFromRunNode(runData, name);
-      if (items?.length) out[name] = items;
-    }
-  }
-  for (const [k, v] of Object.entries(pinData ?? {})) {
-    if (v?.length) {
-      out[k] = v.map((it) => ({ json: (it.json ?? {}) as Record<string, unknown> }));
-    }
-  }
-  return out;
-}
-
-function resolveIncomingItems(
-  workflow: { connections: Record<string, Record<string, Array<Array<{ node: string }> | null>>> },
-  nodeName: string,
-  nodeData: Record<string, SampleItem[]>,
-  runData?: ExecutionRunData | null,
-): SampleItem[] {
-  for (const [source, channels] of Object.entries(workflow.connections ?? {})) {
-    for (const outputs of Object.values(channels)) {
-      for (const targets of outputs) {
-        if (!targets?.some((t) => t.node === nodeName)) continue;
-        if (nodeData[source]?.length) return nodeData[source]!;
-        const fromRun = itemsFromRunNode(runData, source);
-        if (fromRun?.length) return fromRun;
-      }
-    }
-  }
-  return [{ json: {} }];
-}

@@ -198,9 +198,9 @@ function EditorPage() {
     return () => window.removeEventListener("keydown", handler);
   }, [persist]);
 
-  useEffect(() => {
-    if (dirty) setRunData(null);
-  }, [dirty]);
+  // Keep last runData across parameter edits so expression preview / Input
+  // still show upstream items (e.g. quotes) while configuring a node.
+  // Structural graph changes still get fresh data on the next Execute.
 
   useEffect(() => {
     return () => {
