@@ -75,6 +75,12 @@ describe("schema round-trip", () => {
     expect(result.workflow!.nodes).toHaveLength(0);
   });
 
+  it("coerces null settings to empty object", () => {
+    const result = parseWorkflowJson({ ...minimalRaw, settings: null });
+    expect(result.ok).toBe(true);
+    expect(result.workflow!.settings).toEqual({});
+  });
+
   it("parses from a JSON string", () => {
     const result = parseWorkflowJson(JSON.stringify(minimalRaw));
     expect(result.ok).toBe(true);

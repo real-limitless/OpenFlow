@@ -226,6 +226,7 @@ export async function editorCreateWorkflow(
       versionId,
       nodes: "[]",
       connections: "{}",
+      settings: "{}",
     },
   });
   return {
@@ -272,13 +273,14 @@ export async function editorListExecutions(
       finishedAt: true,
     },
   });
-  return rows.map((r) => ({
+  const items = rows.map((r) => ({
     id: r.id,
     status: r.status,
     mode: r.mode,
     startedAt: r.startedAt.toISOString(),
     finishedAt: r.finishedAt?.toISOString() ?? null,
   }));
+  return { count: items.length, items };
 }
 
 export { roleForPerm };

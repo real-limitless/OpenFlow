@@ -22,7 +22,7 @@ vi.mock("../../services/workflow-editor", () => ({
   editorDisconnect: vi.fn(),
   editorExecute: vi.fn(),
   editorGetExecution: vi.fn(),
-  editorListCredentials: vi.fn(async () => []),
+  editorListCredentials: vi.fn(async () => ({ count: 0, items: [] })),
   editorSelectNode: vi.fn((workflowId: string, name: string | null) => ({ nodeName: name })),
 }));
 
@@ -31,7 +31,7 @@ vi.mock("../../services/workflow-access", () => ({
   editorListWorkflows: (...a: unknown[]) => editorListWorkflows(...a),
   editorCreateWorkflow: (...a: unknown[]) => editorCreateWorkflow(...a),
   editorActivateWorkflow: vi.fn(),
-  editorListExecutions: vi.fn(async () => []),
+  editorListExecutions: vi.fn(async () => ({ count: 0, items: [] })),
   loadWorkflowIfAllowed: vi.fn(),
 }));
 

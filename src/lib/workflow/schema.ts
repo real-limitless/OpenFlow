@@ -42,7 +42,10 @@ export const workflowSchema = z
     active: z.boolean().default(false),
     nodes: z.array(nodeSchema),
     connections: connectionsSchema.default({}),
-    settings: z.record(z.unknown()).default({}),
+    settings: z.preprocess(
+      (v) => (v == null ? {} : v),
+      z.record(z.unknown()).default({}),
+    ),
     pinData: z.record(z.array(z.record(z.unknown()))).optional(),
     // Accept array, or a JSON-stringified array (legacy double-encoded `extra` field).
     tags: z.preprocess((v) => {

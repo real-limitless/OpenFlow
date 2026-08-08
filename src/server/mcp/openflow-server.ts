@@ -106,9 +106,14 @@ async function handleRpc(
           name,
           args,
         );
+        // MCP structuredContent must be a JSON object (not array/primitive).
+        const structuredContent =
+          result !== null && typeof result === "object" && !Array.isArray(result)
+            ? (result as Record<string, unknown>)
+            : { result };
         return ok(id, {
           content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
-          structuredContent: result,
+          structuredContent,
           isError: false,
         });
       }

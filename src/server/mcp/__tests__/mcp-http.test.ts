@@ -82,4 +82,49 @@ describe("MCP HTTP", () => {
     });
     expect(res.status).toBe(202);
   });
+
+  it("tools/call structuredContent is always an object (never a bare array)", async () => {
+    const init = await app.request("http://localhost/mcp", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      },
+      body: JSON.stringify({
+        jsonrpc: "2.0",
+        id: 1,
+        method: "initialize",
+        params: {
+          protocolVersion: "2024-11-05",
+          capabilities: {},
+          clientInfo: { name: "test", version: "0" },
+        },
+      }),
+    });
+    const sessionId = init.headers.get("Mcp-Session-Id");
+    expect(sessionId).toBeTruthy();
+
+    const call = await app.request("http://localhost/mcp", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+        "Mcp-Session-Id": sessionId!,
+      },
+      body: JSON.stringify({
+        jsonrpc: "2.0",
+        id: 2,
+        method: "tools/call",
+        params: { name: "list_node_types", arguments: { limit: 3 } },
+      }),
+    });
+    expect(call.status).toBe(200);
+    const body = await call.json();
+    expect(body.result?.isError).not.toBe(true);
+    const sc = body.result?.structuredContent;
+    expect(sc).toBeTruthy();
+    expect(Array.isArray(sc)).toBe(false);
+    expect(typeof sc).toBe("object");
+    expect(Array.isArray(sc.items)).toBe(true);
+  });
 });
