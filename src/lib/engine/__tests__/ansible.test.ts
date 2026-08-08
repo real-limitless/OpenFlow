@@ -102,4 +102,62 @@ describe("openflow-node-base.ansible", () => {
     });
     expect(out[0]![0]!.json.error).toMatch(/ENOENT|ansible/i);
   });
+
+  it("loads ansibleSsh credential and redacts inventory path in argv", async () => {
+    __setAnsibleRunFnForTests(async (argv) => {
+      expect(argv).toContain("-i");
+      const invIdx = argv.indexOf("-i");
+      const inv = argv[invIdx + 1] ?? "";
+      expect(inv).toMatch(/inventory\.ini|openflow-ansible-/);
+      return {
+        code: 0,
+        stdout: JSON.stringify({
+          plays: [
+            {
+              tasks: [
+                {
+                  hosts: {
+                    web: { ping: "pong", changed: false },
+                  },
+                },
+              ],
+            },
+          ],
+        }),
+        stderr: "",
+      };
+    });
+
+    const out = await runNode(
+      TYPE,
+      {
+        module: "ansible.builtin.ping",
+        hosts: "web",
+        authentication: "ansibleSsh",
+        become: true,
+        args: {},
+      },
+      [{}],
+      {
+        credentials: {
+          ansibleSsh: {
+            host: "10.1.2.3",
+            username: "deploy",
+            password: "secret-pass",
+            becomePassword: "become-secret",
+          },
+        },
+      },
+    );
+    const argv = out[0]![0]!.json.argv as string[];
+    expect(argv.join(" ")).not.toMatch(/secret-pass|become-secret|10\.1\.2\.3/);
+    expect(argv.some((a) => a === "[redacted-path]" || a.includes("[redacted"))).toBe(true);
+    expect((out[0]![0]!.json.result as { ping?: string }).ping).toBe("pong");
+  });
+
+  it("requires credential when authentication=sshPassword", async () => {
+    await expect(
+      runNode(TYPE, { module: "ansible.builtin.ping", authentication: "sshPassword" }, [{}]),
+    ).rejects.toThrow(/sshPassword/);
+  });
 });

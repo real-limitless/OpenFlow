@@ -1,6 +1,7 @@
 import type { NodeExecutor } from "@/sdk";
 import { withPairedItem } from "@/sdk";
 import { runAnsibleModuleWithTestHook, type AnsibleRunResult } from "./ansible-runner";
+import { prepareAnsibleAuth, type AnsibleSshCredential } from "./ansible-auth";
 
 function asArgs(value: unknown): Record<string, unknown> | null {
   if (value == null || value === "") return null;
@@ -72,6 +73,69 @@ function hostItems(result: AnsibleRunResult, pairIdx: number) {
   );
 }
 
+function mapSshCred(
+  data: Record<string, unknown> | null,
+  kind: "ansibleSsh" | "sshPassword" | "sshPrivateKey",
+): AnsibleSshCredential | null {
+  if (!data) return null;
+  if (kind === "ansibleSsh") {
+    return {
+      host: data.host as string | undefined,
+      port: data.port as number | string | undefined,
+      username: data.username as string | undefined,
+      password: data.password as string | undefined,
+      privateKey: data.privateKey as string | undefined,
+      passphrase: data.passphrase as string | undefined,
+      becomePassword: data.becomePassword as string | undefined,
+      becomeUser: data.becomeUser as string | undefined,
+    };
+  }
+  if (kind === "sshPassword") {
+    return {
+      host: data.host as string | undefined,
+      port: data.port as number | string | undefined,
+      username: data.username as string | undefined,
+      password: data.password as string | undefined,
+    };
+  }
+  return {
+    host: data.host as string | undefined,
+    port: data.port as number | string | undefined,
+    username: data.username as string | undefined,
+    privateKey: data.privateKey as string | undefined,
+    passphrase: data.passphrase as string | undefined,
+  };
+}
+
+async function resolveCredential(
+  ctx: Parameters<NodeExecutor>[0],
+): Promise<AnsibleSshCredential | null> {
+  const auth = ctx.getParam<string>("authentication", "none");
+  if (auth === "none" || !auth) {
+    // Still try ansibleSsh if bound without auth mode
+    const loose = await ctx.getCredential("ansibleSsh").catch(() => null);
+    if (loose) return mapSshCred(loose, "ansibleSsh");
+    return null;
+  }
+  if (auth === "ansibleSsh") {
+    const data = await ctx.getCredential("ansibleSsh");
+    if (!data) throw new Error('Ansible: credential "ansibleSsh" is not configured on this node');
+    return mapSshCred(data, "ansibleSsh");
+  }
+  if (auth === "sshPassword") {
+    const data = await ctx.getCredential("sshPassword");
+    if (!data) throw new Error('Ansible: credential "sshPassword" is not configured on this node');
+    return mapSshCred(data, "sshPassword");
+  }
+  if (auth === "sshPrivateKey") {
+    const data = await ctx.getCredential("sshPrivateKey");
+    if (!data)
+      throw new Error('Ansible: credential "sshPrivateKey" is not configured on this node');
+    return mapSshCred(data, "sshPrivateKey");
+  }
+  return null;
+}
+
 export const ansibleExecutor: NodeExecutor = async (ctx) => {
   const inputItems = ctx.getInputItems(0);
   const items = inputItems.length ? inputItems : [{ json: {} }];
@@ -87,7 +151,6 @@ export const ansibleExecutor: NodeExecutor = async (ctx) => {
     const inventory = String((ctx.evaluate(inventoryRaw, json) as string) ?? inventoryRaw);
     const argsParam = ctx.getParam<unknown>("args", {});
     let args = asArgs(argsParam);
-    // Allow expression strings inside args object values via re-parse after stringify evaluate — keep simple: if string args already handled
     if (args) {
       const evaluated: Record<string, unknown> = {};
       for (const [k, v] of Object.entries(args)) {
@@ -106,17 +169,30 @@ export const ansibleExecutor: NodeExecutor = async (ctx) => {
     const connection = ctx.getParam<string>("connection", "");
     const timeout = ctx.getParam<number>("timeout", 120);
 
+    let prepared: Awaited<ReturnType<typeof prepareAnsibleAuth>> = null;
     try {
+      const cred = await resolveCredential(ctx);
+      prepared = await prepareAnsibleAuth({
+        credential: cred,
+        hostsParam: hosts,
+        inventoryParam: inventory,
+        becomeParam: become,
+        becomeUserParam: becomeUser,
+        connectionParam: connection,
+      });
+
       const result = await runAnsibleModuleWithTestHook({
         module,
         args,
-        hosts,
-        inventory: inventory || undefined,
+        hosts: prepared?.hostPattern ?? hosts,
+        inventory: prepared?.inventoryPath ?? (inventory || undefined),
         checkMode,
-        become,
-        becomeUser: becomeUser || undefined,
-        connection: connection || undefined,
+        become: prepared?.become ?? become,
+        becomeUser: prepared?.becomeUser ?? (becomeUser || undefined),
+        connection: prepared?.connection ?? (connection || undefined),
         timeoutSec: timeout,
+        extraEnv: prepared?.env,
+        redactArgv: true,
       });
       if (result.failed && !contOnFail) {
         const msg =
@@ -142,6 +218,8 @@ export const ansibleExecutor: NodeExecutor = async (ctx) => {
         ];
       }
       throw err;
+    } finally {
+      if (prepared) await prepared.cleanup();
     }
   };
 

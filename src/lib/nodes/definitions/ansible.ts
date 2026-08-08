@@ -3,10 +3,24 @@ import type { INodeProperties, INodeTypeDescription } from "../types";
 const ansibleProperties: INodeProperties[] = [
   {
     displayName:
-      "Runs ad-hoc ansible on the OpenFlow worker. Pick modules from the Ansible palette gallery. Free-form modules (command/shell/raw/script) are blocked. Module options use Form when a schema exists, otherwise JSON.",
+      "Runs ad-hoc ansible on the OpenFlow worker. Bind Ansible SSH credentials for remote hosts and become. Free-form modules (command/shell/raw/script) are blocked. Module options use Form when a schema exists, otherwise JSON.",
     name: "notice",
     type: "notice",
     default: "",
+  },
+  {
+    displayName: "Authentication",
+    name: "authentication",
+    type: "options",
+    default: "none",
+    description:
+      "none = local/control-node defaults; ansibleSsh = dedicated credential; or reuse SSH password/key credentials",
+    options: [
+      { name: "None (local / inventory only)", value: "none" },
+      { name: "Ansible SSH credential", value: "ansibleSsh" },
+      { name: "SSH Password credential", value: "sshPassword" },
+      { name: "SSH Private Key credential", value: "sshPrivateKey" },
+    ],
   },
   {
     displayName: "Module",
@@ -87,6 +101,12 @@ const ansibleProperties: INodeProperties[] = [
   },
 ];
 
+const ansibleCredentials = [
+  { name: "ansibleSsh", required: false },
+  { name: "sshPassword", required: false },
+  { name: "sshPrivateKey", required: false },
+];
+
 export const ansible: INodeTypeDescription = {
   name: "openflow-node-base.ansible",
   displayName: "Ansible",
@@ -99,6 +119,7 @@ export const ansible: INodeTypeDescription = {
   inputs: ["main"],
   outputs: ["main"],
   icon: "Server",
+  credentials: ansibleCredentials,
   sources: [
     "https://docs.ansible.com/ansible/latest/command_guide/intro_adhoc.html",
     "https://github.com/real-limitless/ansible-flow-mcp",
@@ -118,6 +139,7 @@ export const ansibleTool: INodeTypeDescription = {
   inputs: ["main"],
   outputs: ["main"],
   icon: "Server",
+  credentials: ansibleCredentials,
   sources: [
     "https://docs.ansible.com/ansible/latest/command_guide/intro_adhoc.html",
     "https://github.com/real-limitless/ansible-flow-mcp",

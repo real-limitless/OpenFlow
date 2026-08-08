@@ -130,6 +130,40 @@ const CATALOG: Record<string, CredentialTypeDef> = {
       { key: "passphrase", label: "Passphrase", type: "password" },
     ],
   },
+  /** Ansible control-node SSH + optional become password (OpenFlow Ansible node). */
+  ansibleSsh: {
+    name: "ansibleSsh",
+    displayName: "Ansible SSH",
+    fields: [
+      { key: "host", label: "Host", required: true, placeholder: "192.168.1.10" },
+      { key: "port", label: "Port", type: "number", placeholder: "22" },
+      { key: "username", label: "Username", required: true },
+      {
+        key: "password",
+        label: "SSH Password",
+        type: "password",
+        placeholder: "Leave empty if using a private key",
+      },
+      {
+        key: "privateKey",
+        label: "Private Key (OpenSSH)",
+        type: "textarea",
+        placeholder: "-----BEGIN OPENSSH PRIVATE KEY-----",
+      },
+      { key: "passphrase", label: "Key Passphrase", type: "password" },
+      {
+        key: "becomePassword",
+        label: "Become Password",
+        type: "password",
+        placeholder: "sudo/su password when using become",
+      },
+      {
+        key: "becomeUser",
+        label: "Default Become User",
+        placeholder: "root",
+      },
+    ],
+  },
   s3: {
     name: "s3",
     displayName: "S3",

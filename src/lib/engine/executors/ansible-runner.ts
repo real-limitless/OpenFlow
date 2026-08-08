@@ -54,6 +54,10 @@ export type AnsibleRunOptions = {
   timeoutSec?: number;
   allowedCollections?: readonly string[];
   deniedModules?: readonly string[];
+  /** Extra env (e.g. from auth prep). Never logged. */
+  extraEnv?: Record<string, string>;
+  /** When true, redact temp paths from returned argv */
+  redactArgv?: boolean;
   /** Inject for tests */
   runFn?: (
     argv: string[],
@@ -255,6 +259,20 @@ async function defaultRun(
   });
 }
 
+function sanitizeArgv(argv: string[]): string[] {
+  return argv.map((part) => {
+    if (
+      part.includes("openflow-ansible-") ||
+      part.endsWith("inventory.ini") ||
+      part.endsWith("id_key")
+    ) {
+      return "[redacted-path]";
+    }
+    if (/password=/i.test(part) || /private_key/i.test(part)) return "[redacted]";
+    return part;
+  });
+}
+
 export async function runAnsibleModule(opts: AnsibleRunOptions): Promise<AnsibleRunResult> {
   const fqcn = assertModuleAllowed(
     opts.module,
@@ -278,6 +296,7 @@ export async function runAnsibleModule(opts: AnsibleRunOptions): Promise<Ansible
     ANSIBLE_RETRY_FILES_ENABLED: "False",
     ANSIBLE_HOST_KEY_CHECKING: process.env.ANSIBLE_HOST_KEY_CHECKING || "False",
     ANSIBLE_DEPRECATION_WARNINGS: "False",
+    ...(opts.extraEnv ?? {}),
   };
 
   let timeoutSec = Number(opts.timeoutSec ?? 120);
@@ -317,7 +336,7 @@ export async function runAnsibleModule(opts: AnsibleRunOptions): Promise<Ansible
     hosts,
     stdout,
     stderr,
-    argv,
+    argv: opts.redactArgv === false ? argv : sanitizeArgv(argv),
     failed,
   };
 }

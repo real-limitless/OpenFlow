@@ -24,7 +24,7 @@ status: implemented
 - **Aliases:** none
 - **Inputs:** `main` × 1
 - **Outputs:** `main` × 1
-- **Credentials:** none in v1 (SSH/become via control-node Ansible config / later credential types)
+- **Credentials:** `ansibleSsh` (preferred), or `sshPassword` / `sshPrivateKey`; optional become password on `ansibleSsh`
 
 ## Parameters
 
@@ -86,10 +86,9 @@ When `executeOnce` is true, module runs once using the first input item for expr
 
 ### Partial gaps
 
-- Gallery + hybrid Form|JSON for committed schemas (ping/file/copy); most gallery modules still JSON-only until schemas are generated.
-- No SSH credential binding yet (uses worker Ansible config).
 - Playbook operation not implemented.
 - Live `ansible-doc` schema fetch not implemented (static catalog only).
+- Private key passphrase support is best-effort (env hint; prefer unlocked keys or ssh-agent on the worker).
 
 ## Acceptance tests
 
