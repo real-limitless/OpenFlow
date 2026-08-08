@@ -9,6 +9,9 @@ import {
 import { getNodeType } from "../nodes/registry";
 import type { INodeProperties } from "../nodes/types";
 import { newId } from "./schema";
+import { normalizeAddNodeInit, type AddNodeInit } from "./add-node";
+
+export type { AddNodeInit } from "./add-node";
 
 export function defaultParameters(properties: INodeProperties[]): Record<string, unknown> {
   const out: Record<string, unknown> = {};
@@ -34,12 +37,17 @@ export function addNode(
   wf: IWorkflow,
   type: string,
   position: { x: number; y: number },
-  preferredName?: string,
+  preferredNameOrInit?: string | AddNodeInit,
 ): MutationResult<{ name: string; id: string }> {
+  const init = normalizeAddNodeInit(preferredNameOrInit);
   const description = getNodeType(type);
   const existing = wf.nodes.map((n) => n.name);
-  const base = preferredName?.trim() || description.defaults.name;
+  const base = init.name?.trim() || description.defaults.name;
   const name = uniqueNodeName(existing, base);
+  const parameters = {
+    ...defaultParameters(description.properties),
+    ...(init.parameters ?? {}),
+  };
   const node: INode = {
     id: newId("node"),
     name,
@@ -48,7 +56,7 @@ export function addNode(
       ? description.version[description.version.length - 1]
       : description.version,
     position: [Math.round(position.x), Math.round(position.y)],
-    parameters: defaultParameters(description.properties),
+    parameters,
   };
   return {
     workflow: { ...wf, nodes: [...wf.nodes, node] },
@@ -223,9 +231,7 @@ function withOutputParserEnabled(
   return {
     ...wf,
     nodes: wf.nodes.map((n) =>
-      n.name === target
-        ? { ...n, parameters: { ...n.parameters, hasOutputParser: true } }
-        : n,
+      n.name === target ? { ...n, parameters: { ...n.parameters, hasOutputParser: true } } : n,
     ),
   };
 }

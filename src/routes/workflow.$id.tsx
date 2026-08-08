@@ -74,10 +74,7 @@ function EditorPage() {
     setShowOnboardingBanner(false);
   };
 
-  const handleExecute = async (
-    startNode?: string,
-    opts?: { executePreviousOf?: string },
-  ) => {
+  const handleExecute = async (startNode?: string, opts?: { executePreviousOf?: string }) => {
     setIsExecuting(true);
     setRunData(null);
     bumpHistory();
@@ -259,8 +256,8 @@ function EditorPage() {
       {showOnboardingBanner && status === "ready" && (
         <div className="flex shrink-0 flex-wrap items-center justify-between gap-2 border-b border-primary/30 bg-primary/10 px-4 py-2 text-[13px]">
           <p className="text-foreground">
-            <span className="font-medium">First run:</span> click{" "}
-            <strong>Execute</strong> to run this sample (public GitHub API, no credentials).
+            <span className="font-medium">First run:</span> click <strong>Execute</strong> to run
+            this sample (public GitHub API, no credentials).
           </p>
           <button
             type="button"
@@ -281,11 +278,15 @@ function EditorPage() {
             onExecutePrevious={(nodeName) =>
               void handleExecute(undefined, { executePreviousOf: nodeName })
             }
-            onAddNode={(type) =>
-              addNode(type, {
-                x: 120 + workflow.nodes.length * 40,
-                y: 120 + (workflow.nodes.length % 4) * 40,
-              })
+            onAddNode={(type, init) =>
+              addNode(
+                type,
+                {
+                  x: 120 + workflow.nodes.length * 40,
+                  y: 120 + (workflow.nodes.length % 4) * 40,
+                },
+                init,
+              )
             }
             onSelectExecution={(rd) => setRunData(rd)}
             dockApiRef={dockApiRef}

@@ -498,4 +498,4 @@ n8n-nodes-base.venafiTlsProtectDatacenterTool: specced, docs/specs/nodes/n8n-nod
 n8n-nodes-base.yourlsTool: specced, docs/specs/nodes/n8n-nodes-base.yourlsTool.md
 n8n-nodes-base.wufooTrigger: specced, docs/specs/nodes/n8n-nodes-base.wufooTrigger.md
 
-openflow-node-base.ansible: partial, docs/specs/nodes/openflow-node-base.ansible.md
+openflow-node-base.ansible: implemented, docs/specs/nodes/openflow-node-base.ansible.md

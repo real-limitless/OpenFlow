@@ -4,7 +4,7 @@ displayName: Ansible
 category: Development
 versions: [1]
 priority: high
-status: partial
+status: implemented
 ---
 
 # Ansible
@@ -86,10 +86,10 @@ When `executeOnce` is true, module runs once using the first input item for expr
 
 ### Partial gaps
 
-- No hybrid Form UI / schema fetch yet (JSON `args` only).
-- No gallery palette cards yet.
+- Gallery + hybrid Form|JSON for committed schemas (ping/file/copy); most gallery modules still JSON-only until schemas are generated.
 - No SSH credential binding yet (uses worker Ansible config).
 - Playbook operation not implemented.
+- Live `ansible-doc` schema fetch not implemented (static catalog only).
 
 ## Acceptance tests
 

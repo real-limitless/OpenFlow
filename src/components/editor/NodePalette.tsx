@@ -1,20 +1,20 @@
 import { useEffect, useMemo, useState } from "react";
 import { ChevronDown, ChevronRight, Search, Sparkles } from "lucide-react";
 import { allNodeTypes, NODE_CATEGORIES } from "@/lib/nodes/registry";
-import type { INodeTypeDescription, NodeCategory } from "@/lib/nodes/types";
+import type { INodeTypeDescription } from "@/lib/nodes/types";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "@/components/ui/collapsible";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { NodeIcon, accentFor } from "./BaseNode";
 import { cn } from "@/lib/utils";
 import { apiFetch } from "@/lib/auth/client";
+import { groupGalleryByCollection, searchAnsibleGallery } from "@/lib/nodes/ansible/catalog";
+import { ANSIBLE_NODE_TYPE } from "@/lib/nodes/ansible/types";
+import type { AddNodeInit } from "@/lib/workflow/add-node";
+import { encodeNodeDragPayload, OPENFLOW_NODE_MIME } from "@/lib/workflow/add-node";
 
 interface Props {
-  onAdd: (type: string) => void;
+  onAdd: (type: string, init?: AddNodeInit) => void;
 }
 
 function trackSuggestInsert(type: string, intent: string) {
@@ -31,7 +31,7 @@ const accentText: Record<string, string> = {
   placeholder: "text-[var(--placeholder)] bg-[var(--placeholder)]/12",
 };
 
-const DEFAULT_OPEN: Record<NodeCategory, boolean> = {
+const DEFAULT_OPEN: Record<string, boolean> = {
   Triggers: true,
   Actions: true,
   Flow: false,
@@ -44,6 +44,7 @@ const DEFAULT_OPEN: Record<NodeCategory, boolean> = {
   "Data & Storage": false,
   Database: false,
   Development: false,
+  Ansible: true,
   Files: false,
   Productivity: false,
   Marketing: false,
@@ -102,6 +103,16 @@ export function NodePalette({ onAdd }: Props) {
     })).filter((g) => g.items.length);
   }, [query]);
 
+  const ansibleGroups = useMemo(() => {
+    const hits = searchAnsibleGallery(query, 100);
+    return groupGalleryByCollection(hits);
+  }, [query]);
+
+  const ansibleCount = useMemo(
+    () => ansibleGroups.reduce((n, g) => n + g.items.length, 0),
+    [ansibleGroups],
+  );
+
   const isSearching = query.trim().length > 0;
 
   useEffect(() => {
@@ -109,9 +120,10 @@ export function NodePalette({ onAdd }: Props) {
     setOpenCategories((prev) => {
       const next = { ...prev };
       for (const g of grouped) next[g.category] = true;
+      if (ansibleCount) next.Ansible = true;
       return next;
     });
-  }, [isSearching, grouped]);
+  }, [isSearching, grouped, ansibleCount]);
 
   useEffect(() => {
     const q = query.trim();
@@ -217,7 +229,10 @@ export function NodePalette({ onAdd }: Props) {
                   type="button"
                   draggable
                   onDragStart={(e) => {
-                    e.dataTransfer.setData("application/openflow-node", it.type);
+                    e.dataTransfer.setData(
+                      OPENFLOW_NODE_MIME,
+                      encodeNodeDragPayload({ type: it.type }),
+                    );
                     e.dataTransfer.effectAllowed = "move";
                   }}
                   onClick={() => {
@@ -267,6 +282,93 @@ export function NodePalette({ onAdd }: Props) {
         )}
 
         <div className="space-y-1 p-2">
+          {ansibleCount > 0 && (
+            <Collapsible
+              open={isSearching || (openCategories.Ansible ?? false)}
+              onOpenChange={() => {
+                if (!isSearching) toggleCategory("Ansible");
+              }}
+            >
+              <CollapsibleTrigger asChild>
+                <button
+                  type="button"
+                  className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left hover:bg-accent/60"
+                >
+                  {isSearching || openCategories.Ansible ? (
+                    <ChevronDown className="size-3.5 shrink-0 text-muted-foreground" />
+                  ) : (
+                    <ChevronRight className="size-3.5 shrink-0 text-muted-foreground" />
+                  )}
+                  <span className="flex-1 font-mono text-[10px] uppercase tracking-[0.14em] text-muted-foreground">
+                    Ansible
+                  </span>
+                  <Badge variant="secondary" className="h-5 px-1.5 text-[10px] tabular-nums">
+                    {ansibleCount}
+                  </Badge>
+                </button>
+              </CollapsibleTrigger>
+              <CollapsibleContent>
+                <div className="mb-2 space-y-2 pl-1">
+                  {ansibleGroups.map((g) => (
+                    <div key={g.collection}>
+                      <div className="px-2 py-1 font-mono text-[9px] uppercase tracking-[0.12em] text-muted-foreground/80">
+                        {g.collection}
+                      </div>
+                      <div className="space-y-0.5">
+                        {g.items.map((mod) => {
+                          const init: AddNodeInit = {
+                            name: mod.shortName,
+                            parameters: { module: mod.fqcn },
+                          };
+                          return (
+                            <button
+                              key={mod.fqcn}
+                              type="button"
+                              draggable
+                              onDragStart={(e) => {
+                                e.dataTransfer.setData(
+                                  OPENFLOW_NODE_MIME,
+                                  encodeNodeDragPayload({
+                                    type: ANSIBLE_NODE_TYPE,
+                                    name: mod.shortName,
+                                    parameters: { module: mod.fqcn },
+                                  }),
+                                );
+                                e.dataTransfer.effectAllowed = "move";
+                              }}
+                              onClick={() => onAdd(ANSIBLE_NODE_TYPE, init)}
+                              className="flex w-full items-start gap-2.5 rounded-md border border-transparent p-2 text-left transition hover:border-border hover:bg-surface"
+                            >
+                              <span
+                                className={cn(
+                                  "mt-0.5 grid size-7 shrink-0 place-items-center rounded",
+                                  accentText.action,
+                                )}
+                              >
+                                <NodeIcon name="Server" className="size-4" />
+                              </span>
+                              <span className="min-w-0">
+                                <span className="block truncate text-[13px] font-medium text-foreground">
+                                  {mod.shortName}
+                                </span>
+                                <span className="block font-mono text-[10px] text-muted-foreground/90">
+                                  {mod.fqcn}
+                                </span>
+                                <span className="block text-[11px] leading-snug text-muted-foreground">
+                                  {mod.description}
+                                </span>
+                              </span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </CollapsibleContent>
+            </Collapsible>
+          )}
+
           {grouped.map((group) => {
             const isOpen = isSearching || (openCategories[group.category] ?? false);
             return (
@@ -305,7 +407,10 @@ export function NodePalette({ onAdd }: Props) {
                           type="button"
                           draggable
                           onDragStart={(e) => {
-                            e.dataTransfer.setData("application/openflow-node", d.name);
+                            e.dataTransfer.setData(
+                              OPENFLOW_NODE_MIME,
+                              encodeNodeDragPayload({ type: d.name }),
+                            );
                             e.dataTransfer.effectAllowed = "move";
                           }}
                           onClick={() => onAdd(d.name)}
@@ -335,7 +440,7 @@ export function NodePalette({ onAdd }: Props) {
               </Collapsible>
             );
           })}
-          {!grouped.length && (
+          {!grouped.length && !ansibleCount && (
             <p className="px-2 py-4 text-sm text-muted-foreground">No nodes match “{query}”.</p>
           )}
         </div>

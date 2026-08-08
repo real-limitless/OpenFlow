@@ -6,15 +6,13 @@ import "./dockview-theme.css";
 
 import { useWorkflowStore } from "@/store/workflow-store";
 import type { ExecutionRunData } from "@/lib/engine/types";
-import {
-  EditorDockProvider,
-  type EditorDockContextValue,
-} from "./EditorDockContext";
+import { EditorDockProvider, type EditorDockContextValue } from "./EditorDockContext";
 import { applyDefaultDockLayout, ensurePanel } from "./default-layout";
 import { clearDockLayout, loadDockLayout, saveDockLayout } from "./layout-storage";
 import { EDITOR_PANEL_BY_ID, type EditorPanelId } from "./panel-registry";
 import { dockComponents } from "./dock-panels";
 import { DockTab } from "./DockTab";
+import type { AddNodeInit } from "@/lib/workflow/add-node";
 
 export function EditorDockHost({
   workflowId,
@@ -31,7 +29,7 @@ export function EditorDockHost({
   historyKey: number;
   isExecuting: boolean;
   onExecutePrevious?: (nodeName: string) => void;
-  onAddNode: (type: string) => void;
+  onAddNode: (type: string, init?: AddNodeInit) => void;
   onSelectExecution: (runData: ExecutionRunData) => void;
   dockApiRef: React.MutableRefObject<DockviewApi | null>;
 }) {
@@ -189,10 +187,7 @@ export function floatEditorPanel(api: DockviewApi | null, id: EditorPanelId): vo
   }
 }
 
-export async function popoutEditorPanel(
-  api: DockviewApi | null,
-  id: EditorPanelId,
-): Promise<void> {
+export async function popoutEditorPanel(api: DockviewApi | null, id: EditorPanelId): Promise<void> {
   if (!api || id === "canvas") return;
   ensurePanel(api, id, { focus: false });
   const panel = api.getPanel(id);

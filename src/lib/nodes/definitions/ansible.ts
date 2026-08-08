@@ -19,7 +19,7 @@ export const ansible: INodeTypeDescription = {
   properties: [
     {
       displayName:
-        "Runs ad-hoc ansible on the OpenFlow worker. Free-form modules (command/shell/raw/script) are blocked. Gallery + dynamic forms come later.",
+        "Runs ad-hoc ansible on the OpenFlow worker. Pick modules from the Ansible palette gallery. Free-form modules (command/shell/raw/script) are blocked. Module options use Form when a schema exists, otherwise JSON.",
       name: "notice",
       type: "notice",
       default: "",

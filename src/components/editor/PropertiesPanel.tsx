@@ -33,6 +33,8 @@ import { openNodeIssueUrl } from "@/lib/feedback/github-issue";
 import { executorSourceBlobUrl } from "@/lib/engine/node-runtime";
 import { specBlobUrl, toCanonicalType, toWireType } from "@/lib/nodes/type-ids";
 import { mergeNodeSampleData, resolveIncomingItems } from "@/lib/editor/sample-data";
+import { AnsibleModuleOptions } from "./AnsibleModuleOptions";
+import { ANSIBLE_NODE_TYPE } from "@/lib/nodes/ansible/types";
 
 export function PropertiesPanel({
   embedded = false,
@@ -265,7 +267,17 @@ export function PropertiesPanel({
                 <>
                   {isFormTriggerNode(node) && <FormTriggerUrls node={node} />}
                   {(description.properties ?? [])
-                    .filter((prop) => shouldDisplay(prop, parameters))
+                    .filter((prop) => {
+                      if (!shouldDisplay(prop, parameters)) return false;
+                      // Hybrid module options UI owns `args` for ansible nodes
+                      if (
+                        toCanonicalType(node.type) === ANSIBLE_NODE_TYPE &&
+                        prop.name === "args"
+                      ) {
+                        return false;
+                      }
+                      return true;
+                    })
                     .map((prop) => (
                       <ParameterField
                         key={prop.name}
@@ -281,6 +293,14 @@ export function PropertiesPanel({
                         }
                       />
                     ))}
+                  {toCanonicalType(node.type) === ANSIBLE_NODE_TYPE && (
+                    <AnsibleModuleOptions
+                      moduleFqcn={String(parameters.module ?? "")}
+                      args={parameters.args}
+                      context={context}
+                      onChangeArgs={(args) => updateParameters(node.name, { ...parameters, args })}
+                    />
+                  )}
                 </>
               )}
             </div>
@@ -433,5 +453,3 @@ export function PropertiesPanel({
     </aside>
   );
 }
-
-

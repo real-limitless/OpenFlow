@@ -27,6 +27,7 @@ import openflowMcpRoute from "./mcp/openflow-server";
 import oauthRoute from "./routes/oauth";
 import mcpAccessRoute from "./routes/mcp-access";
 import catalogRoute from "./routes/catalog";
+import ansibleRoute from "./routes/ansible";
 import { startWorker } from "./worker";
 import { seedBuiltinExecutors } from "../lib/engine";
 import { seedBuiltinDescriptions } from "../lib/nodes/registry";
@@ -67,6 +68,7 @@ schedulesRoute(app);
 assistantRoute(app);
 aiGenerateRoute(app);
 catalogRoute(app);
+ansibleRoute(app);
 openflowMcpRoute(app);
 devRoute(app);
 

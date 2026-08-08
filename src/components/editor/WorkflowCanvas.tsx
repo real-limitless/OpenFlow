@@ -20,6 +20,7 @@ import { BaseNode, StickyNode } from "./BaseNode";
 import { OpenFlowEdge } from "./OpenFlowEdge";
 import { SlotNodePicker } from "./SlotNodePicker";
 import { InspectMediaNode, InspectTableNode } from "./InspectNodes";
+import { decodeNodeDragPayload } from "@/lib/workflow/add-node";
 
 const nodeTypes = {
   openflow: BaseNode,
@@ -61,9 +62,7 @@ function CanvasInner({
   });
 
   /** RF measures DOM size; MiniMap reads dimensions from the controlled nodes prop. */
-  const [measured, setMeasured] = useState<Record<string, { width: number; height: number }>>(
-    {},
-  );
+  const [measured, setMeasured] = useState<Record<string, { width: number; height: number }>>({});
 
   const nodes = useMemo(() => {
     const base = toFlowNodes(workflow, selectedNode);
@@ -237,10 +236,17 @@ function CanvasInner({
         }}
         onDrop={(e) => {
           e.preventDefault();
-          const type = e.dataTransfer.getData("application/openflow-node");
-          if (!type) return;
+          const raw =
+            e.dataTransfer.getData("application/openflow-node") ||
+            e.dataTransfer.getData("text/plain");
+          const payload = decodeNodeDragPayload(raw);
+          if (!payload) return;
           const position = screenToFlowPosition({ x: e.clientX, y: e.clientY });
-          addNode(type, { x: position.x - 110, y: position.y - 24 });
+          addNode(
+            payload.type,
+            { x: position.x - 110, y: position.y - 24 },
+            { name: payload.name, parameters: payload.parameters },
+          );
         }}
         defaultEdgeOptions={{ type: "openflow" }}
         proOptions={{ hideAttribution: true }}
