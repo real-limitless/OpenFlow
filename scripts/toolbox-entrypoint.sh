@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # OpenFlow toolbox entrypoint.
-#   catalog-reindex | catalog-reindex-hash | catalog-eval | bash | wait | help
+# Invoked as: openflow-toolbox <cmd> | catalog-reindex | catalog-reindex-hash | catalog-eval
 #
 # App code lives in OPENFLOW_APP_DIR (/app) baked into the image.
 # OPENFLOW_WORKSPACE_DIR (/data/workspace) is shared agent scratch (starts empty).
@@ -64,8 +64,23 @@ run_in_app() {
   (cd "$app" && "$@")
 }
 
-cmd="${1:-wait}"
-shift || true
+# When called via symlink (catalog-reindex, catalog-eval, …), the command is $0's basename.
+invoke_name="$(basename -- "$0")"
+if [[ "$invoke_name" == "openflow-toolbox" || "$invoke_name" == "toolbox-entrypoint.sh" ]]; then
+  cmd="${1:-wait}"
+  if [[ $# -gt 0 ]]; then
+    shift
+  fi
+else
+  # map symlink names → internal commands
+  case "$invoke_name" in
+    catalog-reindex) cmd="catalog-reindex" ;;
+    catalog-reindex-hash) cmd="catalog-reindex-hash" ;;
+    catalog-eval) cmd="catalog-eval" ;;
+    *) cmd="$invoke_name" ;;
+  esac
+  # remaining args stay as "$@"
+fi
 
 case "$cmd" in
   help|-h|--help)
@@ -74,7 +89,7 @@ case "$cmd" in
   wait|sleep|idle)
     banner
     echo "[toolbox] idle — exec: docker compose exec toolbox bash"
-    echo "[toolbox] reindex: docker compose exec toolbox catalog-reindex-hash"
+    echo "[toolbox] reindex: catalog-reindex   or   catalog-reindex-hash"
     exec sleep infinity
     ;;
   bash|sh)
