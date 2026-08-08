@@ -49,7 +49,8 @@ COPY prisma ./prisma
 COPY prisma.config.ts ./
 COPY tsconfig.json ./
 COPY src ./src
-COPY docs/specs ./docs/specs
+# docs/ is excluded by .dockerignore (keeps images small). Catalog reindex
+# works from the node registry alone; specs are optional enrichment.
 COPY scripts ./scripts
 
 COPY scripts/toolbox/ /usr/local/lib/openflow-toolbox/
