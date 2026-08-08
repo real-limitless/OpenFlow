@@ -72,9 +72,12 @@ const DEFAULT_CSS = `
 }
 * { box-sizing: border-box; }
 body { margin: 0; font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, sans-serif; background: var(--bg); color: var(--fg); line-height: 1.5; }
-.of-wrap { max-width: 32rem; margin: 0 auto; padding: 2rem 1.25rem 3rem; }
+.of-wrap { max-width: 40rem; margin: 0 auto; padding: 2rem 1.25rem 3rem; }
 .of-wrap.embed { padding: 1rem; max-width: 100%; }
 .of-card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 1.5rem; }
+.of-thanks { max-width: 100%; }
+.of-thanks a { color: var(--primary); }
+
 h1 { font-size: 1.35rem; margin: 0 0 0.5rem; font-weight: 600; }
 .of-desc { color: var(--muted); font-size: 0.9rem; margin: 0 0 1.25rem; }
 label { display: block; font-size: 0.85rem; font-weight: 500; margin: 0.85rem 0 0.35rem; }

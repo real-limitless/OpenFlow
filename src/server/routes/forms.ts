@@ -15,8 +15,17 @@ import {
   isFormTriggerNode,
   resolveFormPath,
 } from "../forms/register";
-import { renderErrorPage, renderFormPage, renderThanksPage, sanitizeHtml } from "../forms/html";
+import {
+  escapeHtml,
+  renderErrorPage,
+  renderFormPage,
+  renderThanksPage,
+  sanitizeHtml,
+} from "../forms/html";
 import { signFormCsrf, verifyFormCsrf } from "../forms/csrf";
+import type { ExecutionRunData } from "../../lib/engine/types";
+import { typesEqual } from "../../lib/nodes/type-ids";
+import { evaluateExpression, isExpression } from "../../lib/expressions/evaluate";
 
 function definitionFromWorkflow(workflow: {
   id: string;
@@ -80,6 +89,93 @@ function collectBodyFields(
     if (!(k in body)) body[k] = v;
   }
   return body;
+}
+
+function isFormPageNode(node: INode): boolean {
+  return Boolean(node.type && typesEqual(node.type, "n8n-nodes-base.form"));
+}
+
+/** Last successful main-output item from a finished run (prefers Form completion nodes). */
+function extractTerminalJson(
+  definition: IWorkflow,
+  runData: ExecutionRunData,
+): Record<string, unknown> | null {
+  const completionNodes = definition.nodes.filter((n) => {
+    if (n.disabled || !isFormPageNode(n)) return false;
+    const op = String((n.parameters as Record<string, unknown> | undefined)?.operation ?? "form");
+    return op === "completion";
+  });
+
+  const prefer = [
+    ...completionNodes.map((n) => n.name),
+    ...definition.nodes
+      .filter((n) => !n.disabled && !completionNodes.some((c) => c.name === n.name))
+      .map((n) => n.name),
+  ];
+
+  // Prefer latest finishedAt among preferred successful nodes with items
+  let best: { at: string; json: Record<string, unknown> } | null = null;
+  for (const name of prefer) {
+    const rd = runData[name];
+    if (!rd || rd.status !== "success" || !rd.items?.length) continue;
+    const flat = rd.items.flat();
+    const json = (flat[flat.length - 1]?.json ?? null) as Record<string, unknown> | null;
+    if (!json) continue;
+    const at = rd.finishedAt || rd.startedAt || "";
+    if (!best || at >= best.at) best = { at, json };
+  }
+  return best?.json ?? null;
+}
+
+function evalAgainstJson(raw: unknown, json: Record<string, unknown>): string {
+  if (raw == null) return "";
+  if (typeof raw !== "string") return String(raw);
+  if (!isExpression(raw) && !raw.includes("{{")) return raw;
+  const result = evaluateExpression(raw, { json });
+  if (result.ok && result.value != null) return String(result.value);
+  return raw;
+}
+
+function buildWorkflowFinishThanks(
+  definition: IWorkflow,
+  runData: ExecutionRunData,
+): { title: string; bodyHtml: string } {
+  const json = extractTerminalJson(definition, runData) ?? {};
+  const fc = (json.formCompletion ?? null) as
+    | { title?: string; message?: string; pageTitle?: string }
+    | null;
+
+  // Prefer executor-resolved formCompletion; fall back to completion node params + expressions
+  let title = String(fc?.title ?? "").trim();
+  let message = String(fc?.message ?? "").trim();
+
+  if (!title || !message) {
+    const completionNode = definition.nodes.find((n) => {
+      if (n.disabled || !isFormPageNode(n)) return false;
+      const op = String((n.parameters as Record<string, unknown> | undefined)?.operation ?? "form");
+      return op === "completion";
+    });
+    const params = (completionNode?.parameters ?? {}) as Record<string, unknown>;
+    if (!title) title = evalAgainstJson(params.completionTitle, json).trim();
+    if (!message) message = evalAgainstJson(params.completionMessage, json).trim();
+  }
+
+  if (!title) {
+    title = String(json.priceLine ?? json.symbol ?? json.headline ?? "Submitted").trim();
+  }
+  if (!message) {
+    message = String(json.reportHtml ?? json.reportText ?? json.headline ?? "").trim();
+  }
+  if (!message) {
+    message = "<p>Your form was submitted successfully.</p>";
+  }
+
+  // If message is plain text, wrap it; HTML is sanitized in renderThanksPage
+  const bodyHtml = message.includes("<")
+    ? message
+    : `<h1>${escapeHtml(title)}</h1><p>${escapeHtml(message).replace(/\n/g, "<br/>")}</p>`;
+
+  return { title: title || "Submitted", bodyHtml };
 }
 
 export default function formsRoute(app: Hono<AppEnv>) {
@@ -262,7 +358,10 @@ export default function formsRoute(app: Hono<AppEnv>) {
 
       clearFormResponse(execution.id);
 
-      if (!runResult.success && cfg.responseMode === "workflowFinishes") {
+      const waitForWorkflow =
+        cfg.responseMode === "workflowFinishes" || cfg.responseMode === "lastNode";
+
+      if (!runResult.success && waitForWorkflow) {
         c.header("Content-Security-Policy", "frame-ancestors *");
         return c.html(
           renderThanksPage({
@@ -273,6 +372,21 @@ export default function formsRoute(app: Hono<AppEnv>) {
             appendAttribution: cfg.options.appendAttribution !== false,
           }),
           500,
+        );
+      }
+
+      // When waiting for the workflow, render the Form completion / last-node report.
+      if (runResult.success && waitForWorkflow) {
+        const finish = buildWorkflowFinishThanks(ctx.definition, runResult.runData);
+        c.header("Content-Security-Policy", "frame-ancestors *");
+        return c.html(
+          renderThanksPage({
+            title: finish.title,
+            bodyHtml: finish.bodyHtml,
+            embed,
+            appendAttribution: cfg.options.appendAttribution !== false,
+          }),
+          200,
         );
       }
 
