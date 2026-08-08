@@ -110,6 +110,42 @@ describe("batch-queue outputParserStructured — @n8n/n8n-nodes-langchain.output
     expect(result).toEqual({ city: "Osaka", population: 2691000, isCapital: false });
   });
 
+  it("JSON example mode: root array example derives array schema", async () => {
+    const out = await runParser({
+      jsonSchemaExample:
+        '[{"Caption":"x","Idea":"y","Environment":"z","Sound":"s","Status":"for production"}]',
+    });
+
+    const handle = getHandle(out);
+    const result = handle.parse(
+      '[{"Caption":"c","Idea":"i","Environment":"e","Sound":"s","Status":"for production"}]',
+    );
+    expect(result).toEqual([
+      {
+        Caption: "c",
+        Idea: "i",
+        Environment: "e",
+        Sound: "s",
+        Status: "for production",
+      },
+    ]);
+  });
+
+  it("JSON example mode: root array validates item fields", async () => {
+    const out = await runParser({
+      jsonSchemaExample: '[{"Idea":"x","Status":"for production"}]',
+    });
+
+    const handle = getHandle(out);
+    expect(() => handle.parse('[{"Idea":"only"}]')).toThrow(/missing required property/i);
+  });
+
+  it("JSON example mode: rejects primitive root example", async () => {
+    await expect(runParser({ jsonSchemaExample: '"just a string"' })).rejects.toThrow(
+      /object or array/i,
+    );
+  });
+
   it("JSON Schema mode: parse returns conforming object", async () => {
     const out = await runParser({
       schemaType: "manual",
@@ -186,6 +222,17 @@ describe("batch-queue outputParserStructured — @n8n/n8n-nodes-langchain.output
     const handle = getHandle(out);
     const result = handle.parse('Here is the result: {"name":"Bob","age":25} hope that helps!');
     expect(result).toEqual({ name: "Bob", age: 25 });
+  });
+
+  it("autoFix: extracts root array JSON from surrounding prose", async () => {
+    const out = await runParser({
+      autoFix: true,
+      jsonSchemaExample: '[{"name":"x"}]',
+    });
+
+    const handle = getHandle(out);
+    const result = handle.parse('Sure: [{"name":"Bob"}] done.');
+    expect(result).toEqual([{ name: "Bob" }]);
   });
 
   it("autoFix off: JSON in prose fails without extraction", async () => {
