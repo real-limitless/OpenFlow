@@ -11,6 +11,10 @@ import { enqueueOrRun } from "../execute";
 import { resolveSubWorkflowFromDb } from "../workflow-loader";
 import { loadVarsMap } from "../services/variables";
 import { getDefaultEnvironment } from "../services/environments";
+import {
+  notifyExecutionFinished,
+  notifyExecutionStarted,
+} from "../services/workflow-events";
 
 export default function webhooksRoute(app: Hono<AppEnv>) {
   // Public webhook endpoint — no auth required
@@ -55,6 +59,7 @@ export default function webhooksRoute(app: Hono<AppEnv>) {
         mode: "webhook",
       },
     });
+    notifyExecutionStarted(workflow.id, execution.id, "webhook");
 
     const isWebhookType = (t: string) =>
       t === "openflow-node-base.webhook" || t === "n8n-nodes-base.webhook";
@@ -97,14 +102,16 @@ export default function webhooksRoute(app: Hono<AppEnv>) {
     };
 
     const updateExecution = async (result: { success: boolean; runData: unknown }) => {
+      const status = result.success ? "success" : "error";
       await prisma.execution.update({
         where: { id: execution.id },
         data: {
-          status: result.success ? "success" : "error",
+          status,
           finishedAt: new Date(),
           runData: JSON.stringify(result.runData),
         },
       });
+      notifyExecutionFinished(workflow.id, execution.id, status, "webhook");
     };
 
     const handleError = async (err: unknown) => {
@@ -116,6 +123,7 @@ export default function webhooksRoute(app: Hono<AppEnv>) {
           error: JSON.stringify({ message: err instanceof Error ? err.message : String(err) }),
         },
       });
+      notifyExecutionFinished(workflow.id, execution.id, "error", "webhook");
     };
 
     if (!shouldWait) {

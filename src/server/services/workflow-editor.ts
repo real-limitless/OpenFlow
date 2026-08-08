@@ -3,7 +3,7 @@ import { parseWorkflowJson } from "../../lib/workflow/schema";
 import type { IWorkflow } from "../../lib/workflow/types";
 import * as mutations from "../../lib/workflow/mutations";
 import { deserializeJsonFields, KNOWN_WORKFLOW_FIELDS, serializeJsonFields } from "./workflow-io";
-import { emitWorkflowEvent } from "./workflow-events";
+import { emitWorkflowEvent, notifyExecutionStarted } from "./workflow-events";
 import { allNodeTypes, getNodeType } from "../../lib/nodes/registry";
 import { enqueueOrRun } from "../execute";
 import { ensurePersonalProject } from "./projects";
@@ -298,11 +298,7 @@ export async function editorExecute(workflowId: string, userId = "local") {
     },
   });
   await enqueueOrRun(workflowId, execution.id, "manual", wf.pinData, wf, ownerId, row.projectId);
-  emitWorkflowEvent({
-    type: "execution.started",
-    workflowId,
-    executionId: execution.id,
-  });
+  notifyExecutionStarted(workflowId, execution.id, "manual");
   return { executionId: execution.id };
 }
 

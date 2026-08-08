@@ -3,8 +3,19 @@ import type { IWorkflow } from "../../lib/workflow/types";
 export type WorkflowEvent =
   | { type: "workflow.updated"; workflowId: string; workflow: IWorkflow; source: string }
   | { type: "node.selected"; workflowId: string; nodeName: string | null }
-  | { type: "execution.started"; workflowId: string; executionId: string }
-  | { type: "execution.finished"; workflowId: string; executionId: string; status: string };
+  | {
+      type: "execution.started";
+      workflowId: string;
+      executionId: string;
+      mode?: string;
+    }
+  | {
+      type: "execution.finished";
+      workflowId: string;
+      executionId: string;
+      status: string;
+      mode?: string;
+    };
 
 type Listener = (event: WorkflowEvent) => void;
 
@@ -33,4 +44,34 @@ export function emitWorkflowEvent(event: WorkflowEvent): void {
       console.error("[workflow-events] listener error", err);
     }
   }
+}
+
+/** Notify open editors that a new execution row exists. */
+export function notifyExecutionStarted(
+  workflowId: string,
+  executionId: string,
+  mode?: string,
+): void {
+  emitWorkflowEvent({
+    type: "execution.started",
+    workflowId,
+    executionId,
+    mode,
+  });
+}
+
+/** Notify open editors that an execution reached a terminal status. */
+export function notifyExecutionFinished(
+  workflowId: string,
+  executionId: string,
+  status: string,
+  mode?: string,
+): void {
+  emitWorkflowEvent({
+    type: "execution.finished",
+    workflowId,
+    executionId,
+    status,
+    mode,
+  });
 }

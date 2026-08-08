@@ -15,6 +15,7 @@ import { LOCAL_USER_ID } from "./services/users";
 import { loadVarsMap } from "./services/variables";
 import { getDefaultEnvironment, resolveEnvironment } from "./services/environments";
 import { log } from "./log";
+import { notifyExecutionFinished } from "./services/workflow-events";
 import type { IWorkflow, INodeExecutionData } from "../lib/workflow/types";
 
 let redisAvailable: boolean | null = null;
@@ -115,6 +116,7 @@ export async function enqueueOrRun(
       where: { id: executionId },
       data: { status: "error", finishedAt: new Date(), error: "Workflow not found" },
     });
+    notifyExecutionFinished(workflowId, executionId, "error");
     return;
   }
 
@@ -146,10 +148,11 @@ export async function enqueueOrRun(
     },
   })
     .then(async (result) => {
+      const status = result.success ? "success" : "error";
       await prisma.execution.update({
         where: { id: executionId },
         data: {
-          status: result.success ? "success" : "error",
+          status,
           finishedAt: new Date(),
           runData: JSON.stringify(result.runData),
           error: result.success
@@ -161,6 +164,7 @@ export async function enqueueOrRun(
               }),
         },
       });
+      notifyExecutionFinished(workflowId, executionId, status);
     })
     .catch(async (err) => {
       log.error("in-process execution failed", {
@@ -177,5 +181,6 @@ export async function enqueueOrRun(
           error: JSON.stringify({ message: err instanceof Error ? err.message : String(err) }),
         },
       });
+      notifyExecutionFinished(workflowId, executionId, "error");
     });
 }

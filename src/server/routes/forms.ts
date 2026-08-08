@@ -26,6 +26,10 @@ import { signFormCsrf, verifyFormCsrf } from "../forms/csrf";
 import type { ExecutionRunData } from "../../lib/engine/types";
 import { typesEqual } from "../../lib/nodes/type-ids";
 import { evaluateExpression, isExpression } from "../../lib/expressions/evaluate";
+import {
+  notifyExecutionFinished,
+  notifyExecutionStarted,
+} from "../services/workflow-events";
 
 function definitionFromWorkflow(workflow: {
   id: string;
@@ -313,6 +317,7 @@ export default function formsRoute(app: Hono<AppEnv>) {
         mode: "webhook",
       },
     });
+    notifyExecutionStarted(workflowRow.id, execution.id, "webhook");
 
     const defaultEnv = await getDefaultEnvironment(workflowRow.projectId);
     const environmentId = defaultEnv?.id;
@@ -340,10 +345,11 @@ export default function formsRoute(app: Hono<AppEnv>) {
         resolveSubWorkflow: resolveSubWorkflowFromDb,
       });
 
+      const status = runResult.success ? "success" : "error";
       await prisma.execution.update({
         where: { id: execution.id },
         data: {
-          status: runResult.success ? "success" : "error",
+          status,
           finishedAt: new Date(),
           runData: JSON.stringify(runResult.runData),
           error: runResult.success
@@ -355,6 +361,7 @@ export default function formsRoute(app: Hono<AppEnv>) {
               }),
         },
       });
+      notifyExecutionFinished(workflowRow.id, execution.id, status, "webhook");
 
       clearFormResponse(execution.id);
 
@@ -418,6 +425,7 @@ export default function formsRoute(app: Hono<AppEnv>) {
           }),
         },
       });
+      notifyExecutionFinished(workflowRow.id, execution.id, "error", "webhook");
       return c.html(
         renderThanksPage({
           title: "Submission problem",

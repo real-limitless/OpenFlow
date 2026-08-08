@@ -208,7 +208,7 @@ function EditorPage() {
     };
   }, []);
 
-  // Live graph updates from assistant / remote mutations
+  // Live graph updates from assistant / remote mutations + execution history
   useEffect(() => {
     if (status !== "ready") return;
     const sse = new EventSource(`/api/v1/workflows/${id}/events`);
@@ -219,6 +219,8 @@ function EditorPage() {
           workflow?: IWorkflow;
           source?: string;
           nodeName?: string | null;
+          executionId?: string;
+          status?: string;
         };
         if (data.type === "workflow.updated" && data.workflow && data.source !== "editor") {
           // Prefer remote assistant snapshot; drop local dirty to avoid thrash
@@ -226,6 +228,10 @@ function EditorPage() {
         }
         if (data.type === "node.selected") {
           selectNode(data.nodeName ?? null);
+        }
+        // Webhook / form / schedule / external runs: refresh History panel
+        if (data.type === "execution.started" || data.type === "execution.finished") {
+          bumpHistory();
         }
       } catch {
         /* ignore */

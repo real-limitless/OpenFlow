@@ -23,6 +23,7 @@ import {
   type SharePermission,
 } from "../services/shares";
 import { environmentIdFromRequest } from "../services/environments";
+import { notifyExecutionStarted } from "../services/workflow-events";
 
 function minShareForRole(minRole: ProjectRole): SharePermission {
   return minRole === "viewer" ? "view" : "edit";
@@ -555,6 +556,7 @@ export default function workflowsRoute(app: Hono<AppEnv>) {
         mode: "manual",
       },
     });
+    notifyExecutionStarted(id, execution.id, "manual");
 
     const pinData = body.pinData ?? snapshot.pinData;
     await enqueueOrRun(
