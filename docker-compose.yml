@@ -2,6 +2,11 @@
 #   docker compose up -d
 #   open http://localhost:3000
 #
+# Toolbox (git/shell/RAG reindex) — optional profile:
+#   docker compose --profile tools up -d
+#   docker compose exec toolbox bash
+#   docker compose run --rm toolbox catalog-reindex
+#
 # No .env required. Optional: cp .env.example .env and edit.
 # Production: docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
 
@@ -22,6 +27,7 @@ services:
       # Fixed container paths (do not interpolate host .env — breaks the volume mounts)
       BINARY_STORAGE_DIR: /data/binary
       OPENFLOW_SECRETS_DIR: /data/secrets
+      OPENFLOW_WORKSPACE_DIR: /data/workspace
       RUN_WORKER: ${RUN_WORKER:-true}
       WORKER_CONCURRENCY: ${WORKER_CONCURRENCY:-5}
       OPENFLOW_HOT_NODES: ${OPENFLOW_HOT_NODES:-true}
@@ -33,6 +39,13 @@ services:
       OPENFLOW_ASSISTANT_MODEL: ${OPENFLOW_ASSISTANT_MODEL:-openai/gpt-4o-mini}
       OPENFLOW_MCP_ENABLED: ${OPENFLOW_MCP_ENABLED:-true}
       OPENFLOW_PUBLIC_URL: ${OPENFLOW_PUBLIC_URL:-}
+      OPENFLOW_CATALOG_RAG_ENABLED: ${OPENFLOW_CATALOG_RAG_ENABLED:-true}
+      OPENFLOW_CATALOG_EMBED_API_KEY: ${OPENFLOW_CATALOG_EMBED_API_KEY:-${OPENFLOW_ASSISTANT_API_KEY:-}}
+      OPENFLOW_CATALOG_EMBED_BASE_URL: ${OPENFLOW_CATALOG_EMBED_BASE_URL:-${OPENFLOW_ASSISTANT_BASE_URL:-https://openrouter.ai/api/v1}}
+      OPENFLOW_CATALOG_EMBED_MODEL: ${OPENFLOW_CATALOG_EMBED_MODEL:-text-embedding-3-small}
+      OPENFLOW_CATALOG_EMBED_DIMS: ${OPENFLOW_CATALOG_EMBED_DIMS:-1536}
+      OPENFLOW_CATALOG_SHELL_PENALTY: ${OPENFLOW_CATALOG_SHELL_PENALTY:-0.35}
+      OPENFLOW_CATALOG_USE_PGVECTOR: ${OPENFLOW_CATALOG_USE_PGVECTOR:-true}
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
       OPENAI_BASE_URL: ${OPENAI_BASE_URL:-}
       OPENAI_MODEL: ${OPENAI_MODEL:-}
@@ -46,6 +59,7 @@ services:
     volumes:
       - binary-data:/data/binary
       - secrets-data:/data/secrets
+      - workspace-data:/data/workspace
     healthcheck:
       test:
         [
@@ -62,8 +76,49 @@ services:
       redis:
         condition: service_healthy
 
+  # Optional toolbox: git, bash, python, jq, rg, catalog reindex/eval.
+  #   docker compose --profile tools up -d toolbox
+  #   docker compose exec toolbox bash
+  #   docker compose run --rm toolbox catalog-reindex
+  toolbox:
+    profiles: ["tools"]
+    build:
+      context: .
+      dockerfile: Dockerfile.toolbox
+    image: openflow-toolbox:local
+    working_dir: /workspace
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      DATABASE_URL: postgresql://openflow:openflow@db:5432/openflow
+      REDIS_URL: redis://redis:6379
+      OPENFLOW_WORKSPACE_DIR: /data/workspace
+      OPENFLOW_CATALOG_RAG_ENABLED: ${OPENFLOW_CATALOG_RAG_ENABLED:-true}
+      OPENFLOW_CATALOG_EMBED_API_KEY: ${OPENFLOW_CATALOG_EMBED_API_KEY:-${OPENFLOW_ASSISTANT_API_KEY:-}}
+      OPENFLOW_CATALOG_EMBED_BASE_URL: ${OPENFLOW_CATALOG_EMBED_BASE_URL:-${OPENFLOW_ASSISTANT_BASE_URL:-https://openrouter.ai/api/v1}}
+      OPENFLOW_CATALOG_EMBED_MODEL: ${OPENFLOW_CATALOG_EMBED_MODEL:-text-embedding-3-small}
+      OPENFLOW_CATALOG_EMBED_DIMS: ${OPENFLOW_CATALOG_EMBED_DIMS:-1536}
+      OPENFLOW_CATALOG_SHELL_PENALTY: ${OPENFLOW_CATALOG_SHELL_PENALTY:-0.35}
+      OPENFLOW_CATALOG_USE_PGVECTOR: ${OPENFLOW_CATALOG_USE_PGVECTOR:-true}
+      OPENFLOW_ASSISTANT_API_KEY: ${OPENFLOW_ASSISTANT_API_KEY:-}
+      OPENFLOW_ASSISTANT_BASE_URL: ${OPENFLOW_ASSISTANT_BASE_URL:-https://openrouter.ai/api/v1}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      OPENAI_BASE_URL: ${OPENAI_BASE_URL:-}
+    volumes:
+      # App source for catalog:reindex / factory scripts
+      - .:/workspace
+      # Shared agent workspace with api (clones, patches, scripts)
+      - workspace-data:/data/workspace
+      - catalog-data:/data/catalog
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
   db:
-    image: postgres:16-alpine
+    # pgvector-enabled Postgres for semantic node catalog (RAG)
+    image: pgvector/pgvector:pg16
     ports:
       - "15432:5432"
     volumes:
@@ -95,3 +150,5 @@ volumes:
   binary-data:
   secrets-data:
   redis-data:
+  workspace-data:
+  catalog-data:

@@ -72,6 +72,35 @@ Node palette: multi-word / longer queries call semantic suggest and show a **Sug
 - Empty catalog falls back to keyword `list_node_types` / palette filter.
 - Spec chunks are truncated paraphrases of public clean-room specs — not a substitute for `get_node_type`.
 
+## Docker toolbox
+
+Compose ships a **toolbox** profile (git, bash, python, jq, rg, `psql`) that shares `/data/workspace` with `api` and can rebuild the catalog index:
+
+```sh
+docker compose --profile tools up -d toolbox
+docker compose run --rm toolbox catalog-reindex        # API embeddings
+docker compose run --rm toolbox catalog-reindex-hash   # offline
+docker compose run --rm toolbox catalog-eval
+```
+
+See [toolbox.md](toolbox.md). The `db` service uses `pgvector/pgvector:pg16` so the optional `vector` column / HNSW index can activate.
+
+## Full RAG platform (target)
+
+| Surface | Entry |
+| --- | --- |
+| MCP | `suggest_nodes({ intent })` then `get_node_type` / `add_node` |
+| HTTP | `POST /api/v1/catalog/suggest-nodes` |
+| UI | Node palette multi-word search → Suggested strip |
+| Runtime agent | **Node Catalog** tool (`toolNodeCatalog`) on `ai_tool` |
+| Operator | toolbox container + `npm run catalog:reindex` |
+
+Preference ladder (shell **allowed**, ranked low):
+
+1. Domain/core nodes from `suggest_nodes`
+2. Compose Code / Set / IF when partial
+3. Execute Command / SSH when no catalog node fits or user asks for host shell
+
 ## Eval (manual / CI seed)
 
 | Intent | Expect top types to include |

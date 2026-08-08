@@ -106,6 +106,17 @@ export const config = {
       );
     },
   },
+  /**
+   * Shared workspace for Execute Command / Git / toolbox container clones.
+   * Docker Compose mounts this at /data/workspace on api + toolbox.
+   */
+  get workspaceDir() {
+    return (
+      process.env.OPENFLOW_WORKSPACE_DIR?.trim() ||
+      process.env.WORKSPACE_DIR?.trim() ||
+      ""
+    );
+  },
   /** Semantic node catalog (RAG) for MCP / palette / agent discovery. */
   catalog: {
     get enabled() {
