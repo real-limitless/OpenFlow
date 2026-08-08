@@ -23,8 +23,17 @@ RUN apt-get update \
     git \
     openssh-client \
     python3 \
+    python3-pip \
+    python3-venv \
   && ln -sf /usr/bin/python3 /usr/bin/python \
-  && rm -rf /var/lib/apt/lists/*
+  && pip3 install --break-system-packages --no-cache-dir \
+    "ansible-core>=2.16,<2.19" \
+  && ansible-galaxy collection install \
+    ansible.posix \
+    community.general \
+    community.docker \
+    --collections-path /usr/share/ansible/collections \
+  && rm -rf /var/lib/apt/lists/* /root/.cache
 WORKDIR /app
 ENV NODE_ENV=production \
     BINARY_STORAGE_DIR=/data/binary \

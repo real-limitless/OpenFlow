@@ -34,7 +34,7 @@ import { executorSourceBlobUrl } from "@/lib/engine/node-runtime";
 import { specBlobUrl, toCanonicalType, toWireType } from "@/lib/nodes/type-ids";
 import { mergeNodeSampleData, resolveIncomingItems } from "@/lib/editor/sample-data";
 import { AnsibleModuleOptions } from "./AnsibleModuleOptions";
-import { ANSIBLE_NODE_TYPE } from "@/lib/nodes/ansible/types";
+import { ANSIBLE_NODE_TYPES } from "@/lib/nodes/ansible/types";
 
 export function PropertiesPanel({
   embedded = false,
@@ -271,7 +271,7 @@ export function PropertiesPanel({
                       if (!shouldDisplay(prop, parameters)) return false;
                       // Hybrid module options UI owns `args` for ansible nodes
                       if (
-                        toCanonicalType(node.type) === ANSIBLE_NODE_TYPE &&
+                        ANSIBLE_NODE_TYPES.has(toCanonicalType(node.type)) &&
                         prop.name === "args"
                       ) {
                         return false;
@@ -293,7 +293,7 @@ export function PropertiesPanel({
                         }
                       />
                     ))}
-                  {toCanonicalType(node.type) === ANSIBLE_NODE_TYPE && (
+                  {ANSIBLE_NODE_TYPES.has(toCanonicalType(node.type)) && (
                     <AnsibleModuleOptions
                       moduleFqcn={String(parameters.module ?? "")}
                       args={parameters.args}

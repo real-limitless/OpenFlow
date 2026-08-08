@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 import {
   ansibleOptionToProperty,
   getAnsibleModuleSchema,
+  listAnsibleGallery,
+  listAnsibleSchemaFqcns,
   searchAnsibleGallery,
   schemaToProperties,
 } from "../catalog";
@@ -20,6 +22,15 @@ describe("ansible catalog", () => {
     expect(props.some((p) => p.name === "path" && p.required)).toBe(true);
     const state = props.find((p) => p.name === "state");
     expect(state?.type).toBe("options");
+  });
+
+  it("has schemas for full gallery coverage", () => {
+    const gallery = listAnsibleGallery();
+    const schemas = new Set(listAnsibleSchemaFqcns());
+    expect(schemas.size).toBeGreaterThanOrEqual(gallery.length);
+    for (const g of gallery) {
+      expect(schemas.has(g.fqcn), `missing schema for ${g.fqcn}`).toBe(true);
+    }
   });
 
   it("maps boolean options", () => {

@@ -1,15 +1,30 @@
 import type { INodeProperties, INodePropertyOption } from "@/lib/nodes/types";
 import type { AnsibleGalleryEntry, AnsibleModuleSchema, AnsibleOptionSchema } from "./types";
 import galleryJson from "./gallery.json";
-import pingSchema from "./schemas/ansible.builtin.ping.json";
-import fileSchema from "./schemas/ansible.builtin.file.json";
-import copySchema from "./schemas/ansible.builtin.copy.json";
 
-const SCHEMA_BY_FQCN: Record<string, AnsibleModuleSchema> = {
-  "ansible.builtin.ping": pingSchema as AnsibleModuleSchema,
-  "ansible.builtin.file": fileSchema as AnsibleModuleSchema,
-  "ansible.builtin.copy": copySchema as AnsibleModuleSchema,
-};
+const schemaModules = import.meta.glob<{ default: AnsibleModuleSchema }>("./schemas/*.json", {
+  eager: true,
+});
+
+function buildSchemaMap(): Record<string, AnsibleModuleSchema> {
+  const out: Record<string, AnsibleModuleSchema> = {};
+  for (const [path, mod] of Object.entries(schemaModules)) {
+    const data = (mod as { default?: AnsibleModuleSchema }).default ?? (mod as AnsibleModuleSchema);
+    if (!data || typeof data !== "object") continue;
+    const fqcn =
+      typeof data.fqcn === "string" && data.fqcn
+        ? data.fqcn
+        : path
+            .split("/")
+            .pop()
+            ?.replace(/\.json$/, "");
+    if (!fqcn) continue;
+    out[fqcn] = { ...data, fqcn };
+  }
+  return out;
+}
+
+const SCHEMA_BY_FQCN = buildSchemaMap();
 
 export function listAnsibleGallery(): AnsibleGalleryEntry[] {
   return (galleryJson as AnsibleGalleryEntry[]).filter((x) => x?.fqcn);
@@ -65,17 +80,14 @@ function mapOptionType(t: string): INodeProperties["type"] {
 
 export function ansibleOptionToProperty(opt: AnsibleOptionSchema): INodeProperties {
   const choices = Array.isArray(opt.choices) ? opt.choices : null;
+  const mapped = choices?.length ? "options" : mapOptionType(opt.type);
   const base: INodeProperties = {
     displayName: opt.displayName || opt.name,
     name: opt.name,
-    type: choices?.length ? "options" : mapOptionType(opt.type),
+    type: mapped,
     default:
       opt.default ??
-      (mapOptionType(opt.type) === "boolean"
-        ? false
-        : mapOptionType(opt.type) === "json"
-          ? {}
-          : ""),
+      (mapped === "boolean" ? false : mapped === "json" ? {} : mapped === "number" ? 0 : ""),
     description: opt.description,
     required: Boolean(opt.required),
   };

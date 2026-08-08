@@ -33,6 +33,13 @@ describe("openflow-node-base.ansible", () => {
     expect(getExecutor(TYPE)).toBeDefined();
   });
 
+  it("registers ansibleTool with same runner", () => {
+    const tool = "openflow-node-base.ansibleTool";
+    expect(hasExecutor(tool)).toBe(true);
+    expect(getNodeType(tool).displayName).toMatch(/Ansible/i);
+    expect(getNodeType(tool).category).toBe("AI Tool");
+  });
+
   it("builds argv with check and local connection", () => {
     const argv = buildAnsibleArgv({
       module: "ansible.builtin.ping",

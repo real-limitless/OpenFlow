@@ -25,3 +25,5 @@ export type AnsibleModuleSchema = {
 };
 
 export const ANSIBLE_NODE_TYPE = "openflow-node-base.ansible";
+export const ANSIBLE_TOOL_NODE_TYPE = "openflow-node-base.ansibleTool";
+export const ANSIBLE_NODE_TYPES = new Set([ANSIBLE_NODE_TYPE, ANSIBLE_TOOL_NODE_TYPE]);

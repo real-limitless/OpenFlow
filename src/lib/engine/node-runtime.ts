@@ -880,6 +880,11 @@ export const BUILTIN_EXECUTOR_MODULES: Array<{
     exportName: "ansibleExecutor",
   },
   {
+    type: "openflow-node-base.ansibleTool",
+    modulePath: "./executors/ansibleTool",
+    exportName: "ansibleToolExecutor",
+  },
+  {
     type: "openflow-node-base.n8n",
     modulePath: "./executors/n8n",
     exportName: "n8nExecutor",
