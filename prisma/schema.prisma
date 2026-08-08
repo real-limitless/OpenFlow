@@ -26,8 +26,9 @@ model User {
   projectMembers  ProjectMember[]
   sharesGranted   Share[]          @relation("ShareGranteeUser")
   sharesCreated   Share[]          @relation("ShareCreatedBy")
-  oauthAuthCodes  OAuthAuthorizationCode[]
-  oauthTokens     OAuthToken[]
+  oauthAuthCodes       OAuthAuthorizationCode[]
+  oauthTokens          OAuthToken[]
+  mcpTemporaryTokens   McpTemporaryToken[]
 
   @@map("users")
 }
@@ -66,6 +67,8 @@ model OAuthAuthorizationCode {
   codeChallengeMethod String @default("S256")
   /// optional RFC 8707 resource / audience
   resource      String?
+  /// JSON array of { workflowId, canRead, canWrite, canExecute, expiresAt? }
+  workflowGrants String  @default("[]")
   expiresAt     DateTime
   usedAt        DateTime?
   createdAt     DateTime @default(now())
@@ -95,13 +98,31 @@ model OAuthToken {
   revokedAt        DateTime?
   createdAt        DateTime  @default(now())
 
-  client OAuthClient @relation(fields: [clientId], references: [clientId], onDelete: Cascade)
-  user   User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  client   OAuthClient              @relation(fields: [clientId], references: [clientId], onDelete: Cascade)
+  user     User                     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  grants   OAuthTokenWorkflowGrant[]
 
   @@index([clientId])
   @@index([userId])
   @@index([accessExpiresAt])
   @@map("oauth_tokens")
+}
+
+model OAuthTokenWorkflowGrant {
+  id          String    @id @default(cuid())
+  tokenId     String
+  workflowId  String
+  canRead     Boolean   @default(true)
+  canWrite    Boolean   @default(false)
+  canExecute  Boolean   @default(false)
+  expiresAt   DateTime?
+  createdAt   DateTime  @default(now())
+
+  token OAuthToken @relation(fields: [tokenId], references: [id], onDelete: Cascade)
+
+  @@unique([tokenId, workflowId])
+  @@index([workflowId])
+  @@map("oauth_token_workflow_grants")
 }
 
 // ─── Projects + RBAC ────────────────────────────────────
@@ -347,19 +368,84 @@ model Credential {
 // ─── API Keys ───────────────────────────────────────────
 
 model ApiKey {
-  id        String   @id @default(cuid())
+  id        String    @id @default(cuid())
   userId    String
   name      String
   /// SHA-256 hex of raw key (preferred). Legacy rows may store bcrypt ($2…).
   keyHash   String
-  scopes    String   @default("[]")  // JSON array of scope strings
-  createdAt DateTime @default(now())
+  /// JSON array of openflow:read|write|execute
+  scopes    String    @default("[]")
+  /// When true, only ApiKeyWorkflowGrant rows apply (secure default for new keys).
+  restrictWorkflows Boolean @default(true)
+  /// When true, restricted agents may createWorkflow via MCP.
+  canCreateWorkflows Boolean @default(false)
+  expiresAt DateTime?
+  lastUsedAt DateTime?
+  createdAt DateTime  @default(now())
 
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user   User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  grants ApiKeyWorkflowGrant[]
 
   @@index([userId])
   @@unique([keyHash])
   @@map("api_keys")
+}
+
+model ApiKeyWorkflowGrant {
+  id         String    @id @default(cuid())
+  apiKeyId   String
+  workflowId String
+  canRead    Boolean   @default(true)
+  canWrite   Boolean   @default(false)
+  canExecute Boolean   @default(false)
+  expiresAt  DateTime?
+  createdAt  DateTime  @default(now())
+
+  apiKey ApiKey @relation(fields: [apiKeyId], references: [id], onDelete: Cascade)
+
+  @@unique([apiKeyId, workflowId])
+  @@index([workflowId])
+  @@map("api_key_workflow_grants")
+}
+
+// ─── Temporary MCP tokens (editor “Share with AI”) ──────
+
+model McpTemporaryToken {
+  id         String    @id @default(cuid())
+  userId     String
+  name       String?
+  /// SHA-256 of oft_… token
+  tokenHash  String    @unique
+  /// JSON array of openflow scopes
+  scopes     String    @default("[]")
+  expiresAt  DateTime
+  revokedAt  DateTime?
+  lastUsedAt DateTime?
+  createdAt  DateTime  @default(now())
+
+  user   User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  grants McpTemporaryGrant[]
+
+  @@index([userId])
+  @@index([expiresAt])
+  @@map("mcp_temporary_tokens")
+}
+
+model McpTemporaryGrant {
+  id         String    @id @default(cuid())
+  tokenId    String
+  workflowId String
+  canRead    Boolean   @default(true)
+  canWrite   Boolean   @default(false)
+  canExecute Boolean   @default(false)
+  expiresAt  DateTime?
+  createdAt  DateTime  @default(now())
+
+  token McpTemporaryToken @relation(fields: [tokenId], references: [id], onDelete: Cascade)
+
+  @@unique([tokenId, workflowId])
+  @@index([workflowId])
+  @@map("mcp_temporary_grants")
 }
 
 // ─── Webhook Routes ─────────────────────────────────────

@@ -11,6 +11,7 @@ import {
 import { ALL_MCP_SCOPES } from "../oauth/scopes";
 import { mcpResourceUrl, publicOrigin } from "../oauth/public-url";
 import { isMcpEnabled } from "../services/instance-settings";
+import { unrestrictedPolicy } from "../services/agent-policy";
 
 type JsonRpc = {
   jsonrpc?: string;
@@ -63,6 +64,7 @@ async function handleRpc(
     userId: string;
     scopes: string[];
     session: McpSessionState | null;
+    workflowPolicy: import("../services/agent-policy").WorkflowPolicy;
   },
 ): Promise<JsonRpc | null> {
   const id = msg.id ?? null;
@@ -99,6 +101,7 @@ async function handleRpc(
             workflowId: ctx.workflowId,
             scopes: ctx.scopes,
             session: ctx.session,
+            workflowPolicy: ctx.workflowPolicy,
           },
           name,
           args,
@@ -226,7 +229,13 @@ async function handleMcp(c: Context<AppEnv>, requireWorkflowHeader: boolean) {
   }
 
   const workflowId = headerWf || session?.defaultWorkflowId || null;
-  const rpcCtx = { workflowId, userId, scopes, session };
+  let workflowPolicy = unrestrictedPolicy();
+  try {
+    workflowPolicy = c.get("workflowPolicy") ?? unrestrictedPolicy();
+  } catch {
+    /* unset */
+  }
+  const rpcCtx = { workflowId, userId, scopes, session, workflowPolicy };
 
   const results: JsonRpc[] = [];
   for (const msg of messages) {

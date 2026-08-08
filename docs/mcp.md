@@ -12,6 +12,8 @@ In the OpenFlow app: **Settings → MCP**
 
 Env kill-switch still wins: `OPENFLOW_MCP_ENABLED=false` forces MCP off and locks the UI toggle.
 
+Apply DB migration after pull: `npm run db:deploy` (includes workflow grants tables).
+
 ## Endpoint
 
 | URL | Role |
@@ -32,6 +34,26 @@ OPENFLOW_MCP_ENABLED="true"   # default on
 ```
 
 Disable with `OPENFLOW_MCP_ENABLED=false`.
+
+## Access control (workflow grants)
+
+External agents never see more than the **intersection** of:
+
+1. What the OpenFlow user can access (project / share)
+2. OAuth/API key **scopes** (`openflow:read|write|execute`)
+3. **Per-workflow grants** (r / w / x) with optional expiry
+
+| Credential | Prefix | Default |
+|------------|--------|---------|
+| API key | `of_…` | New keys: **restricted** (must grant workflows). Legacy keys: unrestricted until edited. |
+| Temporary token | `oft_…` | Editor **Share with AI (MCP)** — one workflow + TTL |
+| OAuth access | `ofa_…` | Workflows selected on consent screen |
+
+**UI**
+
+- **Settings → API keys** — scopes, restrict toggle, workflow grants, expiry  
+- **Workflow editor → ⋯ → Share with AI (MCP)** — temporary token  
+- **OAuth `/authorize`** — pick workflows after login  
 
 ## Auth
 

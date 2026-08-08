@@ -1,6 +1,11 @@
 import { createHash, randomBytes, timingSafeEqual } from "node:crypto";
 import { prisma } from "../db";
 import { parseScopes, scopesToString } from "./scopes";
+import {
+  normalizeGrantInputs,
+  type GrantInput,
+  type WorkflowGrant,
+} from "../services/agent-policy";
 
 export function safeEqual(a: string, b: string): boolean {
   const ba = Buffer.from(a);
@@ -26,6 +31,29 @@ export function newOpaqueToken(prefix: string): string {
   return `${prefix}_${randomBytes(32).toString("base64url")}`;
 }
 
+function serializeGrants(grants: WorkflowGrant[]): string {
+  return JSON.stringify(
+    grants.map((g) => ({
+      workflowId: g.workflowId,
+      canRead: g.canRead,
+      canWrite: g.canWrite,
+      canExecute: g.canExecute,
+      expiresAt: g.expiresAt?.toISOString() ?? null,
+    })),
+  );
+}
+
+function parseStoredGrants(raw: string | null | undefined): WorkflowGrant[] {
+  if (!raw?.trim()) return [];
+  try {
+    const arr = JSON.parse(raw) as GrantInput[];
+    if (!Array.isArray(arr)) return [];
+    return normalizeGrantInputs(arr);
+  } catch {
+    return [];
+  }
+}
+
 export async function createAuthorizationCode(opts: {
   clientId: string;
   userId: string;
@@ -34,6 +62,7 @@ export async function createAuthorizationCode(opts: {
   codeChallenge: string;
   codeChallengeMethod?: string;
   resource?: string | null;
+  workflowGrants?: WorkflowGrant[];
 }): Promise<string> {
   const code = newOpaqueToken("ofc");
   const expiresAt = new Date(Date.now() + CODE_TTL_SEC * 1000);
@@ -47,6 +76,7 @@ export async function createAuthorizationCode(opts: {
       codeChallenge: opts.codeChallenge,
       codeChallengeMethod: opts.codeChallengeMethod ?? "S256",
       resource: opts.resource ?? null,
+      workflowGrants: serializeGrants(opts.workflowGrants ?? []),
       expiresAt,
     },
   });
@@ -92,6 +122,7 @@ export async function exchangeAuthorizationCode(opts: {
     userId: row.userId,
     scopes: parseScopes(row.scopes),
     resource: row.resource,
+    workflowGrants: parseStoredGrants(row.workflowGrants),
   });
 }
 
@@ -100,6 +131,7 @@ export async function issueTokens(opts: {
   userId: string;
   scopes: string[];
   resource?: string | null;
+  workflowGrants?: WorkflowGrant[];
 }): Promise<{
   ok: true;
   accessToken: string;
@@ -111,7 +143,8 @@ export async function issueTokens(opts: {
   const accessToken = newOpaqueToken("ofa");
   const refreshToken = newOpaqueToken("ofr");
   const now = Date.now();
-  await prisma.oAuthToken.create({
+  const grants = opts.workflowGrants ?? [];
+  const created = await prisma.oAuthToken.create({
     data: {
       accessTokenHash: hashToken(accessToken),
       refreshTokenHash: hashToken(refreshToken),
@@ -121,8 +154,21 @@ export async function issueTokens(opts: {
       resource: opts.resource ?? null,
       accessExpiresAt: new Date(now + ACCESS_TTL_SEC * 1000),
       refreshExpiresAt: new Date(now + REFRESH_TTL_SEC * 1000),
+      grants:
+        grants.length > 0
+          ? {
+              create: grants.map((g) => ({
+                workflowId: g.workflowId,
+                canRead: g.canRead,
+                canWrite: g.canWrite,
+                canExecute: g.canExecute,
+                expiresAt: g.expiresAt,
+              })),
+            }
+          : undefined,
     },
   });
+  void created;
   return {
     ok: true,
     accessToken,
@@ -142,6 +188,7 @@ export async function refreshAccessToken(opts: {
 > {
   const row = await prisma.oAuthToken.findUnique({
     where: { refreshTokenHash: hashToken(opts.refreshToken) },
+    include: { grants: true },
   });
   if (
     !row ||
@@ -152,6 +199,8 @@ export async function refreshAccessToken(opts: {
   ) {
     return { ok: false, error: "invalid_grant", status: 400 };
   }
+
+  const workflowGrants = mapGrantRows(row.grants);
 
   // Rotate: revoke old
   await prisma.oAuthToken.update({
@@ -164,12 +213,31 @@ export async function refreshAccessToken(opts: {
     userId: row.userId,
     scopes: parseScopes(row.scopes),
     resource: row.resource,
+    workflowGrants,
   });
+}
+
+function mapGrantRows(
+  rows: {
+    workflowId: string;
+    canRead: boolean;
+    canWrite: boolean;
+    canExecute: boolean;
+    expiresAt: Date | null;
+  }[],
+): WorkflowGrant[] {
+  return rows.map((r) => ({
+    workflowId: r.workflowId,
+    canRead: r.canRead,
+    canWrite: r.canWrite,
+    canExecute: r.canExecute,
+    expiresAt: r.expiresAt,
+  }));
 }
 
 export async function resolveAccessToken(
   rawToken: string,
-): Promise<{ userId: string; scopes: string[]; resource: string | null } | null> {
+): Promise<{ userId: string; scopes: string[]; resource: string | null; tokenId: string } | null> {
   if (!rawToken.startsWith("ofa_")) return null;
   const row = await prisma.oAuthToken.findUnique({
     where: { accessTokenHash: hashToken(rawToken) },
@@ -181,6 +249,7 @@ export async function resolveAccessToken(
     userId: row.userId,
     scopes: parseScopes(row.scopes),
     resource: row.resource,
+    tokenId: row.id,
   };
 }
 

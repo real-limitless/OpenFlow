@@ -35,6 +35,12 @@ vi.mock("../../services/workflow-access", () => ({
   loadWorkflowIfAllowed: vi.fn(),
 }));
 
+vi.mock("../../db", () => ({
+  prisma: {
+    execution: { findUnique: vi.fn() },
+  },
+}));
+
 import { callOpenflowTool, OPENFLOW_MCP_TOOLS } from "../tools";
 
 describe("openflow MCP tools", () => {

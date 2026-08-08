@@ -26,8 +26,25 @@ type McpSettingsResponse = {
   tools: { name: string; description: string }[];
 };
 
+type TempToken = {
+  id: string;
+  name: string | null;
+  expiresAt: string;
+  revokedAt: string | null;
+  lastUsedAt: string | null;
+  createdAt: string;
+  grants: {
+    workflowId: string;
+    canRead: boolean;
+    canWrite: boolean;
+    canExecute: boolean;
+    expiresAt: string | null;
+  }[];
+};
+
 function McpSettingsPage() {
   const [data, setData] = useState<McpSettingsResponse | null>(null);
+  const [tokens, setTokens] = useState<TempToken[] | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
@@ -45,9 +62,19 @@ function McpSettingsPage() {
     }
   }, []);
 
+  const refreshTokens = useCallback(async () => {
+    const res = await apiFetch("/api/v1/mcp-access-tokens");
+    if (!res.ok) {
+      setTokens([]);
+      return;
+    }
+    setTokens((await res.json()) as TempToken[]);
+  }, []);
+
   useEffect(() => {
     void refresh();
-  }, [refresh]);
+    void refreshTokens();
+  }, [refresh, refreshTokens]);
 
   const clientSnippet = useMemo(() => {
     if (!data?.mcpUrl) return "";
@@ -93,12 +120,27 @@ function McpSettingsPage() {
     }
   };
 
+  const revokeToken = async (id: string) => {
+    if (!confirm("Revoke this temporary MCP token?")) return;
+    const res = await apiFetch(`/api/v1/mcp-access-tokens/${id}`, { method: "DELETE" });
+    if (!res.ok && res.status !== 204) {
+      toast.error("Revoke failed");
+      return;
+    }
+    toast.success("Token revoked");
+    await refreshTokens();
+  };
+
   if (loading && !data) {
     return <p className="text-[13px] text-muted-foreground">Loading…</p>;
   }
   if (!data) {
     return <p className="text-[13px] text-muted-foreground">Could not load MCP settings.</p>;
   }
+
+  const activeTemps = (tokens ?? []).filter(
+    (t) => !t.revokedAt && new Date(t.expiresAt).getTime() > Date.now(),
+  );
 
   return (
     <div className="space-y-8">
@@ -117,7 +159,7 @@ function McpSettingsPage() {
             <p className="mt-0.5 text-[12px] text-muted-foreground">
               {data.authDisabled
                 ? "Auth disabled (local) — no OAuth required"
-                : "Auth on — OAuth 2.1 or API key"}
+                : "Auth on — OAuth 2.1, API key (of_…), or temp token (oft_…)"}
             </p>
           </div>
           <span
@@ -153,6 +195,27 @@ function McpSettingsPage() {
         </div>
       </section>
 
+      <section className="space-y-2 rounded-lg border border-border p-4">
+        <h3 className="text-[14px] font-medium">Access control</h3>
+        <p className="text-[12px] text-muted-foreground">
+          External agents only see the intersection of your user permissions, OAuth/API scopes, and
+          per-workflow grants (read / edit / run) with optional expiry.
+        </p>
+        <ul className="list-inside list-disc space-y-1 text-[12px] text-muted-foreground">
+          <li>
+            <Link to="/settings/api-keys" className="text-primary hover:underline">
+              API keys
+            </Link>{" "}
+            — long-lived <code className="rounded bg-muted px-1">of_…</code> with workflow allowlist
+          </li>
+          <li>
+            Workflow editor → <strong>⋯ → Share with AI (MCP)</strong> — temporary{" "}
+            <code className="rounded bg-muted px-1">oft_…</code> for one workflow
+          </li>
+          <li>OAuth browser login — pick workflows on the consent screen</li>
+        </ul>
+      </section>
+
       <section className="space-y-3">
         <h3 className="text-[14px] font-medium">Connect</h3>
         <CopyRow label="MCP URL" value={data.mcpUrl} onCopy={copy} />
@@ -178,13 +241,77 @@ function McpSettingsPage() {
           </pre>
           <p className="text-[12px] text-muted-foreground">
             Paste the URL into your MCP client. With auth enabled, complete the browser OAuth
-            prompt, or use an{" "}
+            prompt (select workflows), or use an{" "}
             <Link to="/settings/api-keys" className="text-primary hover:underline">
               API key
             </Link>{" "}
-            (<code className="rounded bg-muted px-1">Authorization: Bearer of_…</code>).
+            / temporary token (
+            <code className="rounded bg-muted px-1">Authorization: Bearer of_…</code> or{" "}
+            <code className="rounded bg-muted px-1">oft_…</code>).
           </p>
         </div>
+      </section>
+
+      <section className="space-y-2">
+        <div className="flex items-center justify-between gap-2">
+          <h3 className="text-[14px] font-medium">Temporary tokens</h3>
+          <Button type="button" size="sm" variant="ghost" onClick={() => void refreshTokens()}>
+            Refresh
+          </Button>
+        </div>
+        <p className="text-[12px] text-muted-foreground">
+          Created from the workflow editor (Share with AI). Revoke anytime.
+        </p>
+        <ul className="divide-y divide-border rounded-md border border-border">
+          {tokens === null && (
+            <li className="px-3 py-4 text-center text-[12px] text-muted-foreground">Loading…</li>
+          )}
+          {tokens?.length === 0 && (
+            <li className="px-3 py-4 text-center text-[12px] text-muted-foreground">
+              No temporary tokens yet.
+            </li>
+          )}
+          {tokens?.map((t) => {
+            const expired = new Date(t.expiresAt).getTime() <= Date.now();
+            const revoked = Boolean(t.revokedAt);
+            const status = revoked ? "Revoked" : expired ? "Expired" : "Active";
+            return (
+              <li key={t.id} className="flex flex-wrap items-start justify-between gap-2 px-3 py-2.5">
+                <div className="min-w-0 text-[12px]">
+                  <p className="font-medium">{t.name || t.id}</p>
+                  <p className="text-muted-foreground">
+                    {status}
+                    {" · "}expires {new Date(t.expiresAt).toLocaleString()}
+                    {t.lastUsedAt
+                      ? ` · last used ${new Date(t.lastUsedAt).toLocaleString()}`
+                      : ""}
+                  </p>
+                  <p className="mt-0.5 font-mono text-[10px] text-muted-foreground">
+                    {t.grants
+                      .map(
+                        (g) =>
+                          `${g.workflowId.slice(0, 8)}… r${g.canWrite ? "w" : ""}${g.canExecute ? "x" : ""}`,
+                      )
+                      .join(", ") || "no grants"}
+                  </p>
+                </div>
+                {!revoked && !expired && (
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="destructive"
+                    onClick={() => void revokeToken(t.id)}
+                  >
+                    Revoke
+                  </Button>
+                )}
+              </li>
+            );
+          })}
+        </ul>
+        {activeTemps.length > 0 && (
+          <p className="text-[11px] text-muted-foreground">{activeTemps.length} active</p>
+        )}
       </section>
 
       <section className="space-y-2">
@@ -201,7 +328,7 @@ function McpSettingsPage() {
       <section className="space-y-2">
         <h3 className="text-[14px] font-medium">Tools</h3>
         <p className="text-[12px] text-muted-foreground">
-          Same surface as the editor assistant (catalog, canvas edit, execute).
+          Same surface as the editor assistant (catalog, canvas edit, execute). Filtered by grants.
         </p>
         <ul className="max-h-64 space-y-1.5 overflow-y-auto rounded-md border border-border p-3">
           {data.tools.map((t) => (

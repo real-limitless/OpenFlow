@@ -14,6 +14,30 @@ import {
   validateNewRedirectUri,
 } from "../oauth/tokens";
 import { ensureUserWithProject } from "../services/users";
+import { editorListWorkflows } from "../services/workflow-access";
+import { normalizeGrantInputs, type WorkflowGrant } from "../services/agent-policy";
+import { randomBytes } from "node:crypto";
+
+type PendingConsent = {
+  userId: string;
+  clientId: string;
+  redirectUri: string;
+  state: string;
+  codeChallenge: string;
+  codeChallengeMethod: string;
+  scopes: string[];
+  resource: string | null;
+  expiresAt: number;
+};
+
+const pendingConsents = new Map<string, PendingConsent>();
+
+function prunePending() {
+  const now = Date.now();
+  for (const [k, v] of pendingConsents) {
+    if (v.expiresAt < now) pendingConsents.delete(k);
+  }
+}
 
 function parseRedirectUris(raw: string): string[] {
   try {
@@ -209,8 +233,8 @@ export default function oauthRoute(app: Hono<AppEnv>) {
       htmlPage(
         "Authorize OpenFlow",
         `<h1>Authorize MCP client</h1>
-         <p class="muted"><strong>${escapeHtml(clientLabel)}</strong> wants to access your OpenFlow workflows.</p>
-         <div class="scopes"><strong>Permissions</strong><ul>${scopes.map((s) => `<li>${escapeHtml(s)}</li>`).join("")}</ul></div>
+         <p class="muted"><strong>${escapeHtml(clientLabel)}</strong> wants to access selected workflows via MCP.</p>
+         <div class="scopes"><strong>Capability scopes</strong><ul>${scopes.map((s) => `<li>${escapeHtml(s)}</li>`).join("")}</ul></div>
          ${error ? `<p class="error">${escapeHtml(error)}</p>` : ""}
          <form method="post" action="/authorize">
            ${hidden}
@@ -218,7 +242,7 @@ export default function oauthRoute(app: Hono<AppEnv>) {
            <input type="email" name="email" required autocomplete="username"/>
            <label>Password</label>
            <input type="password" name="password" required autocomplete="current-password"/>
-           <button type="submit">Sign in &amp; allow</button>
+           <button type="submit">Continue</button>
          </form>`,
       ),
     );
@@ -230,25 +254,81 @@ export default function oauthRoute(app: Hono<AppEnv>) {
     }
 
     const contentType = c.req.header("content-type") ?? "";
-    let body: Record<string, string> = {};
+    let body: Record<string, string | string[]> = {};
     if (contentType.includes("application/json")) {
-      body = (await c.req.json()) as Record<string, string>;
+      body = (await c.req.json()) as Record<string, string | string[]>;
     } else {
       const fd = await c.req.parseBody();
       for (const [k, v] of Object.entries(fd)) {
         if (typeof v === "string") body[k] = v;
+        else if (Array.isArray(v)) body[k] = v.filter((x): x is string => typeof x === "string");
       }
     }
 
-    const clientId = body.client_id ?? "";
-    const redirectUri = body.redirect_uri ?? "";
-    const state = body.state ?? "";
-    const codeChallenge = body.code_challenge ?? "";
-    const codeChallengeMethod = body.code_challenge_method ?? "S256";
-    const scopes = parseScopes(body.scope);
-    const resource = body.resource || null;
-    const email = (body.email ?? "").trim().toLowerCase();
-    const password = body.password ?? "";
+    const str = (k: string) => {
+      const v = body[k];
+      return typeof v === "string" ? v : Array.isArray(v) ? (v[0] ?? "") : "";
+    };
+
+    // Step 2: pending consent + workflow selection
+    const pendingId = str("pending_id");
+    if (pendingId) {
+      prunePending();
+      const pending = pendingConsents.get(pendingId);
+      if (!pending || pending.expiresAt < Date.now()) {
+        return c.html(htmlPage("OAuth", `<p class="error">Consent session expired. Start again.</p>`), 400);
+      }
+      pendingConsents.delete(pendingId);
+
+      const selected = body["workflow_id"];
+      const ids = Array.isArray(selected)
+        ? selected
+        : typeof selected === "string" && selected
+          ? [selected]
+          : [];
+      if (ids.length === 0) {
+        return c.html(
+          htmlPage("OAuth", `<p class="error">Select at least one workflow.</p>`),
+          400,
+        );
+      }
+
+      const grants: WorkflowGrant[] = [];
+      for (const workflowId of ids) {
+        const canWrite = str(`w_${workflowId}`) === "on" || str(`w_${workflowId}`) === "1";
+        const canExecute = str(`x_${workflowId}`) === "on" || str(`x_${workflowId}`) === "1";
+        const canRead = true;
+        grants.push(
+          ...normalizeGrantInputs([{ workflowId, canRead, canWrite, canExecute }]),
+        );
+      }
+
+      const code = await createAuthorizationCode({
+        clientId: pending.clientId,
+        userId: pending.userId,
+        redirectUri: pending.redirectUri,
+        scopes: pending.scopes,
+        codeChallenge: pending.codeChallenge,
+        codeChallengeMethod: pending.codeChallengeMethod,
+        resource: pending.resource,
+        workflowGrants: grants,
+      });
+
+      const dest = new URL(pending.redirectUri);
+      dest.searchParams.set("code", code);
+      if (pending.state) dest.searchParams.set("state", pending.state);
+      return c.redirect(dest.toString(), 302);
+    }
+
+    const clientId = str("client_id");
+    const redirectUri = str("redirect_uri");
+    const state = str("state");
+    const codeChallenge = str("code_challenge");
+    const codeChallengeMethod = str("code_challenge_method") || "S256";
+    const scopes = parseScopes(str("scope"));
+    const resource = str("resource") || null;
+    const email = str("email").trim().toLowerCase();
+    const password = str("password");
 
     const fail = (msg: string) => {
       const u = new URL("/authorize", publicOrigin(c));
@@ -281,20 +361,54 @@ export default function oauthRoute(app: Hono<AppEnv>) {
 
     await ensureUserWithProject(user.id);
 
-    const code = await createAuthorizationCode({
-      clientId,
+    const listed = await editorListWorkflows(user.id, { limit: 100 });
+    prunePending();
+    const pid = randomBytes(16).toString("hex");
+    pendingConsents.set(pid, {
       userId: user.id,
+      clientId,
       redirectUri,
-      scopes,
+      state,
       codeChallenge,
       codeChallengeMethod,
+      scopes,
       resource,
+      expiresAt: Date.now() + 10 * 60 * 1000,
     });
 
-    const dest = new URL(redirectUri);
-    dest.searchParams.set("code", code);
-    if (state) dest.searchParams.set("state", state);
-    return c.redirect(dest.toString(), 302);
+    const rows =
+      listed.items.length === 0
+        ? `<p class="muted">You have no workflows. Create one in OpenFlow first.</p>`
+        : listed.items
+            .map(
+              (w) => `<label class="wf">
+                <input type="checkbox" name="workflow_id" value="${escapeHtml(w.id)}" checked/>
+                <span>${escapeHtml(w.name)}</span>
+                <span class="perms">
+                  <label><input type="checkbox" name="w_${escapeHtml(w.id)}" checked/> edit</label>
+                  <label><input type="checkbox" name="x_${escapeHtml(w.id)}" checked/> run</label>
+                </span>
+              </label>`,
+            )
+            .join("\n");
+
+    return c.html(
+      htmlPage(
+        "Select workflows",
+        `<h1>Select workflows</h1>
+         <p class="muted">Choose which workflows this MCP client may access. Uncheck edit/run to grant read-only.</p>
+         <form method="post" action="/authorize">
+           <input type="hidden" name="pending_id" value="${escapeHtml(pid)}"/>
+           <div class="wf-list">${rows}</div>
+           <button type="submit" ${listed.items.length === 0 ? "disabled" : ""}>Allow access</button>
+         </form>
+         <style>
+           .wf-list { display:flex; flex-direction:column; gap:0.5rem; margin:1rem 0; max-height:320px; overflow:auto; }
+           .wf { display:flex; flex-wrap:wrap; align-items:center; gap:0.5rem; font-size:0.9rem; padding:0.4rem; border-radius:6px; background:#8881; }
+           .wf .perms { margin-left:auto; display:flex; gap:0.75rem; font-size:0.8rem; opacity:0.9; }
+         </style>`,
+      ),
+    );
   });
 
   app.post("/token", async (c) => {

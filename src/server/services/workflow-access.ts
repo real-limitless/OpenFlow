@@ -9,9 +9,21 @@ import {
   requireResourceAccess,
   type SharePermission,
 } from "./shares";
+import {
+  assertAgentWorkflowAccess,
+  canAgentCreateWorkflows,
+  grantedWorkflowIds,
+  unrestrictedPolicy,
+  type WorkflowPerm,
+  type WorkflowPolicy,
+} from "./agent-policy";
 
 function minShareForRole(minRole: ProjectRole): SharePermission {
   return minRole === "viewer" ? "view" : "edit";
+}
+
+function roleForPerm(need: WorkflowPerm): ProjectRole {
+  return need === "read" ? "viewer" : "editor";
 }
 
 export async function loadWorkflowIfAllowed(
@@ -38,19 +50,92 @@ export async function assertWorkflowAccess(
   workflowId: string,
   userId: string,
   minRole: ProjectRole,
+  policy: WorkflowPolicy = unrestrictedPolicy(),
+  agentNeed?: WorkflowPerm,
 ): Promise<void> {
   const result = await loadWorkflowIfAllowed(workflowId, userId, minRole);
   if ("error" in result) {
     throw new Error(`Workflow not found or access denied: ${workflowId}`);
   }
+  if (agentNeed) {
+    assertAgentWorkflowAccess(policy, workflowId, agentNeed);
+  }
 }
 
 export async function editorListWorkflows(
   userId: string,
-  opts?: { limit?: number; offset?: number; projectId?: string },
+  opts?: {
+    limit?: number;
+    offset?: number;
+    projectId?: string;
+    policy?: WorkflowPolicy;
+  },
 ) {
+  const policy = opts?.policy ?? unrestrictedPolicy();
   const limit = Math.min(100, Math.max(1, opts?.limit ?? 40));
   const offset = Math.max(0, opts?.offset ?? 0);
+
+  // Restricted agents: only granted workflow IDs
+  if (policy.mode === "grants") {
+    const ids = grantedWorkflowIds(policy, "read");
+    if (ids.length === 0) {
+      return {
+        total: 0,
+        count: 0,
+        offset,
+        limit,
+        has_more: false,
+        next_offset: null,
+        items: [] as {
+          id: string;
+          name: string;
+          active: boolean;
+          projectId: string;
+          shared: boolean;
+          nodeCount: number;
+          updatedAt: string;
+        }[],
+      };
+    }
+    const rows = await prisma.workflow.findMany({
+      where: { id: { in: ids } },
+      select: {
+        id: true,
+        name: true,
+        active: true,
+        nodes: true,
+        projectId: true,
+        updatedAt: true,
+      },
+      orderBy: { updatedAt: "desc" },
+      take: limit,
+      skip: offset,
+    });
+    // Still require user-level access
+    const items = [];
+    for (const r of rows) {
+      const ok = await loadWorkflowIfAllowed(r.id, userId, "viewer");
+      if ("error" in ok) continue;
+      items.push({
+        id: r.id,
+        name: r.name,
+        active: r.active,
+        projectId: r.projectId,
+        shared: false,
+        nodeCount: (JSON.parse(r.nodes) as unknown[]).length,
+        updatedAt: r.updatedAt.toISOString(),
+      });
+    }
+    return {
+      total: items.length,
+      count: items.length,
+      offset,
+      limit,
+      has_more: false,
+      next_offset: null,
+      items,
+    };
+  }
 
   let projectIds: string[];
   if (opts?.projectId) {
@@ -115,7 +200,13 @@ export async function editorListWorkflows(
 export async function editorCreateWorkflow(
   userId: string,
   args: { name?: string; projectId?: string },
+  policy: WorkflowPolicy = unrestrictedPolicy(),
 ) {
+  if (!canAgentCreateWorkflows(policy)) {
+    throw new Error(
+      "This MCP credential cannot create workflows. Enable canCreateWorkflows on the API key or use the OpenFlow UI.",
+    );
+  }
   const { ensureUserWithProject } = await import("./users");
   const { projectId: personalId } = await ensureUserWithProject(userId);
   const projectId = args.projectId || personalId;
@@ -151,9 +242,9 @@ export async function editorActivateWorkflow(
   workflowId: string,
   userId: string,
   active: boolean,
+  policy: WorkflowPolicy = unrestrictedPolicy(),
 ) {
-  const result = await loadWorkflowIfAllowed(workflowId, userId, "editor");
-  if ("error" in result) throw new Error(`Workflow not found: ${workflowId}`);
+  await assertWorkflowAccess(workflowId, userId, "editor", policy, "write");
   const row = await prisma.workflow.update({
     where: { id: workflowId },
     data: { active },
@@ -164,9 +255,10 @@ export async function editorActivateWorkflow(
 export async function editorListExecutions(
   workflowId: string,
   userId: string,
-  opts?: { limit?: number },
+  opts?: { limit?: number; policy?: WorkflowPolicy },
 ) {
-  await assertWorkflowAccess(workflowId, userId, "viewer");
+  const policy = opts?.policy ?? unrestrictedPolicy();
+  await assertWorkflowAccess(workflowId, userId, "viewer", policy, "read");
   const limit = Math.min(50, Math.max(1, opts?.limit ?? 10));
   const rows = await prisma.execution.findMany({
     where: { workflowId },
@@ -188,3 +280,5 @@ export async function editorListExecutions(
     finishedAt: r.finishedAt?.toISOString() ?? null,
   }));
 }
+
+export { roleForPerm };

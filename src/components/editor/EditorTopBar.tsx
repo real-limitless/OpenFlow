@@ -13,6 +13,7 @@ import {
   PanelRight,
   Redo2,
   Save,
+  Bot,
   Share2,
   Table2,
   Undo2,
@@ -47,6 +48,7 @@ import {
 import { MigrationReportDialog } from "./MigrationReport";
 import { ImportCredentialsDialog } from "@/components/credentials";
 import { ShareDialog } from "@/components/share/share-dialog";
+import { McpShareDialog } from "@/components/editor/McpShareDialog";
 import { projectHeaders } from "@/lib/projects/client";
 import type { IWorkflow } from "@/lib/workflow/types";
 import { EnvironmentSwitcher } from "./EnvironmentSwitcher";
@@ -73,6 +75,7 @@ export function EditorTopBar({
   const [reportOpen, setReportOpen] = useState(false);
   const [credsOpen, setCredsOpen] = useState(false);
   const [shareOpen, setShareOpen] = useState(false);
+  const [mcpShareOpen, setMcpShareOpen] = useState(false);
   const [importDraft, setImportDraft] = useState<IWorkflow | null>(null);
   const [missingCount, setMissingCount] = useState(0);
 
@@ -220,6 +223,9 @@ export function EditorTopBar({
       </DropdownMenuItem>
       <DropdownMenuItem onClick={() => setShareOpen(true)}>
         <Share2 className="mr-2 size-4" /> Share
+      </DropdownMenuItem>
+      <DropdownMenuItem onClick={() => setMcpShareOpen(true)}>
+        <Bot className="mr-2 size-4" /> Share with AI (MCP)
       </DropdownMenuItem>
       <DropdownMenuSeparator />
       <DropdownMenuItem asChild>
@@ -404,6 +410,12 @@ export function EditorTopBar({
         resourceType="workflow"
         resourceId={workflow.id}
         resourceName={workflow.name}
+      />
+      <McpShareDialog
+        open={mcpShareOpen}
+        onOpenChange={setMcpShareOpen}
+        workflowId={workflow.id}
+        workflowName={workflow.name}
       />
       <MigrationReportDialog open={reportOpen} onOpenChange={setReportOpen} />
       <ImportCredentialsDialog

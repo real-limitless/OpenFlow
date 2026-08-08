@@ -9,6 +9,12 @@ import {
 import { hasScope, scopeForTool } from "../oauth/scopes";
 import type { McpSessionState } from "./session";
 import { setSessionWorkflow } from "./session";
+import {
+  permForTool,
+  unrestrictedPolicy,
+  type WorkflowPolicy,
+} from "../services/agent-policy";
+import { prisma } from "../db";
 
 export type McpToolDef = {
   name: string;
@@ -28,6 +34,7 @@ export type OpenflowToolContext = {
   workflowId?: string | null;
   scopes?: string[];
   session?: McpSessionState | null;
+  workflowPolicy?: WorkflowPolicy;
 };
 
 const workflowIdProp = {
@@ -328,9 +335,27 @@ export async function callOpenflowTool(
     args = (nameOrArgs as Record<string, unknown>) ?? {};
   }
 
+  const policy = ctx.workflowPolicy ?? unrestrictedPolicy();
   const needed = scopeForTool(name);
   if (!hasScope(ctx.scopes, needed)) {
     throw new Error(`Missing OAuth scope: ${needed}`);
+  }
+
+  const gate = async (wid: string, need: "read" | "write" | "execute") => {
+    await assertWorkflowAccess(
+      wid,
+      ctx.userId,
+      need === "read" ? "viewer" : "editor",
+      policy,
+      need,
+    );
+  };
+
+  const toolPerm = permForTool(name);
+  if (toolPerm === "create") {
+    // handled in create_workflow
+  } else if (toolPerm === "none") {
+    // catalog — allowed with any credential
   }
 
   switch (name) {
@@ -339,32 +364,33 @@ export async function callOpenflowTool(
         limit: typeof args.limit === "number" ? args.limit : undefined,
         offset: typeof args.offset === "number" ? args.offset : undefined,
         projectId: typeof args.projectId === "string" ? args.projectId : undefined,
+        policy,
       });
     case "create_workflow":
-      return editorCreateWorkflow(ctx.userId, {
-        name: typeof args.name === "string" ? args.name : undefined,
-        projectId: typeof args.projectId === "string" ? args.projectId : undefined,
-      });
+      return editorCreateWorkflow(
+        ctx.userId,
+        {
+          name: typeof args.name === "string" ? args.name : undefined,
+          projectId: typeof args.projectId === "string" ? args.projectId : undefined,
+        },
+        policy,
+      );
     case "open_workflow": {
       const wid =
         args.workflowId === null || args.workflowId === undefined
           ? null
           : String(args.workflowId);
-      if (wid) {
-        await assertWorkflowAccess(wid, ctx.userId, "viewer");
-      }
-      if (ctx.session) {
-        setSessionWorkflow(ctx.session, wid);
-      }
+      if (wid) await gate(wid, "read");
+      if (ctx.session) setSessionWorkflow(ctx.session, wid);
       return { workflowId: wid, sessionBound: Boolean(ctx.session) };
     }
     case "activate_workflow": {
       const wid = resolveWorkflowId(ctx, args);
-      return editorActivateWorkflow(wid, ctx.userId, Boolean(args.active));
+      return editorActivateWorkflow(wid, ctx.userId, Boolean(args.active), policy);
     }
     case "get_workflow": {
       const wid = resolveWorkflowId(ctx, args);
-      await assertWorkflowAccess(wid, ctx.userId, "viewer");
+      await gate(wid, "read");
       return editor.editorGetWorkflow(wid);
     }
     case "list_node_types":
@@ -376,7 +402,7 @@ export async function callOpenflowTool(
       return editor.editorGetNodeType(String(args.type ?? ""));
     case "add_node": {
       const wid = resolveWorkflowId(ctx, args);
-      await assertWorkflowAccess(wid, ctx.userId, "editor");
+      await gate(wid, "write");
       const r = await editor.editorAddNode(
         wid,
         {
@@ -391,7 +417,7 @@ export async function callOpenflowTool(
     }
     case "update_node": {
       const wid = resolveWorkflowId(ctx, args);
-      await assertWorkflowAccess(wid, ctx.userId, "editor");
+      await gate(wid, "write");
       const r = await editor.editorUpdateNode(
         wid,
         {
@@ -418,7 +444,7 @@ export async function callOpenflowTool(
     }
     case "rename_node": {
       const wid = resolveWorkflowId(ctx, args);
-      await assertWorkflowAccess(wid, ctx.userId, "editor");
+      await gate(wid, "write");
       const r = await editor.editorRenameNode(
         wid,
         String(args.from ?? ""),
@@ -429,13 +455,13 @@ export async function callOpenflowTool(
     }
     case "delete_node": {
       const wid = resolveWorkflowId(ctx, args);
-      await assertWorkflowAccess(wid, ctx.userId, "editor");
+      await gate(wid, "write");
       const r = await editor.editorDeleteNode(wid, String(args.name ?? ""), ctx.userId);
       return r.result;
     }
     case "connect_nodes": {
       const wid = resolveWorkflowId(ctx, args);
-      await assertWorkflowAccess(wid, ctx.userId, "editor");
+      await gate(wid, "write");
       const r = await editor.editorConnect(
         wid,
         {
@@ -450,28 +476,37 @@ export async function callOpenflowTool(
     }
     case "disconnect": {
       const wid = resolveWorkflowId(ctx, args);
-      await assertWorkflowAccess(wid, ctx.userId, "editor");
+      await gate(wid, "write");
       const r = await editor.editorDisconnect(wid, String(args.edgeId ?? ""), ctx.userId);
       return r.result;
     }
     case "execute_workflow": {
       const wid = resolveWorkflowId(ctx, args);
-      await assertWorkflowAccess(wid, ctx.userId, "editor");
+      await gate(wid, "execute");
       return editor.editorExecute(wid, ctx.userId);
     }
-    case "get_execution":
-      return editor.editorGetExecution(String(args.executionId ?? ""));
+    case "get_execution": {
+      const executionId = String(args.executionId ?? "");
+      const exec = await prisma.execution.findUnique({
+        where: { id: executionId },
+        select: { workflowId: true },
+      });
+      if (!exec) throw new Error(`Execution not found: ${executionId}`);
+      await gate(exec.workflowId, "read");
+      return editor.editorGetExecution(executionId);
+    }
     case "list_executions": {
       const wid = resolveWorkflowId(ctx, args);
       return editorListExecutions(wid, ctx.userId, {
         limit: typeof args.limit === "number" ? args.limit : undefined,
+        policy,
       });
     }
     case "list_credentials":
       return editor.editorListCredentials(ctx.userId);
     case "select_node": {
       const wid = resolveWorkflowId(ctx, args);
-      await assertWorkflowAccess(wid, ctx.userId, "viewer");
+      await gate(wid, "read");
       const n = args.name === null || args.name === undefined ? null : String(args.name);
       return editor.editorSelectNode(wid, n);
     }

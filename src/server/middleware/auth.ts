@@ -1,20 +1,27 @@
 import type { Context, Next } from "hono";
 import { getCookie } from "hono/cookie";
-import bcrypt from "bcryptjs";
-import { createHash } from "node:crypto";
-import { prisma } from "../db";
 import { getSessionUserId } from "../services/sessions";
 import { ensureUser, LOCAL_USER_ID } from "../services/users";
 import { config } from "../../config";
 import { ALL_MCP_SCOPES } from "../oauth/scopes";
 import { resolveAccessToken } from "../oauth/tokens";
 import { mcpResourceUrl, publicOrigin } from "../oauth/public-url";
+import {
+  resolveApiKeyAuth,
+  resolveOAuthAgentAuth,
+  resolveTemporaryTokenAuth,
+  unrestrictedPolicy,
+  type AgentAuth,
+  type WorkflowPolicy,
+} from "../services/agent-policy";
 
 export type AppEnv = {
   Variables: {
     userId: string;
     scopes: string[];
-    authKind: "session" | "api_key" | "oauth" | "disabled";
+    authKind: AgentAuth["authKind"];
+    agentId?: string;
+    workflowPolicy: WorkflowPolicy;
   };
 };
 
@@ -38,7 +45,6 @@ function isMcpPath(path: string): boolean {
   return path === "/mcp" || path.startsWith("/mcp/");
 }
 
-/** Public template marketplace reads (import/sync still require auth). */
 function isPublicTemplateGet(method: string, path: string): boolean {
   if (method !== "GET") return false;
   if (path === "/api/v1/templates" || path === "/api/v1/templates/facets") return true;
@@ -48,41 +54,31 @@ function isPublicTemplateGet(method: string, path: string): boolean {
   return m[1] !== "import";
 }
 
-function hashApiKey(rawKey: string): string {
-  return createHash("sha256").update(rawKey).digest("hex");
-}
-
 function extractBearer(header: string | undefined): string | null {
   if (!header) return null;
   if (header.startsWith("Bearer ")) return header.slice(7).trim();
   return null;
 }
 
-async function getUserIdFromApiKey(rawKey: string): Promise<string | null> {
-  if (!rawKey.startsWith("of_")) return null;
+function applyAgent(c: Context<AppEnv>, auth: AgentAuth) {
+  c.set("userId", auth.userId);
+  c.set("scopes", auth.scopes);
+  c.set("authKind", auth.authKind);
+  if (auth.agentId) c.set("agentId", auth.agentId);
+  c.set("workflowPolicy", auth.workflowPolicy);
+}
 
-  const keyHash = hashApiKey(rawKey);
-  const byHash = await prisma.apiKey.findUnique({
-    where: { keyHash },
-    select: { userId: true },
-  });
-  if (byHash) return byHash.userId;
-
-  const legacy = await prisma.apiKey.findMany({
-    where: { keyHash: { startsWith: "$2" } },
-    select: { keyHash: true, userId: true },
-  });
-  for (const row of legacy) {
-    if (await bcrypt.compare(rawKey, row.keyHash)) {
-      return row.userId;
-    }
-  }
-  return null;
+function sessionAuth(userId: string): AgentAuth {
+  return {
+    userId,
+    scopes: [...ALL_MCP_SCOPES],
+    authKind: "session",
+    workflowPolicy: unrestrictedPolicy(),
+  };
 }
 
 function unauthorizedMcp(c: Context<AppEnv>) {
   const origin = publicOrigin(c);
-  const resource = mcpResourceUrl(origin);
   const meta = `${origin}/.well-known/oauth-protected-resource`;
   return c.json(
     { error: "Authentication required" },
@@ -95,16 +91,18 @@ function unauthorizedMcp(c: Context<AppEnv>) {
 }
 
 export async function authMiddleware(c: Context<AppEnv>, next: Next) {
-  // CORS preflight
   if (c.req.method === "OPTIONS") {
     return next();
   }
 
   if (config.auth.disabled) {
     await ensureUser(LOCAL_USER_ID);
-    c.set("userId", LOCAL_USER_ID);
-    c.set("scopes", [...ALL_MCP_SCOPES]);
-    c.set("authKind", "disabled");
+    applyAgent(c, {
+      userId: LOCAL_USER_ID,
+      scopes: [...ALL_MCP_SCOPES],
+      authKind: "disabled",
+      workflowPolicy: unrestrictedPolicy(),
+    });
     return next();
   }
 
@@ -115,43 +113,45 @@ export async function authMiddleware(c: Context<AppEnv>, next: Next) {
   if (isPublicTemplateGet(c.req.method, path)) {
     const token = getCookie(c, "session");
     const sessionUser = await getSessionUserId(token);
-    if (sessionUser) {
-      c.set("userId", sessionUser);
-      c.set("scopes", [...ALL_MCP_SCOPES]);
-      c.set("authKind", "session");
-    }
+    if (sessionUser) applyAgent(c, sessionAuth(sessionUser));
     return next();
   }
 
   const xApiKey = c.req.header("X-API-Key");
   if (xApiKey) {
-    const userId = await getUserIdFromApiKey(xApiKey.startsWith("Bearer ") ? xApiKey.slice(7) : xApiKey);
-    if (userId) {
-      c.set("userId", userId);
-      c.set("scopes", [...ALL_MCP_SCOPES]);
-      c.set("authKind", "api_key");
+    const raw = xApiKey.startsWith("Bearer ") ? xApiKey.slice(7) : xApiKey;
+    const auth = await resolveApiKeyAuth(raw);
+    if (auth) {
+      applyAgent(c, auth);
       return next();
     }
   }
 
-  const authHeader = c.req.header("Authorization");
-  const bearer = extractBearer(authHeader);
+  const bearer = extractBearer(c.req.header("Authorization"));
   if (bearer) {
     if (bearer.startsWith("of_")) {
-      const userId = await getUserIdFromApiKey(bearer);
-      if (userId) {
-        c.set("userId", userId);
-        c.set("scopes", [...ALL_MCP_SCOPES]);
-        c.set("authKind", "api_key");
+      const auth = await resolveApiKeyAuth(bearer);
+      if (auth) {
+        applyAgent(c, auth);
+        return next();
+      }
+    }
+    if (bearer.startsWith("oft_")) {
+      const auth = await resolveTemporaryTokenAuth(bearer);
+      if (auth) {
+        applyAgent(c, auth);
         return next();
       }
     }
     if (bearer.startsWith("ofa_")) {
       const resolved = await resolveAccessToken(bearer);
       if (resolved) {
-        c.set("userId", resolved.userId);
-        c.set("scopes", resolved.scopes);
-        c.set("authKind", "oauth");
+        const auth = await resolveOAuthAgentAuth(
+          resolved.userId,
+          resolved.scopes,
+          resolved.tokenId,
+        );
+        applyAgent(c, auth);
         return next();
       }
     }
@@ -166,8 +166,14 @@ export async function authMiddleware(c: Context<AppEnv>, next: Next) {
     return c.json({ error: "Authentication required" }, 401);
   }
 
-  c.set("userId", userId);
-  c.set("scopes", [...ALL_MCP_SCOPES]);
-  c.set("authKind", "session");
+  applyAgent(c, sessionAuth(userId));
   return next();
+}
+
+export function getWorkflowPolicy(c: Context<AppEnv>): WorkflowPolicy {
+  try {
+    return c.get("workflowPolicy") ?? unrestrictedPolicy();
+  } catch {
+    return unrestrictedPolicy();
+  }
 }
