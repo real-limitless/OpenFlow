@@ -432,6 +432,19 @@ model DataTableRow {
   @@map("data_table_rows")
 }
 
+// ─── Instance settings (operator UI) ────────────────────
+
+/// Key/value instance config edited under Settings (JSON string values).
+model InstanceSetting {
+  key       String   @id
+  /// JSON-encoded value (array, object, string, number, bool)
+  value     String   @db.Text
+  updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now())
+
+  @@map("instance_settings")
+}
+
 // ─── Public workflow templates (marketplace) ────────────
 
 /// Templates synced from one or more library git repos (see config/template-sources.json).

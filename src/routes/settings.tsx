@@ -12,6 +12,7 @@ const LINKS = [
   { to: "/settings/environments", label: "Environments" },
   { to: "/settings/secret-providers", label: "Secret providers" },
   { to: "/settings/templates", label: "Templates" },
+  { to: "/settings/code", label: "Code node" },
   { to: "/settings/logs", label: "Logs" },
 ] as const;
 
@@ -75,6 +76,12 @@ function SettingsOverview() {
             Templates
           </Link>{" "}
           — marketplace libraries (default n8n-workflow-library + your repos)
+        </li>
+        <li>
+          <Link to="/settings/code" className="text-primary hover:underline">
+            Code node
+          </Link>{" "}
+          — Python import allowlist for the Code node
         </li>
         <li>
           <Link to="/settings/logs" className="text-primary hover:underline">

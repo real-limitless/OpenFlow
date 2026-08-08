@@ -24,6 +24,7 @@ import { Route as DataTablesIdRouteImport } from './routes/data-tables_.$id'
 import { Route as DocsCompatibilityRouteImport } from './routes/docs.compatibility'
 import { Route as ProjectsIdRouteImport } from './routes/projects.$id'
 import { Route as SettingsApiKeysRouteImport } from './routes/settings.api-keys'
+import { Route as SettingsCodeRouteImport } from './routes/settings.code'
 import { Route as SettingsEnvironmentsRouteImport } from './routes/settings.environments'
 import { Route as SettingsLogsRouteImport } from './routes/settings.logs'
 import { Route as SettingsSecretProvidersRouteImport } from './routes/settings.secret-providers'
@@ -106,6 +107,11 @@ const SettingsApiKeysRoute = SettingsApiKeysRouteImport.update({
   path: '/api-keys',
   getParentRoute: () => SettingsRoute,
 } as any)
+const SettingsCodeRoute = SettingsCodeRouteImport.update({
+  id: '/code',
+  path: '/code',
+  getParentRoute: () => SettingsRoute,
+} as any)
 const SettingsEnvironmentsRoute = SettingsEnvironmentsRouteImport.update({
   id: '/environments',
   path: '/environments',
@@ -153,6 +159,7 @@ export interface FileRoutesByFullPath {
   '/docs/compatibility': typeof DocsCompatibilityRoute
   '/projects/$id': typeof ProjectsIdRoute
   '/settings/api-keys': typeof SettingsApiKeysRoute
+  '/settings/code': typeof SettingsCodeRoute
   '/settings/environments': typeof SettingsEnvironmentsRoute
   '/settings/logs': typeof SettingsLogsRoute
   '/settings/secret-providers': typeof SettingsSecretProvidersRoute
@@ -176,6 +183,7 @@ export interface FileRoutesByTo {
   '/docs/compatibility': typeof DocsCompatibilityRoute
   '/projects/$id': typeof ProjectsIdRoute
   '/settings/api-keys': typeof SettingsApiKeysRoute
+  '/settings/code': typeof SettingsCodeRoute
   '/settings/environments': typeof SettingsEnvironmentsRoute
   '/settings/logs': typeof SettingsLogsRoute
   '/settings/secret-providers': typeof SettingsSecretProvidersRoute
@@ -200,6 +208,7 @@ export interface FileRoutesById {
   '/docs/compatibility': typeof DocsCompatibilityRoute
   '/projects/$id': typeof ProjectsIdRoute
   '/settings/api-keys': typeof SettingsApiKeysRoute
+  '/settings/code': typeof SettingsCodeRoute
   '/settings/environments': typeof SettingsEnvironmentsRoute
   '/settings/logs': typeof SettingsLogsRoute
   '/settings/secret-providers': typeof SettingsSecretProvidersRoute
@@ -225,6 +234,7 @@ export interface FileRouteTypes {
     | '/docs/compatibility'
     | '/projects/$id'
     | '/settings/api-keys'
+    | '/settings/code'
     | '/settings/environments'
     | '/settings/logs'
     | '/settings/secret-providers'
@@ -248,6 +258,7 @@ export interface FileRouteTypes {
     | '/docs/compatibility'
     | '/projects/$id'
     | '/settings/api-keys'
+    | '/settings/code'
     | '/settings/environments'
     | '/settings/logs'
     | '/settings/secret-providers'
@@ -271,6 +282,7 @@ export interface FileRouteTypes {
     | '/docs/compatibility'
     | '/projects/$id'
     | '/settings/api-keys'
+    | '/settings/code'
     | '/settings/environments'
     | '/settings/logs'
     | '/settings/secret-providers'
@@ -404,6 +416,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SettingsApiKeysRouteImport
       parentRoute: typeof SettingsRoute
     }
+    '/settings/code': {
+      id: '/settings/code'
+      path: '/code'
+      fullPath: '/settings/code'
+      preLoaderRoute: typeof SettingsCodeRouteImport
+      parentRoute: typeof SettingsRoute
+    }
     '/settings/environments': {
       id: '/settings/environments'
       path: '/environments'
@@ -463,6 +482,7 @@ const ProjectsRouteWithChildren = ProjectsRoute._addFileChildren(
 
 interface SettingsRouteChildren {
   SettingsApiKeysRoute: typeof SettingsApiKeysRoute
+  SettingsCodeRoute: typeof SettingsCodeRoute
   SettingsEnvironmentsRoute: typeof SettingsEnvironmentsRoute
   SettingsLogsRoute: typeof SettingsLogsRoute
   SettingsSecretProvidersRoute: typeof SettingsSecretProvidersRoute
@@ -471,6 +491,7 @@ interface SettingsRouteChildren {
 
 const SettingsRouteChildren: SettingsRouteChildren = {
   SettingsApiKeysRoute: SettingsApiKeysRoute,
+  SettingsCodeRoute: SettingsCodeRoute,
   SettingsEnvironmentsRoute: SettingsEnvironmentsRoute,
   SettingsLogsRoute: SettingsLogsRoute,
   SettingsSecretProvidersRoute: SettingsSecretProvidersRoute,
