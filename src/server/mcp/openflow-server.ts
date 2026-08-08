@@ -2,7 +2,6 @@ import type { Context } from "hono";
 import type { Hono } from "hono";
 import type { AppEnv } from "../middleware/auth";
 import { callOpenflowTool, OPENFLOW_MCP_TOOLS } from "./tools";
-import { config } from "../../config";
 import {
   createMcpSession,
   deleteMcpSession,
@@ -11,6 +10,7 @@ import {
 } from "./session";
 import { ALL_MCP_SCOPES } from "../oauth/scopes";
 import { mcpResourceUrl, publicOrigin } from "../oauth/public-url";
+import { isMcpEnabled } from "../services/instance-settings";
 
 type JsonRpc = {
   jsonrpc?: string;
@@ -126,8 +126,8 @@ async function handleRpc(
   }
 }
 
-function mcpDisabled() {
-  return !config.mcp.enabled && !config.assistant.enabled;
+async function mcpDisabled(): Promise<boolean> {
+  return !(await isMcpEnabled());
 }
 
 function corsHeaders(origin: string | undefined): Record<string, string> {
@@ -143,7 +143,7 @@ function corsHeaders(origin: string | undefined): Record<string, string> {
 }
 
 async function handleMcp(c: Context<AppEnv>, requireWorkflowHeader: boolean) {
-  if (mcpDisabled()) {
+  if (await mcpDisabled()) {
     return c.json({ error: "MCP disabled" }, 503);
   }
 
@@ -260,14 +260,5 @@ export default function openflowMcpRoute(app: Hono<AppEnv>) {
   app.all("/mcp/", (c) => handleMcp(c, false));
 
   // Legacy single-workflow alias (OpenCode assistant)
-  app.all("/mcp/openflow", async (c) => {
-    if (mcpDisabled()) {
-      return c.json({ error: "MCP disabled" }, 503);
-    }
-    const workflowId = resolveWorkflowIdHeader(c);
-    if (!workflowId && c.req.method === "POST") {
-      // Still allow initialize / tools/list without workflow; tools that need it will error.
-    }
-    return handleMcp(c, true);
-  });
+  app.all("/mcp/openflow", async (c) => handleMcp(c, true));
 }

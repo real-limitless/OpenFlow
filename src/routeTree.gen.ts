@@ -25,6 +25,7 @@ import { Route as DocsCompatibilityRouteImport } from './routes/docs.compatibili
 import { Route as ProjectsIdRouteImport } from './routes/projects.$id'
 import { Route as SettingsApiKeysRouteImport } from './routes/settings.api-keys'
 import { Route as SettingsCodeRouteImport } from './routes/settings.code'
+import { Route as SettingsMcpRouteImport } from './routes/settings.mcp'
 import { Route as SettingsEnvironmentsRouteImport } from './routes/settings.environments'
 import { Route as SettingsLogsRouteImport } from './routes/settings.logs'
 import { Route as SettingsSecretProvidersRouteImport } from './routes/settings.secret-providers'
@@ -112,6 +113,11 @@ const SettingsCodeRoute = SettingsCodeRouteImport.update({
   path: '/code',
   getParentRoute: () => SettingsRoute,
 } as any)
+const SettingsMcpRoute = SettingsMcpRouteImport.update({
+  id: '/mcp',
+  path: '/mcp',
+  getParentRoute: () => SettingsRoute,
+} as any)
 const SettingsEnvironmentsRoute = SettingsEnvironmentsRouteImport.update({
   id: '/environments',
   path: '/environments',
@@ -160,6 +166,7 @@ export interface FileRoutesByFullPath {
   '/projects/$id': typeof ProjectsIdRoute
   '/settings/api-keys': typeof SettingsApiKeysRoute
   '/settings/code': typeof SettingsCodeRoute
+  '/settings/mcp': typeof SettingsMcpRoute
   '/settings/environments': typeof SettingsEnvironmentsRoute
   '/settings/logs': typeof SettingsLogsRoute
   '/settings/secret-providers': typeof SettingsSecretProvidersRoute
@@ -184,6 +191,7 @@ export interface FileRoutesByTo {
   '/projects/$id': typeof ProjectsIdRoute
   '/settings/api-keys': typeof SettingsApiKeysRoute
   '/settings/code': typeof SettingsCodeRoute
+  '/settings/mcp': typeof SettingsMcpRoute
   '/settings/environments': typeof SettingsEnvironmentsRoute
   '/settings/logs': typeof SettingsLogsRoute
   '/settings/secret-providers': typeof SettingsSecretProvidersRoute
@@ -209,6 +217,7 @@ export interface FileRoutesById {
   '/projects/$id': typeof ProjectsIdRoute
   '/settings/api-keys': typeof SettingsApiKeysRoute
   '/settings/code': typeof SettingsCodeRoute
+  '/settings/mcp': typeof SettingsMcpRoute
   '/settings/environments': typeof SettingsEnvironmentsRoute
   '/settings/logs': typeof SettingsLogsRoute
   '/settings/secret-providers': typeof SettingsSecretProvidersRoute
@@ -235,6 +244,7 @@ export interface FileRouteTypes {
     | '/projects/$id'
     | '/settings/api-keys'
     | '/settings/code'
+    | '/settings/mcp'
     | '/settings/environments'
     | '/settings/logs'
     | '/settings/secret-providers'
@@ -259,6 +269,7 @@ export interface FileRouteTypes {
     | '/projects/$id'
     | '/settings/api-keys'
     | '/settings/code'
+    | '/settings/mcp'
     | '/settings/environments'
     | '/settings/logs'
     | '/settings/secret-providers'
@@ -283,6 +294,7 @@ export interface FileRouteTypes {
     | '/projects/$id'
     | '/settings/api-keys'
     | '/settings/code'
+    | '/settings/mcp'
     | '/settings/environments'
     | '/settings/logs'
     | '/settings/secret-providers'
@@ -423,6 +435,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SettingsCodeRouteImport
       parentRoute: typeof SettingsRoute
     }
+    '/settings/mcp': {
+      id: '/settings/mcp'
+      path: '/mcp'
+      fullPath: '/settings/mcp'
+      preLoaderRoute: typeof SettingsMcpRouteImport
+      parentRoute: typeof SettingsRoute
+    }
     '/settings/environments': {
       id: '/settings/environments'
       path: '/environments'
@@ -483,6 +502,7 @@ const ProjectsRouteWithChildren = ProjectsRoute._addFileChildren(
 interface SettingsRouteChildren {
   SettingsApiKeysRoute: typeof SettingsApiKeysRoute
   SettingsCodeRoute: typeof SettingsCodeRoute
+  SettingsMcpRoute: typeof SettingsMcpRoute
   SettingsEnvironmentsRoute: typeof SettingsEnvironmentsRoute
   SettingsLogsRoute: typeof SettingsLogsRoute
   SettingsSecretProvidersRoute: typeof SettingsSecretProvidersRoute
@@ -492,6 +512,7 @@ interface SettingsRouteChildren {
 const SettingsRouteChildren: SettingsRouteChildren = {
   SettingsApiKeysRoute: SettingsApiKeysRoute,
   SettingsCodeRoute: SettingsCodeRoute,
+  SettingsMcpRoute: SettingsMcpRoute,
   SettingsEnvironmentsRoute: SettingsEnvironmentsRoute,
   SettingsLogsRoute: SettingsLogsRoute,
   SettingsSecretProvidersRoute: SettingsSecretProvidersRoute,

@@ -2,6 +2,16 @@
 
 Expose the same workflow tools as the editor assistant to **third-party MCP clients** (Claude, Cursor, ChatGPT, etc.) over a remote URL.
 
+## Settings UI
+
+In the OpenFlow app: **Settings → MCP**
+
+- Enable/disable remote MCP (instance owner/admin)
+- Copy MCP URL, OAuth metadata URLs, and a Cursor/Claude client snippet
+- Tool list and scopes
+
+Env kill-switch still wins: `OPENFLOW_MCP_ENABLED=false` forces MCP off and locks the UI toggle.
+
 ## Endpoint
 
 | URL | Role |

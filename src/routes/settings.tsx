@@ -9,6 +9,7 @@ export const Route = createFileRoute("/settings")({
 const LINKS = [
   { to: "/settings", label: "Overview", exact: true },
   { to: "/settings/api-keys", label: "API keys" },
+  { to: "/settings/mcp", label: "MCP" },
   { to: "/settings/environments", label: "Environments" },
   { to: "/settings/secret-providers", label: "Secret providers" },
   { to: "/settings/templates", label: "Templates" },
@@ -58,6 +59,12 @@ function SettingsOverview() {
             API keys
           </Link>{" "}
           — machine access with of_… tokens
+        </li>
+        <li>
+          <Link to="/settings/mcp" className="text-primary hover:underline">
+            MCP
+          </Link>{" "}
+          — remote MCP URL, OAuth, and enable toggle for third-party chatbots
         </li>
         <li>
           <Link to="/settings/environments" className="text-primary hover:underline">
