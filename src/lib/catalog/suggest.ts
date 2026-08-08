@@ -3,6 +3,8 @@ import { fuzzyScore } from "@/lib/nodes/search";
 import { createEmbedClient } from "./embed";
 import { loadIndexFromDb, searchMemory, searchPgvector, catalogStats } from "./index-store";
 import { describeType } from "./corpus";
+import { enrichSuggestedFields } from "./enrich";
+import { recordCatalogSuggest } from "./metrics";
 import { rankTierFor } from "./shell";
 import type { SuggestNodesOptions, SuggestNodesResult, SuggestedNode } from "./types";
 import { seedBuiltinDescriptions, allNodeTypes } from "@/lib/nodes/registry";
@@ -31,6 +33,7 @@ function keywordFallback(intent: string, limit: number): SuggestedNode[] {
 
   return scored.map(({ t, score }) => {
     const isShell = /executeCommand|ssh/i.test(t.name);
+    const extra = enrichSuggestedFields(t, isShell);
     return {
       type: t.name,
       displayName: t.displayName,
@@ -40,6 +43,7 @@ function keywordFallback(intent: string, limit: number): SuggestedNode[] {
       rankTier: rankTierFor(t.name, String(t.category ?? ""), isShell),
       reason: "keyword match (catalog not indexed or cold start)",
       isShell,
+      ...extra,
       inputs: t.inputs as string | string[],
       outputs: t.outputs as string | string[],
     };
@@ -62,15 +66,24 @@ export async function suggestNodes(options: SuggestNodesOptions): Promise<Sugges
     return { mode: "empty", count: 0, items: [], indexed: false, note: "empty intent" };
   }
 
+  const finish = async (
+    result: SuggestNodesResult,
+  ): Promise<SuggestNodesResult> => {
+    if (!options.skipMetrics && result.mode !== "empty") {
+      await recordCatalogSuggest({ source: options.source, count: result.count });
+    }
+    return result;
+  };
+
   if (!config.catalog.enabled) {
     const items = keywordFallback(intent, limit);
-    return {
+    return finish({
       mode: "keyword",
       count: items.length,
       items,
       indexed: false,
       note: "OPENFLOW_CATALOG_RAG_ENABLED=false; keyword only",
-    };
+    });
   }
 
   const stats = await catalogStats().catch(() => ({
@@ -81,13 +94,13 @@ export async function suggestNodes(options: SuggestNodesOptions): Promise<Sugges
 
   if (stats.chunkCount === 0) {
     const items = keywordFallback(intent, limit);
-    return {
+    return finish({
       mode: "keyword",
       count: items.length,
       items,
       indexed: false,
-      note: "Catalog empty — run npm run catalog:reindex",
-    };
+      note: "Catalog empty — run catalog-reindex (or catalog-reindex-hash) in toolbox",
+    });
   }
 
   const client = createEmbedClient();
@@ -96,13 +109,13 @@ export async function suggestNodes(options: SuggestNodesOptions): Promise<Sugges
     [queryVec] = await client.embed([intent]);
   } catch (err) {
     const items = keywordFallback(intent, limit);
-    return {
+    return finish({
       mode: "keyword",
       count: items.length,
       items,
       indexed: true,
       note: `Embed failed (${err instanceof Error ? err.message : String(err)}); keyword fallback`,
-    };
+    });
   }
 
   const chunks = await loadIndexFromDb();
@@ -267,6 +280,7 @@ export async function suggestNodes(options: SuggestNodesOptions): Promise<Sugges
 
     const desc = describeType(typeName);
     const category = v.category || String(desc?.category ?? "");
+    const extra = enrichSuggestedFields(desc, v.isShell);
     items.push({
       type: typeName,
       displayName: v.displayName || desc?.displayName || typeName,
@@ -276,6 +290,7 @@ export async function suggestNodes(options: SuggestNodesOptions): Promise<Sugges
       rankTier: rankTierFor(typeName, category, v.isShell),
       reason: v.reason,
       isShell: v.isShell,
+      ...extra,
       inputs: desc?.inputs as string | string[] | undefined,
       outputs: desc?.outputs as string | string[] | undefined,
     });
@@ -289,11 +304,11 @@ export async function suggestNodes(options: SuggestNodesOptions): Promise<Sugges
   });
 
   const top = items.slice(0, limit);
-  return {
+  return finish({
     mode: "hybrid",
     count: top.length,
     items: top,
     indexed: true,
     modelId: stats.modelId ?? client.modelId,
-  };
+  });
 }

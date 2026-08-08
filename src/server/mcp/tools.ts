@@ -144,13 +144,14 @@ export const OPENFLOW_MCP_TOOLS: McpToolDef[] = [
   {
     name: "suggest_nodes",
     description:
-      "Semantic (RAG) node lookup by natural-language intent. Prefer this before add_node for tasks like clone repo, list issues, send email. Domain nodes rank above Execute Command; shell stays available but lower. Returns ranked type strings with scores/reasons.",
+      'Which OpenFlow node should I use?" — semantic catalog RAG. Call BEFORE add_node for capability intents. Examples: intent="clone a git repository" → openflow-node-base.git; "list GitHub issues" → github; "send email smtp" → emailSend. Domain/core rank above executeCommand (shell still returned, tier shell-fallback). Each hit includes type, rankTier, reason, usageSnippet, whenToUse. Then get_node_type(type) and add_node.',
     inputSchema: {
       type: "object",
       properties: {
         intent: {
           type: "string",
-          description: 'What you need to do, e.g. "clone a git repository" or "list GitHub issues"',
+          description:
+            'Natural language task, e.g. "clone a git repository", "list GitHub issues", "send email via smtp", "run bash on host"',
         },
         limit: { type: "number", description: "Max results (default 8)" },
         includeShell: {
@@ -578,6 +579,7 @@ export async function callOpenflowTool(
         intent: String(args.intent ?? args.query ?? ""),
         limit: typeof args.limit === "number" ? args.limit : 8,
         includeShell: args.includeShell !== false,
+        source: "mcp",
       });
     }
     case "get_node_type":

@@ -45,11 +45,16 @@ export const toolNodeCatalogExecutor: NodeExecutor = async (ctx) => {
         };
       }
       try {
-        const result = await suggestNodes({ intent, limit, includeShell: true });
-        const lines = result.items.map(
-          (it, i) =>
-            `${i + 1}. ${it.type} [${it.rankTier}] score=${it.score.toFixed(3)} — ${it.displayName}: ${it.reason}`,
-        );
+        const result = await suggestNodes({
+          intent,
+          limit,
+          includeShell: true,
+          source: "agent",
+        });
+        const lines = result.items.map((it, i) => {
+          const snip = it.usageSnippet || it.whenToUse || it.reason;
+          return `${i + 1}. ${it.type} [${it.rankTier}] score=${it.score.toFixed(3)} — ${it.displayName}\n   ${snip}`;
+        });
         const content = [
           `mode=${result.mode} indexed=${result.indexed}`,
           result.note ? `note=${result.note}` : "",

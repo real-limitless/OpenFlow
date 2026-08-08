@@ -23,27 +23,37 @@ Dokploy: redeploy so the toolbox image is rebuilt with current `src/` + scripts.
 
 ## Commands
 
+### From the host (or Dokploy “Run command” on the **compose project**, not inside toolbox)
+
 ```sh
 docker compose exec toolbox bash
-docker compose exec toolbox catalog-reindex        # needs embed API key
-docker compose exec toolbox catalog-reindex-hash   # offline / no key
-docker compose exec toolbox catalog-eval
+docker compose exec toolbox catalog-reindex-hash
+docker compose exec toolbox catalog-reindex
+```
 
-# npm helpers
-npm run docker:toolbox:shell
-npm run docker:toolbox:reindex:hash
+### Already inside the toolbox container (`root@…:/app#`)
+
+Do **not** run `npm run docker:toolbox:*` — those call `docker`, which is not installed in the image.
+
+```sh
+# offline index (no embed API key)
+catalog-reindex-hash
+# or
+npm run catalog:reindex:hash
+
+# with OPENFLOW_CATALOG_EMBED_* / ASSISTANT_* key set
+catalog-reindex
+# or
+npm run catalog:reindex
+
+catalog-eval
+ls /app/package.json          # app is here
+ls /data/workspace            # agent scratch — often empty
 ```
 
 ## Catalog reindex
 
-```sh
-# inside toolbox or via exec:
-catalog-reindex-hash
-# with OpenAI-compatible embeddings (OPENFLOW_CATALOG_EMBED_* or ASSISTANT_*):
-catalog-reindex
-```
-
-Uses `DATABASE_URL` pointing at the `db` service.
+Uses `DATABASE_URL` pointing at the `db` service (in compose: `postgresql://openflow:openflow@db:5432/openflow`).
 
 ## Production
 

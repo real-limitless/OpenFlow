@@ -113,17 +113,28 @@ docker compose exec toolbox catalog-eval
 
 See [toolbox.md](toolbox.md). The `db` service uses `pgvector/pgvector:pg16` so the optional `vector` column / HNSW index can activate.
 
-## Full RAG platform (target)
+## Product surfaces (#35)
 
 | Surface | Entry |
 | --- | --- |
-| MCP | `suggest_nodes({ intent })` then `get_node_type` / `add_node` |
-| HTTP | `POST /api/v1/catalog/suggest-nodes` |
-| UI | Node palette multi-word search → Suggested strip |
+| MCP | `suggest_nodes({ intent })` → ranked hits with `usageSnippet` / `whenToUse` → `get_node_type` → `add_node` |
+| HTTP | `POST /api/v1/catalog/suggest-nodes` `{ intent, source? }` |
+| Conversion | `POST /api/v1/catalog/suggest-insert` `{ type, intent?, source? }` (palette fires this on add) |
+| Stats | `GET /api/v1/catalog/stats` includes `metrics.suggestCount`, `insertCount`, `conversionRate` |
+| UI | Palette multi-word search → **Suggested** strip (icon, tier badge, ops snippet) |
 | Runtime agent | **Node Catalog** tool (`toolNodeCatalog`) on `ai_tool` |
-| Operator | toolbox container + `npm run catalog:reindex` |
+| Operator | toolbox + `catalog-reindex` / `catalog-reindex-hash` |
 
-Preference ladder (shell **allowed**, ranked low):
+### Demo (MCP / assistant)
+
+```
+suggest_nodes({ intent: "clone a git repository" })
+→ openflow-node-base.git [domain] usageSnippet: Operations: Clone · …
+get_node_type({ type: "openflow-node-base.git" })
+add_node({ type: "openflow-node-base.git" })
+```
+
+Preference ladder (shell **allowed**, ranked low — `rankTier: shell-fallback`):
 
 1. Domain/core nodes from `suggest_nodes`
 2. Compose Code / Set / IF when partial

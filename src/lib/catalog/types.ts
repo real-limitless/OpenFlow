@@ -21,6 +21,10 @@ export interface SuggestNodesOptions {
   limit?: number;
   /** When true, still return shell nodes but with penalty (default). */
   includeShell?: boolean;
+  /** Caller surface for metrics: palette | mcp | agent | api */
+  source?: string;
+  /** Skip metrics bump (tests). */
+  skipMetrics?: boolean;
 }
 
 export interface SuggestedNode {
@@ -30,8 +34,15 @@ export interface SuggestedNode {
   category: string;
   score: number;
   rankTier: CatalogRankTier;
+  /** Why this matched (hybrid / keyword / anchor). */
   reason: string;
   isShell: boolean;
+  /** Lucide icon name for palette. */
+  icon?: string;
+  /** Spec/ops-backed usage line (operations list or description). */
+  usageSnippet?: string;
+  /** Short guidance: when to pick this node (shell penalty callout). */
+  whenToUse?: string;
   inputs?: string | string[];
   outputs?: string | string[];
 }

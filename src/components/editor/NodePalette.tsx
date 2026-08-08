@@ -17,6 +17,13 @@ interface Props {
   onAdd: (type: string) => void;
 }
 
+function trackSuggestInsert(type: string, intent: string) {
+  void apiFetch("/api/v1/catalog/suggest-insert", {
+    method: "POST",
+    body: JSON.stringify({ type, intent, source: "palette" }),
+  }).catch(() => undefined);
+}
+
 const accentText: Record<string, string> = {
   trigger: "text-[var(--trigger)] bg-[var(--trigger)]/12",
   logic: "text-[var(--logic)] bg-[var(--logic)]/12",
@@ -59,6 +66,10 @@ type SuggestItem = {
   rankTier?: string;
   score?: number;
   isShell?: boolean;
+  icon?: string;
+  usageSnippet?: string;
+  whenToUse?: string;
+  reason?: string;
 };
 
 function looksLikeIntent(q: string): boolean {
@@ -116,7 +127,7 @@ export function NodePalette({ onAdd }: Props) {
       void apiFetch("/api/v1/catalog/suggest-nodes", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ intent: q, limit: 12 }),
+        body: JSON.stringify({ intent: q, limit: 12, source: "palette" }),
       })
         .then(async (res) => {
           if (!res.ok) throw new Error(String(res.status));
@@ -197,6 +208,9 @@ export function NodePalette({ onAdd }: Props) {
             {semantic.map((it) => {
               const d = typeByName.get(it.type);
               const accent = accentFor(d?.group, d?.placeholder);
+              const iconName = it.icon || d?.icon || "Box";
+              const subtitle =
+                it.usageSnippet || it.whenToUse || it.reason || it.description || it.type;
               return (
                 <button
                   key={`sem-${it.type}`}
@@ -206,7 +220,10 @@ export function NodePalette({ onAdd }: Props) {
                     e.dataTransfer.setData("application/openflow-node", it.type);
                     e.dataTransfer.effectAllowed = "move";
                   }}
-                  onClick={() => onAdd(it.type)}
+                  onClick={() => {
+                    trackSuggestInsert(it.type, query.trim());
+                    onAdd(it.type);
+                  }}
                   className="flex w-full items-start gap-2.5 rounded-md border border-transparent p-2 text-left transition hover:border-border hover:bg-surface"
                 >
                   <span
@@ -215,10 +232,10 @@ export function NodePalette({ onAdd }: Props) {
                       accentText[accent],
                     )}
                   >
-                    <NodeIcon name={d?.icon ?? "Box"} className="size-4" />
+                    <NodeIcon name={iconName} className="size-4" />
                   </span>
                   <span className="min-w-0 flex-1">
-                    <span className="flex items-center gap-1.5">
+                    <span className="flex flex-wrap items-center gap-1.5">
                       <span className="truncate text-[13px] font-medium text-foreground">
                         {it.displayName}
                       </span>
@@ -235,8 +252,13 @@ export function NodePalette({ onAdd }: Props) {
                       )}
                     </span>
                     <span className="line-clamp-2 text-[11px] leading-snug text-muted-foreground">
-                      {it.description || it.type}
+                      {subtitle}
                     </span>
+                    {it.whenToUse && it.usageSnippet && (
+                      <span className="mt-0.5 line-clamp-1 text-[10px] text-muted-foreground/80">
+                        {it.whenToUse}
+                      </span>
+                    )}
                   </span>
                 </button>
               );

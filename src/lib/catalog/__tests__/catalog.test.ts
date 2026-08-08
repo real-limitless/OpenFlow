@@ -66,6 +66,22 @@ describe("node catalog corpus + ranking helpers", () => {
   });
 });
 
+describe("catalog enrich snippets", () => {
+  it("builds usageSnippet and shell whenToUse", async () => {
+    const { enrichSuggestedFields } = await import("../enrich");
+    seedBuiltinDescriptions();
+    const git = allNodeTypes().find((t) => t.name === "openflow-node-base.git");
+    expect(git).toBeTruthy();
+    const g = enrichSuggestedFields(git, false);
+    expect(g.icon).toBeTruthy();
+    expect(g.usageSnippet.length).toBeGreaterThan(5);
+
+    const sh = allNodeTypes().find((t) => t.name === "openflow-node-base.executeCommand");
+    const s = enrichSuggestedFields(sh, true);
+    expect(s.whenToUse.toLowerCase()).toMatch(/shell|last resort|domain/);
+  });
+});
+
 describe("hybrid ranking preference (offline hash index)", () => {
   it("scores git-related intent higher for git than pure shell when both in candidate set", async () => {
     // Lightweight stand-in for full DB suggest: corpus + hash cosine

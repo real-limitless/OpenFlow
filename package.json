@@ -58,6 +58,7 @@
     "catalog:reindex": "npx tsx scripts/catalog-reindex.ts",
     "catalog:reindex:hash": "npx tsx scripts/catalog-reindex.ts --hash",
     "catalog:eval": "npx tsx scripts/catalog-eval.ts",
+    "catalog:reindex:hash:local": "npx tsx scripts/catalog-reindex.ts --hash",
     "screenshots": "node scripts/capture-screenshots.mjs"
   },
   "dependencies": {
