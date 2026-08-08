@@ -1,9 +1,15 @@
 /**
- * Shared Ansible ad-hoc runner contract (parity with ansible-flow-mcp).
- * No shell interpolation — argv only.
+ * Shared Ansible runner contract (parity with ansible-flow-mcp).
+ * Ad-hoc modules + playbooks. No shell interpolation — argv only.
  */
 
+import { access, constants, realpath, stat } from "node:fs/promises";
+import { isAbsolute, resolve, sep } from "node:path";
+import { tmpdir } from "node:os";
+
 export const FQCN_RE = /^[a-zA-Z0-9_]+\.[a-zA-Z0-9_]+\.[a-zA-Z0-9_]+$/;
+
+export const MAX_PLAYBOOK_BYTES = 2_000_000;
 
 export const DEFAULT_ALLOWED_COLLECTIONS = [
   "ansible.builtin",
@@ -32,7 +38,9 @@ export type AnsibleHostResult = {
 };
 
 export type AnsibleRunResult = {
-  module: string;
+  kind: "module" | "playbook";
+  module?: string;
+  playbook?: string;
   checkMode: boolean;
   exitCode: number;
   hosts: AnsibleHostResult[];
@@ -41,6 +49,12 @@ export type AnsibleRunResult = {
   argv: string[];
   failed: boolean;
 };
+
+export type AnsibleRunFn = (
+  argv: string[],
+  env: NodeJS.ProcessEnv,
+  timeoutMs: number,
+) => Promise<{ code: number; stdout: string; stderr: string }>;
 
 export type AnsibleRunOptions = {
   module: string;
@@ -59,11 +73,26 @@ export type AnsibleRunOptions = {
   /** When true, redact temp paths from returned argv */
   redactArgv?: boolean;
   /** Inject for tests */
-  runFn?: (
-    argv: string[],
-    env: NodeJS.ProcessEnv,
-    timeoutMs: number,
-  ) => Promise<{ code: number; stdout: string; stderr: string }>;
+  runFn?: AnsibleRunFn;
+};
+
+export type AnsiblePlaybookOptions = {
+  playbook: string;
+  inventory?: string;
+  checkMode?: boolean;
+  become?: boolean;
+  becomeUser?: string;
+  connection?: string;
+  extraVars?: Record<string, unknown> | null;
+  limit?: string;
+  tags?: string;
+  skipTags?: string;
+  timeoutSec?: number;
+  extraEnv?: Record<string, string>;
+  redactArgv?: boolean;
+  /** Optional allowlisted roots (realpath). */
+  playbookRoots?: string[];
+  runFn?: AnsibleRunFn;
 };
 
 export function assertModuleAllowed(
@@ -133,6 +162,45 @@ export function buildAnsibleArgv(opts: {
   return argv;
 }
 
+export function buildPlaybookArgv(opts: {
+  playbook: string;
+  inventory?: string;
+  checkMode?: boolean;
+  become?: boolean;
+  becomeUser?: string;
+  connection?: string;
+  extraVarsFile?: string;
+  limit?: string;
+  tags?: string;
+  skipTags?: string;
+}): string[] {
+  const argv: string[] = ["ansible-playbook", opts.playbook];
+  const inv = (opts.inventory ?? "").trim();
+  if (inv) {
+    argv.push("-i", inv);
+  } else {
+    argv.push("-i", "localhost,");
+    if (!opts.connection?.trim()) {
+      argv.push("-c", "local");
+    }
+  }
+  if (opts.checkMode) argv.push("--check");
+  if (opts.become) argv.push("--become");
+  if (opts.becomeUser?.trim()) {
+    argv.push("--become-user", opts.becomeUser.trim());
+  }
+  if (opts.connection?.trim()) {
+    argv.push("-c", opts.connection.trim());
+  }
+  if (opts.extraVarsFile?.trim()) {
+    argv.push("-e", `@${opts.extraVarsFile.trim()}`);
+  }
+  if (opts.limit?.trim()) argv.push("--limit", opts.limit.trim());
+  if (opts.tags?.trim()) argv.push("--tags", opts.tags.trim());
+  if (opts.skipTags?.trim()) argv.push("--skip-tags", opts.skipTags.trim());
+  return argv;
+}
+
 const SECRET_KEYS = new Set([
   "password",
   "passwd",
@@ -159,6 +227,108 @@ export function redactSecrets(value: unknown): unknown {
     return out;
   }
   return value;
+}
+
+/** Resolve playbook path under allowlisted roots; reject escapes. */
+export async function assertPlaybookPath(rawPath: string, roots?: string[]): Promise<string> {
+  const input = (rawPath ?? "").trim();
+  if (!input) throw new Error("Playbook path is required");
+  if (input.includes("\0")) throw new Error("Invalid playbook path");
+
+  const abs = isAbsolute(input) ? resolve(input) : resolve(process.cwd(), input);
+  let real: string;
+  try {
+    real = await realpath(abs);
+  } catch {
+    throw new Error(`Playbook not found: ${input}`);
+  }
+
+  const lower = real.toLowerCase();
+  if (!lower.endsWith(".yml") && !lower.endsWith(".yaml")) {
+    throw new Error("Playbook must be a .yml or .yaml file");
+  }
+
+  const st = await stat(real);
+  if (!st.isFile()) throw new Error("Playbook path is not a file");
+  if (st.size > MAX_PLAYBOOK_BYTES) {
+    throw new Error(`Playbook exceeds max size (${MAX_PLAYBOOK_BYTES} bytes)`);
+  }
+  await access(real, constants.R_OK);
+
+  const allowed = await resolvePlaybookRoots(roots);
+  const ok = allowed.some((root) => real === root || real.startsWith(root + sep));
+  if (!ok) {
+    throw new Error(
+      `Playbook path is outside allowed roots (${allowed.join(", ")}). ` +
+        `Set OPENFLOW_ANSIBLE_PLAYBOOK_ROOTS to extend.`,
+    );
+  }
+  return real;
+}
+
+export async function resolvePlaybookRoots(explicit?: string[]): Promise<string[]> {
+  const fromEnv = (process.env.OPENFLOW_ANSIBLE_PLAYBOOK_ROOTS ?? "")
+    .split(":")
+    .map((s) => s.trim())
+    .filter(Boolean);
+  const candidates = [
+    ...(explicit ?? []),
+    ...fromEnv,
+    process.cwd(),
+    resolve(process.cwd(), "playbooks"),
+    resolve(process.cwd(), "ansible"),
+    "/data/ansible/playbooks",
+    "/data/ansible",
+    tmpdir(),
+  ];
+  const out: string[] = [];
+  for (const c of candidates) {
+    try {
+      const r = await realpath(resolve(c));
+      if (!out.includes(r)) out.push(r);
+    } catch {
+      // root may not exist yet
+      const r = resolve(c);
+      if (!out.includes(r)) out.push(r);
+    }
+  }
+  return out;
+}
+
+/** Collapse per-task host rows into one item per host with tasks[]. */
+export function aggregateHostResults(rows: AnsibleHostResult[]): AnsibleHostResult[] {
+  const map = new Map<string, AnsibleHostResult & { tasks: Array<Record<string, unknown>> }>();
+  for (const row of rows) {
+    const cur = map.get(row.host);
+    const taskEntry = {
+      ok: row.ok,
+      changed: row.changed,
+      failed: row.failed,
+      unreachable: row.unreachable,
+      skipped: row.skipped,
+      msg: row.msg,
+      rc: row.rc,
+      result: row.result,
+    };
+    if (!cur) {
+      map.set(row.host, {
+        ...row,
+        result: { tasks: [taskEntry], ...row.result },
+        tasks: [taskEntry],
+      });
+      continue;
+    }
+    cur.changed = cur.changed || row.changed;
+    cur.failed = cur.failed || row.failed;
+    cur.unreachable = cur.unreachable || row.unreachable;
+    cur.skipped = cur.skipped && row.skipped;
+    cur.ok = !cur.failed && !cur.unreachable;
+    if (row.msg && !cur.msg) cur.msg = row.msg;
+    if (row.rc != null) cur.rc = row.rc;
+    cur.tasks.push(taskEntry);
+    cur.result = { ...cur.result, tasks: cur.tasks };
+  }
+  return [...map.values()].map(({ tasks: _t, ...rest }) => rest);
 }
 
 export function parseJsonCallback(stdout: string): AnsibleHostResult[] {
@@ -259,14 +429,28 @@ async function defaultRun(
   });
 }
 
+/** ansible-core 2.15+ removed builtin `json` stdout callback; use ansible.posix.json. */
+export function ansibleCallbackEnv(): NodeJS.ProcessEnv {
+  return {
+    ANSIBLE_STDOUT_CALLBACK: process.env.ANSIBLE_STDOUT_CALLBACK || "ansible.posix.json",
+    ANSIBLE_LOAD_CALLBACK_PLUGINS: process.env.ANSIBLE_LOAD_CALLBACK_PLUGINS || "1",
+    ANSIBLE_RETRY_FILES_ENABLED: "False",
+    ANSIBLE_HOST_KEY_CHECKING: process.env.ANSIBLE_HOST_KEY_CHECKING || "False",
+    ANSIBLE_DEPRECATION_WARNINGS: "False",
+  };
+}
+
 function sanitizeArgv(argv: string[]): string[] {
   return argv.map((part) => {
     if (
       part.includes("openflow-ansible-") ||
       part.endsWith("inventory.ini") ||
-      part.endsWith("id_key")
+      part.endsWith("id_key") ||
+      part.endsWith("extra-vars.json") ||
+      part.startsWith("@/") ||
+      part.startsWith("@\\")
     ) {
-      return "[redacted-path]";
+      return part.startsWith("@") ? "@[redacted-path]" : "[redacted-path]";
     }
     if (/password=/i.test(part) || /private_key/i.test(part)) return "[redacted]";
     return part;
@@ -292,10 +476,7 @@ export async function runAnsibleModule(opts: AnsibleRunOptions): Promise<Ansible
 
   const env: NodeJS.ProcessEnv = {
     ...process.env,
-    ANSIBLE_STDOUT_CALLBACK: process.env.ANSIBLE_STDOUT_CALLBACK || "json",
-    ANSIBLE_RETRY_FILES_ENABLED: "False",
-    ANSIBLE_HOST_KEY_CHECKING: process.env.ANSIBLE_HOST_KEY_CHECKING || "False",
-    ANSIBLE_DEPRECATION_WARNINGS: "False",
+    ...ansibleCallbackEnv(),
     ...(opts.extraEnv ?? {}),
   };
 
@@ -330,6 +511,7 @@ export async function runAnsibleModule(opts: AnsibleRunOptions): Promise<Ansible
 
   const failed = code !== 0 || hosts.some((h) => h.failed || h.unreachable);
   return {
+    kind: "module",
     module: fqcn,
     checkMode: Boolean(opts.checkMode),
     exitCode: code,
@@ -341,10 +523,95 @@ export async function runAnsibleModule(opts: AnsibleRunOptions): Promise<Ansible
   };
 }
 
-/** Test-only: allow injecting runFn via module global (cleared by tests). */
-let injectedRunFn: AnsibleRunOptions["runFn"] | undefined;
+export async function runAnsiblePlaybook(opts: AnsiblePlaybookOptions): Promise<AnsibleRunResult> {
+  const playbookPath = await assertPlaybookPath(opts.playbook, opts.playbookRoots);
 
-export function __setAnsibleRunFnForTests(fn: AnsibleRunOptions["runFn"] | undefined): void {
+  const { mkdtemp, writeFile, rm, chmod } = await import("node:fs/promises");
+  const { join } = await import("node:path");
+  let varsDir: string | null = null;
+  let extraVarsFile: string | undefined;
+  const cleanupVars = async () => {
+    if (varsDir) await rm(varsDir, { recursive: true, force: true }).catch(() => undefined);
+  };
+
+  try {
+    if (opts.extraVars && typeof opts.extraVars === "object" && !Array.isArray(opts.extraVars)) {
+      if (Object.keys(opts.extraVars).length > 0) {
+        varsDir = await mkdtemp(join(tmpdir(), "openflow-ansible-vars-"));
+        extraVarsFile = join(varsDir, "extra-vars.json");
+        await writeFile(extraVarsFile, JSON.stringify(opts.extraVars), { mode: 0o600 });
+        await chmod(extraVarsFile, 0o600);
+      }
+    }
+
+    const argv = buildPlaybookArgv({
+      playbook: playbookPath,
+      inventory: opts.inventory,
+      checkMode: opts.checkMode,
+      become: opts.become,
+      becomeUser: opts.becomeUser,
+      connection: opts.connection,
+      extraVarsFile,
+      limit: opts.limit,
+      tags: opts.tags,
+      skipTags: opts.skipTags,
+    });
+
+    const env: NodeJS.ProcessEnv = {
+      ...process.env,
+      ...ansibleCallbackEnv(),
+      ...(opts.extraEnv ?? {}),
+    };
+
+    let timeoutSec = Number(opts.timeoutSec ?? 300);
+    if (!Number.isFinite(timeoutSec)) timeoutSec = 300;
+    timeoutSec = Math.max(5, Math.min(7200, timeoutSec));
+    const timeoutMs = timeoutSec * 1000;
+
+    const run = opts.runFn ?? injectedRunFn ?? defaultRun;
+    const { code, stdout, stderr } = await run(argv, env, timeoutMs);
+    let hosts = aggregateHostResults(parseJsonCallback(stdout));
+
+    if (!hosts.length && code !== 0) {
+      hosts = [
+        {
+          host: "localhost",
+          ok: false,
+          changed: false,
+          failed: true,
+          unreachable: false,
+          skipped: false,
+          msg: (stderr || stdout || `ansible-playbook exited ${code}`).slice(0, 2000),
+          rc: code,
+          result: {
+            stderr: stderr.slice(0, 4000),
+            stdout: stdout.slice(0, 4000),
+          },
+        },
+      ];
+    }
+
+    const failed = code !== 0 || hosts.some((h) => h.failed || h.unreachable);
+    return {
+      kind: "playbook",
+      playbook: playbookPath,
+      checkMode: Boolean(opts.checkMode),
+      exitCode: code,
+      hosts,
+      stdout,
+      stderr,
+      argv: opts.redactArgv === false ? argv : sanitizeArgv(argv),
+      failed,
+    };
+  } finally {
+    await cleanupVars();
+  }
+}
+
+/** Test-only: allow injecting runFn via module global (cleared by tests). */
+let injectedRunFn: AnsibleRunFn | undefined;
+
+export function __setAnsibleRunFnForTests(fn: AnsibleRunFn | undefined): void {
   injectedRunFn = fn;
 }
 
@@ -352,6 +619,15 @@ export async function runAnsibleModuleWithTestHook(
   opts: AnsibleRunOptions,
 ): Promise<AnsibleRunResult> {
   return runAnsibleModule({
+    ...opts,
+    runFn: opts.runFn ?? injectedRunFn,
+  });
+}
+
+export async function runAnsiblePlaybookWithTestHook(
+  opts: AnsiblePlaybookOptions,
+): Promise<AnsibleRunResult> {
+  return runAnsiblePlaybook({
     ...opts,
     runFn: opts.runFn ?? injectedRunFn,
   });

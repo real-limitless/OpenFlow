@@ -8,6 +8,7 @@ Dual-track MCP server: [ansible-flow-mcp](https://github.com/real-limitless/ansi
 
 - `ansible` / `ansible-core` on the **worker** `PATH`
 - Collections you use installed on that control node
+- **`ansible.posix`** (required for JSON stdout callback `ansible.posix.json` on ansible-core ≥ 2.15)
 - Docker image installs `ansible-core` + `ansible.posix`, `community.general`, `community.docker`
 
 ### Local / bare metal
@@ -31,11 +32,32 @@ ansible localhost -m ansible.builtin.ping -c local
 
 ## Canvas usage
 
+### Module (ad-hoc)
+
 1. Palette → **Ansible** → pick a module (e.g. `file`)
 2. Node type is always `openflow-node-base.ansible` with `module` preset
 3. Configure hosts / check mode / become
 4. **Module options**: Form when a schema exists, else JSON
 5. Execute workflow
+
+### Playbook
+
+1. Add **Ansible** node → Resource = **Playbook**
+2. Set **Playbook path** to a `.yml` / `.yaml` on the worker under an allowlisted root
+3. Optional: Extra Vars (JSON), Limit, Tags, Skip Tags
+4. Same inventory / SSH / become / check mode as module mode
+5. Execute → per-host results (tasks nested under `result.tasks` when multi-task)
+
+#### Playbook path jail
+
+Playbooks must resolve under one of:
+
+- `process.cwd()` and `./playbooks`, `./ansible`
+- `/data/ansible`, `/data/ansible/playbooks`
+- `os.tmpdir()`
+- Extra roots via `OPENFLOW_ANSIBLE_PLAYBOOK_ROOTS` (colon-separated)
+
+Max file size 2MB. No path escape (`..` outside roots).
 
 ## API
 

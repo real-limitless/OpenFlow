@@ -1,9 +1,13 @@
 import type { NodeExecutor } from "@/sdk";
 import { withPairedItem } from "@/sdk";
-import { runAnsibleModuleWithTestHook, type AnsibleRunResult } from "./ansible-runner";
+import {
+  runAnsibleModuleWithTestHook,
+  runAnsiblePlaybookWithTestHook,
+  type AnsibleRunResult,
+} from "./ansible-runner";
 import { prepareAnsibleAuth, type AnsibleSshCredential } from "./ansible-auth";
 
-function asArgs(value: unknown): Record<string, unknown> | null {
+function asObject(value: unknown, label: string): Record<string, unknown> | null {
   if (value == null || value === "") return null;
   if (typeof value === "string") {
     const t = value.trim();
@@ -13,20 +17,22 @@ function asArgs(value: unknown): Record<string, unknown> | null {
       if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
         return parsed as Record<string, unknown>;
       }
-      throw new Error("args JSON must be an object");
+      throw new Error(`${label} JSON must be an object`);
     } catch (e) {
-      throw new Error(`Invalid args JSON: ${(e as Error).message}`);
+      throw new Error(`Invalid ${label} JSON: ${(e as Error).message}`);
     }
   }
   if (typeof value === "object" && !Array.isArray(value)) {
     return value as Record<string, unknown>;
   }
-  throw new Error("args must be a JSON object");
+  throw new Error(`${label} must be a JSON object`);
 }
 
 function hostItems(result: AnsibleRunResult, pairIdx: number) {
   const base = {
+    kind: result.kind,
     module: result.module,
+    playbook: result.playbook,
     checkMode: result.checkMode,
     exitCode: result.exitCode,
     argv: result.argv,
@@ -112,7 +118,6 @@ async function resolveCredential(
 ): Promise<AnsibleSshCredential | null> {
   const auth = ctx.getParam<string>("authentication", "none");
   if (auth === "none" || !auth) {
-    // Still try ansibleSsh if bound without auth mode
     const loose = await ctx.getCredential("ansibleSsh").catch(() => null);
     if (loose) return mapSshCred(loose, "ansibleSsh");
     return null;
@@ -136,6 +141,23 @@ async function resolveCredential(
   return null;
 }
 
+function evalObject(
+  ctx: Parameters<NodeExecutor>[0],
+  obj: Record<string, unknown> | null,
+  json: Record<string, unknown>,
+): Record<string, unknown> | null {
+  if (!obj) return null;
+  const evaluated: Record<string, unknown> = {};
+  for (const [k, v] of Object.entries(obj)) {
+    if (typeof v === "string") {
+      evaluated[k] = ctx.evaluate(v, json) ?? v;
+    } else {
+      evaluated[k] = v;
+    }
+  }
+  return evaluated;
+}
+
 export const ansibleExecutor: NodeExecutor = async (ctx) => {
   const inputItems = ctx.getInputItems(0);
   const items = inputItems.length ? inputItems : [{ json: {} }];
@@ -143,31 +165,16 @@ export const ansibleExecutor: NodeExecutor = async (ctx) => {
   const contOnFail = ctx.continueOnFail();
 
   const runFor = async (json: Record<string, unknown>, pairIdx: number) => {
-    const moduleRaw = ctx.getParam<string>("module", "");
-    const module = (ctx.evaluate(moduleRaw, json) as string) ?? moduleRaw;
+    const resource = ctx.getParam<string>("resource", "module") || "module";
     const hostsRaw = ctx.getParam<string>("hosts", "localhost");
     const hosts = String((ctx.evaluate(hostsRaw, json) as string) ?? hostsRaw);
     const inventoryRaw = ctx.getParam<string>("inventory", "");
     const inventory = String((ctx.evaluate(inventoryRaw, json) as string) ?? inventoryRaw);
-    const argsParam = ctx.getParam<unknown>("args", {});
-    let args = asArgs(argsParam);
-    if (args) {
-      const evaluated: Record<string, unknown> = {};
-      for (const [k, v] of Object.entries(args)) {
-        if (typeof v === "string") {
-          evaluated[k] = ctx.evaluate(v, json) ?? v;
-        } else {
-          evaluated[k] = v;
-        }
-      }
-      args = evaluated;
-    }
-
     const checkMode = ctx.getParam<boolean>("checkMode", false);
     const become = ctx.getParam<boolean>("become", false);
     const becomeUser = ctx.getParam<string>("becomeUser", "");
     const connection = ctx.getParam<string>("connection", "");
-    const timeout = ctx.getParam<number>("timeout", 120);
+    const timeout = ctx.getParam<number>("timeout", resource === "playbook" ? 300 : 120);
 
     let prepared: Awaited<ReturnType<typeof prepareAnsibleAuth>> = null;
     try {
@@ -181,19 +188,65 @@ export const ansibleExecutor: NodeExecutor = async (ctx) => {
         connectionParam: connection,
       });
 
-      const result = await runAnsibleModuleWithTestHook({
-        module,
-        args,
-        hosts: prepared?.hostPattern ?? hosts,
-        inventory: prepared?.inventoryPath ?? (inventory || undefined),
-        checkMode,
-        become: prepared?.become ?? become,
-        becomeUser: prepared?.becomeUser ?? (becomeUser || undefined),
-        connection: prepared?.connection ?? (connection || undefined),
-        timeoutSec: timeout,
-        extraEnv: prepared?.env,
-        redactArgv: true,
-      });
+      const inv = prepared?.inventoryPath ?? (inventory || undefined);
+      const becomeFinal = prepared?.become ?? become;
+      const becomeUserFinal = prepared?.becomeUser ?? (becomeUser || undefined);
+      const connectionFinal = prepared?.connection ?? (connection || undefined);
+
+      let result: AnsibleRunResult;
+      if (resource === "playbook") {
+        const playbookRaw = ctx.getParam<string>("playbook", "");
+        const playbook = String((ctx.evaluate(playbookRaw, json) as string) ?? playbookRaw).trim();
+        if (!playbook) throw new Error("Playbook path is required");
+        const extraVars = evalObject(
+          ctx,
+          asObject(ctx.getParam<unknown>("extraVars", {}), "extraVars"),
+          json,
+        );
+        const limit = String(
+          (ctx.evaluate(ctx.getParam<string>("limit", ""), json) as string) ?? "",
+        ).trim();
+        const tags = String(
+          (ctx.evaluate(ctx.getParam<string>("tags", ""), json) as string) ?? "",
+        ).trim();
+        const skipTags = String(
+          (ctx.evaluate(ctx.getParam<string>("skipTags", ""), json) as string) ?? "",
+        ).trim();
+
+        result = await runAnsiblePlaybookWithTestHook({
+          playbook,
+          inventory: inv,
+          checkMode,
+          become: becomeFinal,
+          becomeUser: becomeUserFinal,
+          connection: connectionFinal,
+          extraVars,
+          limit: limit || undefined,
+          tags: tags || undefined,
+          skipTags: skipTags || undefined,
+          timeoutSec: timeout,
+          extraEnv: prepared?.env,
+          redactArgv: true,
+        });
+      } else {
+        const moduleRaw = ctx.getParam<string>("module", "");
+        const module = (ctx.evaluate(moduleRaw, json) as string) ?? moduleRaw;
+        const args = evalObject(ctx, asObject(ctx.getParam<unknown>("args", {}), "args"), json);
+        result = await runAnsibleModuleWithTestHook({
+          module,
+          args,
+          hosts: prepared?.hostPattern ?? hosts,
+          inventory: inv,
+          checkMode,
+          become: becomeFinal,
+          becomeUser: becomeUserFinal,
+          connection: connectionFinal,
+          timeoutSec: timeout,
+          extraEnv: prepared?.env,
+          redactArgv: true,
+        });
+      }
+
       if (result.failed && !contOnFail) {
         const msg =
           result.hosts.find((h) => h.failed || h.unreachable)?.msg ||

@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { spawnSync } from "node:child_process";
+import { mkdtemp, writeFile, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { seedBuiltinExecutors } from "../index";
 import { seedBuiltinDescriptions } from "@/lib/nodes/registry";
 import { runNode } from "./helpers";
@@ -37,7 +40,7 @@ describeDogfood("ansible dogfood (real CLI)", () => {
     expect(item.failed).toBe(false);
     expect(item.exitCode).toBe(0);
     const result = item.result as Record<string, unknown>;
-    expect(result.ping === "pong" || result.ping === "pong" || item.ok === true).toBe(true);
+    expect(result.ping).toBe("pong");
   }, 60_000);
 
   it("file module check-mode on /tmp", async () => {
@@ -96,6 +99,49 @@ describeDogfood("ansible dogfood (real CLI)", () => {
     const argv = (out as Awaited<ReturnType<typeof runNode>>)[0]![0]!.json.argv as string[];
     expect(argv.some((a) => a.includes("openflow-ansible-"))).toBe(false);
   }, 60_000);
+});
+
+describeDogfood("ansible-playbook dogfood", () => {
+  it("runs a minimal local playbook via executor", async () => {
+    __setAnsibleRunFnForTests(undefined);
+    const dir = await mkdtemp(join(tmpdir(), "of-pb-dog-"));
+    const pb = join(dir, "ping.yml");
+    await writeFile(
+      pb,
+      [
+        "---",
+        "- name: OpenFlow dogfood",
+        "  hosts: localhost",
+        "  connection: local",
+        "  gather_facts: false",
+        "  tasks:",
+        "    - name: ping",
+        "      ansible.builtin.ping:",
+        "",
+      ].join("\n"),
+      "utf8",
+    );
+    try {
+      const out = await runNode(
+        TYPE,
+        {
+          resource: "playbook",
+          playbook: pb,
+          inventory: "localhost,",
+          connection: "local",
+          checkMode: false,
+          authentication: "none",
+          timeout: 120,
+        },
+        [{}],
+      );
+      expect(out[0]![0]!.json.kind).toBe("playbook");
+      expect(out[0]![0]!.json.failed).toBe(false);
+      expect(out[0]![0]!.json.exitCode).toBe(0);
+    } finally {
+      await rm(dir, { recursive: true, force: true });
+    }
+  }, 90_000);
 });
 
 describe("ansible dogfood gate", () => {

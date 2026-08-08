@@ -30,14 +30,19 @@ status: implemented
 
 | name | type | default | required | notes |
 |------|------|---------|----------|-------|
-| `module` | string | `""` | **yes** | Module FQCN, e.g. `ansible.builtin.ping` |
-| `args` | json/object | `{}` | no | Module arguments object (YAML map equivalent) |
-| `hosts` | string | `localhost` | no | Host pattern |
-| `inventory` | string | `""` | no | Inventory path or inline; empty → inline `{hosts},` |
+| `resource` | options | `module` | no | `module` \| `playbook` |
+| `authentication` | options | `none` | no | none \| ansibleSsh \| sshPassword \| sshPrivateKey |
+| `module` | string | ping FQCN | when module | Module FQCN |
+| `args` | json/object | `{}` | no | Module arguments (module mode) |
+| `playbook` | string | `""` | when playbook | Path to `.yml`/`.yaml` under path jail |
+| `extraVars` | json/object | `{}` | no | Playbook `-e @file` |
+| `limit` / `tags` / `skipTags` | string | `""` | no | Playbook filters |
+| `hosts` | string | `localhost` | no | Host pattern (module mode) |
+| `inventory` | string | `""` | no | Inventory path or inline |
 | `checkMode` | boolean | `false` | no | Pass `--check` |
 | `become` | boolean | `false` | no | Pass `--become` |
 | `becomeUser` | string | `""` | no | `--become-user` when non-empty |
-| `connection` | string | `""` | no | `-c` when set; default `local` for localhost without inventory |
+| `connection` | string | `""` | no | `-c` when set |
 | `timeout` | number | `120` | no | Subprocess timeout seconds (bounded) |
 | `executeOnce` | boolean | `true` | no | Run once for all items vs per item |
 
@@ -45,11 +50,17 @@ status: implemented
 
 ### Overview
 
-Runs **local ad-hoc Ansible** on the OpenFlow worker/control node:
+### Module mode
 
 `ansible <hosts> -m <module> -i <inventory> [-a <json-args>] [--check] [--become] …`
 
-Uses `ANSIBLE_STDOUT_CALLBACK=json` and parses per-host task results.
+### Playbook mode
+
+`ansible-playbook <playbook.yml> -i <inventory> [--check] [--become] [-e @vars.json] [--limit] [--tags] …`
+
+Playbook path must be under allowlisted roots (`OPENFLOW_ANSIBLE_PLAYBOOK_ROOTS`, cwd, `/data/ansible`, tmpdir). Max 2MB.
+
+Uses `ANSIBLE_STDOUT_CALLBACK=json`. Module mode emits per-task host rows; playbook mode **aggregates by host** with `result.tasks[]`.
 
 ### Allowlist (partial v1)
 
@@ -86,9 +97,9 @@ When `executeOnce` is true, module runs once using the first input item for expr
 
 ### Partial gaps
 
-- Playbook operation not implemented.
 - Live `ansible-doc` schema fetch not implemented (static catalog only).
 - Private key passphrase support is best-effort (env hint; prefer unlocked keys or ssh-agent on the worker).
+- Inline playbook body (paste YAML) not supported — path on worker only.
 
 ## Acceptance tests
 

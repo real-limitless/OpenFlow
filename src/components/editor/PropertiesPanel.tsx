@@ -272,7 +272,8 @@ export function PropertiesPanel({
                       // Hybrid module options UI owns `args` for ansible nodes
                       if (
                         ANSIBLE_NODE_TYPES.has(toCanonicalType(node.type)) &&
-                        prop.name === "args"
+                        prop.name === "args" &&
+                        String(parameters.resource ?? "module") === "module"
                       ) {
                         return false;
                       }
@@ -293,14 +294,17 @@ export function PropertiesPanel({
                         }
                       />
                     ))}
-                  {ANSIBLE_NODE_TYPES.has(toCanonicalType(node.type)) && (
-                    <AnsibleModuleOptions
-                      moduleFqcn={String(parameters.module ?? "")}
-                      args={parameters.args}
-                      context={context}
-                      onChangeArgs={(args) => updateParameters(node.name, { ...parameters, args })}
-                    />
-                  )}
+                  {ANSIBLE_NODE_TYPES.has(toCanonicalType(node.type)) &&
+                    String(parameters.resource ?? "module") === "module" && (
+                      <AnsibleModuleOptions
+                        moduleFqcn={String(parameters.module ?? "")}
+                        args={parameters.args}
+                        context={context}
+                        onChangeArgs={(args) =>
+                          updateParameters(node.name, { ...parameters, args })
+                        }
+                      />
+                    )}
                 </>
               )}
             </div>
