@@ -125,7 +125,11 @@ export const config = {
         process.env.OPENFLOW_CATALOG_RAG_ENABLED !== "0"
       );
     },
-    /** OpenAI-compatible embeddings endpoint (defaults to assistant LLM base). */
+    /**
+     * OpenAI-compatible embeddings base URL (no trailing slash).
+     * Prefer OPENFLOW_CATALOG_EMBED_BASE_URL for a dedicated remote TEI/Ollama/OpenRouter
+     * embed server so catalog reindex does not share the chat LLM endpoint.
+     */
     get embedBaseUrl() {
       return (
         process.env.OPENFLOW_CATALOG_EMBED_BASE_URL?.trim() ||
@@ -134,6 +138,10 @@ export const config = {
         "https://api.openai.com/v1"
       );
     },
+    /** True when catalog embed URL was set explicitly (not chat LLM fallback). */
+    get embedBaseUrlExplicit() {
+      return Boolean(process.env.OPENFLOW_CATALOG_EMBED_BASE_URL?.trim());
+    },
     get embedApiKey() {
       return (
         process.env.OPENFLOW_CATALOG_EMBED_API_KEY?.trim() ||
@@ -141,6 +149,16 @@ export const config = {
         process.env.OPENAI_API_KEY?.trim() ||
         ""
       );
+    },
+    /**
+     * Allow remote embed servers that need no Bearer token (Ollama, many TEI deploys).
+     * Default on when OPENFLOW_CATALOG_EMBED_BASE_URL is set explicitly.
+     */
+    get embedAllowNoAuth() {
+      const v = process.env.OPENFLOW_CATALOG_EMBED_NO_AUTH?.trim().toLowerCase();
+      if (v === "true" || v === "1") return true;
+      if (v === "false" || v === "0") return false;
+      return Boolean(process.env.OPENFLOW_CATALOG_EMBED_BASE_URL?.trim());
     },
     get embedModel() {
       return (
@@ -154,6 +172,16 @@ export const config = {
         32,
         parseInt(process.env.OPENFLOW_CATALOG_EMBED_DIMS ?? "1536", 10) || 1536,
       );
+    },
+    /** Texts per embeddings API request (higher = fewer round-trips on remote GPU). */
+    get embedBatchSize() {
+      const n = parseInt(process.env.OPENFLOW_CATALOG_EMBED_BATCH ?? "32", 10);
+      return Number.isFinite(n) ? Math.min(256, Math.max(1, n)) : 32;
+    },
+    /** Parallel embed batches in flight during reindex. */
+    get embedConcurrency() {
+      const n = parseInt(process.env.OPENFLOW_CATALOG_EMBED_CONCURRENCY ?? "4", 10);
+      return Number.isFinite(n) ? Math.min(16, Math.max(1, n)) : 4;
     },
     /** Penalty applied to shell-tier nodes in hybrid rank (0–1 scale before normalize). */
     get shellPenalty() {

@@ -14,13 +14,27 @@ function resolveDims(): number {
   return config.catalog.dimensions;
 }
 
+function normalizeBaseUrl(raw: string): string {
+  let u = raw.replace(/\/$/, "");
+  // TEI often served at host root; OpenAI path is /v1/embeddings
+  return u;
+}
+
+/**
+ * Create embed client.
+ * - forceHash → offline feature-hash
+ * - else remote OpenAI-compatible POST {base}/embeddings when key present OR no-auth allowed
+ * - else hash fallback
+ */
 export function createEmbedClient(forceHash = false): EmbedClient {
   const dimensions = resolveDims();
   const apiKey = config.catalog.embedApiKey;
-  const baseUrl = config.catalog.embedBaseUrl.replace(/\/$/, "");
+  const baseUrl = normalizeBaseUrl(config.catalog.embedBaseUrl);
   const model = config.catalog.embedModel;
+  const allowNoAuth = config.catalog.embedAllowNoAuth;
+  const useApi = !forceHash && (Boolean(apiKey) || allowNoAuth);
 
-  if (forceHash || !apiKey) {
+  if (!useApi) {
     return {
       modelId: `hash/${dimensions}`,
       dimensions,
@@ -38,12 +52,15 @@ export function createEmbedClient(forceHash = false): EmbedClient {
     async embed(texts: string[]) {
       if (texts.length === 0) return [];
       const url = `${baseUrl}/embeddings`;
+      const headers: Record<string, string> = {
+        "content-type": "application/json",
+      };
+      if (apiKey) {
+        headers.authorization = `Bearer ${apiKey}`;
+      }
       const res = await fetch(url, {
         method: "POST",
-        headers: {
-          authorization: `Bearer ${apiKey}`,
-          "content-type": "application/json",
-        },
+        headers,
         body: JSON.stringify({
           model,
           input: texts.length === 1 ? texts[0] : texts,
@@ -51,11 +68,20 @@ export function createEmbedClient(forceHash = false): EmbedClient {
       });
       if (!res.ok) {
         const errText = await res.text().catch(() => "");
-        throw new Error(`Catalog embed API ${res.status}: ${errText.slice(0, 300)}`);
+        throw new Error(
+          `Catalog embed API ${res.status} ${url}: ${errText.slice(0, 400)}`,
+        );
       }
       const json = (await res.json()) as {
         data?: Array<{ embedding?: number[]; index?: number }>;
+        // TEI alternate shape sometimes returns embedding arrays directly
+        embeddings?: number[][];
       };
+
+      if (Array.isArray(json.embeddings) && json.embeddings.length > 0) {
+        return json.embeddings.map((e) => l2Normalize(padOrTrim(e, dimensions)));
+      }
+
       const data = Array.isArray(json.data) ? json.data : [];
       const byIndex = new Map<number, number[]>();
       for (const row of data) {

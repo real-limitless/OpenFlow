@@ -35,10 +35,38 @@ npm run catalog:reindex:hash
 | Variable | Default | Meaning |
 | --- | --- | --- |
 | `OPENFLOW_CATALOG_RAG_ENABLED` | on | Master switch |
-| `OPENFLOW_CATALOG_EMBED_*` | assistant LLM settings | Embeddings API |
-| `OPENFLOW_CATALOG_EMBED_DIMS` | `1536` | Vector size (must match model / hash) |
+| `OPENFLOW_CATALOG_EMBED_BASE_URL` | assistant / OpenAI base | **Remote** OpenAI-compatible embed server (`…/v1`) |
+| `OPENFLOW_CATALOG_EMBED_API_KEY` | assistant key | Bearer token (optional if no-auth) |
+| `OPENFLOW_CATALOG_EMBED_NO_AUTH` | auto if base URL set | Allow TEI/Ollama without API key |
+| `OPENFLOW_CATALOG_EMBED_MODEL` | `text-embedding-3-small` | Model id |
+| `OPENFLOW_CATALOG_EMBED_DIMS` | `1536` | Vector size (must match model) |
+| `OPENFLOW_CATALOG_EMBED_BATCH` | `32` | Texts per request (raise on GPU TEI) |
+| `OPENFLOW_CATALOG_EMBED_CONCURRENCY` | `4` | Parallel embed batches |
 | `OPENFLOW_CATALOG_SHELL_PENALTY` | `0.35` | Score subtraction for shell-tier nodes |
 | `OPENFLOW_CATALOG_USE_PGVECTOR` | on | Write/query `vector(1536)` when extension works |
+
+### Remote embedding server (faster reindex)
+
+Point catalog at a dedicated embed API (not the chat model):
+
+```sh
+# Dokploy / compose env — example TEI on a GPU box
+OPENFLOW_CATALOG_EMBED_BASE_URL=http://10.0.0.5:8080/v1
+OPENFLOW_CATALOG_EMBED_NO_AUTH=true
+OPENFLOW_CATALOG_EMBED_MODEL=BAAI/bge-base-en-v1.5
+OPENFLOW_CATALOG_EMBED_DIMS=768
+OPENFLOW_CATALOG_EMBED_BATCH=64
+OPENFLOW_CATALOG_EMBED_CONCURRENCY=4
+```
+
+Then inside toolbox:
+
+```sh
+catalog-reindex
+# log should show: embed: mode=api model=… batch=64 concurrency=4
+```
+
+Changing model or dims requires a full reindex. Hash mode (`catalog-reindex-hash`) is only for offline smoke tests.
 
 ## MCP
 

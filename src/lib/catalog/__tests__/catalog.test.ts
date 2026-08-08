@@ -47,6 +47,18 @@ describe("node catalog corpus + ranking helpers", () => {
     expect(v!.length).toBe(client.dimensions);
   });
 
+  it("forceHash ignores remote settings", async () => {
+    const prev = process.env.OPENFLOW_CATALOG_EMBED_BASE_URL;
+    process.env.OPENFLOW_CATALOG_EMBED_BASE_URL = "http://example.invalid/v1";
+    try {
+      const client = createEmbedClient(true);
+      expect(client.mode).toBe("hash");
+    } finally {
+      if (prev === undefined) delete process.env.OPENFLOW_CATALOG_EMBED_BASE_URL;
+      else process.env.OPENFLOW_CATALOG_EMBED_BASE_URL = prev;
+    }
+  });
+
   it("registry still lists node catalog tool", () => {
     seedBuiltinDescriptions();
     const hit = allNodeTypes().find((t) => t.name === "openflow-node-langchain.toolNodeCatalog");
