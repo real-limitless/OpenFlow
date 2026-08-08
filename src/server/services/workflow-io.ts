@@ -70,6 +70,10 @@ export function deserializeJsonFields(row: Record<string, unknown>): IWorkflow {
   if (!Array.isArray(out.nodes)) {
     out.nodes = [];
   }
+  // Optional object fields: drop null so zod optional() does not see "received null"
+  for (const key of ["pinData", "staticData", "meta"] as const) {
+    if (out[key] == null) delete out[key];
+  }
   if (typeof out.extra === "string") {
     try {
       const parsed = JSON.parse(out.extra as string) as Record<string, unknown>;

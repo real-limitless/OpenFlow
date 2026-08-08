@@ -81,6 +81,11 @@ describe("schema round-trip", () => {
     expect(result.workflow!.settings).toEqual({});
   });
 
+  it("accepts null pinData (DB empty workflow)", () => {
+    const result = parseWorkflowJson({ ...minimalRaw, pinData: null, staticData: null });
+    expect(result.ok).toBe(true);
+  });
+
   it("parses from a JSON string", () => {
     const result = parseWorkflowJson(JSON.stringify(minimalRaw));
     expect(result.ok).toBe(true);

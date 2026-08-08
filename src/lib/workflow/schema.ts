@@ -46,7 +46,10 @@ export const workflowSchema = z
       (v) => (v == null ? {} : v),
       z.record(z.unknown()).default({}),
     ),
-    pinData: z.record(z.array(z.record(z.unknown()))).optional(),
+    pinData: z.preprocess(
+      (v) => (v == null ? undefined : v),
+      z.record(z.array(z.record(z.unknown()))).optional(),
+    ),
     // Accept array, or a JSON-stringified array (legacy double-encoded `extra` field).
     tags: z.preprocess((v) => {
       if (typeof v !== "string") return v;
