@@ -41,6 +41,44 @@ vi.mock("../../db", () => ({
   },
 }));
 
+const listCredentialsCompact = vi.fn(async () => ({ count: 0, items: [] }));
+const createCredential = vi.fn();
+const updateCredential = vi.fn();
+const deleteCredential = vi.fn();
+const listCredentialTypeCatalog = vi.fn(() => ({ count: 0, items: [] }));
+const listVariablesMeta = vi.fn(async () => []);
+const createVariable = vi.fn();
+const updateVariable = vi.fn();
+const deleteVariable = vi.fn();
+
+vi.mock("../../services/credentials-admin", () => ({
+  listCredentialsCompact: (...a: unknown[]) =>
+    (listCredentialsCompact as (...args: unknown[]) => unknown)(...a),
+  listCredentialTypeCatalog: (...a: unknown[]) =>
+    (listCredentialTypeCatalog as (...args: unknown[]) => unknown)(...a),
+  createCredential: (...a: unknown[]) =>
+    (createCredential as (...args: unknown[]) => unknown)(...a),
+  updateCredential: (...a: unknown[]) =>
+    (updateCredential as (...args: unknown[]) => unknown)(...a),
+  deleteCredential: (...a: unknown[]) =>
+    (deleteCredential as (...args: unknown[]) => unknown)(...a),
+  isServiceError: (v: unknown) =>
+    Boolean(v && typeof v === "object" && "error" in (v as object) && "status" in (v as object)),
+}));
+
+vi.mock("../../services/variables", () => ({
+  listVariablesMeta: (...a: unknown[]) =>
+    (listVariablesMeta as (...args: unknown[]) => unknown)(...a),
+  createVariable: (...a: unknown[]) =>
+    (createVariable as (...args: unknown[]) => unknown)(...a),
+  updateVariable: (...a: unknown[]) =>
+    (updateVariable as (...args: unknown[]) => unknown)(...a),
+  deleteVariable: (...a: unknown[]) =>
+    (deleteVariable as (...args: unknown[]) => unknown)(...a),
+  isVariableServiceError: (v: unknown) =>
+    Boolean(v && typeof v === "object" && "error" in (v as object) && "status" in (v as object)),
+}));
+
 import { callOpenflowTool, OPENFLOW_MCP_TOOLS } from "../tools";
 
 describe("openflow MCP tools", () => {
@@ -58,7 +96,67 @@ describe("openflow MCP tools", () => {
     expect(names).toContain("add_node");
     expect(names).toContain("connect_nodes");
     expect(names).toContain("execute_workflow");
+    expect(names).toContain("create_credential");
+    expect(names).toContain("create_variable");
+    expect(names).toContain("list_credential_types");
     expect(new Set(names).size).toBe(names.length);
+  });
+
+  it("denies create_credential without openflow:credentials scope", async () => {
+    await expect(
+      callOpenflowTool(
+        {
+          userId: "u1",
+          scopes: ["openflow:read", "openflow:write", "openflow:execute"],
+          authKind: "api_key",
+        },
+        "create_credential",
+        {
+          name: "x",
+          type: "httpHeaderAuth",
+          data: { name: "X", value: "s" },
+        },
+      ),
+    ).rejects.toThrow(/openflow:credentials/);
+    expect(createCredential).not.toHaveBeenCalled();
+  });
+
+  it("allows create_credential with scope and returns metadata only path", async () => {
+    createCredential.mockResolvedValue({
+      id: "c1",
+      name: "x",
+      type: "httpHeaderAuth",
+      projectId: "p1",
+    });
+    const r = await callOpenflowTool(
+      {
+        userId: "u1",
+        scopes: ["openflow:credentials"],
+        authKind: "api_key",
+      },
+      "create_credential",
+      {
+        name: "x",
+        type: "httpHeaderAuth",
+        data: { name: "X", value: "secret" },
+      },
+    );
+    expect(r).toMatchObject({ id: "c1", name: "x" });
+    expect(createCredential).toHaveBeenCalled();
+  });
+
+  it("denies create_variable without openflow:variables", async () => {
+    await expect(
+      callOpenflowTool(
+        {
+          userId: "u1",
+          scopes: ["openflow:write"],
+          authKind: "api_key",
+        },
+        "create_variable",
+        { key: "FOO", value: "bar" },
+      ),
+    ).rejects.toThrow(/openflow:variables/);
   });
 
   it("dispatches get_workflow and add_node (legacy signature)", async () => {

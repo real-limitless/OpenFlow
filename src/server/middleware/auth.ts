@@ -3,7 +3,7 @@ import { getCookie } from "hono/cookie";
 import { getSessionUserId } from "../services/sessions";
 import { ensureUser, LOCAL_USER_ID } from "../services/users";
 import { config } from "../../config";
-import { ALL_MCP_SCOPES } from "../oauth/scopes";
+import { ALL_MCP_SCOPES, HUMAN_MCP_SCOPES } from "../oauth/scopes";
 import { resolveAccessToken } from "../oauth/tokens";
 import { mcpResourceUrl, publicOrigin } from "../oauth/public-url";
 import {
@@ -71,7 +71,7 @@ function applyAgent(c: Context<AppEnv>, auth: AgentAuth) {
 function sessionAuth(userId: string): AgentAuth {
   return {
     userId,
-    scopes: [...ALL_MCP_SCOPES],
+    scopes: [...HUMAN_MCP_SCOPES],
     authKind: "session",
     workflowPolicy: unrestrictedPolicy(),
   };
@@ -99,7 +99,7 @@ export async function authMiddleware(c: Context<AppEnv>, next: Next) {
     await ensureUser(LOCAL_USER_ID);
     applyAgent(c, {
       userId: LOCAL_USER_ID,
-      scopes: [...ALL_MCP_SCOPES],
+      scopes: [...HUMAN_MCP_SCOPES],
       authKind: "disabled",
       workflowPolicy: unrestrictedPolicy(),
     });

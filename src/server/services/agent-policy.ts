@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 import bcrypt from "bcryptjs";
 import { prisma } from "../db";
-import { ALL_MCP_SCOPES, parseScopes } from "../oauth/scopes";
+import { DEFAULT_AGENT_SCOPES, hasScope, parseScopes } from "../oauth/scopes";
 
 export type WorkflowPerm = "read" | "write" | "execute";
 
@@ -93,17 +93,54 @@ export function canAgentCreateWorkflows(policy: WorkflowPolicy): boolean {
 
 function parseScopeList(raw: string): string[] {
   const trimmed = raw?.trim() ?? "";
-  if (!trimmed || trimmed === "[]") return [...ALL_MCP_SCOPES];
+  if (!trimmed || trimmed === "[]") return [...DEFAULT_AGENT_SCOPES];
   try {
     const j = JSON.parse(trimmed) as unknown;
     if (Array.isArray(j)) {
       const parsed = parseScopes(j.join(" "));
-      return parsed.length ? parsed : [...ALL_MCP_SCOPES];
+      return parsed.length ? parsed : [...DEFAULT_AGENT_SCOPES];
     }
   } catch {
     /* space-separated */
   }
   return parseScopes(trimmed);
+}
+
+/** Session/UI and AUTH_DISABLED may manage secrets; restricted agents need opt-in scopes. */
+export function agentMayManageCredentials(
+  auth: Pick<AgentAuth, "authKind" | "scopes"> | { authKind?: AgentAuth["authKind"]; scopes?: string[] },
+): boolean {
+  const kind = auth.authKind ?? "session";
+  if (kind === "session" || kind === "disabled") return true;
+  return hasScope(auth.scopes, "openflow:credentials");
+}
+
+export function agentMayManageVariables(
+  auth: Pick<AgentAuth, "authKind" | "scopes"> | { authKind?: AgentAuth["authKind"]; scopes?: string[] },
+): boolean {
+  const kind = auth.authKind ?? "session";
+  if (kind === "session" || kind === "disabled") return true;
+  return hasScope(auth.scopes, "openflow:variables");
+}
+
+export function assertAgentMayManageCredentials(
+  auth: Pick<AgentAuth, "authKind" | "scopes">,
+): void {
+  if (!agentMayManageCredentials(auth)) {
+    throw new Error(
+      'Missing scope openflow:credentials. Opt in when minting the API key / OAuth / temporary MCP token.',
+    );
+  }
+}
+
+export function assertAgentMayManageVariables(
+  auth: Pick<AgentAuth, "authKind" | "scopes">,
+): void {
+  if (!agentMayManageVariables(auth)) {
+    throw new Error(
+      'Missing scope openflow:variables. Opt in when minting the API key / OAuth / temporary MCP token.',
+    );
+  }
 }
 
 function mapGrantRows(
@@ -265,6 +302,14 @@ export function permForTool(toolName: string): WorkflowPerm | "none" | "create" 
     case "list_node_types":
     case "get_node_type":
     case "list_credentials":
+    case "list_credential_types":
+    case "list_variables":
+    case "create_credential":
+    case "update_credential":
+    case "delete_credential":
+    case "create_variable":
+    case "update_variable":
+    case "delete_variable":
       return "none";
     case "create_workflow":
       return "create";

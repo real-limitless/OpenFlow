@@ -35,10 +35,12 @@ metadata:
 - Chat model → Agent: source=model, target=agent, `targetHandle` = `ai_languageModel-0`
 - Tool → Agent: `targetHandle` = `ai_tool-0`
 
-## Credentials
+## Credentials & variables
 
 - `list_credentials` → set via `update_node` credentials map: `{ "httpHeaderAuth": { "id": "...", "name": "..." } }`
 - Never paste API keys into parameters when a stored credential exists.
+- With scope `openflow:credentials`: `list_credential_types`, `create_credential`, `update_credential`, `delete_credential` (responses are metadata only — never echo secrets).
+- With scope `openflow:variables`: `list_variables` (secrets redacted), `create_variable`, `update_variable`, `delete_variable`.
 
 ## Expressions
 

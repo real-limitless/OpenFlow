@@ -3,7 +3,7 @@ import { createHash, randomBytes } from "node:crypto";
 import { prisma } from "../db";
 import type { AppEnv } from "../middleware/auth";
 import { ensureUser } from "../services/users";
-import { ALL_MCP_SCOPES, parseScopes } from "../oauth/scopes";
+import { DEFAULT_AGENT_SCOPES, parseScopes } from "../oauth/scopes";
 import { normalizeGrantInputs, type GrantInput } from "../services/agent-policy";
 import { loadWorkflowIfAllowed } from "../services/workflow-access";
 
@@ -12,7 +12,8 @@ function hashApiKey(rawKey: string): string {
 }
 
 function parseScopesBody(scopes: unknown): string[] {
-  if (!Array.isArray(scopes) || scopes.length === 0) return [...ALL_MCP_SCOPES];
+  // Empty body → classic agent scopes only (no secret write by default).
+  if (!Array.isArray(scopes) || scopes.length === 0) return [...DEFAULT_AGENT_SCOPES];
   return parseScopes((scopes as string[]).join(" "));
 }
 

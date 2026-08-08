@@ -35,7 +35,12 @@ type KeyRow = {
 
 type WfOption = { id: string; name: string };
 
-const ALL_SCOPES = ["openflow:read", "openflow:write", "openflow:execute"] as const;
+const CLASSIC_SCOPES = ["openflow:read", "openflow:write", "openflow:execute"] as const;
+const OPT_IN_SCOPES = [
+  { id: "openflow:credentials", label: "Manage credentials (create/update/delete secrets)" },
+  { id: "openflow:variables", label: "Manage variables (incl. secret vars)" },
+] as const;
+const ALL_SCOPES = [...CLASSIC_SCOPES, ...OPT_IN_SCOPES.map((s) => s.id)] as const;
 
 function ApiKeysPage() {
   const [list, setList] = useState<KeyRow[] | null>(null);
@@ -43,7 +48,7 @@ function ApiKeysPage() {
   const [name, setName] = useState("");
   const [restrict, setRestrict] = useState(true);
   const [canCreate, setCanCreate] = useState(false);
-  const [scopes, setScopes] = useState<string[]>([...ALL_SCOPES]);
+  const [scopes, setScopes] = useState<string[]>([...CLASSIC_SCOPES]);
   const [expiresAt, setExpiresAt] = useState("");
   const [selectedWf, setSelectedWf] = useState<Record<string, { w: boolean; x: boolean }>>({});
   const [createdRaw, setCreatedRaw] = useState<string | null>(null);
@@ -163,7 +168,7 @@ function ApiKeysPage() {
         <div className="space-y-2">
           <Label className="text-[12px]">Scopes</Label>
           <div className="flex flex-wrap gap-3 text-[12px]">
-            {ALL_SCOPES.map((s) => (
+            {CLASSIC_SCOPES.map((s) => (
               <label key={s} className="flex items-center gap-1.5">
                 <input
                   type="checkbox"
@@ -171,6 +176,25 @@ function ApiKeysPage() {
                   onChange={() => toggleScope(s)}
                 />
                 <code>{s}</code>
+              </label>
+            ))}
+          </div>
+          <p className="text-[11px] text-muted-foreground">
+            Opt-in secret management (off by default — agents never receive decrypted values back):
+          </p>
+          <div className="flex flex-col gap-2 text-[12px]">
+            {OPT_IN_SCOPES.map((s) => (
+              <label key={s.id} className="flex items-start gap-1.5">
+                <input
+                  type="checkbox"
+                  className="mt-0.5"
+                  checked={scopes.includes(s.id)}
+                  onChange={() => toggleScope(s.id)}
+                />
+                <span>
+                  <code>{s.id}</code>
+                  <span className="ml-1 text-muted-foreground">— {s.label}</span>
+                </span>
               </label>
             ))}
           </div>

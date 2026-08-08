@@ -10,10 +10,28 @@ import { hasScope, scopeForTool } from "../oauth/scopes";
 import type { McpSessionState } from "./session";
 import { setSessionWorkflow } from "./session";
 import {
+  assertAgentMayManageCredentials,
+  assertAgentMayManageVariables,
   permForTool,
   unrestrictedPolicy,
+  type AgentAuth,
   type WorkflowPolicy,
 } from "../services/agent-policy";
+import {
+  createCredential,
+  deleteCredential,
+  isServiceError,
+  listCredentialTypeCatalog,
+  listCredentialsCompact,
+  updateCredential,
+} from "../services/credentials-admin";
+import {
+  createVariable,
+  deleteVariable,
+  isVariableServiceError,
+  listVariablesMeta,
+  updateVariable,
+} from "../services/variables";
 import { prisma } from "../db";
 
 export type McpToolDef = {
@@ -33,6 +51,7 @@ export type OpenflowToolContext = {
   /** Bound workflow (header, session, or per-call). */
   workflowId?: string | null;
   scopes?: string[];
+  authKind?: AgentAuth["authKind"];
   session?: McpSessionState | null;
   workflowPolicy?: WorkflowPolicy;
 };
@@ -278,8 +297,141 @@ export const OPENFLOW_MCP_TOOLS: McpToolDef[] = [
     name: "list_credentials",
     description:
       "List credential ids/names/types (never secrets). Use ids when setting node credentials.",
-    inputSchema: { type: "object", properties: {}, additionalProperties: false },
+    inputSchema: {
+      type: "object",
+      properties: {
+        projectId: { type: "string", description: "Optional project filter" },
+        type: { type: "string", description: "Optional credential type filter" },
+      },
+      additionalProperties: false,
+    },
     annotations: { readOnlyHint: true, idempotentHint: true },
+  },
+  {
+    name: "list_credential_types",
+    description:
+      "List credential type schemas (field keys/labels) for create_credential. Requires openflow:credentials.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        query: { type: "string", description: "Filter by name/displayName" },
+      },
+      additionalProperties: false,
+    },
+    annotations: { readOnlyHint: true, idempotentHint: true },
+  },
+  {
+    name: "create_credential",
+    description:
+      "Create a stored credential (metadata only in response — never returns secret values). Requires openflow:credentials + project editor. Then bind with update_node.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        name: { type: "string" },
+        type: {
+          type: "string",
+          description: 'Credential type, e.g. "mcpClientHttpApi", "httpHeaderAuth"',
+        },
+        data: {
+          type: "object",
+          description: "Secret payload object (keys depend on type; never echoed back)",
+        },
+        projectId: { type: "string" },
+        secretProviderId: { type: ["string", "null"] },
+        externalRef: { type: ["string", "null"] },
+      },
+      required: ["name", "type", "data"],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: "update_credential",
+    description:
+      "Update credential name and/or secret data. Response is metadata only. Requires openflow:credentials.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        id: { type: "string" },
+        name: { type: "string" },
+        data: { type: "object", description: "Replacement secret payload" },
+        secretProviderId: { type: ["string", "null"] },
+        externalRef: { type: ["string", "null"] },
+      },
+      required: ["id"],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: "delete_credential",
+    description: "Delete a credential by id. Requires openflow:credentials.",
+    inputSchema: {
+      type: "object",
+      properties: { id: { type: "string" } },
+      required: ["id"],
+      additionalProperties: false,
+    },
+    annotations: { destructiveHint: true },
+  },
+  {
+    name: "list_variables",
+    description:
+      "List project/instance variables. Secret values are redacted (••••••••).",
+    inputSchema: {
+      type: "object",
+      properties: {
+        scope: { type: "string", description: '"project" (default) or "instance"' },
+        projectId: { type: "string" },
+        environmentId: { type: "string" },
+        layer: { type: "string", description: "base | env | all" },
+      },
+      additionalProperties: false,
+    },
+    annotations: { readOnlyHint: true, idempotentHint: true },
+  },
+  {
+    name: "create_variable",
+    description:
+      "Create a project or instance variable. Secret values are redacted in the response. Requires openflow:variables.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        key: { type: "string" },
+        value: {},
+        scope: { type: "string", description: '"project" or "instance"' },
+        projectId: { type: "string" },
+        environmentId: { type: ["string", "null"] },
+        secret: { type: "boolean" },
+      },
+      required: ["key"],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: "update_variable",
+    description:
+      "Update a variable by id. Secret values stay redacted. Requires openflow:variables.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        id: { type: "string" },
+        key: { type: "string" },
+        value: {},
+        secret: { type: "boolean" },
+      },
+      required: ["id"],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: "delete_variable",
+    description: "Delete a variable by id. Requires openflow:variables.",
+    inputSchema: {
+      type: "object",
+      properties: { id: { type: "string" } },
+      required: ["id"],
+      additionalProperties: false,
+    },
+    annotations: { destructiveHint: true },
   },
   {
     name: "select_node",
@@ -503,7 +655,142 @@ export async function callOpenflowTool(
       });
     }
     case "list_credentials":
-      return editor.editorListCredentials(ctx.userId);
+      return listCredentialsCompact(ctx.userId, {
+        projectId: typeof args.projectId === "string" ? args.projectId : undefined,
+        type: typeof args.type === "string" ? args.type : undefined,
+      });
+    case "list_credential_types": {
+      assertAgentMayManageCredentials({
+        authKind: ctx.authKind ?? "session",
+        scopes: ctx.scopes ?? [],
+      });
+      return listCredentialTypeCatalog(
+        typeof args.query === "string" ? args.query : undefined,
+      );
+    }
+    case "create_credential": {
+      assertAgentMayManageCredentials({
+        authKind: ctx.authKind ?? "session",
+        scopes: ctx.scopes ?? [],
+      });
+      const data = args.data;
+      if (!data || typeof data !== "object" || Array.isArray(data)) {
+        throw new Error("data must be an object");
+      }
+      const result = await createCredential(ctx.userId, {
+        name: String(args.name ?? ""),
+        type: String(args.type ?? ""),
+        data: data as Record<string, unknown>,
+        projectId: typeof args.projectId === "string" ? args.projectId : undefined,
+        secretProviderId:
+          args.secretProviderId === null
+            ? null
+            : typeof args.secretProviderId === "string"
+              ? args.secretProviderId
+              : undefined,
+        externalRef:
+          args.externalRef === null
+            ? null
+            : typeof args.externalRef === "string"
+              ? args.externalRef
+              : undefined,
+      });
+      if (isServiceError(result)) throw new Error(result.error);
+      return result;
+    }
+    case "update_credential": {
+      assertAgentMayManageCredentials({
+        authKind: ctx.authKind ?? "session",
+        scopes: ctx.scopes ?? [],
+      });
+      const result = await updateCredential(ctx.userId, String(args.id ?? ""), {
+        name: typeof args.name === "string" ? args.name : undefined,
+        data:
+          args.data && typeof args.data === "object" && !Array.isArray(args.data)
+            ? (args.data as Record<string, unknown>)
+            : undefined,
+        secretProviderId:
+          args.secretProviderId === null
+            ? null
+            : typeof args.secretProviderId === "string"
+              ? args.secretProviderId
+              : undefined,
+        externalRef:
+          args.externalRef === null
+            ? null
+            : typeof args.externalRef === "string"
+              ? args.externalRef
+              : undefined,
+      });
+      if (isServiceError(result)) throw new Error(result.error);
+      return result;
+    }
+    case "delete_credential": {
+      assertAgentMayManageCredentials({
+        authKind: ctx.authKind ?? "session",
+        scopes: ctx.scopes ?? [],
+      });
+      const result = await deleteCredential(ctx.userId, String(args.id ?? ""));
+      if (isServiceError(result)) throw new Error(result.error);
+      return result;
+    }
+    case "list_variables": {
+      const result = await listVariablesMeta(ctx.userId, {
+        scope: args.scope === "instance" ? "instance" : "project",
+        projectId: typeof args.projectId === "string" ? args.projectId : undefined,
+        environmentId:
+          typeof args.environmentId === "string" ? args.environmentId : undefined,
+        layer:
+          args.layer === "base" || args.layer === "env" || args.layer === "all"
+            ? args.layer
+            : "all",
+      });
+      if (isVariableServiceError(result)) throw new Error(result.error);
+      return { count: result.length, items: result };
+    }
+    case "create_variable": {
+      assertAgentMayManageVariables({
+        authKind: ctx.authKind ?? "session",
+        scopes: ctx.scopes ?? [],
+      });
+      const result = await createVariable(ctx.userId, {
+        key: String(args.key ?? ""),
+        value: args.value,
+        scope: args.scope === "instance" ? "instance" : "project",
+        projectId: typeof args.projectId === "string" ? args.projectId : undefined,
+        environmentId:
+          args.environmentId === null
+            ? null
+            : typeof args.environmentId === "string"
+              ? args.environmentId
+              : undefined,
+        secret: typeof args.secret === "boolean" ? args.secret : undefined,
+      });
+      if (isVariableServiceError(result)) throw new Error(result.error);
+      return result;
+    }
+    case "update_variable": {
+      assertAgentMayManageVariables({
+        authKind: ctx.authKind ?? "session",
+        scopes: ctx.scopes ?? [],
+      });
+      const result = await updateVariable(ctx.userId, String(args.id ?? ""), {
+        key: typeof args.key === "string" ? args.key : undefined,
+        value: args.value,
+        secret: typeof args.secret === "boolean" ? args.secret : undefined,
+      });
+      if (isVariableServiceError(result)) throw new Error(result.error);
+      return result;
+    }
+    case "delete_variable": {
+      assertAgentMayManageVariables({
+        authKind: ctx.authKind ?? "session",
+        scopes: ctx.scopes ?? [],
+      });
+      const result = await deleteVariable(ctx.userId, String(args.id ?? ""));
+      if (isVariableServiceError(result)) throw new Error(result.error);
+      return result;
+    }
     case "select_node": {
       const wid = resolveWorkflowId(ctx, args);
       await gate(wid, "read");

@@ -1,8 +1,12 @@
 import { describe, expect, it } from "vitest";
 import {
+  agentMayManageCredentials,
+  agentMayManageVariables,
+  assertAgentMayManageCredentials,
   assertAgentWorkflowAccess,
   grantAllows,
   normalizeGrantInputs,
+  permForTool,
   type WorkflowPolicy,
 } from "../services/agent-policy";
 
@@ -68,5 +72,40 @@ describe("agent-policy", () => {
     expect(grantAllows(g, "read")).toBe(true);
     expect(grantAllows(g, "write")).toBe(false);
     expect(grantAllows(g, "execute")).toBe(true);
+  });
+
+  it("session/disabled may manage secrets; api_key needs opt-in scope", () => {
+    expect(agentMayManageCredentials({ authKind: "session", scopes: [] })).toBe(true);
+    expect(agentMayManageVariables({ authKind: "disabled", scopes: [] })).toBe(true);
+    expect(
+      agentMayManageCredentials({
+        authKind: "api_key",
+        scopes: ["openflow:read", "openflow:write", "openflow:execute"],
+      }),
+    ).toBe(false);
+    expect(
+      agentMayManageCredentials({
+        authKind: "api_key",
+        scopes: ["openflow:credentials"],
+      }),
+    ).toBe(true);
+    expect(
+      agentMayManageVariables({
+        authKind: "oauth",
+        scopes: ["openflow:variables"],
+      }),
+    ).toBe(true);
+    expect(() =>
+      assertAgentMayManageCredentials({
+        authKind: "temporary",
+        scopes: ["openflow:write"],
+      }),
+    ).toThrow(/openflow:credentials/);
+  });
+
+  it("permForTool treats credential/variable tools as non-workflow", () => {
+    expect(permForTool("create_credential")).toBe("none");
+    expect(permForTool("list_variables")).toBe("none");
+    expect(permForTool("delete_variable")).toBe("none");
   });
 });

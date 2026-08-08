@@ -134,16 +134,32 @@ See `docs/assistant.md` and `.opencode/assistant/opencode.json`.
 | `connect_nodes` / `disconnect` | Wiring |
 | `execute_workflow` / `get_execution` / `list_executions` | Runs |
 | `list_credentials` | Ids/names/types only (no secrets) |
+| `list_credential_types` | Field schemas for create (`openflow:credentials`) |
+| `create_credential` / `update_credential` / `delete_credential` | Manage stored credentials — **metadata only** in responses (`openflow:credentials`, opt-in) |
+| `list_variables` | Project/instance vars; secret values redacted |
+| `create_variable` / `update_variable` / `delete_variable` | Manage vars (`openflow:variables`, opt-in) |
 | `select_node` | Focus node in open editor UI |
 
 Workflow-scoped tools accept optional `workflowId`, or use the session default from `open_workflow` / header.
+
+## Scopes
+
+| Scope | Default on new API keys / temp MCP tokens | Purpose |
+| --- | --- | --- |
+| `openflow:read` | yes | List/read workflows, credentials **meta**, variables (redacted) |
+| `openflow:write` | yes | Edit workflow graph |
+| `openflow:execute` | yes | Run workflows |
+| `openflow:credentials` | **no** (opt-in) | Create/update/delete credentials |
+| `openflow:variables` | **no** (opt-in) | Create/update/delete variables |
+
+Browser sessions and `AUTH_DISABLED` always include the opt-in scopes (human UI path). Restricted agents (API key / OAuth / temporary MCP) must enable them explicitly. The same scopes gate REST `POST/PUT/DELETE` on `/api/v1/credentials` and `/api/v1/variables` so agents cannot bypass MCP via HTTP.
 
 ## Security
 
 - Prefer HTTPS in production.
 - OAuth redirect URIs must be `https:`, `http://localhost`, or custom schemes.
 - Access tokens are opaque (`ofa_…`); only hashes are stored.
-- Never put secrets in chat; use stored credentials via `list_credentials` + `update_node`.
+- Never put secrets in chat. Prefer stored credentials via `list_credentials` + `update_node`. Agents with `openflow:credentials` may write secrets through tools; responses never return decrypted values.
 
 ## Related
 

@@ -177,6 +177,12 @@ async function handleMcp(c: Context<AppEnv>, requireWorkflowHeader: boolean) {
   }
 
   const scopes = c.get("scopes") ?? [...ALL_MCP_SCOPES];
+  let authKind: import("../services/agent-policy").AgentAuth["authKind"] = "session";
+  try {
+    authKind = c.get("authKind") ?? "session";
+  } catch {
+    /* unset */
+  }
   const headerWf = resolveWorkflowIdHeader(c);
   const sessionHeader = c.req.header("Mcp-Session-Id") || c.req.header("mcp-session-id");
 
@@ -240,7 +246,7 @@ async function handleMcp(c: Context<AppEnv>, requireWorkflowHeader: boolean) {
   } catch {
     /* unset */
   }
-  const rpcCtx = { workflowId, userId, scopes, session, workflowPolicy };
+  const rpcCtx = { workflowId, userId, scopes, authKind, session, workflowPolicy };
 
   const results: JsonRpc[] = [];
   for (const msg of messages) {

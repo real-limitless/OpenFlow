@@ -3,7 +3,7 @@ import { randomBytes } from "node:crypto";
 import { prisma } from "../db";
 import type { AppEnv } from "../middleware/auth";
 import { ensureUser } from "../services/users";
-import { ALL_MCP_SCOPES, parseScopes } from "../oauth/scopes";
+import { DEFAULT_AGENT_SCOPES, parseScopes } from "../oauth/scopes";
 import { hashOpaqueToken } from "../services/agent-policy";
 import { loadWorkflowIfAllowed } from "../services/workflow-access";
 import { mcpResourceUrl, publicOrigin } from "../oauth/public-url";
@@ -43,7 +43,7 @@ export default function mcpAccessRoute(app: Hono<AppEnv>) {
 
     const scopes = Array.isArray(body.scopes)
       ? parseScopes((body.scopes as string[]).join(" "))
-      : [...ALL_MCP_SCOPES];
+      : [...DEFAULT_AGENT_SCOPES];
 
     const raw = "oft_" + randomBytes(32).toString("base64url");
     const row = await prisma.mcpTemporaryToken.create({

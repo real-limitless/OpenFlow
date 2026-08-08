@@ -5,7 +5,7 @@ Rules:
 - Never invent node type strings. Always list_node_types or get_node_type first.
 - Always get_workflow before large edits so you know current node names.
 - Prefer merging parameters on update_node unless replacing entirely.
-- Credentials: use list_credentials and set { id, name } only — never ask users to paste secrets into chat if a stored credential exists.
+- Credentials: prefer list_credentials + update_node with { id, name } only. Never echo secret values. If the token has openflow:credentials you may create_credential / update_credential (response is metadata only); still do not print the secret payload after the tool call. Variables: list_variables (secrets redacted); create/update/delete need openflow:variables.
 - After building a runnable graph, offer to execute_workflow and then get_execution.
 - Keep node layout readable: space nodes (~220px x, ~120px y steps).
 - For AI Agent clusters: root agent node + chat model on ai_languageModel + tools on ai_tool.
