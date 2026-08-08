@@ -26,8 +26,82 @@ model User {
   projectMembers  ProjectMember[]
   sharesGranted   Share[]          @relation("ShareGranteeUser")
   sharesCreated   Share[]          @relation("ShareCreatedBy")
+  oauthAuthCodes  OAuthAuthorizationCode[]
+  oauthTokens     OAuthToken[]
 
   @@map("users")
+}
+
+// ─── OAuth 2.1 (MCP remote clients) ─────────────────────
+
+model OAuthClient {
+  id                      String   @id @default(cuid())
+  clientId                String   @unique
+  /// null for public clients (PKCE-only)
+  clientSecretHash        String?
+  clientName              String?
+  /// JSON string array of redirect URIs
+  redirectUris            String   @default("[]")
+  /// none | client_secret_post | client_secret_basic
+  tokenEndpointAuthMethod String   @default("none")
+  createdAt               DateTime @default(now())
+
+  authCodes OAuthAuthorizationCode[]
+  tokens    OAuthToken[]
+
+  @@map("oauth_clients")
+}
+
+model OAuthAuthorizationCode {
+  id            String   @id @default(cuid())
+  /// SHA-256 hex of the opaque code
+  codeHash      String   @unique
+  clientId      String
+  userId        String
+  redirectUri   String
+  /// space-separated scopes
+  scopes        String   @default("")
+  codeChallenge String
+  /// S256
+  codeChallengeMethod String @default("S256")
+  /// optional RFC 8707 resource / audience
+  resource      String?
+  expiresAt     DateTime
+  usedAt        DateTime?
+  createdAt     DateTime @default(now())
+
+  client OAuthClient @relation(fields: [clientId], references: [clientId], onDelete: Cascade)
+  user   User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([clientId])
+  @@index([userId])
+  @@index([expiresAt])
+  @@map("oauth_authorization_codes")
+}
+
+model OAuthToken {
+  id               String    @id @default(cuid())
+  /// SHA-256 hex of access token
+  accessTokenHash  String    @unique
+  /// SHA-256 hex of refresh token (nullable after revoke)
+  refreshTokenHash String?   @unique
+  clientId         String
+  userId           String
+  /// space-separated scopes
+  scopes           String    @default("")
+  resource         String?
+  accessExpiresAt  DateTime
+  refreshExpiresAt DateTime?
+  revokedAt        DateTime?
+  createdAt        DateTime  @default(now())
+
+  client OAuthClient @relation(fields: [clientId], references: [clientId], onDelete: Cascade)
+  user   User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([clientId])
+  @@index([userId])
+  @@index([accessExpiresAt])
+  @@map("oauth_tokens")
 }
 
 // ─── Projects + RBAC ────────────────────────────────────

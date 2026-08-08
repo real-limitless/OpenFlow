@@ -223,6 +223,7 @@ See [`.env.example`](../.env.example) for the full list. Common vars:
 | `DD_API_KEY` | — | Datadog Logs API key when type=`datadog` |
 | `RUN_WORKER` | `true` | BullMQ worker inside API process |
 | `OPENFLOW_ASSISTANT_*` | optional | Editor AI assistant |
+| `OPENFLOW_MCP_ENABLED` / `OPENFLOW_PUBLIC_URL` | optional | Remote MCP + OAuth ([docs/mcp.md](mcp.md)) |
 
 ## Logging
 

@@ -89,6 +89,23 @@ export const config = {
       );
     },
   },
+  /** Public base URL for OAuth issuer / MCP metadata (no trailing slash). */
+  get publicUrl() {
+    const raw =
+      process.env.OPENFLOW_PUBLIC_URL?.trim() ||
+      process.env.PUBLIC_URL?.trim() ||
+      "";
+    return raw.replace(/\/$/, "");
+  },
+  /** Remote MCP server for third-party chatbots (tools + OAuth). */
+  mcp: {
+    get enabled() {
+      return (
+        process.env.OPENFLOW_MCP_ENABLED !== "false" &&
+        process.env.OPENFLOW_MCP_ENABLED !== "0"
+      );
+    },
+  },
   /** Workflow editor assistant (chat + OpenFlow MCP). */
   assistant: {
     get enabled() {

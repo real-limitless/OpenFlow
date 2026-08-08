@@ -23,6 +23,7 @@ import assistantRoute from "./routes/assistant";
 import aiGenerateRoute from "./routes/ai-generate";
 import formsRoute from "./routes/forms";
 import openflowMcpRoute from "./mcp/openflow-server";
+import oauthRoute from "./routes/oauth";
 import { startWorker } from "./worker";
 import { seedBuiltinExecutors } from "../lib/engine";
 import { seedBuiltinDescriptions } from "../lib/nodes/registry";
@@ -41,6 +42,7 @@ app.use("*", authMiddleware);
 
 healthRoute(app);
 setupRoute(app);
+oauthRoute(app);
 authRoute(app);
 apiKeysRoute(app);
 projectsRoute(app);

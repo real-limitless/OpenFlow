@@ -18,6 +18,7 @@ Never commit or paste these into issues, PRs, or logs:
 | --- | --- |
 | `CREDENTIALS_KEY` | `.env` or Docker `secrets-data` volume — encrypts stored credentials |
 | `OPENFLOW_ASSISTANT_API_KEY` / `OPENAI_API_KEY` | `.env` — LLM assistant |
+| OAuth access/refresh tokens (`ofa_` / `ofr_`) | Hashed in DB; issued to remote MCP clients |
 | `OPENCODE_API_KEY` / server password | `.env` when using the OpenCode backend |
 | Database passwords | Compose / `DATABASE_URL` |
 | Cloud keys (AWS, Vault, S3, Datadog, …) | `.env` or secret providers UI |

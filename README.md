@@ -160,6 +160,7 @@ See [`.env.example`](.env.example) for the full list. Common variables:
 | `DATABASE_URL` | Host dev uses `localhost:15432` |
 | `REDIS_URL` | BullMQ queue (optional for some execute paths) |
 | `OPENFLOW_ASSISTANT_*` | Editor AI assistant |
+| `OPENFLOW_MCP_ENABLED` / `OPENFLOW_PUBLIC_URL` | Remote MCP + OAuth issuer ([docs/mcp.md](docs/mcp.md)) |
 
 Deep install, S3/MinIO binary storage, logging, and production notes: [docs/install.md](docs/install.md).
 
@@ -238,4 +239,5 @@ See [docs/clean-room.md](docs/clean-room.md) and [docs/sdk/OVERVIEW.md](docs/sdk
 | [SECURITY.md](SECURITY.md) | Secrets & reporting |
 | [CONTRIBUTING.md](CONTRIBUTING.md) | How to contribute |
 | [docs/assistant.md](docs/assistant.md) | Editor AI assistant |
+| [docs/mcp.md](docs/mcp.md) | Remote MCP for third-party chatbots |
 | [docs/clean-room.md](docs/clean-room.md) | Spec → implement pipeline |

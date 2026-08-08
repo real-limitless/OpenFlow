@@ -48,7 +48,17 @@ function isH3SwallowedErrorBody(body: string): boolean {
   }
 }
 
-const API_PREFIXES = ["/api/", "/health", "/webhook", "/form", "/mcp/"];
+const API_PREFIXES = [
+  "/api/",
+  "/health",
+  "/webhook",
+  "/form",
+  "/mcp",
+  "/.well-known",
+  "/authorize",
+  "/register",
+  "/token",
+];
 
 export default {
   async fetch(request: Request, env: unknown, ctx: unknown) {

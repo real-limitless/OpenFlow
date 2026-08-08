@@ -48,6 +48,8 @@ OpenCode project config lives in `.opencode/assistant/` with:
 
 Set `OPENFLOW_MCP_URL` / `OPENFLOW_WORKFLOW_ID` when running OpenCode standalone against `/mcp/openflow`.
 
+Third-party chatbots should use the public remote MCP at `/mcp` (OAuth 2.1). See **[docs/mcp.md](./mcp.md)**.
+
 ## APIs
 
 | Path | Role |
@@ -55,7 +57,8 @@ Set `OPENFLOW_MCP_URL` / `OPENFLOW_WORKFLOW_ID` when running OpenCode standalone
 | `GET /api/v1/workflows/:id/events` | SSE graph push (`workflow.updated`, `node.selected`) |
 | `GET/DELETE /api/v1/workflows/:id/assistant/session` | Chat session |
 | `POST /api/v1/workflows/:id/assistant/messages` | User message → SSE stream. Body: `{ message, workflow? }` — optional full graph snapshot (same idea as execute) so the agent sees unsaved canvas state |
-| `GET/POST /mcp/openflow` | OpenFlow MCP (header `X-OpenFlow-Workflow-Id`) |
+| `GET/POST /mcp` | Remote MCP for third-party clients (OAuth or API key) |
+| `GET/POST /mcp/openflow` | Compat MCP (optional `X-OpenFlow-Workflow-Id`) |
 | `GET /api/v1/assistant/health` | Feature flags |
 
 ## Phase 2
