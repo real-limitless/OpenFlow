@@ -875,6 +875,11 @@ export const BUILTIN_EXECUTOR_MODULES: Array<{
     exportName: "executeCommandExecutor",
   },
   {
+    type: "openflow-node-base.ansible",
+    modulePath: "./executors/ansible",
+    exportName: "ansibleExecutor",
+  },
+  {
     type: "openflow-node-base.n8n",
     modulePath: "./executors/n8n",
     exportName: "n8nExecutor",
