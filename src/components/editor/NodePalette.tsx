@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
-import { ChevronDown, ChevronRight, Search } from "lucide-react";
+import { ChevronDown, ChevronRight, Search, Sparkles } from "lucide-react";
 import { allNodeTypes, NODE_CATEGORIES } from "@/lib/nodes/registry";
-import type { NodeCategory } from "@/lib/nodes/types";
+import type { INodeTypeDescription, NodeCategory } from "@/lib/nodes/types";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -23,12 +23,6 @@ const accentText: Record<string, string> = {
   placeholder: "text-[var(--placeholder)] bg-[var(--placeholder)]/12",
 };
 
-/**
- * Only the core building blocks start expanded. With 24 categories the domain
- * groups have to open collapsed or the palette is unusable on first render.
- * Typed as Record<NodeCategory, …> so a newly added category must be given a
- * default here rather than silently defaulting to closed.
- */
 const DEFAULT_OPEN: Record<NodeCategory, boolean> = {
   Triggers: true,
   Actions: true,
@@ -56,20 +50,35 @@ const DEFAULT_OPEN: Record<NodeCategory, boolean> = {
   Miscellaneous: false,
 };
 
+type SuggestItem = {
+  type: string;
+  displayName: string;
+  description: string;
+  category: string;
+  rankTier?: string;
+  score?: number;
+  isShell?: boolean;
+};
+
+function looksLikeIntent(q: string): boolean {
+  const t = q.trim();
+  if (t.length < 8) return false;
+  if (/\s/.test(t)) return true;
+  return t.length >= 16;
+}
+
 export function NodePalette({ onAdd }: Props) {
   const [query, setQuery] = useState("");
   const [openCategories, setOpenCategories] = useState<Record<string, boolean>>(DEFAULT_OPEN);
+  const [semantic, setSemantic] = useState<SuggestItem[] | null>(null);
+  const [semanticMode, setSemanticMode] = useState<string | null>(null);
+  const [semanticLoading, setSemanticLoading] = useState(false);
 
   const grouped = useMemo(() => {
     const q = query.trim().toLowerCase();
     const matches = allNodeTypes().filter((d) => {
       if (!q) return true;
-      const hay = [
-        d.displayName,
-        d.description,
-        d.name,
-        d.category,
-      ]
+      const hay = [d.displayName, d.description, d.name, d.category]
         .filter((s): s is string => typeof s === "string")
         .join("\n")
         .toLowerCase();
@@ -92,9 +101,56 @@ export function NodePalette({ onAdd }: Props) {
     });
   }, [isSearching, grouped]);
 
+  useEffect(() => {
+    const q = query.trim();
+    if (!looksLikeIntent(q)) {
+      setSemantic(null);
+      setSemanticMode(null);
+      setSemanticLoading(false);
+      return;
+    }
+    let cancelled = false;
+    setSemanticLoading(true);
+    const t = window.setTimeout(() => {
+      void fetch("/api/v1/catalog/suggest-nodes", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ intent: q, limit: 12 }),
+      })
+        .then(async (res) => {
+          if (!res.ok) throw new Error(String(res.status));
+          return res.json() as Promise<{ mode?: string; items?: SuggestItem[] }>;
+        })
+        .then((data) => {
+          if (cancelled) return;
+          setSemantic(Array.isArray(data.items) ? data.items : []);
+          setSemanticMode(data.mode ?? "hybrid");
+        })
+        .catch(() => {
+          if (!cancelled) {
+            setSemantic(null);
+            setSemanticMode(null);
+          }
+        })
+        .finally(() => {
+          if (!cancelled) setSemanticLoading(false);
+        });
+    }, 280);
+    return () => {
+      cancelled = true;
+      window.clearTimeout(t);
+    };
+  }, [query]);
+
   const toggleCategory = (category: string) => {
     setOpenCategories((prev) => ({ ...prev, [category]: !prev[category] }));
   };
+
+  const typeByName = useMemo(() => {
+    const m = new Map<string, INodeTypeDescription>();
+    for (const d of allNodeTypes()) m.set(d.name, d);
+    return m;
+  }, []);
 
   return (
     <aside className="flex h-full w-full min-w-0 shrink-0 flex-col border-r border-border bg-sidebar">
@@ -104,13 +160,67 @@ export function NodePalette({ onAdd }: Props) {
           <Input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search nodes"
+            placeholder="Search or describe a task…"
             className="h-9 bg-background pl-8 text-sm"
           />
         </div>
+        {looksLikeIntent(query) && (
+          <p className="mt-1.5 flex items-center gap-1 text-[10px] text-muted-foreground">
+            <Sparkles className="size-3" />
+            {semanticLoading
+              ? "Semantic catalog…"
+              : semanticMode
+                ? `Semantic (${semanticMode}) — domain nodes ranked above shell`
+                : "Semantic unavailable — keyword results below"}
+          </p>
+        )}
       </div>
 
       <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
+        {semantic && semantic.length > 0 && (
+          <div className="space-y-0.5 border-b border-border p-2">
+            <div className="px-2 py-1 font-mono text-[10px] uppercase tracking-[0.14em] text-muted-foreground">
+              Suggested
+            </div>
+            {semantic.map((it) => {
+              const d = typeByName.get(it.type);
+              const accent = accentFor(d?.group, d?.placeholder);
+              return (
+                <button
+                  key={`sem-${it.type}`}
+                  type="button"
+                  onClick={() => onAdd(it.type)}
+                  className="flex w-full items-start gap-2 rounded-md px-2 py-1.5 text-left hover:bg-accent/60"
+                >
+                  <NodeIcon
+                    name={d?.name ?? it.type}
+                    className={cn("mt-0.5 size-7 shrink-0 rounded-md", accentText[accent])}
+                  />
+                  <span className="min-w-0 flex-1">
+                    <span className="flex items-center gap-1.5">
+                      <span className="truncate text-sm font-medium">{it.displayName}</span>
+                      {it.rankTier && (
+                        <Badge
+                          variant="outline"
+                          className={cn(
+                            "h-4 shrink-0 px-1 text-[9px]",
+                            it.isShell && "border-amber-500/40 text-amber-700 dark:text-amber-400",
+                          )}
+                        >
+                          {it.rankTier}
+                        </Badge>
+                      )}
+                    </span>
+                    <span className="line-clamp-2 text-[11px] text-muted-foreground">
+                      {it.description || it.type}
+                    </span>
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        )}
+
         <div className="space-y-1 p-2">
           {grouped.map((group) => {
             const isOpen = isSearching || (openCategories[group.category] ?? false);
@@ -148,27 +258,16 @@ export function NodePalette({ onAdd }: Props) {
                         <button
                           key={d.name}
                           type="button"
-                          draggable
-                          onDragStart={(e) => {
-                            e.dataTransfer.setData("application/openflow-node", d.name);
-                            e.dataTransfer.effectAllowed = "move";
-                          }}
                           onClick={() => onAdd(d.name)}
-                          className="flex w-full items-start gap-2.5 rounded-md border border-transparent p-2 text-left transition hover:border-border hover:bg-surface"
+                          className="flex w-full items-start gap-2 rounded-md px-2 py-1.5 text-left hover:bg-accent/60"
                         >
-                          <span
-                            className={cn(
-                              "mt-0.5 grid size-7 shrink-0 place-items-center rounded",
-                              accentText[accent],
-                            )}
-                          >
-                            <NodeIcon name={d.icon} className="size-4" />
-                          </span>
-                          <span className="min-w-0">
-                            <span className="block truncate text-[13px] font-medium text-foreground">
-                              {d.displayName}
-                            </span>
-                            <span className="block text-[11px] leading-snug text-muted-foreground">
+                          <NodeIcon
+                            name={d.name}
+                            className={cn("mt-0.5 size-7 shrink-0 rounded-md", accentText[accent])}
+                          />
+                          <span className="min-w-0 flex-1">
+                            <span className="block truncate text-sm font-medium">{d.displayName}</span>
+                            <span className="line-clamp-2 text-[11px] text-muted-foreground">
                               {d.description}
                             </span>
                           </span>
@@ -180,16 +279,8 @@ export function NodePalette({ onAdd }: Props) {
               </Collapsible>
             );
           })}
-          {!grouped.length && (
-            <p className="px-2 py-4 text-sm text-muted-foreground">No nodes match “{query}”.</p>
-          )}
         </div>
       </div>
-
-      <p className="border-t border-border p-3 text-[11px] leading-snug text-muted-foreground">
-        Drag onto the canvas, or click to place. Unsupported imported types keep their parameters as
-        placeholder nodes.
-      </p>
     </aside>
   );
 }

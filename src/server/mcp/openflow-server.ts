@@ -81,7 +81,7 @@ async function handleRpc(
           capabilities: { tools: { listChanged: false } },
           serverInfo: { name: "openflow", version: "1.0.0" },
           instructions:
-            "OpenFlow workflow MCP. Use list_workflows / open_workflow, then canvas tools (get_workflow, add_node, connect_nodes, execute_workflow). Never invent node type strings — call list_node_types / get_node_type.",
+            "OpenFlow workflow MCP. Use list_workflows / open_workflow, then canvas tools (get_workflow, add_node, connect_nodes, execute_workflow). Never invent node type strings. For capability intents call suggest_nodes first (semantic catalog), then get_node_type, then add_node. Prefer domain nodes (git, github, httpRequest, emailSend, …) over Execute Command; shell is allowed but ranked last when a catalog node fits.",
         });
       case "notifications/initialized":
       case "notifications/cancelled":

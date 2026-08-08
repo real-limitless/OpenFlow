@@ -50,6 +50,9 @@
     "templates:sync:scraped": "npx tsx scripts/templates/sync-from-scraped.ts",
     "tui": "bash scripts/tui.sh",
     "generate:executors": "node scripts/generate-executor-register.mjs",
+    "catalog:reindex": "npx tsx scripts/catalog-reindex.ts",
+    "catalog:reindex:hash": "npx tsx scripts/catalog-reindex.ts --hash",
+    "catalog:eval": "npx tsx scripts/catalog-eval.ts",
     "screenshots": "node scripts/capture-screenshots.mjs"
   },
   "dependencies": {

@@ -1595,6 +1595,11 @@ export const BUILTIN_EXECUTOR_MODULES: Array<{
     exportName: "toolCalculatorExecutor",
   },
   {
+    type: "openflow-node-langchain.toolNodeCatalog",
+    modulePath: "./executors/toolNodeCatalog",
+    exportName: "toolNodeCatalogExecutor",
+  },
+  {
     type: "openflow-node-langchain.lmChatDeepSeek",
     modulePath: "./executors/lm-chat-deepseek",
     exportName: "lmChatDeepSeekExecutor",

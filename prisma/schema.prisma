@@ -533,6 +533,42 @@ model InstanceSetting {
 
 // ─── Public workflow templates (marketplace) ────────────
 
+/// Semantic catalog chunks for node discovery (RAG). Embeddings stored as pgvector + JSON fallback.
+model NodeCatalogChunk {
+  id            String   @id
+  typeName      String
+  chunkKind     String
+  title         String
+  body          String   @db.Text
+  contentHash   String
+  modelId       String
+  dimensions    Int
+  /// JSON float[] fallback when vector column unused / offline hash embed
+  embeddingJson String?  @db.Text
+  isShell       Boolean  @default(false)
+  rankBoost     Float    @default(0)
+  category      String?
+  displayName   String?
+  metadata      String   @default("{}")
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([typeName])
+  @@index([chunkKind])
+  @@index([isShell])
+  @@index([contentHash])
+  @@map("node_catalog_chunks")
+}
+
+/// Catalog reindex status / config snapshots.
+model NodeCatalogMeta {
+  key       String   @id
+  value     String   @db.Text
+  updatedAt DateTime @updatedAt
+
+  @@map("node_catalog_meta")
+}
+
 /// Templates synced from one or more library git repos (see config/template-sources.json).
 model WorkflowTemplate {
   /// Composite id: `${sourceId}:${packId}` (e.g. n8n-community:1957)

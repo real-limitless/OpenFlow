@@ -26,6 +26,7 @@ import formsRoute from "./routes/forms";
 import openflowMcpRoute from "./mcp/openflow-server";
 import oauthRoute from "./routes/oauth";
 import mcpAccessRoute from "./routes/mcp-access";
+import catalogRoute from "./routes/catalog";
 import { startWorker } from "./worker";
 import { seedBuiltinExecutors } from "../lib/engine";
 import { seedBuiltinDescriptions } from "../lib/nodes/registry";
@@ -65,6 +66,7 @@ templateSourcesRoute(app);
 schedulesRoute(app);
 assistantRoute(app);
 aiGenerateRoute(app);
+catalogRoute(app);
 openflowMcpRoute(app);
 devRoute(app);
 

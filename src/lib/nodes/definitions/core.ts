@@ -425,7 +425,8 @@ export const executeCommand: INodeTypeDescription = {
   category: "Development",
   group: ["organization"],
   version: 1,
-  description: "Execute a shell command on the host machine",
+  description:
+    "Execute a shell command on the host machine. Prefer domain nodes (Git, GitHub, HTTP, Email, …) when they cover the task; shell is always available as a lower-ranked fallback.",
   defaults: { name: "Execute Command" },
   inputs: ["main"],
   outputs: ["main"],
@@ -480,7 +481,8 @@ export const executeCommandTool: INodeTypeDescription = {
   category: "Action",
   group: ["organization"],
   version: 1,
-  description: "Executes a shell command and returns stdout, stderr, and exit code. Use with AI agents for tool-based command execution.",
+  description:
+    "Host shell command (stdout/stderr/exitCode). Ranked as last-resort vs domain nodes (git, github, httpRequest, emailSend). Prefer Node Catalog / domain tools first; use shell when no catalog node fits or the user asks for OS commands.",
   defaults: { name: "Execute Command Tool" },
   inputs: ["main"],
   outputs: ["main"],
@@ -10080,7 +10082,8 @@ export const langchainAgent: INodeTypeDescription = {
           displayName: "System Message",
           name: "systemMessage",
           type: "string",
-          default: "",
+          default:
+            "You are an OpenFlow workflow agent. Prefer domain tools and the Node Catalog search tool over host shell. Use Execute Command only when no catalog node fits or the user explicitly wants shell. Call search_openflow_nodes (Node Catalog) when unsure which capability to use.",
           typeOptions: { rows: 4 },
         },
         {
@@ -10807,6 +10810,44 @@ export const toolCalculator: INodeTypeDescription = {
       required: false,
       placeholder: "Use this tool to perform mathematical calculations on an expression string.",
       typeOptions: { rows: 2 },
+    },
+  ],
+};
+
+export const toolNodeCatalog: INodeTypeDescription = {
+  name: "openflow-node-langchain.toolNodeCatalog",
+  displayName: "Node Catalog",
+  category: "AI Tool",
+  group: ["input"],
+  version: [1],
+  description:
+    "Semantic lookup of OpenFlow node types by intent. Agents should call this before inventing shell steps — domain nodes rank above Execute Command.",
+  defaults: { name: "Node Catalog" },
+  inputs: [],
+  outputs: ["ai_tool"],
+  icon: "Search",
+  properties: [
+    {
+      displayName: "Tool Name",
+      name: "name",
+      type: "string",
+      default: "search_openflow_nodes",
+      required: true,
+    },
+    {
+      displayName: "Description",
+      name: "description",
+      type: "string",
+      default:
+        "Find the best OpenFlow catalog node for a task (git, github, http, email, …). Prefer returned domain nodes over shell/executeCommand. Pass a natural-language intent as query.",
+      required: true,
+      typeOptions: { rows: 3 },
+    },
+    {
+      displayName: "Result Limit",
+      name: "limit",
+      type: "number",
+      default: 6,
     },
   ],
 };

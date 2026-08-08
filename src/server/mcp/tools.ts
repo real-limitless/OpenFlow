@@ -130,13 +130,35 @@ export const OPENFLOW_MCP_TOOLS: McpToolDef[] = [
   {
     name: "list_node_types",
     description:
-      "Search the OpenFlow node type catalog. Use before adding nodes. Returns type name, displayName, description.",
+      "Keyword search the OpenFlow node type catalog. Prefer suggest_nodes for natural-language intents. Returns type name, displayName, description.",
     inputSchema: {
       type: "object",
       properties: {
         query: { type: "string", description: "Search string (name, displayName, category)" },
         limit: { type: "number", description: "Max results (default 40)" },
       },
+      additionalProperties: false,
+    },
+    annotations: { readOnlyHint: true, idempotentHint: true },
+  },
+  {
+    name: "suggest_nodes",
+    description:
+      "Semantic (RAG) node lookup by natural-language intent. Prefer this before add_node for tasks like clone repo, list issues, send email. Domain nodes rank above Execute Command; shell stays available but lower. Returns ranked type strings with scores/reasons.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        intent: {
+          type: "string",
+          description: 'What you need to do, e.g. "clone a git repository" or "list GitHub issues"',
+        },
+        limit: { type: "number", description: "Max results (default 8)" },
+        includeShell: {
+          type: "boolean",
+          description: "Include shell/executeCommand candidates (default true, ranked lower)",
+        },
+      },
+      required: ["intent"],
       additionalProperties: false,
     },
     annotations: { readOnlyHint: true, idempotentHint: true },
@@ -550,6 +572,14 @@ export async function callOpenflowTool(
         typeof args.query === "string" ? args.query : undefined,
         typeof args.limit === "number" ? args.limit : 40,
       );
+    case "suggest_nodes": {
+      const { suggestNodes } = await import("../../lib/catalog");
+      return suggestNodes({
+        intent: String(args.intent ?? args.query ?? ""),
+        limit: typeof args.limit === "number" ? args.limit : 8,
+        includeShell: args.includeShell !== false,
+      });
+    }
     case "get_node_type":
       return editor.editorGetNodeType(String(args.type ?? ""));
     case "add_node": {

@@ -1,0 +1,82 @@
+# Semantic node catalog (RAG)
+
+OpenFlow indexes the node registry (and optional `docs/specs/nodes/*.md` blurbs) into a vector catalog so agents and the UI can discover **domain nodes before shell**.
+
+Shell (`executeCommand` / SSH) stays **available** but is **rank-penalized**.
+
+## Architecture
+
+| Piece | Role |
+| --- | --- |
+| Corpus builder | `src/lib/catalog/corpus.ts` — summary / operations / spec chunks |
+| Embeddings | OpenAI-compatible `/embeddings` or offline **hash** embed |
+| Storage | Postgres `node_catalog_chunks` (+ optional pgvector column) |
+| Suggest | Hybrid: vector similarity + keyword fuzzy + shell penalty |
+| Surfaces | MCP `suggest_nodes`, `POST /api/v1/catalog/suggest-nodes`, Node palette, AI **Node Catalog** tool |
+
+## Setup
+
+```bash
+# migration (enables vector extension when available)
+npm run db:deploy   # or db:migrate
+
+# index (prefer real embeddings when key is set)
+export OPENFLOW_CATALOG_EMBED_API_KEY=...   # or reuse OPENFLOW_ASSISTANT_API_KEY
+export OPENFLOW_CATALOG_EMBED_BASE_URL=https://openrouter.ai/api/v1   # optional
+export OPENFLOW_CATALOG_EMBED_MODEL=text-embedding-3-small           # or provider model
+npm run catalog:reindex
+
+# offline / CI hash index
+npm run catalog:reindex:hash
+```
+
+### Env
+
+| Variable | Default | Meaning |
+| --- | --- | --- |
+| `OPENFLOW_CATALOG_RAG_ENABLED` | on | Master switch |
+| `OPENFLOW_CATALOG_EMBED_*` | assistant LLM settings | Embeddings API |
+| `OPENFLOW_CATALOG_EMBED_DIMS` | `1536` | Vector size (must match model / hash) |
+| `OPENFLOW_CATALOG_SHELL_PENALTY` | `0.35` | Score subtraction for shell-tier nodes |
+| `OPENFLOW_CATALOG_USE_PGVECTOR` | on | Write/query `vector(1536)` when extension works |
+
+## MCP
+
+```
+suggest_nodes({ intent: "clone a git repository", limit: 8 })
+```
+
+Then `get_node_type` → `add_node`. Prefer `rankTier: domain|core` over `shell-fallback`.
+
+Assistant / MCP instructions encode the same ladder (domain → compose → shell last).
+
+## HTTP
+
+- `POST /api/v1/catalog/suggest-nodes` `{ intent, limit?, includeShell? }`
+- `GET /api/v1/catalog/stats`
+- `POST /api/v1/catalog/reindex` `{ forceHash? }` (authenticated)
+
+## Runtime AI Agent
+
+Add **Node Catalog** (`openflow-node-langchain.toolNodeCatalog`) on `ai_tool`.  
+The tool runs the same `suggestNodes` service and tells the model to prefer domain types.
+
+## UI
+
+Node palette: multi-word / longer queries call semantic suggest and show a **Suggested** strip with tier badges.
+
+## Ops notes
+
+- Reindex after large node definition changes.
+- Changing embed model/dims requires a full reindex.
+- Empty catalog falls back to keyword `list_node_types` / palette filter.
+- Spec chunks are truncated paraphrases of public clean-room specs — not a substitute for `get_node_type`.
+
+## Eval (manual / CI seed)
+
+| Intent | Expect top types to include |
+| --- | --- |
+| clone a git repository | `openflow-node-base.git` above `executeCommand` |
+| list github issues | `openflow-node-base.github` |
+| send email via smtp | `openflow-node-base.emailSend` |
+| run arbitrary bash on host | `executeCommand` allowed near top |

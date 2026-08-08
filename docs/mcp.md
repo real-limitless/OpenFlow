@@ -129,7 +129,8 @@ See `docs/assistant.md` and `.opencode/assistant/opencode.json`.
 | `open_workflow` | Bind default workflow for the MCP session |
 | `activate_workflow` | active true/false |
 | `get_workflow` | Graph summary |
-| `list_node_types` / `get_node_type` | Node catalog |
+| `list_node_types` / `get_node_type` | Node catalog (keyword + schema) |
+| `suggest_nodes` | Semantic RAG node lookup by intent (prefer domain over shell) |
 | `add_node` / `update_node` / `rename_node` / `delete_node` | Canvas edits |
 | `connect_nodes` / `disconnect` | Wiring |
 | `execute_workflow` / `get_execution` / `list_executions` | Runs |

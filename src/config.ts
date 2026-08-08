@@ -106,6 +106,56 @@ export const config = {
       );
     },
   },
+  /** Semantic node catalog (RAG) for MCP / palette / agent discovery. */
+  catalog: {
+    get enabled() {
+      return (
+        process.env.OPENFLOW_CATALOG_RAG_ENABLED !== "false" &&
+        process.env.OPENFLOW_CATALOG_RAG_ENABLED !== "0"
+      );
+    },
+    /** OpenAI-compatible embeddings endpoint (defaults to assistant LLM base). */
+    get embedBaseUrl() {
+      return (
+        process.env.OPENFLOW_CATALOG_EMBED_BASE_URL?.trim() ||
+        process.env.OPENFLOW_ASSISTANT_BASE_URL?.trim() ||
+        process.env.OPENAI_BASE_URL?.trim() ||
+        "https://api.openai.com/v1"
+      );
+    },
+    get embedApiKey() {
+      return (
+        process.env.OPENFLOW_CATALOG_EMBED_API_KEY?.trim() ||
+        process.env.OPENFLOW_ASSISTANT_API_KEY?.trim() ||
+        process.env.OPENAI_API_KEY?.trim() ||
+        ""
+      );
+    },
+    get embedModel() {
+      return (
+        process.env.OPENFLOW_CATALOG_EMBED_MODEL?.trim() ||
+        "text-embedding-3-small"
+      );
+    },
+    /** Fixed pgvector dimension (must match embed model / hash fallback). */
+    get dimensions() {
+      return Math.max(
+        32,
+        parseInt(process.env.OPENFLOW_CATALOG_EMBED_DIMS ?? "1536", 10) || 1536,
+      );
+    },
+    /** Penalty applied to shell-tier nodes in hybrid rank (0–1 scale before normalize). */
+    get shellPenalty() {
+      const n = parseFloat(process.env.OPENFLOW_CATALOG_SHELL_PENALTY ?? "0.35");
+      return Number.isFinite(n) ? Math.min(1, Math.max(0, n)) : 0.35;
+    },
+    get usePgvector() {
+      return (
+        process.env.OPENFLOW_CATALOG_USE_PGVECTOR !== "false" &&
+        process.env.OPENFLOW_CATALOG_USE_PGVECTOR !== "0"
+      );
+    },
+  },
   /** Workflow editor assistant (chat + OpenFlow MCP). */
   assistant: {
     get enabled() {
