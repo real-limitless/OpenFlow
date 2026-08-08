@@ -284,6 +284,40 @@ describe("batch-02 triggers-flow", () => {
       ).rejects.toThrow(/doesn't return/i);
     });
 
+    it("pythonNative allows safe stdlib imports", async () => {
+      const out = await runNode(
+        "n8n-nodes-base.code",
+        {
+          mode: "runOnceForAllItems",
+          language: "pythonNative",
+          pythonCode: `
+import json
+import re
+from datetime import datetime
+return [{"json": {"ok": True, "n": len(_items), "has_j": hasattr(json, "dumps")}}]
+`,
+        },
+        [{ x: 1 }],
+      );
+      expect(out[0][0].json.ok).toBe(true);
+      expect(out[0][0].json.n).toBe(1);
+      expect(out[0][0].json.has_j).toBe(true);
+    });
+
+    it("pythonNative blocks os import", async () => {
+      await expect(
+        runNode(
+          "n8n-nodes-base.code",
+          {
+            mode: "runOnceForAllItems",
+            language: "pythonNative",
+            pythonCode: `import os\nreturn [{"json": {}}]`,
+          },
+          [{ a: 1 }],
+        ),
+      ).rejects.toThrow(/not allowed/i);
+    });
+
     it("python (pyodide) all-items maps via _items", async () => {
       const out = await runNode(
         "n8n-nodes-base.code",
