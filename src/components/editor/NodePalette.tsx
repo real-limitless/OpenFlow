@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { ChevronDown, ChevronRight, Search, Sparkles } from "lucide-react";
 import { allNodeTypes, NODE_CATEGORIES } from "@/lib/nodes/registry";
 import type { INodeTypeDescription } from "@/lib/nodes/types";
@@ -102,15 +102,23 @@ export function NodePalette({ onAdd }: Props) {
   }, [query]);
 
   const isSearching = query.trim().length > 0;
+  /** Auto-expand matching categories once per query; user can still collapse. */
+  const autoExpandedForQuery = useRef<string | null>(null);
 
   useEffect(() => {
-    if (!isSearching) return;
+    const q = query.trim();
+    if (!q) {
+      autoExpandedForQuery.current = null;
+      return;
+    }
+    if (autoExpandedForQuery.current === q) return;
+    autoExpandedForQuery.current = q;
     setOpenCategories((prev) => {
       const next = { ...prev };
       for (const g of grouped) next[g.category] = true;
       return next;
     });
-  }, [isSearching, grouped]);
+  }, [query, grouped]);
 
   useEffect(() => {
     const q = query.trim();
@@ -269,17 +277,15 @@ export function NodePalette({ onAdd }: Props) {
         )}
 
         <div className="space-y-1 p-2">
-          <AnsiblePaletteSection query={query} forceOpen={isSearching} onAdd={onAdd} />
+          <AnsiblePaletteSection query={query} onAdd={onAdd} />
 
           {grouped.map((group) => {
-            const isOpen = isSearching || (openCategories[group.category] ?? false);
+            const isOpen = openCategories[group.category] ?? false;
             return (
               <Collapsible
                 key={group.category}
                 open={isOpen}
-                onOpenChange={() => {
-                  if (!isSearching) toggleCategory(group.category);
-                }}
+                onOpenChange={() => toggleCategory(group.category)}
               >
                 <CollapsibleTrigger asChild>
                   <button

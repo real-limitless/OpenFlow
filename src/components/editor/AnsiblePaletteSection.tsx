@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { ChevronDown, ChevronRight } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
@@ -71,11 +71,9 @@ function ModuleRow({
 
 export function AnsiblePaletteSection({
   query,
-  forceOpen,
   onAdd,
 }: {
   query: string;
-  forceOpen?: boolean;
   onAdd: (type: string, init?: AddNodeInit) => void;
 }) {
   const q = query.trim();
@@ -92,6 +90,9 @@ export function AnsiblePaletteSection({
   const [loadingCollection, setLoadingCollection] = useState<Record<string, boolean>>({});
   const [searchHits, setSearchHits] = useState<AnsibleGalleryHit[]>([]);
   const [searchLoading, setSearchLoading] = useState(false);
+  /** Search hit groups: default expanded once per query; user may collapse. */
+  const [openSearchGroups, setOpenSearchGroups] = useState<Record<string, boolean>>({});
+  const autoExpandedSearchQuery = useRef<string | null>(null);
 
   // Load collection index once when section mounts / opens
   useEffect(() => {
@@ -121,15 +122,28 @@ export function AnsiblePaletteSection({
   useEffect(() => {
     if (!isSearch) {
       setSearchHits([]);
+      autoExpandedSearchQuery.current = null;
+      setOpenSearchGroups({});
       return;
     }
+    // Prefer showing Ansible results when searching
+    setSectionOpen(true);
     let cancelled = false;
     const t = window.setTimeout(() => {
       setSearchLoading(true);
       void fetchAnsibleModules({ q, limit: 300 })
         .then((data) => {
           if (cancelled) return;
-          setSearchHits(Array.isArray(data.items) ? data.items : []);
+          const items = Array.isArray(data.items) ? data.items : [];
+          setSearchHits(items);
+          // Expand matching collection groups once per query (still collapsible)
+          if (autoExpandedSearchQuery.current !== q) {
+            autoExpandedSearchQuery.current = q;
+            const groups = groupGalleryByCollection(items);
+            const next: Record<string, boolean> = {};
+            for (const g of groups) next[g.collection] = true;
+            setOpenSearchGroups(next);
+          }
         })
         .catch(() => {
           if (!cancelled) setSearchHits([]);
@@ -171,7 +185,6 @@ export function AnsiblePaletteSection({
     });
   };
 
-  const open = forceOpen || sectionOpen;
   const searchGroups = isSearch ? groupGalleryByCollection(searchHits) : [];
   const badge = isSearch
     ? searchLoading
@@ -189,18 +202,13 @@ export function AnsiblePaletteSection({
   }
 
   return (
-    <Collapsible
-      open={open}
-      onOpenChange={(v) => {
-        if (!forceOpen) setSectionOpen(v);
-      }}
-    >
+    <Collapsible open={sectionOpen} onOpenChange={setSectionOpen}>
       <CollapsibleTrigger asChild>
         <button
           type="button"
           className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left hover:bg-accent/60"
         >
-          {open ? (
+          {sectionOpen ? (
             <ChevronDown className="size-3.5 shrink-0 text-muted-foreground" />
           ) : (
             <ChevronRight className="size-3.5 shrink-0 text-muted-foreground" />
@@ -229,19 +237,47 @@ export function AnsiblePaletteSection({
                 No Ansible modules match.
               </p>
             ) : (
-              searchGroups.map((g) => (
-                <div key={g.collection}>
-                  <div className="px-2 py-1 font-mono text-[9px] uppercase tracking-[0.12em] text-muted-foreground/80">
-                    {g.collection}
-                    <span className="ml-1 text-muted-foreground">({g.items.length})</span>
-                  </div>
-                  <div className="space-y-0.5">
-                    {g.items.map((mod) => (
-                      <ModuleRow key={mod.fqcn} mod={mod as AnsibleGalleryHit} onAdd={onAdd} />
-                    ))}
-                  </div>
-                </div>
-              ))
+              searchGroups.map((g) => {
+                const gOpen = openSearchGroups[g.collection] ?? true;
+                return (
+                  <Collapsible
+                    key={g.collection}
+                    open={gOpen}
+                    onOpenChange={(v) =>
+                      setOpenSearchGroups((prev) => ({ ...prev, [g.collection]: v }))
+                    }
+                  >
+                    <CollapsibleTrigger asChild>
+                      <button
+                        type="button"
+                        className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left hover:bg-accent/60"
+                      >
+                        {gOpen ? (
+                          <ChevronDown className="size-3 shrink-0 text-muted-foreground" />
+                        ) : (
+                          <ChevronRight className="size-3 shrink-0 text-muted-foreground" />
+                        )}
+                        <span className="min-w-0 flex-1 truncate font-mono text-[11px] text-foreground">
+                          {g.collection}
+                        </span>
+                        <Badge
+                          variant="outline"
+                          className="h-4 shrink-0 px-1 text-[9px] tabular-nums"
+                        >
+                          {g.items.length}
+                        </Badge>
+                      </button>
+                    </CollapsibleTrigger>
+                    <CollapsibleContent>
+                      <div className="mb-1 space-y-0.5 border-l border-border/60 pl-2 ml-2">
+                        {g.items.map((mod) => (
+                          <ModuleRow key={mod.fqcn} mod={mod as AnsibleGalleryHit} onAdd={onAdd} />
+                        ))}
+                      </div>
+                    </CollapsibleContent>
+                  </Collapsible>
+                );
+              })
             )
           ) : (
             collections.map((col) => {
