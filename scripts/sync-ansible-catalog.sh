@@ -10,7 +10,8 @@ if [[ ! -d "$SRC" ]]; then
   exit 1
 fi
 mkdir -p "$DST"
-rsync -a --delete "$SRC/" "$DST/"
+# Keep OpenFlow README.md (not part of MCP catalog)
+rsync -a --delete --exclude 'README.md' "$SRC/" "$DST/"
 echo "Synced $SRC → $DST"
 echo "gallery: $(python3 -c "import json;print(len(json.load(open('$DST/gallery.json'))))" 2>/dev/null || echo '?') entries"
 echo "schemas: $(find "$DST/schemas" -name '*.json' 2>/dev/null | wc -l)"
