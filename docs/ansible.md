@@ -65,8 +65,9 @@ Full Galaxy gallery (~thousands of modules) lives on **server disk**, not in the
 
 - Path: `data/ansible-catalog/` (or `OPENFLOW_ANSIBLE_CATALOG_DIR`)
 - Sync: `npm run ansible:sync-catalog` from a checkout of [ansible-flow-mcp](https://github.com/real-limitless/ansible-flow-mcp)
-- Palette calls `GET /api/v1/ansible/modules?q=`
-- Form UI calls `GET /api/v1/ansible/modules/:fqcn/schema` on demand
+- **Palette browse:** Ansible → **collection** (e.g. `ansible.builtin`) → **module** (e.g. `yum`) — modules load only when a collection is expanded
+- **Palette search:** filters across all collections
+- Form UI calls schema endpoint on demand
 - Modules with empty `options` → JSON args only; rich schemas → Form \| JSON
 
 ## API
@@ -74,7 +75,9 @@ Full Galaxy gallery (~thousands of modules) lives on **server disk**, not in the
 | Endpoint | Purpose |
 | --- | --- |
 | `GET /api/v1/ansible/stats` | Catalog root + counts |
-| `GET /api/v1/ansible/modules?q=&limit=` | Gallery search (paginated) |
+| `GET /api/v1/ansible/collections` | All collections + module counts |
+| `GET /api/v1/ansible/modules?collection=` | **All** modules in one collection |
+| `GET /api/v1/ansible/modules?q=&limit=` | Global search |
 | `GET /api/v1/ansible/modules/:fqcn/schema` | Slim arg schema (lazy) |
 
 ## Credentials (SSH / become)

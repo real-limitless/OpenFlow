@@ -2,8 +2,10 @@ import type { Hono } from "hono";
 import type { AppEnv } from "../middleware/auth";
 import {
   ansibleCatalogStats,
+  ansibleSchemaFileExistsFs,
   getAnsibleModuleSchemaFs,
-  listAnsibleGalleryFs,
+  listAnsibleCollectionsFs,
+  listAnsibleModulesByCollectionFs,
   searchAnsibleGalleryFs,
 } from "../../lib/nodes/ansible/catalog-fs";
 import { schemaHasFormFields } from "../../lib/nodes/ansible/catalog-core";
@@ -17,44 +19,88 @@ function requireUserId(c: { get: (k: "userId") => string | undefined }): string 
   }
 }
 
+function enrichList(
+  items: Array<{ fqcn: string; shortName: string; collection: string; description: string }>,
+) {
+  return items.map((item) => ({
+    ...item,
+    // Cheap: schema file on disk. Form fields confirmed only when schema is fetched.
+    hasSchemaFile: ansibleSchemaFileExistsFs(item.fqcn),
+  }));
+}
+
 export default function ansibleRoute(app: Hono<AppEnv>) {
   app.get("/api/v1/ansible/stats", async (c) => {
     if (!requireUserId(c)) return c.json({ error: "Unauthorized" }, 401);
-    return c.json(ansibleCatalogStats());
+    const stats = ansibleCatalogStats();
+    const collections = listAnsibleCollectionsFs();
+    return c.json({
+      ...stats,
+      collectionCount: collections.length,
+    });
   });
 
+  /** Browse: all collections with counts (no module payload). */
+  app.get("/api/v1/ansible/collections", async (c) => {
+    if (!requireUserId(c)) return c.json({ error: "Unauthorized" }, 401);
+    const collections = listAnsibleCollectionsFs();
+    const stats = ansibleCatalogStats();
+    return c.json({
+      totalModules: stats.galleryCount,
+      count: collections.length,
+      collections,
+      catalogRoot: stats.root,
+    });
+  });
+
+  /**
+   * Modules:
+   *  - ?collection=ansible.builtin → all modules in that collection
+   *  - ?q=yum → global search (default limit 200, max 500)
+   *  - neither → empty items (use /collections to browse)
+   */
   app.get("/api/v1/ansible/modules", async (c) => {
     if (!requireUserId(c)) return c.json({ error: "Unauthorized" }, 401);
     const q = String(c.req.query("q") ?? c.req.query("query") ?? "").trim();
-    const limitRaw = Number(c.req.query("limit") ?? 80);
-    const limit = Number.isFinite(limitRaw) ? Math.min(Math.max(limitRaw, 1), 500) : 80;
     const collection = String(c.req.query("collection") ?? "").trim();
-
-    let items = q ? searchAnsibleGalleryFs(q, limit * 3) : listAnsibleGalleryFs();
-    if (collection) {
-      items = items.filter((i) => i.collection === collection);
-    }
-    if (!q) {
-      items = items.slice(0, limit);
-    } else {
-      items = items.slice(0, limit);
-    }
-
-    // Annotate form-ready without loading every schema: check file existence lightly via get
-    // (cached). Only for returned page.
-    const enriched = items.map((item) => {
-      const schema = getAnsibleModuleSchemaFs(item.fqcn);
-      return {
-        ...item,
-        hasFormSchema: schemaHasFormFields(schema),
-      };
-    });
+    const limitRaw = Number(c.req.query("limit") ?? (q ? 200 : 0));
+    const offsetRaw = Number(c.req.query("offset") ?? 0);
+    const limit = Number.isFinite(limitRaw) ? Math.min(Math.max(limitRaw, 0), 5000) : 200;
+    const offset = Number.isFinite(offsetRaw) ? Math.max(offsetRaw, 0) : 0;
 
     const stats = ansibleCatalogStats();
+
+    if (collection) {
+      const all = listAnsibleModulesByCollectionFs(collection);
+      const slice = limit > 0 ? all.slice(offset, offset + limit) : all.slice(offset);
+      return c.json({
+        count: slice.length,
+        total: all.length,
+        collection,
+        offset,
+        items: enrichList(slice),
+        catalogRoot: stats.root,
+      });
+    }
+
+    if (q) {
+      const searchLimit = limit > 0 ? limit : 200;
+      const items = searchAnsibleGalleryFs(q, Math.min(searchLimit, 500));
+      return c.json({
+        count: items.length,
+        total: stats.galleryCount,
+        query: q,
+        items: enrichList(items),
+        catalogRoot: stats.root,
+      });
+    }
+
+    // No collection / query: do not dump the catalog
     return c.json({
-      count: enriched.length,
+      count: 0,
       total: stats.galleryCount,
-      items: enriched,
+      items: [],
+      message: "Pass collection=… to list a collection, or q=… to search.",
       catalogRoot: stats.root,
     });
   });

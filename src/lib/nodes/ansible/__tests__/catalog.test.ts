@@ -13,7 +13,9 @@ import {
 } from "../catalog";
 import {
   getAnsibleModuleSchemaFs,
+  listAnsibleCollectionsFs,
   listAnsibleGalleryFs,
+  listAnsibleModulesByCollectionFs,
   resetAnsibleCatalogCache,
   searchAnsibleGalleryFs,
   resolveAnsibleCatalogRoot,
@@ -135,6 +137,20 @@ describe("ansible catalog-fs (server)", () => {
       getAnsibleModuleSchemaFs("ansible.builtin.ping");
     expect(schema).not.toBeNull();
     expect(schema!.fqcn).toMatch(/^ansible\.builtin\./);
+  });
+
+  it("lists all collections and full builtin modules (no 80 cap)", () => {
+    const cols = listAnsibleCollectionsFs();
+    expect(cols.length).toBeGreaterThanOrEqual(1);
+    expect(cols.every((c) => c.name && c.moduleCount > 0)).toBe(true);
+    const builtin = cols.find((c) => c.name === "ansible.builtin");
+    expect(builtin).toBeDefined();
+    const mods = listAnsibleModulesByCollectionFs("ansible.builtin");
+    expect(mods.length).toBe(builtin!.moduleCount);
+    expect(mods.length).toBeGreaterThan(10);
+    // yum is a classic builtin module name when full catalog is present
+    const names = new Set(mods.map((m) => m.shortName));
+    expect(names.has("file") || names.has("ping")).toBe(true);
   });
 });
 

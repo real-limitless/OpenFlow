@@ -8,11 +8,9 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { NodeIcon, accentFor } from "./BaseNode";
 import { cn } from "@/lib/utils";
 import { apiFetch } from "@/lib/auth/client";
-import { groupGalleryByCollection } from "@/lib/nodes/ansible/catalog-core";
-import { fetchAnsibleModules, type AnsibleGalleryHit } from "@/lib/nodes/ansible/client";
-import { ANSIBLE_NODE_TYPE } from "@/lib/nodes/ansible/types";
 import type { AddNodeInit } from "@/lib/workflow/add-node";
 import { encodeNodeDragPayload, OPENFLOW_NODE_MIME } from "@/lib/workflow/add-node";
+import { AnsiblePaletteSection } from "./AnsiblePaletteSection";
 
 interface Props {
   onAdd: (type: string, init?: AddNodeInit) => void;
@@ -45,7 +43,6 @@ const DEFAULT_OPEN: Record<string, boolean> = {
   "Data & Storage": false,
   Database: false,
   Development: false,
-  Ansible: true,
   Files: false,
   Productivity: false,
   Marketing: false,
@@ -87,9 +84,6 @@ export function NodePalette({ onAdd }: Props) {
   const [semantic, setSemantic] = useState<SuggestItem[] | null>(null);
   const [semanticMode, setSemanticMode] = useState<string | null>(null);
   const [semanticLoading, setSemanticLoading] = useState(false);
-  const [ansibleHits, setAnsibleHits] = useState<AnsibleGalleryHit[]>([]);
-  const [ansibleTotal, setAnsibleTotal] = useState(0);
-  const [ansibleLoading, setAnsibleLoading] = useState(false);
 
   const grouped = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -107,43 +101,6 @@ export function NodePalette({ onAdd }: Props) {
     })).filter((g) => g.items.length);
   }, [query]);
 
-  // Lazy-load Ansible gallery from API (full catalog lives on server disk).
-  useEffect(() => {
-    let cancelled = false;
-    const t = window.setTimeout(
-      () => {
-        setAnsibleLoading(true);
-        void fetchAnsibleModules({ q: query.trim(), limit: query.trim() ? 120 : 80 })
-          .then((data) => {
-            if (cancelled) return;
-            setAnsibleHits(Array.isArray(data.items) ? data.items : []);
-            setAnsibleTotal(typeof data.total === "number" ? data.total : (data.count ?? 0));
-          })
-          .catch(() => {
-            if (!cancelled) {
-              setAnsibleHits([]);
-              setAnsibleTotal(0);
-            }
-          })
-          .finally(() => {
-            if (!cancelled) setAnsibleLoading(false);
-          });
-      },
-      query.trim() ? 200 : 0,
-    );
-    return () => {
-      cancelled = true;
-      window.clearTimeout(t);
-    };
-  }, [query]);
-
-  const ansibleGroups = useMemo(() => groupGalleryByCollection(ansibleHits), [ansibleHits]);
-
-  const ansibleCount = useMemo(
-    () => ansibleGroups.reduce((n, g) => n + g.items.length, 0),
-    [ansibleGroups],
-  );
-
   const isSearching = query.trim().length > 0;
 
   useEffect(() => {
@@ -151,10 +108,9 @@ export function NodePalette({ onAdd }: Props) {
     setOpenCategories((prev) => {
       const next = { ...prev };
       for (const g of grouped) next[g.category] = true;
-      if (ansibleCount) next.Ansible = true;
       return next;
     });
-  }, [isSearching, grouped, ansibleCount]);
+  }, [isSearching, grouped]);
 
   useEffect(() => {
     const q = query.trim();
@@ -313,111 +269,7 @@ export function NodePalette({ onAdd }: Props) {
         )}
 
         <div className="space-y-1 p-2">
-          {ansibleCount > 0 && (
-            <Collapsible
-              open={isSearching || (openCategories.Ansible ?? false)}
-              onOpenChange={() => {
-                if (!isSearching) toggleCategory("Ansible");
-              }}
-            >
-              <CollapsibleTrigger asChild>
-                <button
-                  type="button"
-                  className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left hover:bg-accent/60"
-                >
-                  {isSearching || openCategories.Ansible ? (
-                    <ChevronDown className="size-3.5 shrink-0 text-muted-foreground" />
-                  ) : (
-                    <ChevronRight className="size-3.5 shrink-0 text-muted-foreground" />
-                  )}
-                  <span className="flex-1 font-mono text-[10px] uppercase tracking-[0.14em] text-muted-foreground">
-                    Ansible{ansibleLoading ? "…" : ""}
-                  </span>
-                  <Badge variant="secondary" className="h-5 px-1.5 text-[10px] tabular-nums">
-                    {ansibleTotal > ansibleCount
-                      ? `${ansibleCount}/${ansibleTotal}`
-                      : ansibleCount || ansibleTotal}
-                  </Badge>
-                </button>
-              </CollapsibleTrigger>
-              <CollapsibleContent>
-                <div className="mb-2 space-y-2 pl-1">
-                  {ansibleTotal > 0 && (
-                    <p className="px-2 text-[10px] text-muted-foreground">
-                      {ansibleTotal.toLocaleString()} modules in catalog · search to filter · Form
-                      when schema has options
-                    </p>
-                  )}
-                  {ansibleGroups.map((g) => (
-                    <div key={g.collection}>
-                      <div className="px-2 py-1 font-mono text-[9px] uppercase tracking-[0.12em] text-muted-foreground/80">
-                        {g.collection}
-                      </div>
-                      <div className="space-y-0.5">
-                        {g.items.map((mod) => {
-                          const hit = mod as AnsibleGalleryHit;
-                          const init: AddNodeInit = {
-                            name: mod.shortName,
-                            parameters: { resource: "module", module: mod.fqcn },
-                          };
-                          return (
-                            <button
-                              key={mod.fqcn}
-                              type="button"
-                              draggable
-                              onDragStart={(e) => {
-                                e.dataTransfer.setData(
-                                  OPENFLOW_NODE_MIME,
-                                  encodeNodeDragPayload({
-                                    type: ANSIBLE_NODE_TYPE,
-                                    name: mod.shortName,
-                                    parameters: { resource: "module", module: mod.fqcn },
-                                  }),
-                                );
-                                e.dataTransfer.effectAllowed = "move";
-                              }}
-                              onClick={() => onAdd(ANSIBLE_NODE_TYPE, init)}
-                              className="flex w-full items-start gap-2.5 rounded-md border border-transparent p-2 text-left transition hover:border-border hover:bg-surface"
-                            >
-                              <span
-                                className={cn(
-                                  "mt-0.5 grid size-7 shrink-0 place-items-center rounded",
-                                  accentText.action,
-                                )}
-                              >
-                                <NodeIcon name="Server" className="size-4" />
-                              </span>
-                              <span className="min-w-0">
-                                <span className="flex items-center gap-1.5">
-                                  <span className="block truncate text-[13px] font-medium text-foreground">
-                                    {mod.shortName}
-                                  </span>
-                                  {hit.hasFormSchema && (
-                                    <Badge
-                                      variant="outline"
-                                      className="h-4 shrink-0 px-1 text-[9px]"
-                                    >
-                                      form
-                                    </Badge>
-                                  )}
-                                </span>
-                                <span className="block font-mono text-[10px] text-muted-foreground/90">
-                                  {mod.fqcn}
-                                </span>
-                                <span className="block text-[11px] leading-snug text-muted-foreground">
-                                  {mod.description}
-                                </span>
-                              </span>
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </CollapsibleContent>
-            </Collapsible>
-          )}
+          <AnsiblePaletteSection query={query} forceOpen={isSearching} onAdd={onAdd} />
 
           {grouped.map((group) => {
             const isOpen = isSearching || (openCategories[group.category] ?? false);
@@ -490,8 +342,10 @@ export function NodePalette({ onAdd }: Props) {
               </Collapsible>
             );
           })}
-          {!grouped.length && !ansibleCount && (
-            <p className="px-2 py-4 text-sm text-muted-foreground">No nodes match “{query}”.</p>
+          {!grouped.length && isSearching && (
+            <p className="px-2 py-4 text-sm text-muted-foreground">
+              No core nodes match “{query}” (check Ansible results above).
+            </p>
           )}
         </div>
       </div>

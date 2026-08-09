@@ -12,10 +12,18 @@ import { join, resolve } from "node:path";
 import type { AnsibleGalleryEntry, AnsibleModuleSchema } from "./types";
 import { searchGalleryEntries } from "./catalog-core";
 
+export type AnsibleCollectionSummary = {
+  name: string;
+  moduleCount: number;
+};
+
 let cachedRoot: string | null = null;
 let cachedGallery: AnsibleGalleryEntry[] | null = null;
 let cachedGalleryMtime = 0;
+let cachedCollections: AnsibleCollectionSummary[] | null = null;
+let cachedByCollection: Map<string, AnsibleGalleryEntry[]> | null = null;
 const schemaCache = new Map<string, AnsibleModuleSchema | null>();
+const schemaFileExistsCache = new Map<string, boolean>();
 
 export function resolveAnsibleCatalogRoot(cwd = process.cwd()): string {
   const env = process.env.OPENFLOW_ANSIBLE_CATALOG_DIR?.trim();
@@ -43,13 +51,38 @@ export function resetAnsibleCatalogCache(): void {
   cachedRoot = null;
   cachedGallery = null;
   cachedGalleryMtime = 0;
+  cachedCollections = null;
+  cachedByCollection = null;
   schemaCache.clear();
+  schemaFileExistsCache.clear();
+}
+
+function rebuildCollectionIndex(items: AnsibleGalleryEntry[]): void {
+  const by = new Map<string, AnsibleGalleryEntry[]>();
+  for (const item of items) {
+    const c = (item.collection || "other").trim() || "other";
+    const list = by.get(c) ?? [];
+    list.push(item);
+    by.set(c, list);
+  }
+  for (const [, list] of by) {
+    list.sort((a, b) => a.shortName.localeCompare(b.shortName) || a.fqcn.localeCompare(b.fqcn));
+  }
+  cachedByCollection = by;
+  cachedCollections = [...by.entries()]
+    .map(([name, list]) => ({ name, moduleCount: list.length }))
+    .sort((a, b) => a.name.localeCompare(b.name));
 }
 
 function loadGalleryFromDisk(): AnsibleGalleryEntry[] {
   const root = getAnsibleCatalogRoot();
   const path = join(root, "gallery.json");
-  if (!existsSync(path)) return [];
+  if (!existsSync(path)) {
+    cachedGallery = [];
+    cachedGalleryMtime = 0;
+    rebuildCollectionIndex([]);
+    return [];
+  }
   const st = statSync(path);
   if (cachedGallery && st.mtimeMs === cachedGalleryMtime) return cachedGallery;
   const raw = JSON.parse(readFileSync(path, "utf8")) as unknown;
@@ -58,6 +91,7 @@ function loadGalleryFromDisk(): AnsibleGalleryEntry[] {
     : [];
   cachedGallery = items;
   cachedGalleryMtime = st.mtimeMs;
+  rebuildCollectionIndex(items);
   return items;
 }
 
@@ -67,6 +101,32 @@ export function listAnsibleGalleryFs(): AnsibleGalleryEntry[] {
 
 export function searchAnsibleGalleryFs(query: string, limit = 80): AnsibleGalleryEntry[] {
   return searchGalleryEntries(loadGalleryFromDisk(), query, limit);
+}
+
+/** All collections with module counts (sorted by name). */
+export function listAnsibleCollectionsFs(): AnsibleCollectionSummary[] {
+  loadGalleryFromDisk();
+  return cachedCollections ?? [];
+}
+
+/** All modules in one collection (full list, sorted). */
+export function listAnsibleModulesByCollectionFs(collection: string): AnsibleGalleryEntry[] {
+  loadGalleryFromDisk();
+  const key = (collection ?? "").trim();
+  if (!key) return [];
+  return cachedByCollection?.get(key) ?? [];
+}
+
+/** Cheap existence check for schema file (no full parse). */
+export function ansibleSchemaFileExistsFs(fqcn: string): boolean {
+  const key = (fqcn ?? "").trim();
+  if (!key) return false;
+  if (schemaFileExistsCache.has(key)) return schemaFileExistsCache.get(key)!;
+  const root = getAnsibleCatalogRoot();
+  const path = join(root, "schemas", `${key}.json`);
+  const ok = existsSync(path);
+  schemaFileExistsCache.set(key, ok);
+  return ok;
 }
 
 export function getAnsibleModuleSchemaFs(fqcn: string): AnsibleModuleSchema | null {
