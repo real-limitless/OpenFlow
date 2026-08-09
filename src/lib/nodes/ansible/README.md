@@ -1,14 +1,20 @@
-# Ansible catalog (dual-track)
+# Ansible catalog integration
 
-Synced from [ansible-flow-mcp](https://github.com/real-limitless/ansible-flow-mcp) `catalog/`.
-
-| File | Role |
+| Path | Role |
 | --- | --- |
-| `gallery.json` | Palette module cards |
-| `schemas/*.json` | Hybrid Form UI + API |
-| `collections-allowlist.yml` | Policy reference (executor has TS allowlist) |
+| `data/ansible-catalog/` | Full gallery + schemas (server FS, lazy API) |
+| `fallback/` | Small fixture set if full catalog missing |
+| `catalog-fs.ts` | Node-only loader |
+| `catalog-core.ts` | Pure search/group/schema→fields |
+| `client.ts` | Browser `fetch` helpers |
+| `catalog.ts` | Client override hooks for tests |
 
-Regenerate upstream with `python scripts/generate_catalog.py`, then copy `catalog/` here.
+**Do not** `import.meta.glob` thousands of schemas into the Vite client.
 
-Executor: `src/lib/engine/executors/ansible.ts`  
-Node type: `openflow-node-base.ansible`
+Sync from sibling MCP repo:
+
+```bash
+npm run ansible:sync-catalog
+```
+
+Source of truth: https://github.com/real-limitless/ansible-flow-mcp/tree/main/catalog

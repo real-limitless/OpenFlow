@@ -60,7 +60,8 @@
     "catalog:eval": "npx tsx scripts/catalog-eval.ts",
     "catalog:reindex:hash:local": "npx tsx scripts/catalog-reindex.ts --hash",
     "screenshots": "node scripts/capture-screenshots.mjs",
-    "screenshots:ansible": "node scripts/capture-ansible-screenshots.mjs"
+    "screenshots:ansible": "node scripts/capture-ansible-screenshots.mjs",
+    "ansible:sync-catalog": "bash scripts/sync-ansible-catalog.sh"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",

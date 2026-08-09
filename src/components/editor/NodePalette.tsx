@@ -8,7 +8,8 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { NodeIcon, accentFor } from "./BaseNode";
 import { cn } from "@/lib/utils";
 import { apiFetch } from "@/lib/auth/client";
-import { groupGalleryByCollection, searchAnsibleGallery } from "@/lib/nodes/ansible/catalog";
+import { groupGalleryByCollection } from "@/lib/nodes/ansible/catalog-core";
+import { fetchAnsibleModules, type AnsibleGalleryHit } from "@/lib/nodes/ansible/client";
 import { ANSIBLE_NODE_TYPE } from "@/lib/nodes/ansible/types";
 import type { AddNodeInit } from "@/lib/workflow/add-node";
 import { encodeNodeDragPayload, OPENFLOW_NODE_MIME } from "@/lib/workflow/add-node";
@@ -86,6 +87,9 @@ export function NodePalette({ onAdd }: Props) {
   const [semantic, setSemantic] = useState<SuggestItem[] | null>(null);
   const [semanticMode, setSemanticMode] = useState<string | null>(null);
   const [semanticLoading, setSemanticLoading] = useState(false);
+  const [ansibleHits, setAnsibleHits] = useState<AnsibleGalleryHit[]>([]);
+  const [ansibleTotal, setAnsibleTotal] = useState(0);
+  const [ansibleLoading, setAnsibleLoading] = useState(false);
 
   const grouped = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -103,10 +107,37 @@ export function NodePalette({ onAdd }: Props) {
     })).filter((g) => g.items.length);
   }, [query]);
 
-  const ansibleGroups = useMemo(() => {
-    const hits = searchAnsibleGallery(query, 100);
-    return groupGalleryByCollection(hits);
+  // Lazy-load Ansible gallery from API (full catalog lives on server disk).
+  useEffect(() => {
+    let cancelled = false;
+    const t = window.setTimeout(
+      () => {
+        setAnsibleLoading(true);
+        void fetchAnsibleModules({ q: query.trim(), limit: query.trim() ? 120 : 80 })
+          .then((data) => {
+            if (cancelled) return;
+            setAnsibleHits(Array.isArray(data.items) ? data.items : []);
+            setAnsibleTotal(typeof data.total === "number" ? data.total : (data.count ?? 0));
+          })
+          .catch(() => {
+            if (!cancelled) {
+              setAnsibleHits([]);
+              setAnsibleTotal(0);
+            }
+          })
+          .finally(() => {
+            if (!cancelled) setAnsibleLoading(false);
+          });
+      },
+      query.trim() ? 200 : 0,
+    );
+    return () => {
+      cancelled = true;
+      window.clearTimeout(t);
+    };
   }, [query]);
+
+  const ansibleGroups = useMemo(() => groupGalleryByCollection(ansibleHits), [ansibleHits]);
 
   const ansibleCount = useMemo(
     () => ansibleGroups.reduce((n, g) => n + g.items.length, 0),
@@ -300,15 +331,23 @@ export function NodePalette({ onAdd }: Props) {
                     <ChevronRight className="size-3.5 shrink-0 text-muted-foreground" />
                   )}
                   <span className="flex-1 font-mono text-[10px] uppercase tracking-[0.14em] text-muted-foreground">
-                    Ansible
+                    Ansible{ansibleLoading ? "…" : ""}
                   </span>
                   <Badge variant="secondary" className="h-5 px-1.5 text-[10px] tabular-nums">
-                    {ansibleCount}
+                    {ansibleTotal > ansibleCount
+                      ? `${ansibleCount}/${ansibleTotal}`
+                      : ansibleCount || ansibleTotal}
                   </Badge>
                 </button>
               </CollapsibleTrigger>
               <CollapsibleContent>
                 <div className="mb-2 space-y-2 pl-1">
+                  {ansibleTotal > 0 && (
+                    <p className="px-2 text-[10px] text-muted-foreground">
+                      {ansibleTotal.toLocaleString()} modules in catalog · search to filter · Form
+                      when schema has options
+                    </p>
+                  )}
                   {ansibleGroups.map((g) => (
                     <div key={g.collection}>
                       <div className="px-2 py-1 font-mono text-[9px] uppercase tracking-[0.12em] text-muted-foreground/80">
@@ -316,9 +355,10 @@ export function NodePalette({ onAdd }: Props) {
                       </div>
                       <div className="space-y-0.5">
                         {g.items.map((mod) => {
+                          const hit = mod as AnsibleGalleryHit;
                           const init: AddNodeInit = {
                             name: mod.shortName,
-                            parameters: { module: mod.fqcn },
+                            parameters: { resource: "module", module: mod.fqcn },
                           };
                           return (
                             <button
@@ -331,7 +371,7 @@ export function NodePalette({ onAdd }: Props) {
                                   encodeNodeDragPayload({
                                     type: ANSIBLE_NODE_TYPE,
                                     name: mod.shortName,
-                                    parameters: { module: mod.fqcn },
+                                    parameters: { resource: "module", module: mod.fqcn },
                                   }),
                                 );
                                 e.dataTransfer.effectAllowed = "move";
@@ -348,8 +388,18 @@ export function NodePalette({ onAdd }: Props) {
                                 <NodeIcon name="Server" className="size-4" />
                               </span>
                               <span className="min-w-0">
-                                <span className="block truncate text-[13px] font-medium text-foreground">
-                                  {mod.shortName}
+                                <span className="flex items-center gap-1.5">
+                                  <span className="block truncate text-[13px] font-medium text-foreground">
+                                    {mod.shortName}
+                                  </span>
+                                  {hit.hasFormSchema && (
+                                    <Badge
+                                      variant="outline"
+                                      className="h-4 shrink-0 px-1 text-[9px]"
+                                    >
+                                      form
+                                    </Badge>
+                                  )}
                                 </span>
                                 <span className="block font-mono text-[10px] text-muted-foreground/90">
                                   {mod.fqcn}

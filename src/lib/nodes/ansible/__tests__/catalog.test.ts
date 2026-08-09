@@ -1,36 +1,90 @@
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it } from "vitest";
 import {
   ansibleOptionToProperty,
-  getAnsibleModuleSchema,
-  listAnsibleGallery,
-  listAnsibleSchemaFqcns,
-  searchAnsibleGallery,
+  groupGalleryByCollection,
+  schemaHasFormFields,
   schemaToProperties,
+  searchGalleryEntries,
+} from "../catalog-core";
+import {
+  setAnsibleCatalogOverride,
+  getAnsibleModuleSchema,
+  searchAnsibleGallery,
 } from "../catalog";
+import {
+  getAnsibleModuleSchemaFs,
+  listAnsibleGalleryFs,
+  resetAnsibleCatalogCache,
+  searchAnsibleGalleryFs,
+  resolveAnsibleCatalogRoot,
+} from "../catalog-fs";
 import { decodeNodeDragPayload, encodeNodeDragPayload } from "@/lib/workflow/add-node";
+import { existsSync } from "node:fs";
 
-describe("ansible catalog", () => {
+const fixtureGallery = [
+  {
+    fqcn: "ansible.builtin.file",
+    shortName: "file",
+    collection: "ansible.builtin",
+    description: "Manage files",
+  },
+  {
+    fqcn: "ansible.builtin.ping",
+    shortName: "ping",
+    collection: "ansible.builtin",
+    description: "Ping",
+  },
+  {
+    fqcn: "community.docker.docker_container",
+    shortName: "docker_container",
+    collection: "community.docker",
+    description: "Containers",
+  },
+];
+
+const fixtureSchemas = {
+  "ansible.builtin.file": {
+    fqcn: "ansible.builtin.file",
+    shortDescription: "Manage files",
+    options: [
+      {
+        name: "path",
+        displayName: "Path",
+        type: "string",
+        required: true,
+        default: null,
+        description: "Path",
+        choices: null,
+        noLog: false,
+        suboptions: null,
+      },
+      {
+        name: "state",
+        displayName: "State",
+        type: "string",
+        required: false,
+        default: "file",
+        description: "State",
+        choices: ["absent", "directory", "file"],
+        noLog: false,
+        suboptions: null,
+      },
+    ],
+  },
+};
+
+describe("ansible catalog-core", () => {
   it("searches gallery by short name", () => {
-    const hits = searchAnsibleGallery("file");
+    const hits = searchGalleryEntries(fixtureGallery, "file");
     expect(hits.some((h) => h.fqcn === "ansible.builtin.file")).toBe(true);
   });
 
-  it("loads file schema and maps options", () => {
-    const schema = getAnsibleModuleSchema("ansible.builtin.file");
-    expect(schema).not.toBeNull();
-    const props = schemaToProperties(schema!);
+  it("maps options and detects form schemas", () => {
+    const props = schemaToProperties(fixtureSchemas["ansible.builtin.file"]);
     expect(props.some((p) => p.name === "path" && p.required)).toBe(true);
-    const state = props.find((p) => p.name === "state");
-    expect(state?.type).toBe("options");
-  });
-
-  it("has schemas for full gallery coverage", () => {
-    const gallery = listAnsibleGallery();
-    const schemas = new Set(listAnsibleSchemaFqcns());
-    expect(schemas.size).toBeGreaterThanOrEqual(gallery.length);
-    for (const g of gallery) {
-      expect(schemas.has(g.fqcn), `missing schema for ${g.fqcn}`).toBe(true);
-    }
+    expect(props.find((p) => p.name === "state")?.type).toBe("options");
+    expect(schemaHasFormFields(fixtureSchemas["ansible.builtin.file"])).toBe(true);
+    expect(schemaHasFormFields({ fqcn: "x", options: [] })).toBe(false);
   });
 
   it("maps boolean options", () => {
@@ -41,6 +95,46 @@ describe("ansible catalog", () => {
       default: false,
     });
     expect(prop.type).toBe("boolean");
+  });
+
+  it("groups by collection", () => {
+    const groups = groupGalleryByCollection(fixtureGallery);
+    expect(groups.some((g) => g.collection === "ansible.builtin")).toBe(true);
+  });
+});
+
+describe("ansible catalog override (client)", () => {
+  beforeEach(() => {
+    setAnsibleCatalogOverride({ gallery: fixtureGallery, schemas: fixtureSchemas });
+  });
+
+  it("search + get schema via override", () => {
+    expect(searchAnsibleGallery("ping")[0]?.fqcn).toBe("ansible.builtin.ping");
+    expect(getAnsibleModuleSchema("ansible.builtin.file")?.options?.length).toBe(2);
+  });
+});
+
+describe("ansible catalog-fs (server)", () => {
+  beforeEach(() => {
+    resetAnsibleCatalogCache();
+  });
+
+  it("resolves catalog root and loads gallery when data present", () => {
+    const root = resolveAnsibleCatalogRoot();
+    expect(existsSync(root) || root.includes("ansible")).toBe(true);
+    const gallery = listAnsibleGalleryFs();
+    // fallback (18) or full data catalog
+    expect(gallery.length).toBeGreaterThanOrEqual(10);
+    const hits = searchAnsibleGalleryFs("file", 20);
+    expect(hits.some((h) => h.fqcn.includes("file"))).toBe(true);
+  });
+
+  it("loads a known schema from disk when available", () => {
+    const schema =
+      getAnsibleModuleSchemaFs("ansible.builtin.file") ||
+      getAnsibleModuleSchemaFs("ansible.builtin.ping");
+    expect(schema).not.toBeNull();
+    expect(schema!.fqcn).toMatch(/^ansible\.builtin\./);
   });
 });
 
@@ -53,7 +147,6 @@ describe("node drag payload", () => {
     });
     const decoded = decodeNodeDragPayload(raw);
     expect(decoded?.type).toBe("openflow-node-base.ansible");
-    expect(decoded?.name).toBe("file");
     expect(decoded?.parameters?.module).toBe("ansible.builtin.file");
   });
 

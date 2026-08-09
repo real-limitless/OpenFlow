@@ -28,7 +28,11 @@ dist-ssr
 
 # App runtime data (binary store, local secrets dumps)
 data/
+!data/ansible-catalog/
+!data/ansible-catalog/**
 .secrets/
+# factory/tmp shot pages
+.tmp/
 
 # Wrangler / Cloudflare
 .wrangler/

@@ -46,6 +46,9 @@ COPY prisma.config.ts prisma.config.ts
 COPY scripts/docker-entrypoint.sh /usr/local/bin/openflow-entrypoint.sh
 RUN chmod +x /usr/local/bin/openflow-entrypoint.sh
 COPY --from=build /app/.output ./.output
+# Ansible gallery + schemas (lazy-loaded by API; not in client bundle)
+COPY data/ansible-catalog ./data/ansible-catalog
+ENV OPENFLOW_ANSIBLE_CATALOG_DIR=/app/data/ansible-catalog
 COPY --from=deps /app/node_modules/isolated-vm ./node_modules/isolated-vm
 # Code node Python (Pyodide WASM runtime + data files)
 COPY --from=deps /app/node_modules/pyodide ./node_modules/pyodide

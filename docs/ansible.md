@@ -59,12 +59,23 @@ Playbooks must resolve under one of:
 
 Max file size 2MB. No path escape (`..` outside roots).
 
+## Catalog (lazy-loaded)
+
+Full Galaxy gallery (~thousands of modules) lives on **server disk**, not in the browser bundle:
+
+- Path: `data/ansible-catalog/` (or `OPENFLOW_ANSIBLE_CATALOG_DIR`)
+- Sync: `npm run ansible:sync-catalog` from a checkout of [ansible-flow-mcp](https://github.com/real-limitless/ansible-flow-mcp)
+- Palette calls `GET /api/v1/ansible/modules?q=`
+- Form UI calls `GET /api/v1/ansible/modules/:fqcn/schema` on demand
+- Modules with empty `options` → JSON args only; rich schemas → Form \| JSON
+
 ## API
 
 | Endpoint | Purpose |
 | --- | --- |
-| `GET /api/v1/ansible/modules?q=` | Gallery search |
-| `GET /api/v1/ansible/modules/:fqcn/schema` | Slim arg schema |
+| `GET /api/v1/ansible/stats` | Catalog root + counts |
+| `GET /api/v1/ansible/modules?q=&limit=` | Gallery search (paginated) |
+| `GET /api/v1/ansible/modules/:fqcn/schema` | Slim arg schema (lazy) |
 
 ## Credentials (SSH / become)
 
