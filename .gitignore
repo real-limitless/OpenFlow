@@ -27,7 +27,8 @@ dist-ssr
 .dev.vars
 
 # App runtime data (binary store, local secrets dumps)
-data/
+# Use data/* (not data/) so negation can re-include ansible-catalog for new files.
+data/*
 !data/ansible-catalog/
 !data/ansible-catalog/**
 .secrets/
