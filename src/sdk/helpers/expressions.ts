@@ -7,6 +7,7 @@ export function evaluateOnItem(
   extras?: {
     nodeData?: Record<string, INodeExecutionData[]>;
     env?: Record<string, string>;
+    envAllowlist?: string[];
     vars?: Record<string, unknown>;
   },
 ): unknown {
@@ -14,13 +15,11 @@ export function evaluateOnItem(
     json: itemJson,
     nodeData: extras?.nodeData
       ? Object.fromEntries(
-          Object.entries(extras.nodeData).map(([k, v]) => [
-            k,
-            v.map((i) => ({ json: i.json })),
-          ]),
+          Object.entries(extras.nodeData).map(([k, v]) => [k, v.map((i) => ({ json: i.json }))]),
         )
       : undefined,
     env: extras?.env,
+    envAllowlist: extras?.envAllowlist,
     vars: extras?.vars,
   });
   if (result.ok) return result.value;

@@ -358,6 +358,32 @@ describe("Runner", () => {
     expect(result.success).toBe(true);
   });
 
+  it("uses injected env instead of process.env when provided", async () => {
+    process.env.RUNNER_ENV_PROBE = "from-process";
+    const workflow = makeWorkflow(
+      [
+        { id: "1", name: "A", type: "trigger", typeVersion: 1, position: [0, 0], parameters: {} },
+        {
+          id: "2",
+          name: "B",
+          type: "echo",
+          typeVersion: 1,
+          position: [200, 0],
+          parameters: { v: "={{ $env.RUNNER_ENV_PROBE }}" },
+        },
+      ],
+      { A: { main: [[{ node: "B", type: "main", index: 0 }]] } },
+    );
+    const echo: NodeExecutor = async (_ctx, node) => [[{ json: { v: node.parameters.v } }]];
+    const result = await executeWorkflow({
+      workflow,
+      nodeExecutors: { trigger: async () => [[{ json: {} }]], echo },
+      env: { RUNNER_ENV_PROBE: "from-options" },
+    });
+    expect(result.runData.B.items?.[0]?.[0]?.json.v).toBe("from-options");
+    delete process.env.RUNNER_ENV_PROBE;
+  });
+
   it("reports failure when any node errors", async () => {
     const workflow = makeWorkflow(
       [

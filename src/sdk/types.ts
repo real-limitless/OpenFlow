@@ -75,16 +75,19 @@ export interface ExecutionContext {
 
   /** Custom variables for `$vars` in expressions. */
   vars?: Record<string, unknown>;
+
+  /**
+   * Optional URL policy for HTTP-capable nodes.
+   * When set, a false return blocks the request.
+   */
+  allowUrl?: (url: string) => boolean;
 }
 
 /**
  * Executor signature used by the engine registry.
  * `node` is the same object as `ctx.node` (resolved parameters).
  */
-export type NodeExecutor = (
-  ctx: ExecutionContext,
-  node: INode,
-) => Promise<NodeOutput>;
+export type NodeExecutor = (ctx: ExecutionContext, node: INode) => Promise<NodeOutput>;
 
 export interface NodeDefinition {
   type: string;
@@ -111,4 +114,13 @@ export interface CreateContextOptions {
   dataTables?: DataTableAccess;
   /** Custom variables for `$vars` in expressions. */
   vars?: Record<string, unknown>;
+  /** Env map for `$env`. When omitted, the host may fall back to `process.env`. */
+  env?: Record<string, string>;
+  /** When set, only these `$env` keys are visible. */
+  envAllowlist?: string[];
+  /**
+   * Optional URL policy for HTTP-capable nodes.
+   * When set, a false return blocks the request.
+   */
+  allowUrl?: (url: string) => boolean;
 }

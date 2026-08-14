@@ -134,6 +134,30 @@ describe("http-request executor — n8n-nodes-base.httpRequest", () => {
     expect(getExecutor(TYPE)).toBeDefined();
   });
 
+  it("honors allowUrl and does not fetch when denied", async () => {
+    const node = makeNode({
+      name: "N",
+      type: TYPE,
+      parameters: { method: "GET", url: "https://example.com/x" },
+    });
+    const ctx = createExecutionContext({
+      node,
+      workflow: {
+        id: "wf",
+        name: "Test",
+        active: false,
+        nodes: [node],
+        connections: {},
+        settings: {},
+      },
+      getNodeInputItems: () => [{ json: {} }],
+      continueOnFail: false,
+      allowUrl: () => false,
+    });
+    await expect(getExecutor(TYPE)!(ctx, node)).rejects.toThrow(/allowUrl policy/);
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
   it("GET parses JSON body into item json", async () => {
     installFetch(mockResponse({ hello: "world" }));
     const out = await run({ method: "GET", url: "https://example.com/get" });

@@ -111,11 +111,11 @@ export const httpRequestExecutor: NodeExecutor = async (ctx, node) => {
           u.searchParams.set(q.name, String(resolveValue(q.value, itemJson)));
         }
       }
-      return executeWithUrl(u.toString(), method, headers, bodyInit, node);
+      return executeWithUrl(u.toString(), method, headers, bodyInit, node, ctx.allowUrl);
     }
   }
 
-  return executeWithUrl(url, method, headers, bodyInit, node);
+  return executeWithUrl(url, method, headers, bodyInit, node, ctx.allowUrl);
 };
 
 async function executeWithUrl(
@@ -124,6 +124,7 @@ async function executeWithUrl(
   headers: Record<string, string>,
   body: string | undefined,
   node: { parameters: Record<string, unknown> },
+  allowUrl?: (url: string) => boolean,
 ): Promise<import("../../workflow/types").INodeExecutionData[][]> {
   const options = (node.parameters.options as Record<string, unknown> | undefined) ?? {};
   const responseOptions = (options.response as Record<string, unknown> | undefined) ?? {};
@@ -133,6 +134,10 @@ async function executeWithUrl(
   const fullResponse = responseOptions.fullResponse === true || options.fullResponse === true;
   const neverError = responseOptions.neverError === true || options.neverError === true;
   const responseFormat = (responseOptions.responseFormat as string) ?? "autodetect";
+
+  if (allowUrl && !allowUrl(url)) {
+    throw new Error(`HTTP Request blocked by allowUrl policy: ${url}`);
+  }
 
   try {
     const controller = new AbortController();

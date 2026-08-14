@@ -22,7 +22,14 @@ import {
   collectWorkflowCredentials,
   fetchLocalCredentials,
 } from "@/lib/workflow/credentials-inventory";
+import { serializeForRuntime } from "@/lib/runtime/serialize";
 import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { MigrationReportDialog } from "./MigrationReport";
@@ -71,15 +78,39 @@ export function EditorTopBar({ actions }: { actions?: React.ReactNode }) {
     }
   };
 
-  const handleExport = () => {
-    const blob = new Blob([serializeWorkflow(workflow)], { type: "application/json" });
+  const downloadJson = (json: string, suffix = "") => {
+    const blob = new Blob([json], { type: "application/json" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `${workflow.name.replace(/[^a-z0-9-_ ]/gi, "").trim() || "workflow"}.json`;
+    const base = workflow.name.replace(/[^a-z0-9-_ ]/gi, "").trim() || "workflow";
+    a.download = `${base}${suffix}.json`;
     a.click();
     URL.revokeObjectURL(url);
+  };
+
+  const handleExport = () => {
+    downloadJson(serializeWorkflow(workflow));
     toast.success("Workflow exported");
+  };
+
+  const handleExportRuntime = () => {
+    const report = serializeForRuntime(workflow);
+    downloadJson(serializeWorkflow(report.workflow), ".runtime");
+    if (report.unsupportedNodes.length > 0) {
+      const names = report.unsupportedNodes.map((n) => n.name).join(", ");
+      toast.warning(`Runtime export: ${report.unsupportedNodes.length} unsupported node(s)`, {
+        description: names,
+      });
+      return;
+    }
+    if (report.requiredCredentials.length > 0) {
+      toast.success(
+        `Exported for runtime (${report.requiredCredentials.length} credential slot(s) to bind)`,
+      );
+      return;
+    }
+    toast.success("Exported for runtime");
   };
 
   const handleImport = async (file: File) => {
@@ -164,9 +195,17 @@ export function EditorTopBar({ actions }: { actions?: React.ReactNode }) {
         >
           <Upload className="mr-1 size-4" /> Import
         </Button>
-        <Button variant="ghost" size="sm" className="h-8 text-[12px]" onClick={handleExport}>
-          <Download className="mr-1 size-4" /> Export
-        </Button>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" size="sm" className="h-8 text-[12px]">
+              <Download className="mr-1 size-4" /> Export
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem onClick={handleExport}>Workflow JSON</DropdownMenuItem>
+            <DropdownMenuItem onClick={handleExportRuntime}>For runtime…</DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
         <Button
           variant="ghost"
           size="sm"
