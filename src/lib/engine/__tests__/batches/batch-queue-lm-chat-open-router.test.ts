@@ -121,11 +121,9 @@ describe("batch-queue lmChatOpenRouter — @n8n/n8n-nodes-langchain.lmChatOpenRo
 
   it("throws when apiKey is empty", async () => {
     await expect(
-      runModel(
-        { model: { __rl: true, mode: "list", value: "openai/gpt-4o" }, options: {} },
-        [{}],
-        { openRouterApi: { apiKey: "" } },
-      ),
+      runModel({ model: { __rl: true, mode: "list", value: "openai/gpt-4o" }, options: {} }, [{}], {
+        openRouterApi: { apiKey: "" },
+      }),
     ).rejects.toThrow(/missing apiKey/);
   });
 
@@ -184,6 +182,122 @@ describe("batch-queue lmChatOpenRouter — @n8n/n8n-nodes-langchain.lmChatOpenRo
       messages,
       temperature: 0,
       max_tokens: 1024,
+    });
+    expect((captured[0].body as Record<string, unknown>).tools).toBeUndefined();
+  });
+
+  it("sends tools and parses tool_calls for the Agent loop", async () => {
+    const captured: Array<{ body: unknown }> = [];
+    setOpenRouterHttpClient(async (opts) => {
+      captured.push({ body: opts.body });
+      return {
+        status: 200,
+        headers: {},
+        body: {
+          choices: [
+            {
+              message: {
+                content: null,
+                tool_calls: [
+                  {
+                    id: "call_1",
+                    type: "function",
+                    function: { name: "read_file", arguments: '{"path":"README.md"}' },
+                  },
+                ],
+              },
+            },
+          ],
+          model: "openai/gpt-4o",
+          usage: { prompt_tokens: 10, completion_tokens: 8, total_tokens: 18 },
+        },
+      };
+    });
+
+    const handle = getHandle(
+      await runModel({
+        model: { __rl: true, mode: "list", value: "openai/gpt-4o" },
+        options: {},
+      }),
+    );
+    const result = await handle.invoke(
+      [{ role: "user", content: "read the readme" }],
+      [
+        {
+          name: "read_file",
+          description: "Read a file",
+          schema: { type: "object", properties: { path: { type: "string" } } },
+        },
+      ],
+    );
+
+    expect(result.text).toBe("");
+    expect(result.toolCalls).toEqual([
+      { id: "call_1", name: "read_file", args: { path: "README.md" } },
+    ]);
+    expect(captured[0].body).toMatchObject({
+      tool_choice: "auto",
+      tools: [
+        {
+          type: "function",
+          function: { name: "read_file", description: "Read a file" },
+        },
+      ],
+    });
+  });
+
+  it("round-trips assistant tool_calls and role:tool on the next turn", async () => {
+    const captured: Array<{ body: unknown }> = [];
+    setOpenRouterHttpClient(async (opts) => {
+      captured.push({ body: opts.body });
+      return {
+        status: 200,
+        headers: {},
+        body: {
+          choices: [{ message: { content: "README is a guide." } }],
+          model: "openai/gpt-4o",
+          usage: { prompt_tokens: 20, completion_tokens: 6, total_tokens: 26 },
+        },
+      };
+    });
+
+    const handle = getHandle(
+      await runModel({
+        model: { __rl: true, mode: "list", value: "openai/gpt-4o" },
+        options: {},
+      }),
+    );
+    const result = await handle.invoke(
+      [
+        { role: "user", content: "read the readme" },
+        {
+          role: "assistant",
+          content: "",
+          tool_calls: [
+            {
+              id: "call_1",
+              type: "function",
+              function: { name: "read_file", arguments: '{"path":"README.md"}' },
+            },
+          ],
+        },
+        { role: "tool", content: "# OpenFlow", tool_call_id: "call_1" },
+      ],
+      [{ name: "read_file" }],
+    );
+
+    expect(result.text).toBe("README is a guide.");
+    expect(result.toolCalls).toBeUndefined();
+    const messages = (captured[0].body as { messages: Record<string, unknown>[] }).messages;
+    expect(messages[1]).toMatchObject({
+      role: "assistant",
+      content: null,
+      tool_calls: [{ id: "call_1", type: "function" }],
+    });
+    expect(messages[2]).toMatchObject({
+      role: "tool",
+      content: "# OpenFlow",
+      tool_call_id: "call_1",
     });
   });
 

@@ -1,6 +1,7 @@
 import type { NodeExecutor, INodeExecutionData } from "@/sdk";
 import { ensureItems } from "@/sdk";
 import { evaluateExpression } from "../../expressions/evaluate";
+import { emitToolHandle } from "../tool-handle";
 
 function resolveValue(raw: unknown, itemJson: Record<string, unknown>): unknown {
   if (typeof raw !== "string") return raw;
@@ -732,7 +733,41 @@ async function runOperation(
 }
 
 export const githubToolExecutor: NodeExecutor = async (ctx, node) => {
-  const items = ensureItems(ctx.getInputItems(0));
+  const rawItems = ctx.getInputItems(0);
+  if (rawItems.length === 0) {
+    return emitToolHandle(ctx, {
+      type: "n8n-nodes-base.githubTool",
+      name: "github",
+      description: String(
+        ctx.getParam("description", "Read GitHub repo metadata, trees, and file contents") ??
+          "Read GitHub repo metadata, trees, and file contents",
+      ),
+      schema: {
+        type: "object",
+        properties: {
+          owner: { type: "string" },
+          repo: { type: "string" },
+          path: { type: "string", description: "File or directory path" },
+          ref: { type: "string", description: "Branch, tag, or commit" },
+        },
+        required: ["owner", "repo"],
+      },
+      async invoke(args) {
+        const { baseUrl, token } = await getCredential(ctx);
+        const own = String(args.owner ?? "");
+        const rep = String(args.repo ?? "");
+        const path = String(args.path ?? "");
+        const ref = String(args.ref ?? "");
+        const apiPath = path
+          ? `repos/${own}/${rep}/contents/${path.replace(/^\/+/, "")}`
+          : `repos/${own}/${rep}`;
+        const params = ref ? { ref } : undefined;
+        const parsed = await githubRequest(baseUrl, "GET", apiPath, undefined, params, token);
+        return JSON.stringify(parsed).slice(0, 8000);
+      },
+    });
+  }
+  const items = ensureItems(rawItems);
   const out: INodeExecutionData[] = [];
   const resource = String(node.parameters.resource ?? "issue");
   const operation = String(node.parameters.operation ?? "get");

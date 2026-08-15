@@ -75,16 +75,16 @@ export interface ExecutionContext {
 
   /** Custom variables for `$vars` in expressions. */
   vars?: Record<string, unknown>;
+
+  /** Jail root for filesystem / git tools (harness hosts). */
+  fsRoot?: string;
 }
 
 /**
  * Executor signature used by the engine registry.
  * `node` is the same object as `ctx.node` (resolved parameters).
  */
-export type NodeExecutor = (
-  ctx: ExecutionContext,
-  node: INode,
-) => Promise<NodeOutput>;
+export type NodeExecutor = (ctx: ExecutionContext, node: INode) => Promise<NodeOutput>;
 
 export interface NodeDefinition {
   type: string;
@@ -111,4 +111,5 @@ export interface CreateContextOptions {
   dataTables?: DataTableAccess;
   /** Custom variables for `$vars` in expressions. */
   vars?: Record<string, unknown>;
+  fsRoot?: string;
 }

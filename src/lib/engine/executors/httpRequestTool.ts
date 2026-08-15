@@ -1,5 +1,6 @@
 import type { NodeExecutor } from "@/sdk";
 import { withPairedItem } from "@/sdk";
+import { emitToolHandle } from "../tool-handle";
 
 interface HeaderParam {
   name: string;
@@ -61,6 +62,33 @@ function getNested(
 
 export const httpRequestToolExecutor: NodeExecutor = async (ctx, node) => {
   const inputItems = ctx.getInputItems(0);
+  if (inputItems.length === 0) {
+    const description = String(
+      ctx.getParam("description", "Fetch a URL and return the response body") ??
+        "Fetch a URL and return the response body",
+    );
+    return emitToolHandle(ctx, {
+      type: "n8n-nodes-base.httpRequestTool",
+      name: "http_request",
+      description,
+      schema: {
+        type: "object",
+        properties: {
+          url: { type: "string", description: "URL to request" },
+          method: { type: "string", description: "HTTP method" },
+        },
+        required: ["url"],
+      },
+      async invoke(args) {
+        const method = String(args.method ?? node.parameters.method ?? "GET");
+        const url = String(args.url ?? "");
+        if (!url) throw new Error("http_request: url is required");
+        const res = await fetch(url, { method });
+        const text = await res.text();
+        return text.slice(0, 8000);
+      },
+    });
+  }
   const options = (node.parameters.options as Record<string, unknown>) ?? {};
   const responseOptions = (options.response as Record<string, unknown>) ?? {};
 

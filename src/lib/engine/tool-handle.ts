@@ -69,6 +69,8 @@ export function resolveJailPath(fsRoot: string, requested: string): string {
 export function requireFsRoot(ctx: ExecutionContext): string {
   const fromParam = String(ctx.getParam("fsRoot", "") ?? "").trim();
   if (fromParam) return resolve(fromParam);
+  const fromCtx = ctx.fsRoot?.trim();
+  if (fromCtx) return resolve(fromCtx);
   const env = process.env.OPENFLOW_FS_ROOT?.trim();
   if (env) return resolve(env);
   return process.cwd();

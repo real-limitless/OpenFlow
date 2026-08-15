@@ -99,6 +99,8 @@ export interface RunOptions {
   destinationNode?: string | null;
   /** When true (default), destination itself is not executed. */
   stopBeforeDestination?: boolean;
+  /** Jail root for filesystem / git agent tools. */
+  fsRoot?: string;
 }
 
 export interface RunResult {
@@ -334,9 +336,7 @@ export async function executeWorkflow(options: RunOptions): Promise<RunResult> {
             }) ?? child.nodes[0];
 
           const childPin =
-            start && subOpts.items.length > 0
-              ? { [start.name]: subOpts.items }
-              : undefined;
+            start && subOpts.items.length > 0 ? { [start.name]: subOpts.items } : undefined;
 
           const childResult = await executeWorkflow({
             workflow: child,
@@ -383,6 +383,7 @@ export async function executeWorkflow(options: RunOptions): Promise<RunResult> {
           customData,
           dataTables: options.dataTables,
           vars: options.vars,
+          fsRoot: options.fsRoot,
         });
 
         outputs = await executor(ctx, resolvedNode);

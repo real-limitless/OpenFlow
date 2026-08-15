@@ -9,12 +9,33 @@ const DEFAULT_MAX_RETRIES = 2;
 export interface OpenRouterChatMessage {
   role: "system" | "user" | "assistant" | "tool";
   content: string;
+  tool_call_id?: string;
+  tool_calls?: Array<{
+    id: string;
+    type: "function";
+    function: { name: string; arguments: string };
+  }>;
+  name?: string;
+}
+
+export interface OpenRouterToolCall {
+  id?: string;
+  name: string;
+  args: Record<string, unknown>;
+}
+
+export interface OpenRouterAgentToolDef {
+  name: string;
+  description?: string;
+  schema?: unknown;
+  parameters?: unknown;
 }
 
 export interface OpenRouterCompletionResult {
   text: string;
   model: string;
   usage: { promptTokens: number; completionTokens: number; totalTokens: number };
+  toolCalls?: OpenRouterToolCall[];
 }
 
 export interface OpenRouterModelHandle {
@@ -22,7 +43,10 @@ export interface OpenRouterModelHandle {
   model: string;
   options: Record<string, unknown>;
   baseUrl: string;
-  invoke(messages: OpenRouterChatMessage[]): Promise<OpenRouterCompletionResult>;
+  invoke(
+    messages: OpenRouterChatMessage[],
+    tools?: OpenRouterAgentToolDef[] | unknown[],
+  ): Promise<OpenRouterCompletionResult>;
 }
 
 export type OpenRouterHttpClient = (options: SdkHttpRequestOptions) => Promise<SdkHttpResponse>;
@@ -79,12 +103,76 @@ function mapResponseFormat(responseFormat: unknown): Record<string, string> | un
   return undefined;
 }
 
+function normalizeAgentToolDefs(tools: unknown[] | undefined): OpenRouterAgentToolDef[] {
+  if (!tools || tools.length === 0) return [];
+  const out: OpenRouterAgentToolDef[] = [];
+  for (const t of tools) {
+    if (!t || typeof t !== "object") continue;
+    const o = t as Record<string, unknown>;
+    if (typeof o.name !== "string" || !o.name) continue;
+    out.push({
+      name: o.name,
+      description: typeof o.description === "string" ? o.description : undefined,
+      schema: o.schema ?? o.parameters,
+    });
+  }
+  return out;
+}
+
+function mapAgentTools(tools: OpenRouterAgentToolDef[]): unknown[] {
+  return tools.map((t) => {
+    const parameters =
+      t.schema && typeof t.schema === "object" ? t.schema : { type: "object", properties: {} };
+    return {
+      type: "function",
+      function: {
+        name: t.name,
+        ...(t.description ? { description: t.description } : {}),
+        parameters,
+      },
+    };
+  });
+}
+
+function serializeMessages(messages: OpenRouterChatMessage[]): unknown[] {
+  return messages.map((m) => {
+    const msg: Record<string, unknown> = { role: m.role, content: m.content ?? "" };
+    if (m.tool_call_id) msg.tool_call_id = m.tool_call_id;
+    if (m.tool_calls && m.tool_calls.length > 0) msg.tool_calls = m.tool_calls;
+    if (m.name) msg.name = m.name;
+    if (m.role === "assistant" && (!m.content || m.content === "") && m.tool_calls?.length) {
+      msg.content = null;
+    }
+    return msg;
+  });
+}
+
+function parseToolCallArguments(raw: unknown): Record<string, unknown> {
+  if (raw == null) return {};
+  if (typeof raw === "object" && !Array.isArray(raw)) return raw as Record<string, unknown>;
+  if (typeof raw === "string") {
+    const trimmed = raw.trim();
+    if (!trimmed) return {};
+    try {
+      const parsed = JSON.parse(trimmed) as unknown;
+      if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+        return parsed as Record<string, unknown>;
+      }
+      return { value: parsed };
+    } catch {
+      return { raw };
+    }
+  }
+  return { value: raw };
+}
+
 function buildChatCompletionsBody(
   model: string,
   messages: OpenRouterChatMessage[],
   options: Record<string, unknown>,
+  agentTools?: OpenRouterAgentToolDef[],
 ): Record<string, unknown> {
-  const body: Record<string, unknown> = { model, messages };
+  const body: Record<string, unknown> = { model, messages: serializeMessages(messages) };
   if (options.temperature != null) body.temperature = options.temperature;
   if (options.maxTokens != null) body.max_tokens = options.maxTokens;
   if (options.frequencyPenalty != null) body.frequency_penalty = options.frequencyPenalty;
@@ -92,24 +180,49 @@ function buildChatCompletionsBody(
   if (options.topP != null) body.top_p = options.topP;
   const responseFormat = mapResponseFormat(options.responseFormat);
   if (responseFormat) body.response_format = responseFormat;
+  if (agentTools && agentTools.length > 0) {
+    body.tools = mapAgentTools(agentTools);
+    body.tool_choice = "auto";
+  }
   return body;
 }
 
 function parseChatCompletionsResponse(body: unknown): OpenRouterCompletionResult {
   const b = body as {
-    choices?: Array<{ message?: { content?: string } }>;
+    choices?: Array<{
+      message?: {
+        content?: string | null;
+        tool_calls?: Array<{
+          id?: string;
+          type?: string;
+          function?: { name?: string; arguments?: string };
+        }>;
+      };
+    }>;
     model?: string;
     usage?: { prompt_tokens?: number; completion_tokens?: number; total_tokens?: number };
   };
-  const text = b.choices?.[0]?.message?.content ?? "";
+  const message = b.choices?.[0]?.message;
+  const text = message?.content ?? "";
+  const toolCalls: OpenRouterToolCall[] = [];
+  for (const tc of message?.tool_calls ?? []) {
+    const name = tc.function?.name;
+    if (!name) continue;
+    toolCalls.push({
+      id: tc.id,
+      name,
+      args: parseToolCallArguments(tc.function?.arguments),
+    });
+  }
   return {
-    text,
+    text: typeof text === "string" ? text : "",
     model: b.model ?? "",
     usage: {
       promptTokens: b.usage?.prompt_tokens ?? 0,
       completionTokens: b.usage?.completion_tokens ?? 0,
       totalTokens: b.usage?.total_tokens ?? 0,
     },
+    ...(toolCalls.length > 0 ? { toolCalls } : {}),
   };
 }
 
@@ -126,7 +239,9 @@ function classifyError(status: number, body: unknown): Error {
     );
   }
   if (status === 401 || status === 403) {
-    return new Error(`OpenRouter authentication error (${status}) — check your API key. ${bodyStr}`);
+    return new Error(
+      `OpenRouter authentication error (${status}) — check your API key. ${bodyStr}`,
+    );
   }
   return new Error(`OpenRouter API error (${status}): ${bodyStr}`);
 }
@@ -143,6 +258,7 @@ async function invokeModel(
     apiKey: string;
   },
   messages: OpenRouterChatMessage[],
+  tools?: unknown[],
 ): Promise<OpenRouterCompletionResult> {
   const http = httpOverride ?? sdkHttpRequest;
   const timeout = (handle.options.timeout as number) ?? DEFAULT_TIMEOUT;
@@ -150,7 +266,12 @@ async function invokeModel(
   const headers = buildHeaders(handle.apiKey);
 
   const url = `${handle.baseUrl}/chat/completions`;
-  const body = buildChatCompletionsBody(handle.model, messages, handle.options);
+  const body = buildChatCompletionsBody(
+    handle.model,
+    messages,
+    handle.options,
+    normalizeAgentToolDefs(tools),
+  );
 
   let lastError: Error | null = null;
 
@@ -207,8 +328,11 @@ export const lmChatOpenRouterExecutor: NodeExecutor = async (ctx) => {
     model,
     options,
     baseUrl,
-    invoke(messages: OpenRouterChatMessage[]): Promise<OpenRouterCompletionResult> {
-      return invokeModel({ model, options, baseUrl, apiKey }, messages);
+    invoke(
+      messages: OpenRouterChatMessage[],
+      tools?: OpenRouterAgentToolDef[] | unknown[],
+    ): Promise<OpenRouterCompletionResult> {
+      return invokeModel({ model, options, baseUrl, apiKey }, messages, tools);
     },
   };
 

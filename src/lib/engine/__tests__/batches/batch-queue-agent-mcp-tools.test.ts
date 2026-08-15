@@ -5,7 +5,10 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { seedBuiltinDescriptions } from "@/lib/nodes/registry";
 import { getNodeType } from "@/lib/nodes/registry";
 import { hasExecutor } from "@/lib/engine/node-runtime";
-import { runNode } from "../helpers";
+import { resolve } from "node:path";
+import { runNode, makeNode } from "../helpers";
+import { createExecutionContext } from "@/sdk";
+import { requireFsRoot } from "../../tool-handle";
 
 seedBuiltinDescriptions();
 
@@ -59,5 +62,24 @@ describe("agent MCP tool nodes", () => {
     expect(bundle.tools[0]?.name).toBe("web_search");
     const result = await bundle.invoke("web_search", { query: "openflow" });
     expect(result.content).toContain("example.com");
+  });
+
+  it("requireFsRoot prefers ctx.fsRoot over cwd", () => {
+    const node = makeNode({ type: "openflow-node-base.filesystemTool" });
+    const ctx = createExecutionContext({
+      node,
+      workflow: {
+        id: "wf",
+        name: "t",
+        active: false,
+        nodes: [node],
+        connections: {},
+        settings: {},
+      },
+      getNodeInputItems: () => [],
+      continueOnFail: false,
+      fsRoot: "/tmp/of-jail",
+    });
+    expect(requireFsRoot(ctx)).toBe(resolve("/tmp/of-jail"));
   });
 });
