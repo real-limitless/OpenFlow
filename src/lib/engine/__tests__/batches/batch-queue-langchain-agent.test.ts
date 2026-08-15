@@ -240,7 +240,7 @@ describe("batch-queue langchainAgent — @n8n/n8n-nodes-langchain.agent", () => 
     ).rejects.toThrow(/No prompt specified/i);
   });
 
-  it("missing tools: throws error about at least one tool", async () => {
+  it("missing tools: runs the model with no tool loop", async () => {
     const node = makeNode({ name: "Agent", type: TYPE, parameters: { options: {} } });
     const items = toItems([{ chatInput: "Hi" }]);
     const connections: IConnections = {
@@ -252,10 +252,8 @@ describe("batch-queue langchainAgent — @n8n/n8n-nodes-langchain.agent", () => 
     };
     const ctx = makeAgentCtx(items, node, subNodeOutputs, connections);
     const executor = getExecutor(TYPE)!;
-
-    await expect(executor(ctx, node)).rejects.toThrow(
-      /At least one Tool sub-node must be connected/i,
-    );
+    const out = await executor(ctx, node);
+    expect(out[0][0].json.output).toBeDefined();
   });
 
   it("intermediate steps flag: output includes intermediateSteps array", async () => {

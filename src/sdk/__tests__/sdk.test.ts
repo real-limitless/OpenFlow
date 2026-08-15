@@ -78,4 +78,24 @@ describe("OpenFlow SDK", () => {
   it("getParam helper works standalone", () => {
     expect(getParam(baseNode, "count")).toBe(3);
   });
+
+  it("evaluate uses injected env and allowlist", () => {
+    const c = createExecutionContext({
+      node: baseNode,
+      workflow: {
+        id: "w",
+        name: "t",
+        active: false,
+        nodes: [baseNode],
+        connections: {},
+        settings: {},
+      },
+      getNodeInputItems: () => [{ json: {} }],
+      continueOnFail: false,
+      env: { A: "1", B: "2" },
+      envAllowlist: ["A"],
+    });
+    expect(c.evaluate("={{ $env.A }}")).toBe("1");
+    expect(c.evaluate("={{ $env.B }}")).toBeUndefined();
+  });
 });

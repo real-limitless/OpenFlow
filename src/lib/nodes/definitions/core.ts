@@ -479,8 +479,8 @@ export const executeCommandTool: INodeTypeDescription = {
   version: 1,
   description: "Executes a shell command and returns stdout, stderr, and exit code. Use with AI agents for tool-based command execution.",
   defaults: { name: "Execute Command Tool" },
-  inputs: ["main"],
-  outputs: ["main"],
+  inputs: [],
+  outputs: ["ai_tool"],
   icon: "Terminal",
   sources: [
     "https://docs.n8n.io/integrations/builtin/core-nodes/n8n-nodes-base.executecommand/",
@@ -8119,8 +8119,8 @@ export const httpRequestTool: INodeTypeDescription = {
   version: 1,
   description: "Makes an HTTP request and returns the response. Designed for AI agent tool use.",
   defaults: { name: "HTTP Request Tool" },
-  inputs: ["main"],
-  outputs: ["main"],
+  inputs: [],
+  outputs: ["ai_tool"],
   icon: "Globe",
   credentials: [
     { name: "httpBasicAuth" },

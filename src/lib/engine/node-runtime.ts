@@ -2472,6 +2472,21 @@ export const BUILTIN_EXECUTOR_MODULES: Array<{
     exportName: "webSearchExecutor",
   },
   {
+    type: "n8n-nodes-base.webSearchTool",
+    modulePath: "./executors/webSearchTool",
+    exportName: "webSearchToolExecutor",
+  },
+  {
+    type: "n8n-nodes-base.gitTool",
+    modulePath: "./executors/gitTool",
+    exportName: "gitToolExecutor",
+  },
+  {
+    type: "n8n-nodes-base.filesystemTool",
+    modulePath: "./executors/filesystemTool",
+    exportName: "filesystemToolExecutor",
+  },
+  {
     type: "n8n-nodes-base.webflowTool",
     modulePath: "./executors/n8n-nodes-base.webflowTool",
     exportName: "webflowToolExecutor",

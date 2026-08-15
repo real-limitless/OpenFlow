@@ -30,6 +30,7 @@ Node work follows a clean-room pipeline: public docs → behavioral spec → SDK
 | [docs/install.md](docs/install.md) | Docker / production |
 | [SECURITY.md](SECURITY.md) | Secrets & reporting |
 | [docs/assistant.md](docs/assistant.md) | Editor AI assistant |
+| [docs/runtime.md](docs/runtime.md) | Lite headless embed runtime |
 | [docs/dogfood.md](docs/dogfood.md) | End-to-end fixtures |
 
 ## Questions

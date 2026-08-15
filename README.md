@@ -108,6 +108,7 @@ Turns auth on by default, disables hot-reload, binds DB/Redis to localhost only.
 - **Credentials & secrets** — encrypted vault, environments, variables, secret providers
 - **Self-hosted stack** — Hono API, Prisma + Postgres, BullMQ + Redis workers
 - **Plugin SDK** — `defineNode` authoring surface for builtins and future plugins
+- **Lite runtime** — headless `createRuntime()` to run exported JSON in another Node process ([docs/runtime.md](docs/runtime.md))
 - **Templates** — marketplace browser with compatibility badges
 
 ## Development
@@ -133,6 +134,7 @@ Or step through setup interactively: **`npm run tui`**.
 | `npm run db:migrate` | Prisma migrate (dev) |
 | `npm run db:studio` | Prisma Studio |
 | `npm run screenshots` | Capture README / marketing PNGs (Playwright) |
+| `npm run build:runtime` | Bundle lite runtime (`openflow/runtime`) |
 
 Copy `.env.example` → `.env` if you skip `setup` (it generates `CREDENTIALS_KEY` for you).
 
@@ -195,9 +197,10 @@ scripts/
   tui.sh          # Interactive manager + install wizard
   setup.sh        # Non-interactive first-time setup
   install.sh      # Docker one-line installer
-docs/
+  docs/
   onboarding.md   # New developer guide
   install.md      # Install / production notes
+  runtime.md      # Lite headless embed runtime
   clean-room.md   # Clean-room rules
   sdk/            # SDK overview + non-goals
   specs/          # Per-node behavioral specs
@@ -238,4 +241,5 @@ See [docs/clean-room.md](docs/clean-room.md) and [docs/sdk/OVERVIEW.md](docs/sdk
 | [SECURITY.md](SECURITY.md) | Secrets & reporting |
 | [CONTRIBUTING.md](CONTRIBUTING.md) | How to contribute |
 | [docs/assistant.md](docs/assistant.md) | Editor AI assistant |
+| [docs/runtime.md](docs/runtime.md) | Lite headless embed runtime |
 | [docs/clean-room.md](docs/clean-room.md) | Spec → implement pipeline |

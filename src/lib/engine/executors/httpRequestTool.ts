@@ -23,10 +23,7 @@ interface FormDataParam {
   inputDataFieldName?: string;
 }
 
-function resolveValue(
-  raw: unknown,
-  itemJson: Record<string, unknown>,
-): unknown {
+function resolveValue(raw: unknown, itemJson: Record<string, unknown>): unknown {
   if (typeof raw !== "string") return raw;
   if (raw.startsWith("{{") || raw.startsWith("=")) {
     return raw;
@@ -42,10 +39,7 @@ function safeParse(s: string): unknown {
   }
 }
 
-function getNested(
-  obj: Record<string, unknown> | undefined,
-  ...paths: string[]
-): unknown {
+function getNested(obj: Record<string, unknown> | undefined, ...paths: string[]): unknown {
   if (!obj) return undefined;
   for (const path of paths) {
     const val = path.split(".").reduce<unknown>((acc, key) => {
@@ -60,6 +54,57 @@ function getNested(
 }
 
 export const httpRequestToolExecutor: NodeExecutor = async (ctx, node) => {
+  if (ctx.getInputItems(0).length === 0) {
+    const handle = {
+      type: "n8n-nodes-base.httpRequestTool",
+      name: String(ctx.getParam("toolName", "http_request")),
+      description: String(
+        ctx.getParam("description", "Make an HTTP request and return the response body"),
+      ),
+      schema: {
+        type: "object",
+        properties: {
+          url: { type: "string", description: "Request URL" },
+          method: { type: "string", description: "HTTP method" },
+          body: { description: "Optional JSON body" },
+        },
+      },
+      async invoke(args: Record<string, unknown>) {
+        const merged = { ...node.parameters, ...args };
+        const url = String(merged.url ?? "");
+        if (ctx.allowUrl && !ctx.allowUrl(url)) {
+          throw new Error(`HTTP Request blocked by allowUrl policy: ${url}`);
+        }
+        const method = String(merged.method ?? "GET");
+        const headers: Record<string, string> = {};
+        let bodyInit: string | undefined;
+        if (merged.body !== undefined && method !== "GET" && method !== "HEAD") {
+          bodyInit = typeof merged.body === "string" ? merged.body : JSON.stringify(merged.body);
+          headers["Content-Type"] = "application/json";
+        } else if (merged.sendBody && merged.jsonBody !== undefined) {
+          bodyInit =
+            typeof merged.jsonBody === "string" ? merged.jsonBody : JSON.stringify(merged.jsonBody);
+          headers["Content-Type"] = "application/json";
+        }
+        const res = await fetch(url, { method, headers, body: bodyInit });
+        const text = await res.text();
+        if (ctx.allowUrl && !res.ok) {
+          /* still return body */
+        }
+        if (!res.ok) {
+          throw new Error(`HTTP ${res.status} ${res.statusText}`.trim());
+        }
+        try {
+          return { content: text };
+        } catch {
+          return { content: text };
+        }
+      },
+    };
+    const pairedItem = { item: 0, input: 0 };
+    return [[{ json: handle as unknown as Record<string, unknown>, pairedItem }]];
+  }
+
   const inputItems = ctx.getInputItems(0);
   const options = (node.parameters.options as Record<string, unknown>) ?? {};
   const responseOptions = (options.response as Record<string, unknown>) ?? {};
@@ -69,14 +114,10 @@ export const httpRequestToolExecutor: NodeExecutor = async (ctx, node) => {
     (options.includeResponseHeadersAndStatus as boolean) ??
     false;
   const neverError =
-    (responseOptions.neverError as boolean) ??
-    (options.neverError as boolean) ??
-    false;
+    (responseOptions.neverError as boolean) ?? (options.neverError as boolean) ?? false;
 
   const optimizeResponse =
-    (responseOptions.optimizeResponse as boolean) ??
-    (options.optimizeResponse as boolean) ??
-    false;
+    (responseOptions.optimizeResponse as boolean) ?? (options.optimizeResponse as boolean) ?? false;
 
   const results: Array<{ json: unknown }> = [];
 
@@ -85,15 +126,13 @@ export const httpRequestToolExecutor: NodeExecutor = async (ctx, node) => {
     const itemJson = (item.json ?? {}) as Record<string, unknown>;
 
     const method = (node.parameters.method as string) ?? "GET";
-    let url = String(resolveValue(node.parameters.url as string ?? "", itemJson));
+    let url = String(resolveValue((node.parameters.url as string) ?? "", itemJson));
 
     const headers: Record<string, string> = {};
 
     if (node.parameters.sendHeaders) {
       const headerContainer = node.parameters.headerParameters as
-        | { parameters?: HeaderParam[] }
-        | HeaderParam[]
-        | undefined;
+        { parameters?: HeaderParam[] } | HeaderParam[] | undefined;
       const headerParams: HeaderParam[] = Array.isArray(headerContainer)
         ? headerContainer
         : (headerContainer?.parameters ?? []);
@@ -116,16 +155,14 @@ export const httpRequestToolExecutor: NodeExecutor = async (ctx, node) => {
         headers["Content-Type"] = headers["Content-Type"] ?? "application/json";
       } else if (bodyContentType === "formUrlencoded") {
         const formContainer = node.parameters.bodyParameters as
-          | { parameters?: BodyParam[] }
-          | undefined;
+          { parameters?: BodyParam[] } | undefined;
         const params = formContainer?.parameters ?? [];
         const pairs = params.map(
           (p) =>
             `${encodeURIComponent(p.name)}=${encodeURIComponent(resolveValue(p.value, itemJson) as string)}`,
         );
         bodyInit = pairs.join("&");
-        headers["Content-Type"] =
-          headers["Content-Type"] ?? "application/x-www-form-urlencoded";
+        headers["Content-Type"] = headers["Content-Type"] ?? "application/x-www-form-urlencoded";
       } else if (bodyContentType === "raw") {
         bodyInit = (node.parameters.rawBody as string) ?? "";
         const rawCt = node.parameters.rawContentType as string | undefined;
@@ -134,8 +171,7 @@ export const httpRequestToolExecutor: NodeExecutor = async (ctx, node) => {
         }
       } else if (bodyContentType === "formData") {
         const fdContainer = node.parameters.formDataParameters as
-          | { parameters?: FormDataParam[] }
-          | undefined;
+          { parameters?: FormDataParam[] } | undefined;
         const params = fdContainer?.parameters ?? [];
         const parts: string[] = [];
         for (const p of params) {
@@ -149,8 +185,7 @@ export const httpRequestToolExecutor: NodeExecutor = async (ctx, node) => {
         headers["Content-Type"] =
           headers["Content-Type"] ?? "multipart/form-data; boundary=X-BOUNDARY";
       } else if (bodyContentType === "binaryData") {
-        const fieldName =
-          (node.parameters.binaryInputDataFieldName as string) ?? "data";
+        const fieldName = (node.parameters.binaryInputDataFieldName as string) ?? "data";
         const binaryData = item.binary?.[fieldName];
         if (binaryData) {
           bodyInit = binaryData.data;
@@ -162,9 +197,7 @@ export const httpRequestToolExecutor: NodeExecutor = async (ctx, node) => {
 
     if (node.parameters.sendQuery) {
       const queryContainer = node.parameters.queryParameters as
-        | { parameters?: QueryParam[] }
-        | QueryParam[]
-        | undefined;
+        { parameters?: QueryParam[] } | QueryParam[] | undefined;
       const queryParams: QueryParam[] = Array.isArray(queryContainer)
         ? queryContainer
         : (queryContainer?.parameters ?? []);
@@ -180,19 +213,21 @@ export const httpRequestToolExecutor: NodeExecutor = async (ctx, node) => {
     }
 
     const timeout =
-      getNested(options, "timeout") != null
-        ? Number(getNested(options, "timeout"))
-        : 10000;
-    const followRedirect =
-      getNested(responseOptions, "redirect.followRedirects", "followRedirect") as
-        | boolean
-        | undefined;
+      getNested(options, "timeout") != null ? Number(getNested(options, "timeout")) : 10000;
+    const followRedirect = getNested(
+      responseOptions,
+      "redirect.followRedirects",
+      "followRedirect",
+    ) as boolean | undefined;
     const follow =
       followRedirect !== undefined
         ? followRedirect
-        : getNested(options, "redirect.followRedirects", "followRedirect") ?? true;
+        : (getNested(options, "redirect.followRedirects", "followRedirect") ?? true);
 
     try {
+      if (ctx.allowUrl && !ctx.allowUrl(url)) {
+        throw new Error(`HTTP Request blocked by allowUrl policy: ${url}`);
+      }
       const controller = new AbortController();
       const timer = setTimeout(() => controller.abort(), timeout);
 
@@ -237,11 +272,7 @@ export const httpRequestToolExecutor: NodeExecutor = async (ctx, node) => {
       }
 
       if (optimizeResponse) {
-        responseData = await optimizeResponseData(
-          responseData,
-          responseOptions,
-          options,
-        );
+        responseData = await optimizeResponseData(responseData, responseOptions, options);
       }
 
       results.push({
@@ -251,13 +282,13 @@ export const httpRequestToolExecutor: NodeExecutor = async (ctx, node) => {
             : responseData,
       });
     } catch (err) {
-      throw new Error(
-        `HTTP Request failed: ${err instanceof Error ? err.message : String(err)}`,
-      );
+      throw new Error(`HTTP Request failed: ${err instanceof Error ? err.message : String(err)}`);
     }
   }
 
-  return [results.map((item, idx) => withPairedItem({ json: item.json }, idx))];
+  return [
+    results.map((item, idx) => withPairedItem({ json: item.json as Record<string, unknown> }, idx)),
+  ];
 };
 
 async function optimizeResponseData(
@@ -272,20 +303,20 @@ async function optimizeResponseData(
 
   if (expectedResponseType === "json") {
     const fieldContainingData =
-      (responseOptions.fieldContainingData as string) ??
-      (options.fieldContainingData as string);
+      (responseOptions.fieldContainingData as string) ?? (options.fieldContainingData as string);
     const includeFields =
-      (responseOptions.includeFields as string) ??
-      (options.includeFields as string) ??
-      "all";
-    const fields =
-      (responseOptions.fields as string) ?? (options.fields as string);
+      (responseOptions.includeFields as string) ?? (options.includeFields as string) ?? "all";
+    const fields = (responseOptions.fields as string) ?? (options.fields as string);
 
     if (fieldContainingData && typeof data === "object" && data !== null) {
       const parts = fieldContainingData.split(".");
       let current: unknown = data;
       for (const part of parts) {
-        if (current && typeof current === "object" && part in (current as Record<string, unknown>)) {
+        if (
+          current &&
+          typeof current === "object" &&
+          part in (current as Record<string, unknown>)
+        ) {
           current = (current as Record<string, unknown>)[part];
         } else {
           current = undefined;
@@ -343,8 +374,7 @@ async function optimizeResponseData(
       text = stripHtml(text);
 
       const elementsToOmit =
-        (responseOptions.elementsToOmit as string) ??
-        (options.elementsToOmit as string);
+        (responseOptions.elementsToOmit as string) ?? (options.elementsToOmit as string);
       if (elementsToOmit) {
         const selectors = elementsToOmit.split(",").map((s) => s.trim());
         for (const sel of selectors) {
@@ -374,7 +404,10 @@ async function optimizeResponseData(
 }
 
 function stripHtml(html: string): string {
-  return html.replace(/<[^>]*>/g, "").replace(/\s+/g, " ").trim();
+  return html
+    .replace(/<[^>]*>/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
 }
 
 function removeBySelector(html: string, _selector: string): string {

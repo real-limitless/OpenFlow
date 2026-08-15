@@ -2,17 +2,8 @@ import type { CreateContextOptions, ExecutionContext } from "./types";
 import { getParam, getParams } from "./helpers/params";
 import { evaluateOnItem } from "./helpers/expressions";
 
-export function createExecutionContext(
-  options: CreateContextOptions,
-): ExecutionContext {
-  const {
-    node,
-    workflow,
-    getNodeInputItems,
-    continueOnFail,
-    getCredential,
-    nodeData,
-  } = options;
+export function createExecutionContext(options: CreateContextOptions): ExecutionContext {
+  const { node, workflow, getNodeInputItems, continueOnFail, getCredential, nodeData } = options;
 
   const customData: Record<string, string> = options.customData ?? {};
 
@@ -43,7 +34,10 @@ export function createExecutionContext(
     evaluate(expression: string, itemJson: Record<string, unknown> = {}) {
       return evaluateOnItem(expression, itemJson, {
         nodeData,
-        env: typeof process !== "undefined" ? (process.env as Record<string, string>) : undefined,
+        env:
+          options.env ??
+          (typeof process !== "undefined" ? (process.env as Record<string, string>) : undefined),
+        envAllowlist: options.envAllowlist,
         vars: options.vars,
       });
     },
@@ -60,6 +54,8 @@ export function createExecutionContext(
     },
     dataTables: options.dataTables,
     vars: options.vars,
+    allowUrl: options.allowUrl,
+    fsRoot: options.fsRoot,
   };
 
   return ctx;

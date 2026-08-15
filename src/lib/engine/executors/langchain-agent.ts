@@ -215,8 +215,12 @@ function resolvePromptForItem(ctx: ExecutionContext, itemJson: Record<string, un
     return resolved != null ? String(resolved) : "";
   }
 
-  const chatInput = (itemJson as { chatInput?: unknown }).chatInput;
-  return chatInput != null ? String(chatInput) : "";
+  const auto =
+    (itemJson as { chatInput?: unknown }).chatInput ??
+    (itemJson as { userPrompt?: unknown }).userPrompt ??
+    (itemJson as { prompt?: unknown }).prompt ??
+    (itemJson as { text?: unknown }).text;
+  return auto != null ? String(auto) : "";
 }
 
 function resolveSystemMessage(
@@ -267,8 +271,15 @@ export const langchainAgentExecutor: NodeExecutor = async (ctx, node) => {
     throw new Error("A Chat Model sub-node must be connected");
   }
 
-  if (subs.tools.length === 0) {
-    throw new Error("At least one Tool sub-node must be connected");
+  const toolHandles =
+    subs.tools.length === 0
+      ? []
+      : getToolHandles(
+          ctx,
+          subs.tools.map((t) => t.name),
+        );
+  if (subs.tools.length > 0 && toolHandles.length === 0) {
+    throw new Error("Tool sub-nodes connected but no valid tool handles were produced");
   }
 
   const primaryModel = getModelHandle(ctx, subs.languageModels[0].name);
@@ -287,15 +298,6 @@ export const langchainAgentExecutor: NodeExecutor = async (ctx, node) => {
   const returnIntermediateSteps = options.returnIntermediateSteps === true;
   const maxIterations = resolveMaxIterations(options);
 
-  const toolHandles = getToolHandles(
-    ctx,
-    subs.tools.map((t) => t.name),
-  );
-  if (toolHandles.length === 0) {
-    throw new Error(
-      "Tool sub-nodes connected but no valid tool handles were produced",
-    );
-  }
   const toolDefs = toolHandles.map((t) => ({
     name: t.name,
     description: t.description,
@@ -383,7 +385,7 @@ export const langchainAgentExecutor: NodeExecutor = async (ctx, node) => {
           let observation = "";
           if (typeof tool.invoke === "function") {
             const obs = await tool.invoke(call.args ?? {});
-            observation = typeof obs === "string" ? obs : String(obs ?? "");
+            observation = observationFromMcpResult(obs);
           }
           messages.push({
             role: "tool",

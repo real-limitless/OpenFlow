@@ -48,8 +48,7 @@ export const httpRequestExecutor: NodeExecutor = async (ctx, node) => {
     const contentType = (node.parameters.contentType as string) ?? "json";
 
     if (contentType === "json") {
-      const raw = node.parameters.jsonBody;
-      const parsed = typeof raw === "string" ? safeParse(raw) : raw;
+      const parsed = resolveJsonBody(node.parameters.jsonBody, itemJson);
       bodyInit = JSON.stringify(parsed);
       headers["Content-Type"] = headers["Content-Type"] ?? "application/json";
     } else if (contentType === "form-urlencoded") {
@@ -111,11 +110,11 @@ export const httpRequestExecutor: NodeExecutor = async (ctx, node) => {
           u.searchParams.set(q.name, String(resolveValue(q.value, itemJson)));
         }
       }
-      return executeWithUrl(u.toString(), method, headers, bodyInit, node);
+      return executeWithUrl(u.toString(), method, headers, bodyInit, node, ctx.allowUrl);
     }
   }
 
-  return executeWithUrl(url, method, headers, bodyInit, node);
+  return executeWithUrl(url, method, headers, bodyInit, node, ctx.allowUrl);
 };
 
 async function executeWithUrl(
@@ -124,6 +123,7 @@ async function executeWithUrl(
   headers: Record<string, string>,
   body: string | undefined,
   node: { parameters: Record<string, unknown> },
+  allowUrl?: (url: string) => boolean,
 ): Promise<import("../../workflow/types").INodeExecutionData[][]> {
   const options = (node.parameters.options as Record<string, unknown> | undefined) ?? {};
   const responseOptions = (options.response as Record<string, unknown> | undefined) ?? {};
@@ -133,6 +133,10 @@ async function executeWithUrl(
   const fullResponse = responseOptions.fullResponse === true || options.fullResponse === true;
   const neverError = responseOptions.neverError === true || options.neverError === true;
   const responseFormat = (responseOptions.responseFormat as string) ?? "autodetect";
+
+  if (allowUrl && !allowUrl(url)) {
+    throw new Error(`HTTP Request blocked by allowUrl policy: ${url}`);
+  }
 
   try {
     const controller = new AbortController();
@@ -195,6 +199,27 @@ async function executeWithUrl(
   } catch (err) {
     throw new Error(`HTTP Request failed: ${err instanceof Error ? err.message : String(err)}`);
   }
+}
+
+function isEmptyJsonBody(raw: unknown): boolean {
+  if (raw == null || raw === "") return true;
+  if (typeof raw === "object" && !Array.isArray(raw) && Object.keys(raw as object).length === 0) {
+    return true;
+  }
+  return false;
+}
+
+/** Empty jsonBody uses incoming `$json.body` (or the whole item). String expressions are evaluated. */
+function resolveJsonBody(raw: unknown, itemJson: Record<string, unknown>): unknown {
+  if (isEmptyJsonBody(raw)) {
+    return itemJson.body !== undefined ? itemJson.body : itemJson;
+  }
+  if (typeof raw === "string") {
+    const resolved = resolveValue(raw, itemJson);
+    if (typeof resolved === "string") return safeParse(resolved);
+    return resolved;
+  }
+  return raw;
 }
 
 function safeParse(s: string): unknown {
