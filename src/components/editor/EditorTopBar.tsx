@@ -95,7 +95,7 @@ export function EditorTopBar({ actions }: { actions?: React.ReactNode }) {
   };
 
   const handleExportRuntime = () => {
-    const report = serializeForRuntime(workflow);
+    const report = serializeForRuntime(workflow, "harness");
     downloadJson(serializeWorkflow(report.workflow), ".runtime");
     if (report.unsupportedNodes.length > 0) {
       const names = report.unsupportedNodes.map((n) => n.name).join(", ");

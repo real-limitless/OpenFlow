@@ -55,6 +55,7 @@ export function createExecutionContext(options: CreateContextOptions): Execution
     dataTables: options.dataTables,
     vars: options.vars,
     allowUrl: options.allowUrl,
+    fsRoot: options.fsRoot,
   };
 
   return ctx;

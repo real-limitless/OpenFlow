@@ -81,6 +81,9 @@ export interface ExecutionContext {
    * When set, a false return blocks the request.
    */
   allowUrl?: (url: string) => boolean;
+
+  /** Jail root for filesystem / git tool paths. */
+  fsRoot?: string;
 }
 
 /**
@@ -123,4 +126,6 @@ export interface CreateContextOptions {
    * When set, a false return blocks the request.
    */
   allowUrl?: (url: string) => boolean;
+  /** Jail root for filesystem / git tool paths. */
+  fsRoot?: string;
 }

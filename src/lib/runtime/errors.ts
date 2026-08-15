@@ -1,5 +1,5 @@
 export class LiteRuntimeError extends Error {
-  readonly code: "unsupported_nodes" | "invalid_workflow" | "missing_executor";
+  readonly code: "unsupported_nodes" | "invalid_workflow" | "missing_executor" | "tool_policy";
   readonly unsupportedNodes?: Array<{ name: string; type: string }>;
 
   constructor(

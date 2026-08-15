@@ -5,10 +5,16 @@ export type {
   LiteRuntime,
   RuntimeRunOptions,
 } from "./create-runtime";
-export { LITE_NODE_TYPES, isLiteNodeType, normalizeNodeType } from "./allowlist";
-export type { LiteNodeType } from "./allowlist";
+export {
+  LITE_NODE_TYPES,
+  HARNESS_NODE_TYPES,
+  isLiteNodeType,
+  isHarnessNodeType,
+  normalizeNodeType,
+} from "./allowlist";
+export type { LiteNodeType, RuntimePreset } from "./allowlist";
 export { assertLiteCompatible, unsupportedLiteNodes } from "./validate";
-export { createLiteExecutorMap } from "./executors";
+export { createLiteExecutorMap, createRuntimeExecutorMap } from "./executors";
 export { serializeForRuntime, serializeForRuntimeJson } from "./serialize";
 export type { RuntimeCredentialSlot, RuntimeExport } from "./serialize";
 export { LiteRuntimeError } from "./errors";

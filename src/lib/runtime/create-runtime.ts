@@ -2,11 +2,11 @@ import type { CredentialData, CredentialResolver } from "../engine/credentials";
 import { executeWorkflow, type RunResult } from "../engine/runner";
 import type { INodeExecutionData, IWorkflow } from "../workflow/types";
 import { parseWorkflowJson } from "../workflow/schema";
-import { LITE_NODE_TYPES, LITE_TRIGGER_TYPES } from "./allowlist";
-import { createLiteExecutorMap } from "./executors";
+import { allowlistForPreset, LITE_TRIGGER_TYPES, type RuntimePreset } from "./allowlist";
+import { createRuntimeExecutorMap } from "./executors";
 import { LiteRuntimeError } from "./errors";
 import { denyPrivateUrls } from "./url-policy";
-import { assertLiteCompatible, unsupportedLiteNodes } from "./validate";
+import { assertLiteCompatible, assertToolPolicy, unsupportedRuntimeNodes } from "./validate";
 import { serializeForRuntime, type RuntimeExport } from "./serialize";
 
 export type LiteCredentials = CredentialResolver | Record<string, CredentialData>;
@@ -17,6 +17,9 @@ export interface CreateRuntimeOptions {
   env?: Record<string, string>;
   envAllowlist?: string[];
   allowUrl?: (url: string) => boolean;
+  preset?: RuntimePreset;
+  allowedTools?: string[];
+  fsRoot?: string;
 }
 
 export interface RuntimeRunOptions {
@@ -81,22 +84,24 @@ function resolveStartName(workflow: IWorkflow, preferred?: string | null): strin
 }
 
 export function createRuntime(options: CreateRuntimeOptions = {}): LiteRuntime {
-  const nodeExecutors = createLiteExecutorMap();
+  const preset = options.preset ?? "lite";
+  const nodeExecutors = createRuntimeExecutorMap(preset);
   const credentialResolver = makeResolver(options.credentials);
   const allowUrl = options.allowUrl ?? denyPrivateUrls;
   const env = options.env ?? {};
 
   return {
     supportedTypes() {
-      return LITE_NODE_TYPES;
+      return allowlistForPreset(preset);
     },
     validate(workflow) {
       const parsed = parseInput(workflow);
-      return serializeForRuntime(parsed);
+      return serializeForRuntime(parsed, preset);
     },
     async run(workflow, runOptions = {}) {
       const parsed = parseInput(workflow);
-      assertLiteCompatible(parsed);
+      assertLiteCompatible(parsed, preset);
+      assertToolPolicy(parsed, options.allowedTools);
       const startNode = resolveStartName(parsed, runOptions.startNode);
       const pinData = startNode != null ? { [startNode]: toPinItems(runOptions.input) } : undefined;
 
@@ -110,6 +115,7 @@ export function createRuntime(options: CreateRuntimeOptions = {}): LiteRuntime {
         env,
         envAllowlist: options.envAllowlist,
         allowUrl,
+        fsRoot: options.fsRoot,
         onProgress: runOptions.onProgress,
       });
 
@@ -117,7 +123,7 @@ export function createRuntime(options: CreateRuntimeOptions = {}): LiteRuntime {
         ([, v]) => v.status === "skipped" && v.error?.startsWith("No executor"),
       );
       if (missing.length > 0) {
-        const unsupported = unsupportedLiteNodes(parsed);
+        const unsupported = unsupportedRuntimeNodes(parsed, preset);
         throw new LiteRuntimeError(
           `Missing lite executor for: ${missing.map(([n]) => n).join(", ")}`,
           "missing_executor",

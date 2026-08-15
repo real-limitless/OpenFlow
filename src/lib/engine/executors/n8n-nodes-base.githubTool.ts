@@ -732,6 +732,49 @@ async function runOperation(
 }
 
 export const githubToolExecutor: NodeExecutor = async (ctx, node) => {
+  if (ctx.getInputItems(0).length === 0) {
+    const handle = {
+      type: "n8n-nodes-base.githubTool",
+      name: String(ctx.getParam("toolName", "github")),
+      description: String(
+        ctx.getParam(
+          "description",
+          "GitHub API: get/list files, repos, issues, and contents. Pass resource, operation, owner, repository, filePath.",
+        ),
+      ),
+      schema: {
+        type: "object",
+        properties: {
+          resource: { type: "string" },
+          operation: { type: "string" },
+          owner: { type: "string" },
+          repository: { type: "string" },
+          filePath: { type: "string" },
+          branch: { type: "string" },
+        },
+      },
+      async invoke(args: Record<string, unknown>) {
+        const merged = { ...node.parameters, ...args };
+        const { baseUrl, token } = await getCredential(ctx);
+        if (ctx.allowUrl && !ctx.allowUrl(baseUrl)) {
+          throw new Error(`HTTP Request blocked by allowUrl policy: ${baseUrl}`);
+        }
+        const resource = String(merged.resource ?? "file");
+        const operation = String(merged.operation ?? "get");
+        const results = await runOperation(
+          { parameters: merged },
+          resource,
+          operation,
+          args,
+          baseUrl,
+          token,
+        );
+        return { content: JSON.stringify(results) };
+      },
+    };
+    return [[{ json: handle as unknown as Record<string, unknown>, pairedItem: { item: 0, input: 0 } }]];
+  }
+
   const items = ensureItems(ctx.getInputItems(0));
   const out: INodeExecutionData[] = [];
   const resource = String(node.parameters.resource ?? "issue");
@@ -744,6 +787,9 @@ export const githubToolExecutor: NodeExecutor = async (ctx, node) => {
     const pairedItem = item.pairedItem ?? { item: idx, input: 0 };
     try {
       const { baseUrl, token } = await getCredential(ctx);
+      if (ctx.allowUrl && !ctx.allowUrl(baseUrl)) {
+        throw new Error(`HTTP Request blocked by allowUrl policy: ${baseUrl}`);
+      }
       const results = await runOperation(node, resource, operation, itemJson, baseUrl, token);
       for (const r of results) {
         out.push({ json: r, pairedItem });

@@ -76,6 +76,8 @@ export interface RunOptions {
    * Optional URL policy forwarded to HTTP-capable nodes via the execution context.
    */
   allowUrl?: (url: string) => boolean;
+  /** Jail root for filesystem / git tool paths. */
+  fsRoot?: string;
   /**
    * Optional start node (usually a trigger name). When set, only that node and
    * its downstream graph run — like n8n’s “execute this trigger”.
@@ -322,6 +324,7 @@ export async function executeWorkflow(options: RunOptions): Promise<RunResult> {
             env: resolvedEnv,
             envAllowlist: options.envAllowlist,
             allowUrl: options.allowUrl,
+            fsRoot: options.fsRoot,
           });
 
           if (!childResult.success) {
@@ -359,6 +362,7 @@ export async function executeWorkflow(options: RunOptions): Promise<RunResult> {
           env: resolvedEnv,
           envAllowlist: options.envAllowlist,
           allowUrl: options.allowUrl,
+          fsRoot: options.fsRoot,
         });
 
         outputs = await executor(ctx, resolvedNode);

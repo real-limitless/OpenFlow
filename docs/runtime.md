@@ -38,12 +38,45 @@ Wire type strings are JSON identifiers (`n8n-nodes-base.*`). Prefix-stripped ali
 | `set` | Assign fields |
 | `if`, `switch` | Branch |
 | `merge`, `filter`, `noOp` | Combine / keep / pass-through |
-| `httpRequest` | `fetch`; credentials + `allowUrl` |
+| `httpRequest` | `fetch`; credentials + `allowUrl`. Empty `jsonBody` posts incoming `$json.body` (or the whole item). String `jsonBody` expressions are evaluated. |
 | `code` | JavaScript only (`isolated-vm`). Python throws. |
 | `function`, `functionItem` | Aliases of Code |
 | `stickyNote` | Ignored |
 
-Anything else (Slack, databases, AI agents, webhooks, schedules, file/binary nodes, …) **fails validation before run**. Disabled unsupported nodes still fail — fail-closed.
+Anything else (Slack, databases, webhooks, schedules, …) **fails validation before run** on the default `lite` preset. Disabled unsupported nodes still fail — fail-closed.
+
+## Harness preset (AI Agent)
+
+`createRuntime({ preset: "harness" })` adds an Agent cluster plus coding-agent tools. Export → For runtime… validates against this preset.
+
+| Type | Role |
+|------|------|
+| `@n8n/n8n-nodes-langchain.agent` | Agent loop. `promptType: auto` reads `chatInput` / `userPrompt` / `prompt` / `text`. Zero tools allowed (clean stages). |
+| `…lmChatOpenRouter` | Chat model. Bind `openRouterApi: { apiKey }` on the host. |
+| `httpRequestTool` | `web_fetch` — `ai_tool` handle; `$fromAI()` via invoke args |
+| `webSearchTool` | `web_search` |
+| `githubTool` | GitHub file/repo/issue API |
+| `gitTool` | clone / showFile / log (jailed to `fsRoot`) |
+| `filesystemTool` | read / glob / grep (requires `fsRoot`) |
+| `executeCommandTool` | Last-resort bash |
+
+Aliases `openflow-node-langchain.*` and `openflow-node-base.*` resolve to the same executors.
+
+```ts
+const runtime = createRuntime({
+  preset: "harness",
+  credentials: { openRouterApi: { apiKey: process.env.OPENROUTER_API_KEY } },
+  allowUrl: (url) => url.startsWith("https://"),
+  allowedTools: ["httpRequestTool", "webSearchTool", "githubTool"],
+  fsRoot: "/tmp/dirty-workspace",
+});
+runtime.validate(orchestrate);
+await runtime.run(orchestrate, { input: { userPrompt: "…", license: "Apache-2.0" } });
+```
+
+**Dirty vs clean:** omit `allowedTools` (or list fetch/search/git/fs) for Orchestrate/Spec. Pass `allowedTools: []` (or no tool nodes) for Reveal/Improve/Implement/Check. Extra tools throw `LiteRuntimeError` (`tool_policy`).
+
+Prefer domain tools over `executeCommandTool`. `allowUrl` applies to HTTP tool, GitHub, search, and git remotes. Default still denies private/metadata hosts.
 
 ## Export a workflow
 
@@ -106,7 +139,17 @@ try {
 }
 ```
 
-`@/lib/runtime` is the in-tree entry (`src/lib/runtime`). There is no published npm package yet.
+**Import**
+
+```ts
+// After `npm run build:runtime` — works from another package that depends on this repo
+import { createRuntime } from "openflow/runtime";
+
+// In this repo (Vite / tsconfig `@/` alias)
+import { createRuntime } from "@/lib/runtime";
+```
+
+The package is still `private`. `exports["./runtime"]` points at `dist/runtime/` (run `npm run build:runtime` first). `isolated-vm` is loaded only when a Code node runs.
 
 ### `createRuntime(options)`
 
@@ -233,13 +276,19 @@ The full product engine does **not** apply this policy unless you pass `allowUrl
 - Do not run untrusted Code in multi-tenant embeds ([SDK non-goals](sdk/NON_GOALS.md)).
 - Export never includes secret values — only slot names.
 
-## Tests
+## Tests and bundle
 
 ```sh
+npm run build:runtime
 npx vitest run src/lib/runtime
 ```
 
-Covers allowlist rejection, Set → IF, HTTP + credentials, private-URL block, `$env` isolation, Code JS, and an import-graph gate (runtime must not pull Prisma, BullMQ, `src/server`, or the full executor registry).
+Covers allowlist rejection, Set → IF, HTTP + credentials, private-URL block, `$env` isolation, Code JS, harness Agent smoke, an import-graph gate (no Prisma / BullMQ / full executor registry), and a bundle-size gate (`dist/runtime/index.js` < 1.2 MB).
+
+`npm run build:runtime` writes:
+
+- `dist/runtime/index.js` — ESM bundle (`isolated-vm` external)
+- `dist/runtime/index.d.ts` — public types
 
 ## Layout
 
@@ -257,8 +306,8 @@ src/lib/runtime/
 
 Kernel hooks used by lite (also available to the full engine):
 
-- `RunOptions.env` / `envAllowlist` / `allowUrl` in `src/lib/engine/runner.ts`
-- `CreateContextOptions.env` / `allowUrl` in `src/sdk`
+- `RunOptions.env` / `envAllowlist` / `allowUrl` / `fsRoot` in `src/lib/engine/runner.ts`
+- `CreateContextOptions.env` / `allowUrl` / `fsRoot` in `src/sdk`
 
 ## Lite vs full engine
 
@@ -273,7 +322,7 @@ Kernel hooks used by lite (also available to the full engine):
 
 ## Non-goals
 
-- Published `@openflow/runtime` npm package (in-tree entry only)
+- Published `@openflow/runtime` npm package (use `openflow/runtime` from this repo after `build:runtime`)
 - Browser / WASM / script-tag engine
 - Full catalog as optional add-ons
 - Webhooks, cron, data tables, binary FS/S3

@@ -1,6 +1,7 @@
 import type { INode, IWorkflow } from "../workflow/types";
 import { serializeWorkflow } from "../workflow/schema";
-import { unsupportedLiteNodes } from "./validate";
+import { unsupportedRuntimeNodes } from "./validate";
+import type { RuntimePreset } from "./allowlist";
 
 export interface RuntimeCredentialSlot {
   slot: string;
@@ -33,7 +34,10 @@ function stripNodeCredentials(node: INode): {
   return { node: { ...node, credentials: kept }, slots };
 }
 
-export function serializeForRuntime(workflow: IWorkflow): RuntimeExport {
+export function serializeForRuntime(
+  workflow: IWorkflow,
+  preset: RuntimePreset = "lite",
+): RuntimeExport {
   const requiredCredentials: RuntimeCredentialSlot[] = [];
   const nodes = workflow.nodes.map((n) => {
     const { node, slots } = stripNodeCredentials(n);
@@ -41,10 +45,10 @@ export function serializeForRuntime(workflow: IWorkflow): RuntimeExport {
     return node;
   });
   const next: IWorkflow = { ...workflow, nodes };
-  const unsupportedNodes = unsupportedLiteNodes(next);
+  const unsupportedNodes = unsupportedRuntimeNodes(next, preset);
   const warnings: string[] = [];
   if (unsupportedNodes.length > 0) {
-    warnings.push(`${unsupportedNodes.length} node(s) are not supported by the lite runtime`);
+    warnings.push(`${unsupportedNodes.length} node(s) are not supported by the ${preset} runtime`);
   }
   if (requiredCredentials.length > 0) {
     warnings.push(`${requiredCredentials.length} credential slot(s) must be bound by the host`);

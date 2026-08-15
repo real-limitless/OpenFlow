@@ -1,0 +1,59 @@
+{
+  "name": "Harness Agent OpenRouter HTTP",
+  "active": false,
+  "nodes": [
+    {
+      "id": "start",
+      "name": "Start",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [0, 0],
+      "parameters": {}
+    },
+    {
+      "id": "agent",
+      "name": "Agent",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1,
+      "position": [240, 0],
+      "parameters": {
+        "promptType": "auto",
+        "options": {
+          "systemMessage": "={{ $json.license ? 'License: ' + $json.license : '' }}",
+          "maxIterations": 8
+        }
+      }
+    },
+    {
+      "id": "model",
+      "name": "OpenRouter",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenRouter",
+      "typeVersion": 1,
+      "position": [240, -160],
+      "parameters": { "model": "openai/gpt-4o-mini" },
+      "credentials": { "openRouterApi": { "name": "OpenRouter" } }
+    },
+    {
+      "id": "http",
+      "name": "HTTP Request Tool",
+      "type": "n8n-nodes-base.httpRequestTool",
+      "typeVersion": 1,
+      "position": [240, 180],
+      "parameters": {
+        "method": "GET",
+        "url": "",
+        "description": "Fetch a URL and return the response body"
+      }
+    }
+  ],
+  "connections": {
+    "Start": { "main": [[{ "node": "Agent", "type": "main", "index": 0 }]] },
+    "OpenRouter": {
+      "ai_languageModel": [[{ "node": "Agent", "type": "ai_languageModel", "index": 0 }]]
+    },
+    "HTTP Request Tool": {
+      "ai_tool": [[{ "node": "Agent", "type": "ai_tool", "index": 0 }]]
+    }
+  },
+  "settings": {}
+}
