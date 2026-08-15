@@ -3,7 +3,7 @@ import { parseWorkflowJson } from "../../lib/workflow/schema";
 import type { IWorkflow } from "../../lib/workflow/types";
 import * as mutations from "../../lib/workflow/mutations";
 import { deserializeJsonFields, KNOWN_WORKFLOW_FIELDS, serializeJsonFields } from "./workflow-io";
-import { emitWorkflowEvent } from "./workflow-events";
+import { emitWorkflowEvent, notifyExecutionStarted } from "./workflow-events";
 import { allNodeTypes, getNodeType } from "../../lib/nodes/registry";
 import { enqueueOrRun } from "../execute";
 import { ensurePersonalProject } from "./projects";
@@ -93,17 +93,41 @@ export async function saveWorkflow(
   return saved;
 }
 
+/** Serialize load→mutate→save per workflow so concurrent MCP/editor tools don't clobber each other. */
+const workflowMutationTails = new Map<string, Promise<unknown>>();
+
+async function withWorkflowLock<T>(workflowId: string, fn: () => Promise<T>): Promise<T> {
+  const prev = workflowMutationTails.get(workflowId) ?? Promise.resolve();
+  let release!: () => void;
+  const gate = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  const tail = prev.then(() => gate, () => gate);
+  workflowMutationTails.set(workflowId, tail);
+  await prev.catch(() => undefined);
+  try {
+    return await fn();
+  } finally {
+    release();
+    if (workflowMutationTails.get(workflowId) === tail) {
+      workflowMutationTails.delete(workflowId);
+    }
+  }
+}
+
 async function withWorkflow<T>(
   workflowId: string,
   source: string,
   userId: string,
   fn: (wf: IWorkflow) => mutations.MutationResult<T> | Promise<mutations.MutationResult<T>>,
 ): Promise<{ workflow: IWorkflow; result: T }> {
-  const current = await loadWorkflow(workflowId);
-  if (!current) throw new Error(`Workflow not found: ${workflowId}`);
-  const { workflow, result } = await fn(current);
-  const saved = await saveWorkflow(workflowId, { ...workflow, id: workflowId }, userId, source);
-  return { workflow: saved, result };
+  return withWorkflowLock(workflowId, async () => {
+    const current = await loadWorkflow(workflowId);
+    if (!current) throw new Error(`Workflow not found: ${workflowId}`);
+    const { workflow, result } = await fn(current);
+    const saved = await saveWorkflow(workflowId, { ...workflow, id: workflowId }, userId, source);
+    return { workflow: saved, result };
+  });
 }
 
 export async function editorGetWorkflow(workflowId: string) {
@@ -124,7 +148,7 @@ export async function editorListNodeTypes(query?: string, limit = 40) {
         (t.category ?? "").toLowerCase().includes(q),
     );
   }
-  return types.slice(0, Math.min(100, Math.max(1, limit))).map((t) => ({
+  const items = types.slice(0, Math.min(100, Math.max(1, limit))).map((t) => ({
     name: t.name,
     displayName: t.displayName,
     description: t.description,
@@ -133,6 +157,7 @@ export async function editorListNodeTypes(query?: string, limit = 40) {
     outputs: t.outputs,
     version: t.version,
   }));
+  return { count: items.length, items };
 }
 
 export async function editorGetNodeType(type: string) {
@@ -273,11 +298,7 @@ export async function editorExecute(workflowId: string, userId = "local") {
     },
   });
   await enqueueOrRun(workflowId, execution.id, "manual", wf.pinData, wf, ownerId, row.projectId);
-  emitWorkflowEvent({
-    type: "execution.started",
-    workflowId,
-    executionId: execution.id,
-  });
+  notifyExecutionStarted(workflowId, execution.id, "manual");
   return { executionId: execution.id };
 }
 
@@ -321,7 +342,7 @@ export async function editorListCredentials(userId = "local") {
     select: { id: true, name: true, type: true },
     orderBy: { name: "asc" },
   });
-  return rows;
+  return { count: rows.length, items: rows };
 }
 
 export function editorSelectNode(workflowId: string, nodeName: string | null) {

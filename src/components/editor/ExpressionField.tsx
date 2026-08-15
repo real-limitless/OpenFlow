@@ -92,6 +92,12 @@ interface Props {
 function Preview({ value, context }: { value: string; context: ExpressionContext }) {
   const result = useMemo(() => evaluateExpression(value, context), [value, context]);
   if (result.literal) return null;
+  const emptyInput =
+    result.ok &&
+    result.value === undefined &&
+    context.json != null &&
+    typeof context.json === "object" &&
+    Object.keys(context.json as object).length === 0;
   return (
     <div className="rounded-md border border-border bg-background/60 px-2.5 py-1.5">
       <p className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
@@ -109,6 +115,11 @@ function Preview({ value, context }: { value: string; context: ExpressionContext
             : String(result.value)
           : result.error}
       </p>
+      {emptyInput && (
+        <p className="mt-1 text-[10px] leading-snug text-muted-foreground">
+          No input data — pin upstream output or use Execute previous nodes.
+        </p>
+      )}
     </div>
   );
 }

@@ -142,6 +142,21 @@ export const toolWorkflowExecutor: NodeExecutor = async (ctx) => {
   const handle: ToolHandle = {
     name,
     description,
+    inputSchema: {
+      type: "object",
+      properties: {
+        query: {
+          type: "string",
+          description: "Primary natural-language or structured input for the sub-workflow",
+        },
+        input: {
+          type: "string",
+          description: "Optional alternate payload string passed through to the sub-workflow",
+        },
+      },
+      additionalProperties: true,
+      required: [],
+    },
     invoke: (args: Record<string, unknown>) => invokeToolWorkflow(ctx, args),
   };
 

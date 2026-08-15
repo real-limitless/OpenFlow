@@ -56,9 +56,23 @@ export function deserializeJsonFields(row: Record<string, unknown>): IWorkflow {
       try {
         out[key] = JSON.parse(out[key] as string);
       } catch {
-        out[key] = null;
+        out[key] = key === "settings" || key === "connections" ? {} : key === "nodes" ? [] : null;
       }
     }
+  }
+  // DB null / missing JSON blobs → safe empty values so parseWorkflowJson accepts the graph
+  if (out.settings == null || typeof out.settings !== "object" || Array.isArray(out.settings)) {
+    out.settings = {};
+  }
+  if (out.connections == null || typeof out.connections !== "object" || Array.isArray(out.connections)) {
+    out.connections = {};
+  }
+  if (!Array.isArray(out.nodes)) {
+    out.nodes = [];
+  }
+  // Optional object fields: drop null so zod optional() does not see "received null"
+  for (const key of ["pinData", "staticData", "meta"] as const) {
+    if (out[key] == null) delete out[key];
   }
   if (typeof out.extra === "string") {
     try {

@@ -4,6 +4,7 @@
  */
 import type { NodeExecutor } from "@/sdk";
 import type { INodeTypeDescription } from "@/lib/nodes/types";
+import { openflowRepoBase, toCanonicalType, typeKeys } from "@/lib/nodes/type-ids";
 
 const executors = new Map<string, NodeExecutor>();
 const descriptions = new Map<string, INodeTypeDescription>();
@@ -28,12 +29,14 @@ export function seedBuiltinExecutors(): void {
   seeded = true;
 }
 
+/** All keys that resolve to the same node (canonical + n8n wire + legacy). */
 function dualKeys(type: string): string[] {
-  const keys = [type];
-  if (type.startsWith("n8n-")) {
-    keys.push(type.replace(/^n8n-/, ""));
-  }
-  return keys;
+  return typeKeys(type);
+}
+
+function resolveTypeKey(type: string): string {
+  const viaAlias = aliases.get(type) ?? type;
+  return toCanonicalType(viaAlias);
 }
 
 export function registerExecutor(type: string, executor: NodeExecutor): void {
@@ -42,14 +45,34 @@ export function registerExecutor(type: string, executor: NodeExecutor): void {
   }
 }
 
+/** Fill required UI fields so incomplete clean-room defs cannot crash the editor. */
+function normalizeDescription(description: INodeTypeDescription): INodeTypeDescription {
+  const canonicalName = toCanonicalType(description.name);
+  return {
+    ...description,
+    name: canonicalName,
+    inputs: description.inputs ?? [],
+    outputs: description.outputs ?? [],
+    properties: description.properties ?? [],
+    sources: description.sources ?? [],
+    group: Array.isArray(description.group) ? description.group : ["transform"],
+    icon: description.icon || "Box",
+  };
+}
+
 export function registerDescription(description: INodeTypeDescription): void {
-  for (const key of dualKeys(description.name)) {
-    descriptions.set(key, description);
+  const normalized = normalizeDescription(description);
+  for (const key of dualKeys(normalized.name)) {
+    descriptions.set(key, normalized);
   }
 }
 
 export function registerAlias(fromType: string, toType: string): void {
-  aliases.set(fromType, toType);
+  const target = toCanonicalType(toType);
+  for (const key of dualKeys(fromType)) {
+    aliases.set(key, target);
+  }
+  aliases.set(fromType, target);
 }
 
 export function registerNode(options: {
@@ -62,13 +85,21 @@ export function registerNode(options: {
 }
 
 export function getExecutor(type: string): NodeExecutor | undefined {
-  const resolved = aliases.get(type) ?? type;
-  return executors.get(resolved);
+  const resolved = resolveTypeKey(type);
+  return (
+    executors.get(type) ??
+    executors.get(resolved) ??
+    executors.get(toCanonicalType(type))
+  );
 }
 
 export function getDescription(type: string): INodeTypeDescription | undefined {
-  const resolved = aliases.get(type) ?? type;
-  return descriptions.get(resolved);
+  const resolved = resolveTypeKey(type);
+  return (
+    descriptions.get(type) ??
+    descriptions.get(resolved) ??
+    descriptions.get(toCanonicalType(type))
+  );
 }
 
 export function hasExecutor(type: string): boolean {
@@ -86,8 +117,33 @@ export function hasExecutor(type: string): boolean {
  * bundle. Falls back to the live registry so runtime-registered plugins count.
  */
 export function hasBuiltinExecutor(type: string): boolean {
-  const resolved = aliases.get(type) ?? type;
-  return builtinExecutorTypes.has(resolved) || executors.has(resolved);
+  for (const key of dualKeys(resolveTypeKey(type))) {
+    if (builtinExecutorTypes.has(key) || executors.has(key)) return true;
+  }
+  return builtinExecutorTypes.has(type) || executors.has(type);
+}
+
+/**
+ * Repo-relative path to the builtin executor source for `type`, e.g.
+ * `src/lib/engine/executors/http-request.ts`. Safe for UI (reads the static
+ * manifest only — does not import executor modules).
+ */
+export function getBuiltinExecutorSourcePath(type: string): string | null {
+  const canonical = toCanonicalType(type);
+  const entry = BUILTIN_EXECUTOR_MODULES.find(
+    (e) => toCanonicalType(e.type) === canonical || typeKeys(e.type).includes(type),
+  );
+  if (!entry?.modulePath) return null;
+  // modulePath is like "./executors/http-request" relative to src/lib/engine/
+  const rel = entry.modulePath.replace(/^\.\//, "").replace(/\.ts$/i, "");
+  return `src/lib/engine/${rel}.ts`;
+}
+
+/** GitHub blob URL for the node executor source, or null if unregistered. */
+export function executorSourceBlobUrl(type: string, branch = "main"): string | null {
+  const path = getBuiltinExecutorSourcePath(type);
+  if (!path) return null;
+  return `${openflowRepoBase()}/blob/${branch}/${path}`;
 }
 
 /**
@@ -101,11 +157,11 @@ export function hasBuiltinExecutor(type: string): boolean {
 export function getExecutorUnavailability(
   type: string,
 ): { setter: string; reason: string } | null {
-  const resolved = aliases.get(type) ?? type;
-  // Deliberately does not consult the live `executors` map: seedBuiltinExecutors
-  // registers these very executors, so presence there proves nothing about
-  // whether a transport was supplied.
-  return builtinUnavailable.get(resolved) ?? null;
+  for (const key of dualKeys(resolveTypeKey(type))) {
+    const u = builtinUnavailable.get(key);
+    if (u) return u;
+  }
+  return builtinUnavailable.get(type) ?? null;
 }
 
 export function listUnavailableExecutorTypes(): string[] {
@@ -115,8 +171,15 @@ export function listUnavailableExecutorTypes(): string[] {
 export function listExecutorTypes(): string[] {
   const types = new Set<string>();
   for (const key of executors.keys()) {
-    if (key.startsWith("n8n-nodes-base.") || key.startsWith("openflow.")) {
-      types.add(key);
+    if (
+      key.startsWith("openflow-node-base.") ||
+      key.startsWith("openflow-node-langchain.") ||
+      key.startsWith("openflow.") ||
+      key.startsWith("n8n-nodes-base.") ||
+      key.startsWith("@n8n/")
+    ) {
+      // Prefer canonical form in listings
+      types.add(toCanonicalType(key));
     }
   }
   return [...types].sort();
@@ -205,294 +268,294 @@ export const BUILTIN_EXECUTOR_MODULES: Array<{
   unavailable?: { setter: string; reason: string };
 }> = [
   {
-    type: "n8n-nodes-base.manualTrigger",
+    type: "openflow-node-base.manualTrigger",
     modulePath: "./executors/manual-trigger",
     exportName: "manualTriggerExecutor",
   },
-  { type: "n8n-nodes-base.set", modulePath: "./executors/set", exportName: "setExecutor" },
-  { type: "n8n-nodes-base.noOp", modulePath: "./executors/noop", exportName: "noopExecutor" },
+  { type: "openflow-node-base.set", modulePath: "./executors/set", exportName: "setExecutor" },
+  { type: "openflow-node-base.noOp", modulePath: "./executors/noop", exportName: "noopExecutor" },
   {
-    type: "n8n-nodes-base.automizy",
+    type: "openflow-node-base.automizy",
     modulePath: "./executors/n8n-nodes-base.automizy",
     exportName: "automizyExecutor",
   },
   {
-    type: "n8n-nodes-base.moveBinaryData",
+    type: "openflow-node-base.moveBinaryData",
     modulePath: "./executors/move-binary-data",
     exportName: "moveBinaryDataExecutor",
   },
-  { type: "n8n-nodes-base.if", modulePath: "./executors/if", exportName: "ifExecutor" },
+  { type: "openflow-node-base.if", modulePath: "./executors/if", exportName: "ifExecutor" },
   {
-    type: "n8n-nodes-base.httpRequest",
+    type: "openflow-node-base.httpRequest",
     modulePath: "./executors/http-request",
     exportName: "httpRequestExecutor",
   },
-  { type: "n8n-nodes-base.code", modulePath: "./executors/code", exportName: "codeExecutor" },
+  { type: "openflow-node-base.code", modulePath: "./executors/code", exportName: "codeExecutor" },
   {
-    type: "n8n-nodes-base.aiTransform",
+    type: "openflow-node-base.aiTransform",
     modulePath: "./executors/aiTransform",
     exportName: "aiTransformExecutor",
   },
   {
-    type: "n8n-nodes-base.webhook",
+    type: "openflow-node-base.webhook",
     modulePath: "./executors/webhook",
     exportName: "webhookExecutor",
   },
   {
-    type: "n8n-nodes-base.respondToWebhook",
+    type: "openflow-node-base.respondToWebhook",
     modulePath: "./executors/respond-to-webhook",
     exportName: "respondToWebhookExecutor",
   },
   {
-    type: "n8n-nodes-base.switch",
+    type: "openflow-node-base.switch",
     modulePath: "./executors/switch",
     exportName: "switchExecutor",
   },
-  { type: "n8n-nodes-base.merge", modulePath: "./executors/merge", exportName: "mergeExecutor" },
+  { type: "openflow-node-base.merge", modulePath: "./executors/merge", exportName: "mergeExecutor" },
   {
-    type: "n8n-nodes-base.compareDatasets",
+    type: "openflow-node-base.compareDatasets",
     modulePath: "./executors/compare-datasets",
     exportName: "compareDatasetsExecutor",
   },
-  { type: "n8n-nodes-base.wait", modulePath: "./executors/wait", exportName: "waitExecutor" },
+  { type: "openflow-node-base.wait", modulePath: "./executors/wait", exportName: "waitExecutor" },
   {
-    type: "n8n-nodes-base.splitOut",
+    type: "openflow-node-base.splitOut",
     modulePath: "./executors/split-out",
     exportName: "splitOutExecutor",
   },
   {
-    type: "n8n-nodes-base.aggregate",
+    type: "openflow-node-base.aggregate",
     modulePath: "./executors/aggregate",
     exportName: "aggregateExecutor",
   },
   {
-    type: "n8n-nodes-base.summarize",
+    type: "openflow-node-base.summarize",
     modulePath: "./executors/summarize",
     exportName: "summarizeExecutor",
   },
   {
-    type: "n8n-nodes-base.filter",
+    type: "openflow-node-base.filter",
     modulePath: "./executors/filter",
     exportName: "filterExecutor",
   },
-  { type: "n8n-nodes-base.limit", modulePath: "./executors/limit", exportName: "limitExecutor" },
+  { type: "openflow-node-base.limit", modulePath: "./executors/limit", exportName: "limitExecutor" },
   {
-    type: "n8n-nodes-base.removeDuplicates",
+    type: "openflow-node-base.removeDuplicates",
     modulePath: "./executors/remove-duplicates",
     exportName: "removeDuplicatesExecutor",
   },
   {
-    type: "n8n-nodes-base.itemLists",
+    type: "openflow-node-base.itemLists",
     modulePath: "./executors/item-lists",
     exportName: "itemListsExecutor",
   },
   {
-    type: "n8n-nodes-base.dateTime",
+    type: "openflow-node-base.dateTime",
     modulePath: "./executors/date-time",
     exportName: "dateTimeExecutor",
   },
   {
-    type: "n8n-nodes-base.splitInBatches",
+    type: "openflow-node-base.splitInBatches",
     modulePath: "./executors/split-in-batches",
     exportName: "splitInBatchesExecutor",
   },
   {
-    type: "n8n-nodes-base.executeWorkflow",
+    type: "openflow-node-base.executeWorkflow",
     modulePath: "./executors/execute-workflow",
     exportName: "executeWorkflowExecutor",
   },
   {
-    type: "n8n-nodes-base.executeWorkflowTrigger",
+    type: "openflow-node-base.executeWorkflowTrigger",
     modulePath: "./executors/execute-workflow-trigger",
     exportName: "executeWorkflowTriggerExecutor",
   },
   {
-    type: "n8n-nodes-base.executeCommandTool",
+    type: "openflow-node-base.executeCommandTool",
     modulePath: "./executors/executeCommandTool",
     exportName: "executeCommandToolExecutor",
   },
   {
-    type: "n8n-nodes-base.stopAndError",
+    type: "openflow-node-base.stopAndError",
     modulePath: "./executors/stop-and-error",
     exportName: "stopAndErrorExecutor",
   },
   {
-    type: "n8n-nodes-base.scheduleTrigger",
+    type: "openflow-node-base.scheduleTrigger",
     modulePath: "./executors/schedule-trigger",
     exportName: "scheduleTriggerExecutor",
   },
   {
-    type: "n8n-nodes-base.sort",
+    type: "openflow-node-base.sort",
     modulePath: "./executors/sort",
     exportName: "sortExecutor",
   },
   {
-    type: "n8n-nodes-base.renameKeys",
+    type: "openflow-node-base.renameKeys",
     modulePath: "./executors/rename-keys",
     exportName: "renameKeysExecutor",
   },
   {
-    type: "n8n-nodes-base.errorTrigger",
+    type: "openflow-node-base.errorTrigger",
     modulePath: "./executors/error-trigger",
     exportName: "errorTriggerExecutor",
   },
   {
-    type: "n8n-nodes-base.ftp",
+    type: "openflow-node-base.ftp",
     modulePath: "./executors/ftp",
     exportName: "ftpExecutor",
   },
   {
-    type: "n8n-nodes-base.ssh",
+    type: "openflow-node-base.ssh",
     modulePath: "./executors/ssh",
     exportName: "sshExecutor",
   },
   {
-    type: "n8n-nodes-base.convertToFile",
+    type: "openflow-node-base.convertToFile",
     modulePath: "./executors/convert-to-file",
     exportName: "convertToFileExecutor",
   },
   {
-    type: "n8n-nodes-base.extractFromFile",
+    type: "openflow-node-base.extractFromFile",
     modulePath: "./executors/extract-from-file",
     exportName: "extractFromFileExecutor",
   },
   {
-    type: "n8n-nodes-base.readPDF",
+    type: "openflow-node-base.readPDF",
     modulePath: "./executors/read-pdf",
     exportName: "readPDFExecutor",
   },
   {
-    type: "n8n-nodes-base.spreadsheetFile",
+    type: "openflow-node-base.spreadsheetFile",
     modulePath: "./executors/spreadsheet-file",
     exportName: "spreadsheetFileExecutor",
   },
   {
-    type: "n8n-nodes-base.readBinaryFile",
+    type: "openflow-node-base.readBinaryFile",
     modulePath: "./executors/readBinaryFile",
     exportName: "readBinaryFileExecutor",
   },
   {
-    type: "n8n-nodes-base.readWriteFile",
+    type: "openflow-node-base.readWriteFile",
     modulePath: "./executors/readWriteFile",
     exportName: "readWriteFileExecutor",
   },
   {
-    type: "n8n-nodes-base.readBinaryFiles",
+    type: "openflow-node-base.readBinaryFiles",
     modulePath: "./executors/readBinaryFiles",
     exportName: "readBinaryFilesExecutor",
   },
   {
-    type: "n8n-nodes-base.writeBinaryFile",
+    type: "openflow-node-base.writeBinaryFile",
     modulePath: "./executors/write-binary-file",
     exportName: "writeBinaryFileExecutor",
   },
   {
-    type: "n8n-nodes-base.rssFeedRead",
+    type: "openflow-node-base.rssFeedRead",
     modulePath: "./executors/rss-feed-read",
     exportName: "rssFeedReadExecutor",
   },
   {
-    type: "n8n-nodes-base.rssFeedReadTrigger",
+    type: "openflow-node-base.rssFeedReadTrigger",
     modulePath: "./executors/rss-feed-read-trigger",
     exportName: "rssFeedReadTriggerExecutor",
   },
   {
-    type: "n8n-nodes-base.emailSend",
+    type: "openflow-node-base.emailSend",
     modulePath: "./executors/email-send",
     exportName: "emailSendExecutor",
   },
   {
-    type: "n8n-nodes-base.dataTable",
+    type: "openflow-node-base.dataTable",
     modulePath: "./executors/data-table",
     exportName: "dataTableExecutor",
   },
   {
-    type: "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+    type: "openflow-node-langchain.lmChatOpenAi",
     modulePath: "./executors/lm-chat-openai",
     exportName: "lmChatOpenAiExecutor",
   },
   {
-    type: "@n8n/n8n-nodes-langchain.lmOpenAi",
+    type: "openflow-node-langchain.lmOpenAi",
     modulePath: "./executors/lm-openai",
     exportName: "lmOpenAiExecutor",
   },
   {
-    type: "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+    type: "openflow-node-langchain.lmChatGoogleGemini",
     modulePath: "./executors/lm-chat-google-gemini",
     exportName: "lmChatGoogleGeminiExecutor",
   },
   {
-    type: "@n8n/n8n-nodes-langchain.lmChatAnthropic",
+    type: "openflow-node-langchain.lmChatAnthropic",
     modulePath: "./executors/lm-chat-anthropic",
     exportName: "lmChatAnthropicExecutor",
   },
   {
-    type: "@n8n/n8n-nodes-langchain.lmChatOllama",
+    type: "openflow-node-langchain.lmChatOllama",
     modulePath: "./executors/lm-chat-ollama",
     exportName: "lmChatOllamaExecutor",
   },
   {
-    type: "@n8n/n8n-nodes-langchain.lmChatOpenRouter",
+    type: "openflow-node-langchain.lmChatOpenRouter",
     modulePath: "./executors/lm-chat-open-router",
     exportName: "lmChatOpenRouterExecutor",
   },
   {
-    type: "@n8n/n8n-nodes-langchain.agent",
+    type: "openflow-node-langchain.agent",
     modulePath: "./executors/langchain-agent",
     exportName: "langchainAgentExecutor",
   },
   {
-    type: "@n8n/n8n-nodes-langchain.chainRetrievalQa",
+    type: "openflow-node-langchain.chainRetrievalQa",
     modulePath: "./executors/langchain-chain-retrieval-qa",
     exportName: "langchainChainRetrievalQaExecutor",
   },
   {
-    type: "@n8n/n8n-nodes-langchain.chainSummarization",
+    type: "openflow-node-langchain.chainSummarization",
     modulePath: "./executors/langchain-chain-summarization",
     exportName: "langchainChainSummarizationExecutor",
   },
   {
-    type: "@n8n/n8n-nodes-langchain.chainLlm",
+    type: "openflow-node-langchain.chainLlm",
     modulePath: "./executors/chain-llm",
     exportName: "chainLlmExecutor",
   },
   {
-    type: "@n8n/n8n-nodes-langchain.outputParserStructured",
+    type: "openflow-node-langchain.outputParserStructured",
     modulePath: "./executors/langchain-output-parser-structured",
     exportName: "langchainOutputParserStructuredExecutor",
   },
   {
-    type: "@n8n/n8n-nodes-langchain.outputParserItemList",
+    type: "openflow-node-langchain.outputParserItemList",
     modulePath: "./executors/langchain-output-parser-item-list",
     exportName: "langchainOutputParserItemListExecutor",
   },
   {
-    type: "@n8n/n8n-nodes-langchain.outputParserAutofixing",
+    type: "openflow-node-langchain.outputParserAutofixing",
     modulePath: "./executors/langchain-output-parser-autofixing",
     exportName: "langchainOutputParserAutofixingExecutor",
   },
   {
-    type: "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+    type: "openflow-node-langchain.memoryBufferWindow",
     modulePath: "./executors/memory-buffer-window",
     exportName: "memoryBufferWindowExecutor",
   },
   {
-    type: "@n8n/n8n-nodes-langchain.mcpClientTool",
+    type: "openflow-node-langchain.mcpClientTool",
     modulePath: "./executors/mcp-client-tool",
     exportName: "mcpClientToolExecutor",
   },
   {
-    type: "@n8n/n8n-nodes-langchain.mcpTrigger",
+    type: "openflow-node-langchain.mcpTrigger",
     modulePath: "./executors/mcp-trigger",
     exportName: "mcpTriggerExecutor",
   },
   {
-    type: "@n8n/n8n-nodes-langchain.microsoftAgent365Trigger",
+    type: "openflow-node-langchain.microsoftAgent365Trigger",
     modulePath: "./executors/microsoft-agent-365-trigger",
     exportName: "microsoftAgent365TriggerExecutor",
   },
   {
-    type: "n8n-nodes-base.stickyNote",
+    type: "openflow-node-base.stickyNote",
     modulePath: "./executors/sticky-note",
     exportName: "stickyNoteExecutor",
   },
@@ -507,362 +570,372 @@ export const BUILTIN_EXECUTOR_MODULES: Array<{
     exportName: "inspectMediaExecutor",
   },
   {
-    type: "n8n-nodes-base.crypto",
+    type: "openflow-node-base.crypto",
     modulePath: "./executors/crypto",
     exportName: "cryptoExecutor",
   },
   {
-    type: "n8n-nodes-base.xml",
+    type: "openflow-node-base.xml",
     modulePath: "./executors/xml",
     exportName: "xmlExecutor",
   },
   {
-    type: "n8n-nodes-base.x",
+    type: "openflow-node-base.x",
     modulePath: "./executors/xml",
     exportName: "xmlExecutor",
   },
   {
-    type: "n8n-nodes-base.html",
+    type: "openflow-node-base.html",
     modulePath: "./executors/html",
     exportName: "htmlExecutor",
   },
   {
-    type: "n8n-nodes-base.markdown",
+    type: "openflow-node-base.markdown",
     modulePath: "./executors/markdown",
     exportName: "markdownExecutor",
   },
   {
-    type: "n8n-nodes-base.editImage",
+    type: "openflow-node-base.editImage",
     modulePath: "./executors/editImage",
     exportName: "editImageExecutor",
   },
   {
-    type: "n8n-nodes-base.jwt",
+    type: "openflow-node-base.jwt",
     modulePath: "./executors/jwt",
     exportName: "jwtExecutor",
   },
   {
-    type: "n8n-nodes-base.compression",
+    type: "openflow-node-base.compression",
     modulePath: "./executors/compression",
     exportName: "compressionExecutor",
   },
   {
-    type: "n8n-nodes-base.executionData",
+    type: "openflow-node-base.executionData",
     modulePath: "./executors/executionData",
     exportName: "executionDataExecutor",
   },
   {
-    type: "n8n-nodes-base.git",
+    type: "openflow-node-base.git",
     modulePath: "./executors/git",
     exportName: "gitExecutor",
   },
   {
-    type: "n8n-nodes-base.formTrigger",
+    type: "openflow-node-base.formTrigger",
     modulePath: "./executors/form-trigger",
     exportName: "formTriggerExecutor",
   },
   {
-    type: "n8n-nodes-base.sseTrigger",
+    type: "openflow-node-base.sseTrigger",
     modulePath: "./executors/sse-trigger",
     exportName: "sseTriggerExecutor",
   },
   {
-    type: "n8n-nodes-base.localFileTrigger",
+    type: "openflow-node-base.localFileTrigger",
     modulePath: "./executors/local-file-trigger",
     exportName: "localFileTriggerExecutor",
   },
   {
-    type: "@n8n/n8n-nodes-langchain.chatTrigger",
+    type: "openflow-node-langchain.chatTrigger",
     modulePath: "./executors/langchain-chat-trigger",
     exportName: "langchainChatTriggerExecutor",
   },
   {
-    type: "n8n-nodes-base.workflowTrigger",
+    type: "openflow-node-base.workflowTrigger",
     modulePath: "./executors/workflow-trigger",
     exportName: "workflowTriggerExecutor",
   },
   {
-    type: "n8n-nodes-base.activationTrigger",
+    type: "openflow-node-base.activationTrigger",
     modulePath: "./executors/activation-trigger",
     exportName: "activationTriggerExecutor",
   },
   {
-    type: "n8n-nodes-base.n8nTrigger",
+    type: "openflow-node-base.n8nTrigger",
     modulePath: "./executors/n8n-trigger",
     exportName: "n8nTriggerExecutor",
   },
   {
-    type: "n8n-nodes-base.graphql",
+    type: "openflow-node-base.graphql",
     modulePath: "./executors/graphql",
     exportName: "graphqlExecutor",
   },
   {
-    type: "n8n-nodes-base.graphqlTool",
+    type: "openflow-node-base.graphqlTool",
     modulePath: "./executors/graphqlTool",
     exportName: "graphqlToolExecutor",
   },
   {
-    type: "@n8n/n8n-nodes-langchain.openAi",
+    type: "openflow-node-langchain.openAi",
     modulePath: "./executors/openai",
     exportName: "openAiExecutor",
   },
   {
-    type: "@n8n/n8n-nodes-langchain.vectorStoreInMemory",
+    type: "openflow-node-langchain.vectorStoreInMemory",
     modulePath: "./executors/vectorStoreInMemory",
     exportName: "vectorStoreInMemoryExecutor",
   },
   {
-    type: "@n8n/n8n-nodes-langchain.vectorStoreMilvus",
+    type: "openflow-node-langchain.vectorStoreMilvus",
     modulePath: "./executors/vectorStoreMilvus",
     exportName: "vectorStoreMilvusExecutor",
   },
   {
-    type: "@n8n/n8n-nodes-langchain.code",
+    type: "openflow-node-langchain.code",
     modulePath: "./executors/langchain-code",
     exportName: "langchainCodeExecutor",
   },
   {
-    type: "@n8n/n8n-nodes-langchain.documentDefaultDataLoader",
+    type: "openflow-node-langchain.documentDefaultDataLoader",
     modulePath: "./executors/langchain-document-default-data-loader",
     exportName: "langchainDocumentDefaultDataLoaderExecutor",
   },
   {
-    type: "@n8n/n8n-nodes-langchain.textSplitterRecursiveCharacterTextSplitter",
+    type: "openflow-node-langchain.textSplitterRecursiveCharacterTextSplitter",
     modulePath: "./executors/langchain-text-splitter-recursive-character",
     exportName: "langchainTextSplitterRecursiveCharacterExecutor",
   },
   {
-    type: "@n8n/n8n-nodes-langchain.embeddingsCohere",
+    type: "openflow-node-langchain.embeddingsCohere",
     modulePath: "./executors/embeddings-cohere",
     exportName: "embeddingsCohereExecutor",
   },
   {
-    type: "@n8n/n8n-nodes-langchain.anthropic",
+    type: "openflow-node-langchain.anthropic",
     modulePath: "./executors/n8n-nodes-langchain.anthropic",
     exportName: "anthropicExecutor",
   },
   {
-    type: "@n8n/n8n-nodes-langchain.embeddingsGoogleGemini",
+    type: "openflow-node-langchain.embeddingsGoogleGemini",
     modulePath: "./executors/embeddings-google-gemini",
     exportName: "embeddingsGoogleGeminiExecutor",
   },
   {
-    type: "@n8n/n8n-nodes-langchain.embeddingsOpenAi",
+    type: "openflow-node-langchain.embeddingsOpenAi",
     modulePath: "./executors/embeddings-openai",
     exportName: "embeddingsOpenAiExecutor",
   },
   {
-    type: "n8n-nodes-base.airtable",
+    type: "openflow-node-base.airtable",
     modulePath: "./executors/n8n-nodes-base.airtable",
     exportName: "airtableExecutor",
   },
   {
-    type: "n8n-nodes-base.notion",
+    type: "openflow-node-base.notion",
     modulePath: "./executors/notion",
     exportName: "notionExecutor",
   },
   {
-    type: "n8n-nodes-base.notionTool",
+    type: "openflow-node-base.notionTool",
     modulePath: "./executors/n8n-nodes-base.notionTool",
     exportName: "notionToolExecutor",
   },
   {
-    type: "n8n-nodes-base.googleDriveTool",
+    type: "openflow-node-base.googleDriveTool",
     modulePath: "./executors/n8n-nodes-base.googleDriveTool",
     exportName: "googleDriveToolExecutor",
   },
   {
-    type: "n8n-nodes-base.whatsApp",
+    type: "openflow-node-base.whatsApp",
     modulePath: "./executors/n8n-nodes-base.whatsApp",
     exportName: "whatsAppExecutor",
   },
   {
-    type: "n8n-nodes-base.telegram",
+    type: "openflow-node-base.telegram",
     modulePath: "./executors/telegram",
     exportName: "telegramExecutor",
   },
   {
-    type: "n8n-nodes-base.telegramTool",
+    type: "openflow-node-base.telegramTool",
     modulePath: "./executors/n8n-nodes-base.telegramTool",
     exportName: "telegramToolExecutor",
   },
   {
-    type: "n8n-nodes-base.webflow",
+    type: "openflow-node-base.webflow",
     modulePath: "./executors/webflow",
     exportName: "webflowExecutor",
   },
   {
-    type: "n8n-nodes-base.gmail",
+    type: "openflow-node-base.gmail",
     modulePath: "./executors/n8n-nodes-base.gmail",
     exportName: "gmailExecutor",
   },
   {
-    type: "n8n-nodes-base.slack",
+    type: "openflow-node-base.slack",
     modulePath: "./executors/n8n-nodes-base.slack",
     exportName: "slackExecutor",
   },
   {
-    type: "n8n-nodes-base.discord",
+    type: "openflow-node-base.discord",
     modulePath: "./executors/n8n-nodes-base.discord",
     exportName: "discordExecutor",
   },
   {
-    type: "n8n-nodes-base.discordTool",
+    type: "openflow-node-base.discordTool",
     modulePath: "./executors/n8n-nodes-base.discordTool",
     exportName: "discordToolExecutor",
   },
   {
-    type: "n8n-nodes-base.jira",
+    type: "openflow-node-base.jira",
     modulePath: "./executors/n8n-nodes-base.jira",
     exportName: "jiraExecutor",
   },
   {
-    type: "n8n-nodes-base.jiraTool",
+    type: "openflow-node-base.jiraTool",
     modulePath: "./executors/n8n-nodes-base.jiraTool",
     exportName: "jiraToolExecutor",
   },
   {
-    type: "n8n-nodes-base.twilio",
+    type: "openflow-node-base.twilio",
     modulePath: "./executors/n8n-nodes-base.twilio",
     exportName: "twilioExecutor",
   },
   {
-    type: "n8n-nodes-base.googleSheets",
+    type: "openflow-node-base.googleSheets",
     modulePath: "./executors/n8n-nodes-base.googleSheets",
     exportName: "googleSheetsExecutor",
   },
   {
-    type: "n8n-nodes-base.googleDocs",
+    type: "openflow-node-base.googleDocs",
     modulePath: "./executors/n8n-nodes-base.googleDocs",
     exportName: "googleDocsExecutor",
   },
   {
-    type: "n8n-nodes-base.googleCalendar",
+    type: "openflow-node-base.googleCalendar",
     modulePath: "./executors/google-calendar",
     exportName: "googleCalendarExecutor",
   },
   {
-    type: "n8n-nodes-base.youTube",
+    type: "openflow-node-base.youTube",
     modulePath: "./executors/youTube",
     exportName: "youTubeExecutor",
   },
   {
-    type: "n8n-nodes-base.postgres",
+    type: "openflow-node-base.postgres",
     modulePath: "./executors/postgres",
     exportName: "postgresExecutor",
   },
   {
-    type: "n8n-nodes-base.mySql",
+    type: "openflow-node-base.mySql",
     modulePath: "./executors/mySql",
     exportName: "mySqlExecutor",
   },
   {
-    type: "n8n-nodes-base.mySqlTool",
+    type: "openflow-node-base.mySqlTool",
     modulePath: "./executors/MySqlTool",
     exportName: "mySqlToolExecutor",
   },
   {
-    type: "n8n-nodes-base.s3",
+    type: "openflow-node-base.s3",
     modulePath: "./executors/s3",
     exportName: "s3Executor",
   },
   {
-    type: "n8n-nodes-base.redis",
+    type: "openflow-node-base.redis",
     modulePath: "./executors/redis",
     exportName: "redisExecutor",
   },
   {
-    type: "n8n-nodes-base.hubspot",
+    type: "openflow-node-base.hubspot",
     modulePath: "./executors/hubspot",
     exportName: "hubspotExecutor",
   },
   {
-    type: "n8n-nodes-base.mongoDb",
+    type: "openflow-node-base.mongoDb",
     modulePath: "./executors/mongo-db",
     exportName: "mongoDbExecutor",
   },
   {
-    type: "n8n-nodes-base.supabase",
+    type: "openflow-node-base.supabase",
     modulePath: "./executors/supabase",
     exportName: "supabaseExecutor",
   },
   {
-    type: "n8n-nodes-base.supabaseTool",
+    type: "openflow-node-base.supabaseTool",
     modulePath: "./executors/SupabaseTool",
     exportName: "supabaseToolExecutor",
   },
   {
-    type: "n8n-nodes-base.facebookGraphApi",
+    type: "openflow-node-base.facebookGraphApi",
     modulePath: "./executors/facebook-graph-api",
     exportName: "facebookGraphApiExecutor",
   },
   {
-    type: "n8n-nodes-base.wordpress",
+    type: "openflow-node-base.wordpress",
     modulePath: "./executors/wordpress",
     exportName: "wordpressExecutor",
   },
   {
-    type: "n8n-nodes-base.debugHelper",
+    type: "openflow-node-base.debugHelper",
     modulePath: "./executors/debug-helper",
     exportName: "debugHelperExecutor",
   },
   {
-    type: "n8n-nodes-base.executeCommand",
+    type: "openflow-node-base.executeCommand",
     modulePath: "./executors/execute-command",
     exportName: "executeCommandExecutor",
   },
   {
-    type: "n8n-nodes-base.n8n",
+    type: "openflow-node-base.ansible",
+    modulePath: "./executors/ansible",
+    exportName: "ansibleExecutor",
+  },
+  {
+    type: "openflow-node-base.ansibleTool",
+    modulePath: "./executors/ansibleTool",
+    exportName: "ansibleToolExecutor",
+  },
+  {
+    type: "openflow-node-base.n8n",
     modulePath: "./executors/n8n",
     exportName: "n8nExecutor",
   },
   {
-    type: "n8n-nodes-base.hackerNews",
+    type: "openflow-node-base.hackerNews",
     modulePath: "./executors/hacker-news",
     exportName: "hackerNewsExecutor",
   },
   {
-    type: "n8n-nodes-base.hackerNewsTool",
+    type: "openflow-node-base.hackerNewsTool",
     modulePath: "./executors/n8n-nodes-base.hackerNewsTool",
     exportName: "hackerNewsToolExecutor",
   },
   {
-    type: "n8n-nodes-base.marketstackTool",
+    type: "openflow-node-base.marketstackTool",
     modulePath: "./executors/n8n-nodes-base.marketstackTool",
     exportName: "marketstackToolExecutor",
   },
   {
-    type: "n8n-nodes-base.evaluation",
+    type: "openflow-node-base.evaluation",
     modulePath: "./executors/evaluation",
     exportName: "evaluationExecutor",
   },
   {
-    type: "n8n-nodes-base.evaluationTrigger",
+    type: "openflow-node-base.evaluationTrigger",
     modulePath: "./executors/evaluation-trigger",
     exportName: "evaluationTriggerExecutor",
   },
   {
-    type: "n8n-nodes-base.form",
+    type: "openflow-node-base.form",
     modulePath: "./executors/form",
     exportName: "formExecutor",
   },
   {
-    type: "n8n-nodes-base.gmailTrigger",
+    type: "openflow-node-base.gmailTrigger",
     modulePath: "./executors/gmail-trigger",
     exportName: "gmailTriggerExecutor",
   },
   {
-    type: "n8n-nodes-base.totp",
+    type: "openflow-node-base.totp",
     modulePath: "./executors/totp",
     exportName: "totpExecutor",
   },
   {
-    type: "n8n-nodes-base.timeSaved",
+    type: "openflow-node-base.timeSaved",
     modulePath: "./executors/n8n-nodes-base.timeSaved",
     exportName: "timeSavedExecutor",
   },
   {
-    type: "n8n-nodes-base.ldap",
+    type: "openflow-node-base.ldap",
     modulePath: "./executors/ldap",
     exportName: "ldapExecutor",
     unavailable: {
@@ -871,127 +944,127 @@ export const BUILTIN_EXECUTOR_MODULES: Array<{
     },
   },
   {
-    type: "n8n-nodes-base.iCalendar",
+    type: "openflow-node-base.iCalendar",
     modulePath: "./executors/iCalendar",
     exportName: "iCalendarExecutor",
   },
   {
-    type: "n8n-nodes-base.quickChart",
+    type: "openflow-node-base.quickChart",
     modulePath: "./executors/quick-chart",
     exportName: "quickChartExecutor",
   },
   {
-    type: "n8n-nodes-base.quickChartTool",
+    type: "openflow-node-base.quickChartTool",
     modulePath: "./executors/quickChartTool",
     exportName: "quickChartToolExecutor",
   },
   {
-    type: "n8n-nodes-mcp.mcpClientTool",
+    type: "openflow-node-mcp.mcpClientTool",
     modulePath: "./executors/mcp-community-client",
     exportName: "mcpCommunityClientExecutor",
   },
   {
-    type: "n8n-nodes-base.awsS3",
+    type: "openflow-node-base.awsS3",
     modulePath: "./executors/awsS3",
     exportName: "awsS3Executor",
   },
   {
-    type: "n8n-nodes-base.awsS3Tool",
+    type: "openflow-node-base.awsS3Tool",
     modulePath: "./executors/awsS3Tool",
     exportName: "awsS3ToolExecutor",
   },
   {
-    type: "n8n-nodes-base.homeAssistant",
+    type: "openflow-node-base.homeAssistant",
     modulePath: "./executors/home-assistant",
     exportName: "homeAssistantExecutor",
   },
   {
-    type: "n8n-nodes-base.mailgun",
+    type: "openflow-node-base.mailgun",
     modulePath: "./executors/mailgun",
     exportName: "mailgunExecutor",
   },
   {
-    type: "n8n-nodes-base.mattermost",
+    type: "openflow-node-base.mattermost",
     modulePath: "./executors/n8n-nodes-base.mattermost",
     exportName: "mattermostExecutor",
   },
   {
-    type: "n8n-nodes-base.googleSlides",
+    type: "openflow-node-base.googleSlides",
     modulePath: "./executors/n8n-nodes-base.googleSlides",
     exportName: "googleSlidesExecutor",
   },
   {
-    type: "n8n-nodes-base.matrix",
+    type: "openflow-node-base.matrix",
     modulePath: "./executors/matrix",
     exportName: "matrixExecutor",
   },
   {
-    type: "n8n-nodes-base.rocketchat",
+    type: "openflow-node-base.rocketchat",
     modulePath: "./executors/rocketchat",
     exportName: "rocketchatExecutor",
   },
   {
-    type: "n8n-nodes-base.gotify",
+    type: "openflow-node-base.gotify",
     modulePath: "./executors/gotify",
     exportName: "gotifyExecutor",
   },
   {
-    type: "n8n-nodes-base.gotifyTool",
+    type: "openflow-node-base.gotifyTool",
     modulePath: "./executors/gotifyTool",
     exportName: "gotifyToolExecutor",
   },
   {
-    type: "n8n-nodes-base.pushbullet",
+    type: "openflow-node-base.pushbullet",
     modulePath: "./executors/pushbullet",
     exportName: "pushbulletExecutor",
   },
   {
-    type: "n8n-nodes-base.pushover",
+    type: "openflow-node-base.pushover",
     modulePath: "./executors/pushover",
     exportName: "pushoverExecutor",
   },
   {
-    type: "n8n-nodes-base.messageBird",
+    type: "openflow-node-base.messageBird",
     modulePath: "./executors/message-bird",
     exportName: "messageBirdExecutor",
   },
   {
-    type: "n8n-nodes-base.sms77",
+    type: "openflow-node-base.sms77",
     modulePath: "./executors/n8n-nodes-base.sms77",
     exportName: "sms77Executor",
   },
   {
-    type: "n8n-nodes-base.sms77Tool",
+    type: "openflow-node-base.sms77Tool",
     modulePath: "./executors/sms77Tool",
     exportName: "sms77ToolExecutor",
   },
   {
-    type: "n8n-nodes-base.sendGrid",
+    type: "openflow-node-base.sendGrid",
     modulePath: "./executors/n8n-nodes-base.sendGrid",
     exportName: "sendGridExecutor",
   },
   {
-    type: "n8n-nodes-base.sendInBlue",
+    type: "openflow-node-base.sendInBlue",
     modulePath: "./executors/sendInBlue",
     exportName: "sendInBlueExecutor",
   },
   {
-    type: "n8n-nodes-base.mailjet",
+    type: "openflow-node-base.mailjet",
     modulePath: "./executors/mailjet",
     exportName: "mailjetExecutor",
   },
   {
-    type: "n8n-nodes-base.mailchimp",
+    type: "openflow-node-base.mailchimp",
     modulePath: "./executors/mailchimp",
     exportName: "mailchimpExecutor",
   },
   {
-    type: "n8n-nodes-base.postmarkTrigger",
+    type: "openflow-node-base.postmarkTrigger",
     modulePath: "./executors/postmark-trigger",
     exportName: "postmarkTriggerExecutor",
   },
   {
-    type: "n8n-nodes-base.emailReadImap",
+    type: "openflow-node-base.emailReadImap",
     modulePath: "./executors/email-read-imap",
     exportName: "emailReadImapExecutor",
     unavailable: {
@@ -1000,2192 +1073,2426 @@ export const BUILTIN_EXECUTOR_MODULES: Array<{
     },
   },
   {
-    type: "n8n-nodes-base.microsoftOneDrive",
+    type: "openflow-node-base.microsoftOneDrive",
     modulePath: "./executors/microsoft-one-drive",
     exportName: "microsoftOneDriveExecutor",
   },
   {
-    type: "n8n-nodes-base.microsoftExcel",
+    type: "openflow-node-base.microsoftExcel",
     modulePath: "./executors/microsoft-excel",
     exportName: "microsoftExcelExecutor",
   },
   {
-    type: "n8n-nodes-base.microsoftSharePoint",
+    type: "openflow-node-base.microsoftSharePoint",
     modulePath: "./executors/microsoft-sharepoint",
     exportName: "microsoftSharePointExecutor",
   },
   {
-    type: "n8n-nodes-base.microsoftSql",
+    type: "openflow-node-base.microsoftSql",
     modulePath: "./executors/microsoftSql",
     exportName: "microsoftSqlExecutor",
   },
   {
-    type: "n8n-nodes-base.microsoftEntra",
+    type: "openflow-node-base.microsoftEntra",
     modulePath: "./executors/microsoft-entra",
     exportName: "microsoftEntraExecutor",
   },
   {
-    type: "n8n-nodes-base.googleAnalytics",
+    type: "openflow-node-base.googleAnalytics",
     modulePath: "./executors/google-analytics",
     exportName: "googleAnalyticsExecutor",
   },
   {
-    type: "n8n-nodes-base.microsoftTeams",
+    type: "openflow-node-base.microsoftTeams",
     modulePath: "./executors/microsoft-teams",
     exportName: "microsoftTeamsExecutor",
   },
   {
-    type: "n8n-nodes-base.microsoftToDo",
+    type: "openflow-node-base.microsoftToDo",
     modulePath: "./executors/microsoft-to-do",
     exportName: "microsoftToDoExecutor",
   },
   {
-    type: "n8n-nodes-base.microsoftToDoTool",
+    type: "openflow-node-base.microsoftToDoTool",
     modulePath: "./executors/n8n-nodes-base.microsoftToDoTool",
     exportName: "microsoftToDoToolExecutor",
   },
   {
-    type: "n8n-nodes-base.googleTasks",
+    type: "openflow-node-base.googleTasks",
     modulePath: "./executors/n8n-nodes-base.googleTasks",
     exportName: "googleTasksExecutor",
   },
   {
-    type: "n8n-nodes-base.googleContacts",
+    type: "openflow-node-base.googleContacts",
     modulePath: "./executors/google-contacts",
     exportName: "googleContactsExecutor",
   },
   {
-    type: "n8n-nodes-base.googleTranslate",
+    type: "openflow-node-base.googleTranslate",
     modulePath: "./executors/google-translate",
     exportName: "googleTranslateExecutor",
   },
   {
-    type: "n8n-nodes-base.googleAds",
+    type: "openflow-node-base.googleAds",
     modulePath: "./executors/google-ads",
     exportName: "googleAdsExecutor",
   },
   {
-    type: "n8n-nodes-base.googleBigQuery",
+    type: "openflow-node-base.googleBigQuery",
     modulePath: "./executors/google-bigquery",
     exportName: "googleBigQueryExecutor",
   },
   {
-    type: "n8n-nodes-base.googleBusinessProfile",
+    type: "openflow-node-base.googleBusinessProfile",
     modulePath: "./executors/google-business-profile",
     exportName: "googleBusinessProfileExecutor",
   },
   {
-    type: "n8n-nodes-base.googleBusinessProfileTrigger",
+    type: "openflow-node-base.googleBusinessProfileTrigger",
     modulePath: "./executors/google-business-profile-trigger",
     exportName: "googleBusinessProfileTriggerExecutor",
   },
   {
-    type: "n8n-nodes-base.googleCloudStorage",
+    type: "openflow-node-base.googleCloudStorage",
     modulePath: "./executors/google-cloud-storage",
     exportName: "googleCloudStorageExecutor",
   },
   {
-    type: "n8n-nodes-base.gSuiteAdmin",
+    type: "openflow-node-base.gSuiteAdmin",
     modulePath: "./executors/g-suite-admin",
     exportName: "gSuiteAdminExecutor",
   },
   {
-    type: "n8n-nodes-base.gSuiteAdminTool",
+    type: "openflow-node-base.gSuiteAdminTool",
     modulePath: "./executors/g-suite-admin-tool",
     exportName: "gSuiteAdminToolExecutor",
   },
   {
-    type: "n8n-nodes-base.googleChat",
+    type: "openflow-node-base.googleChat",
     modulePath: "./executors/googleChat",
     exportName: "googleChatExecutor",
   },
   {
-    type: "n8n-nodes-base.clickUp",
+    type: "openflow-node-base.clickUp",
     modulePath: "./executors/clickUp",
     exportName: "clickUpExecutor",
   },
   {
-    type: "n8n-nodes-base.clickUpTool",
+    type: "openflow-node-base.clickUpTool",
     modulePath: "./executors/n8n-nodes-base.clickUpTool",
     exportName: "clickUpToolExecutor",
   },
   {
-    type: "n8n-nodes-base.trello",
+    type: "openflow-node-base.trello",
     modulePath: "./executors/trello",
     exportName: "trelloExecutor",
   },
   {
-    type: "n8n-nodes-base.asana",
+    type: "openflow-node-base.asana",
     modulePath: "./executors/asana",
     exportName: "asanaExecutor",
   },
   {
-    type: "n8n-nodes-base.asanaTool",
+    type: "openflow-node-base.asanaTool",
     modulePath: "./executors/n8n-nodes-base.asanaTool",
     exportName: "asanaToolExecutor",
   },
   {
-    type: "n8n-nodes-base.githubTrigger",
+    type: "openflow-node-base.githubTrigger",
     modulePath: "./executors/github-trigger",
     exportName: "githubTriggerExecutor",
   },
   {
-    type: "n8n-nodes-base.mondayCom",
+    type: "openflow-node-base.mondayCom",
     modulePath: "./executors/monday-com",
     exportName: "mondayComExecutor",
   },
   {
-    type: "n8n-nodes-base.todoist",
+    type: "openflow-node-base.todoist",
     modulePath: "./executors/todoist",
     exportName: "todoistExecutor",
   },
   {
-    type: "n8n-nodes-base.linear",
+    type: "openflow-node-base.linear",
     modulePath: "./executors/linear",
     exportName: "linearExecutor",
   },
   {
-    type: "n8n-nodes-base.gitlab",
+    type: "openflow-node-base.gitlab",
     modulePath: "./executors/gitlab",
     exportName: "gitlabExecutor",
   },
   {
-    type: "n8n-nodes-base.gitlabTrigger",
+    type: "openflow-node-base.gitlabTrigger",
     modulePath: "./executors/gitlab-trigger",
     exportName: "gitlabTriggerExecutor",
   },
   {
-    type: "n8n-nodes-base.bitbucketTrigger",
+    type: "openflow-node-base.bitbucketTrigger",
     modulePath: "./executors/bitbucket-trigger",
     exportName: "bitbucketTriggerExecutor",
   },
   {
-    type: "n8n-nodes-base.jenkins",
+    type: "openflow-node-base.jenkins",
     modulePath: "./executors/jenkins",
     exportName: "jenkinsExecutor",
   },
   {
-    type: "n8n-nodes-base.circleCi",
+    type: "openflow-node-base.circleCi",
     modulePath: "./executors/circle-ci",
     exportName: "circleCiExecutor",
   },
   {
-    type: "n8n-nodes-base.salesforce",
+    type: "openflow-node-base.salesforce",
     modulePath: "./executors/salesforce",
     exportName: "salesforceExecutor",
   },
   {
-    type: "n8n-nodes-base.salesforceTool",
+    type: "openflow-node-base.salesforceTool",
     modulePath: "./executors/n8n-nodes-base.salesforceTool",
     exportName: "salesforceToolExecutor",
   },
   {
-    type: "n8n-nodes-base.pipedrive",
+    type: "openflow-node-base.pipedrive",
     modulePath: "./executors/pipedrive",
     exportName: "pipedriveExecutor",
   },
   {
-    type: "n8n-nodes-base.pipedriveTool",
+    type: "openflow-node-base.pipedriveTool",
     modulePath: "./executors/n8n-nodes-base.pipedriveTool",
     exportName: "pipedriveToolExecutor",
   },
   {
-    type: "n8n-nodes-base.zammad",
+    type: "openflow-node-base.zammad",
     modulePath: "./executors/n8n-nodes-base.zammad",
     exportName: "zammadExecutor",
   },
   {
-    type: "n8n-nodes-base.zendesk",
+    type: "openflow-node-base.zendesk",
     modulePath: "./executors/zendesk",
     exportName: "zendeskExecutor",
   },
   {
-    type: "n8n-nodes-base.zendeskTool",
+    type: "openflow-node-base.zendeskTool",
     modulePath: "./executors/n8n-nodes-base.zendeskTool",
     exportName: "zendeskToolExecutor",
   },
   {
-    type: "n8n-nodes-base.zendeskTrigger",
+    type: "openflow-node-base.zendeskTrigger",
     modulePath: "./executors/zendesk-trigger",
     exportName: "zendeskTriggerExecutor",
   },
   {
-    type: "n8n-nodes-base.zohoCrm",
+    type: "openflow-node-base.zohoCrm",
     modulePath: "./executors/zoho-crm",
     exportName: "zohoCrmExecutor",
   },
   {
-    type: "n8n-nodes-base.highLevel",
+    type: "openflow-node-base.highLevel",
     modulePath: "./executors/highLevel",
     exportName: "highLevelExecutor",
   },
   {
-    type: "n8n-nodes-base.odoo",
+    type: "openflow-node-base.odoo",
     modulePath: "./executors/odoo",
     exportName: "odooExecutor",
   },
   {
-    type: "n8n-nodes-base.hubspotTrigger",
+    type: "openflow-node-base.hubspotTrigger",
     modulePath: "./executors/hubspot-trigger",
     exportName: "hubspotTriggerExecutor",
   },
   {
-    type: "n8n-nodes-base.wooCommerce",
+    type: "openflow-node-base.wooCommerce",
     modulePath: "./executors/woo-commerce",
     exportName: "wooCommerceExecutor",
   },
   {
-    type: "n8n-nodes-base.shopify",
+    type: "openflow-node-base.shopify",
     modulePath: "./executors/shopify",
     exportName: "shopifyExecutor",
   },
   {
-    type: "n8n-nodes-base.stripe",
+    type: "openflow-node-base.stripe",
     modulePath: "./executors/n8n-nodes-base.stripe",
     exportName: "stripeExecutor",
   },
   {
-    type: "n8n-nodes-base.stripeTool",
+    type: "openflow-node-base.stripeTool",
     modulePath: "./executors/n8n-nodes-base.stripeTool",
     exportName: "stripeToolExecutor",
   },
 {
-    type: "n8n-nodes-base.snowflake",
+    type: "openflow-node-base.snowflake",
     modulePath: "./executors/n8n-nodes-base.snowflake",
     exportName: "snowflakeExecutor",
   },
   {
-    type: "n8n-nodes-base.kafka",
+    type: "openflow-node-base.kafka",
     modulePath: "./executors/kafkaNode",
     exportName: "kafkaExecutor",
   },
   {
-    type: "n8n-nodes-base.mqtt",
+    type: "openflow-node-base.mqtt",
     modulePath: "./executors/mqtt",
     exportName: "mqttExecutor",
   },
   {
-    type: "n8n-nodes-base.rabbitmqTrigger",
+    type: "openflow-node-base.rabbitmqTrigger",
     modulePath: "./executors/rabbitmqTrigger",
     exportName: "rabbitmqTriggerExecutor",
   },
   {
-    type: "n8n-nodes-base.nocoDb",
+    type: "openflow-node-base.nocoDb",
     modulePath: "./executors/n8n-nodes-base.nocoDb",
     exportName: "nocoDbExecutor",
   },
   {
-    type: "n8n-nodes-base.stripeTrigger",
+    type: "openflow-node-base.stripeTrigger",
     modulePath: "./executors/stripe-trigger",
     exportName: "stripeTriggerExecutor",
   },
   {
-    type: "n8n-nodes-base.quickbaseTool",
+    type: "openflow-node-base.quickbaseTool",
     modulePath: "./executors/quickbaseTool",
     exportName: "quickbaseToolExecutor",
   },
   {
-    type: "n8n-nodes-base.quickbooks",
+    type: "openflow-node-base.quickbooks",
     modulePath: "./executors/n8n-nodes-base.quickbooks",
     exportName: "quickbooksExecutor",
   },
   {
-    type: "n8n-nodes-base.xero",
+    type: "openflow-node-base.xero",
     modulePath: "./executors/n8n-nodes-base.xero",
     exportName: "xeroExecutor",
   },
   {
-    type: "n8n-nodes-base.payPal",
+    type: "openflow-node-base.payPal",
     modulePath: "./executors/n8n-nodes-base.payPal",
     exportName: "payPalExecutor",
   },
   {
-    type: "n8n-nodes-base.pagerDuty",
+    type: "openflow-node-base.pagerDuty",
     modulePath: "./executors/pagerDuty",
     exportName: "pagerDutyExecutor",
   },
   {
-    type: "n8n-nodes-base.pagerDutyTool",
+    type: "openflow-node-base.pagerDutyTool",
     modulePath: "./executors/n8n-nodes-base.pagerDutyTool",
     exportName: "pagerDutyToolExecutor",
   },
   {
-    type: "n8n-nodes-base.baserow",
+    type: "openflow-node-base.baserow",
     modulePath: "./executors/n8n-nodes-base.baserow",
     exportName: "baserowExecutor",
   },
   {
-    type: "n8n-nodes-base.dropbox",
+    type: "openflow-node-base.dropbox",
     modulePath: "./executors/n8n-nodes-base.dropbox",
     exportName: "dropboxExecutor",
   },
   {
-    type: "n8n-nodes-base.nextCloud",
+    type: "openflow-node-base.nextCloud",
     modulePath: "./executors/nextCloud",
     exportName: "nextCloudExecutor",
   },
   {
-    type: "n8n-nodes-base.awsLambda",
+    type: "openflow-node-base.awsLambda",
     modulePath: "./executors/aws-lambda",
     exportName: "awsLambdaExecutor",
   },
   {
-    type: "n8n-nodes-base.awsSes",
+    type: "openflow-node-base.awsSes",
     modulePath: "./executors/n8n-nodes-base.awsSes",
     exportName: "awsSesExecutor",
   },
   {
-    type: "n8n-nodes-base.awsIam",
+    type: "openflow-node-base.awsIam",
     modulePath: "./executors/n8n-nodes-base.awsIam",
     exportName: "awsIamExecutor",
   },
   {
-    type: "n8n-nodes-base.elasticsearch",
+    type: "openflow-node-base.elasticsearch",
     modulePath: "./executors/elasticsearch",
     exportName: "elasticsearchExecutor",
   },
   {
-    type: "n8n-nodes-base.rabbitmq",
+    type: "openflow-node-base.rabbitmq",
     modulePath: "./executors/rabbitmq",
     exportName: "rabbitmqExecutor",
   },
   {
-    type: "n8n-nodes-base.amqp",
+    type: "openflow-node-base.amqp",
     modulePath: "./executors/amqp",
     exportName: "amqpExecutor",
   },
   {
     // Not `unavailable`: redisTrigger.ts ships a real lazy-import default over
     // ioredis (a declared dependency), exactly like the redis executor.
-    type: "n8n-nodes-base.redisTrigger",
+    type: "openflow-node-base.redisTrigger",
     modulePath: "./executors/redisTrigger",
     exportName: "redisTriggerExecutor",
   },
   {
-    type: "n8n-nodes-base.postgresTrigger",
+    type: "openflow-node-base.postgresTrigger",
     modulePath: "./executors/postgres-trigger",
     exportName: "postgresTriggerExecutor",
   },
   {
-    type: "@n8n/n8n-nodes-langchain.modelSelector",
+    type: "openflow-node-langchain.modelSelector",
     modulePath: "./executors/langchain-model-selector",
     exportName: "langchainModelSelectorExecutor",
   },
   {
-    type: "@n8n/n8n-nodes-langchain.guardrails",
+    type: "openflow-node-langchain.guardrails",
     modulePath: "./executors/guardrails",
     exportName: "guardrailsExecutor",
   },
   {
-    type: "n8n-nodes-base.httpRequestTool",
+    type: "openflow-node-base.httpRequestTool",
     modulePath: "./executors/httpRequestTool",
     exportName: "httpRequestToolExecutor",
   },
   {
-    type: "n8n-nodes-base.gmailTool",
+    type: "openflow-node-base.gmailTool",
     modulePath: "./executors/n8n-nodes-base.gmailTool",
     exportName: "gmailToolExecutor",
   },
   {
-    type: "n8n-nodes-base.googleSheetsTool",
+    type: "openflow-node-base.googleSheetsTool",
     modulePath: "./executors/n8n-nodes-base.googleSheetsTool",
     exportName: "googleSheetsToolExecutor",
   },
   {
-    type: "n8n-nodes-base.googleCalendarTool",
+    type: "openflow-node-base.googleCalendarTool",
     modulePath: "./executors/n8n-nodes-base.googleCalendarTool",
     exportName: "googleCalendarToolExecutor",
   },
   {
-    type: "n8n-nodes-base.googleTasksTool",
+    type: "openflow-node-base.googleTasksTool",
     modulePath: "./executors/n8n-nodes-base.googleTasksTool",
     exportName: "googleTasksToolExecutor",
   },
   {
-    type: "n8n-nodes-base.wooCommerceTool",
+    type: "openflow-node-base.wooCommerceTool",
     modulePath: "./executors/n8n-nodes-base.wooCommerceTool",
     exportName: "wooCommerceToolExecutor",
   },
   {
-    type: "n8n-nodes-base.cryptoTool",
+    type: "openflow-node-base.cryptoTool",
     modulePath: "./executors/cryptoTool",
     exportName: "cryptoToolExecutor",
   },
   {
-    type: "n8n-nodes-base.rssFeedReadTool",
+    type: "openflow-node-base.rssFeedReadTool",
     modulePath: "./executors/rssFeedReadTool",
     exportName: "rssFeedReadToolExecutor",
   },
   {
-    type: "n8n-nodes-base.dateTimeTool",
+    type: "openflow-node-base.dateTimeTool",
     modulePath: "./executors/dateTimeTool",
     exportName: "dateTimeToolExecutor",
   },
   {
-    type: "@n8n/n8n-nodes-langchain.toolSearXng",
+    type: "openflow-node-langchain.toolSearXng",
     modulePath: "./executors/tool-searxng",
     exportName: "toolSearXngExecutor",
   },
   {
-    type: "@n8n/n8n-nodes-langchain.toolWikipedia",
+    type: "openflow-node-langchain.toolWikipedia",
     modulePath: "./executors/toolWikipedia",
     exportName: "toolWikipediaExecutor",
   },
   {
-    type: "@n8n/n8n-nodes-langchain.toolWolframAlpha",
+    type: "openflow-node-langchain.toolWolframAlpha",
     modulePath: "./executors/tool-wolfram-alpha",
     exportName: "toolWolframAlphaExecutor",
   },
   {
-    type: "@n8n/n8n-nodes-langchain.retrieverVectorStore",
+    type: "openflow-node-langchain.retrieverVectorStore",
     modulePath: "./executors/retrieverVectorStore",
     exportName: "retrieverVectorStoreExecutor",
   },
   {
-    type: "@n8n/n8n-nodes-langchain.memoryManager",
+    type: "openflow-node-langchain.memoryManager",
     modulePath: "./executors/n8n-nodes-langchain.memoryManager",
     exportName: "n8nNodesLangchainMemoryManagerExecutor",
   },
   {
-    type: "n8n-nodes-base.chargebeeTrigger",
+    type: "openflow-node-base.chargebeeTrigger",
     modulePath: "./executors/n8n-nodes-base.chargebeeTrigger",
     exportName: "chargebeeTriggerExecutor",
   },
   {
-    type: "n8n-nodes-base.convertKitTrigger",
+    type: "openflow-node-base.convertKitTrigger",
     modulePath: "./executors/convertKitTrigger",
     exportName: "convertKitTriggerExecutor",
   },
   {
-    type: "n8n-nodes-base.perplexity",
+    type: "openflow-node-base.perplexity",
     modulePath: "./executors/perplexity",
     exportName: "perplexityExecutor",
   },
   {
-    type: "n8n-nodes-base.telegramTrigger",
+    type: "openflow-node-base.telegramTrigger",
     modulePath: "./executors/telegram-trigger",
     exportName: "telegramTriggerExecutor",
   },
   {
-    type: "@n8n/n8n-nodes-langchain.googleGemini",
+    type: "openflow-node-langchain.googleGemini",
     modulePath: "./executors/google-gemini",
     exportName: "googleGeminiExecutor",
   },
   {
-    type: "n8n-nodes-base.googleDrive",
+    type: "openflow-node-base.googleDrive",
     modulePath: "./executors/googleDrive",
     exportName: "googleDriveExecutor",
   },
   {
-    type: "n8n-nodes-base.googleDriveTrigger",
+    type: "openflow-node-base.googleDriveTrigger",
     modulePath: "./executors/google-drive-trigger",
     exportName: "googleDriveTriggerExecutor",
   },
   {
-    type: "@n8n/n8n-nodes-langchain.toolWorkflow",
+    type: "openflow-node-langchain.toolWorkflow",
     modulePath: "./executors/toolWorkflow",
     exportName: "toolWorkflowExecutor",
   },
   {
-    type: "@n8n/n8n-nodes-langchain.informationExtractor",
+    type: "openflow-node-langchain.informationExtractor",
     modulePath: "./executors/langchain-information-extractor",
     exportName: "langchainInformationExtractorExecutor",
   },
   {
-    type: "n8n-nodes-base.salesmateTool",
+    type: "openflow-node-base.salesmateTool",
     modulePath: "./executors/salesmateTool",
     exportName: "salesmateToolExecutor",
   },
   {
-    type: "n8n-nodes-base.googleSheetsTrigger",
+    type: "openflow-node-base.googleSheetsTrigger",
     modulePath: "./executors/google-sheets-trigger",
     exportName: "googleSheetsTriggerExecutor",
   },
   {
-    type: "@n8n/n8n-nodes-langchain.lmChatGroq",
+    type: "openflow-node-langchain.lmChatGroq",
     modulePath: "./executors/lm-chat-groq",
     exportName: "lmChatGroqExecutor",
   },
   {
-    type: "@n8n/n8n-nodes-langchain.lmChatMistralCloud",
+    type: "openflow-node-langchain.lmChatMistralCloud",
     modulePath: "./executors/lm-chat-mistral-cloud",
     exportName: "lmChatMistralCloudExecutor",
   },
   {
-    type: "@n8n/n8n-nodes-langchain.toolThink",
+    type: "openflow-node-langchain.toolThink",
     modulePath: "./executors/toolThink",
     exportName: "toolThinkExecutor",
   },
   {
-    type: "@n8n/n8n-nodes-langchain.vectorStoreSupabase",
+    type: "openflow-node-langchain.vectorStoreSupabase",
     modulePath: "./executors/vectorStoreSupabase",
     exportName: "vectorStoreSupabaseExecutor",
   },
   {
-    type: "@n8n/n8n-nodes-langchain.vectorStorePinecone",
+    type: "openflow-node-langchain.vectorStorePinecone",
     modulePath: "./executors/vectorStorePinecone",
     exportName: "vectorStorePineconeExecutor",
   },
   {
-    type: "@n8n/n8n-nodes-langchain.toolCalculator",
+    type: "openflow-node-langchain.toolCalculator",
     modulePath: "./executors/toolCalculator",
     exportName: "toolCalculatorExecutor",
   },
   {
-    type: "@n8n/n8n-nodes-langchain.lmChatDeepSeek",
+    type: "openflow-node-langchain.toolNodeCatalog",
+    modulePath: "./executors/toolNodeCatalog",
+    exportName: "toolNodeCatalogExecutor",
+  },
+  {
+    type: "openflow-node-langchain.lmChatDeepSeek",
     modulePath: "./executors/lm-chat-deepseek",
     exportName: "lmChatDeepSeekExecutor",
   },
   {
-    type: "@n8n/n8n-nodes-langchain.lmChatAzureOpenAi",
+    type: "openflow-node-langchain.lmChatAzureOpenAi",
     modulePath: "./executors/lm-chat-azure-openai",
     exportName: "lmChatAzureOpenAiExecutor",
   },
   {
-    type: "@n8n/n8n-nodes-langchain.agentTool",
+    type: "openflow-node-langchain.agentTool",
     modulePath: "./executors/langchain-agent-tool",
     exportName: "langchainAgentToolExecutor",
   },
   {
-    type: "n8n-nodes-base.linkedIn",
+    type: "openflow-node-base.linkedIn",
     modulePath: "./executors/linkedin",
     exportName: "linkedInExecutor",
   },
   {
-    type: "@n8n/n8n-nodes-langchain.textClassifier",
+    type: "openflow-node-langchain.textClassifier",
     modulePath: "./executors/langchain-text-classifier",
     exportName: "langchainTextClassifierExecutor",
   },
   {
-    type: "n8n-nodes-base.whatsAppTrigger",
+    type: "openflow-node-base.whatsAppTrigger",
     modulePath: "./executors/whatsapp-trigger",
     exportName: "whatsAppTriggerExecutor",
   },
   {
-    type: "n8n-nodes-base.github",
+    type: "openflow-node-base.github",
     modulePath: "./executors/github",
     exportName: "githubExecutor",
   },
   {
-    type: "n8n-nodes-base.twitter",
+    type: "openflow-node-base.twitter",
     modulePath: "./executors/twitter",
     exportName: "twitterExecutor",
   },
   {
-    type: "n8n-nodes-base.twitterTool",
+    type: "openflow-node-base.twitterTool",
     modulePath: "./executors/twitterTool",
     exportName: "twitterToolExecutor",
   },
   {
-    type: "n8n-nodes-base.microsoftOutlook",
+    type: "openflow-node-base.microsoftOutlook",
     modulePath: "./executors/microsoft-outlook",
     exportName: "microsoftOutlookExecutor",
   },
   {
-    type: "n8n-nodes-base.openThesaurus",
+    type: "openflow-node-base.openThesaurus",
     modulePath: "./executors/openThesaurus",
     exportName: "openThesaurusExecutor",
   },
   {
-    type: "n8n-nodes-base.openAi",
+    type: "openflow-node-base.openAi",
     modulePath: "./executors/openai",
     exportName: "openAiExecutor",
   },
   {
-    type: "@n8n/n8n-nodes-langchain.googleGeminiTool",
+    type: "openflow-node-langchain.googleGeminiTool",
     modulePath: "./executors/n8n-nodes-langchain.googleGeminiTool",
     exportName: "googleGeminiToolExecutor",
   },
   {
-    type: "@n8n/n8n-nodes-langchain.toolCode",
+    type: "openflow-node-langchain.toolCode",
     modulePath: "./executors/toolCode",
     exportName: "toolCodeExecutor",
   },
   {
-    type: "@n8n/n8n-nodes-langchain.vectorStoreQdrant",
+    type: "openflow-node-langchain.vectorStoreQdrant",
     modulePath: "./executors/vectorStoreQdrant",
     exportName: "vectorStoreQdrantExecutor",
   },
   {
-    type: "@n8n/n8n-nodes-langchain.vectorStorePGVector",
+    type: "openflow-node-langchain.vectorStorePGVector",
     modulePath: "./executors/vectorStorePGVector",
     exportName: "vectorStorePGVectorExecutor",
   },
   {
-    type: "@n8n/n8n-nodes-langchain.memoryPostgresChat",
+    type: "openflow-node-langchain.memoryPostgresChat",
     modulePath: "./executors/memory-postgres-chat",
     exportName: "memoryPostgresChatExecutor",
   },
   {
-    type: "@n8n/n8n-nodes-langchain.memoryRedisChat",
+    type: "openflow-node-langchain.memoryRedisChat",
     modulePath: "./executors/memory-redis-chat",
     exportName: "memoryRedisChatExecutor",
   },
   {
-    type: "@n8n/n8n-nodes-langchain.memoryMongoDbChat",
+    type: "openflow-node-langchain.memoryMongoDbChat",
     modulePath: "./executors/memory-mongodb-chat",
     exportName: "memoryMongoDbChatExecutor",
   },
   {
-    type: "@n8n/n8n-nodes-langchain.toolHttpRequest",
+    type: "openflow-node-langchain.toolHttpRequest",
     modulePath: "./executors/toolHttpRequest",
     exportName: "toolHttpRequestExecutor",
   },
   {
-    type: "@n8n/n8n-nodes-langchain.toolVectorStore",
+    type: "openflow-node-langchain.toolVectorStore",
     modulePath: "./executors/toolVectorStore",
     exportName: "toolVectorStoreExecutor",
   },
   {
-    type: "@n8n/n8n-nodes-langchain.toolSerpApi",
+    type: "openflow-node-langchain.toolSerpApi",
     modulePath: "./executors/toolSerpApi",
     exportName: "toolSerpApiExecutor",
   },
   {
-    type: "n8n-nodes-base.slackTrigger",
+    type: "openflow-node-base.slackTrigger",
     modulePath: "./executors/slack-trigger",
     exportName: "slackTriggerExecutor",
   },
   {
-    type: "n8n-nodes-base.jotFormTrigger",
+    type: "openflow-node-base.jotFormTrigger",
     modulePath: "./executors/jotform-trigger",
     exportName: "jotFormTriggerExecutor",
   },
   {
-    type: "n8n-nodes-base.reddit",
+    type: "openflow-node-base.reddit",
     modulePath: "./executors/reddit",
     exportName: "redditExecutor",
   },
   {
-    type: "n8n-nodes-base.perplexityTool",
+    type: "openflow-node-base.perplexityTool",
     modulePath: "./executors/n8n-nodes-base.perplexityTool",
     exportName: "perplexityToolExecutor",
   },
   {
-    type: "n8n-nodes-base.googleDocsTool",
+    type: "openflow-node-base.googleDocsTool",
     modulePath: "./executors/n8n-nodes-base.googleDocsTool",
     exportName: "googleDocsToolExecutor",
   },
   {
-    type: "n8n-nodes-base.airtableTool",
+    type: "openflow-node-base.airtableTool",
     modulePath: "./executors/n8n-nodes-base.airtableTool",
     exportName: "airtableToolExecutor",
   },
   {
-    type: "n8n-nodes-base.airtop",
+    type: "openflow-node-base.airtop",
     modulePath: "./executors/n8n-nodes-base.airtop",
     exportName: "airtopExecutor",
   },
   {
-    type: "n8n-nodes-base.airtopTool",
+    type: "openflow-node-base.airtopTool",
     modulePath: "./executors/n8n-nodes-base.airtopTool",
     exportName: "airtopToolExecutor",
   },
   {
-    type: "n8n-nodes-base.shopifyTrigger",
+    type: "openflow-node-base.shopifyTrigger",
     modulePath: "./executors/n8n-nodes-base.shopifyTrigger",
     exportName: "shopifyTriggerExecutor",
   },
   {
-    type: "@n8n/n8n-nodes-langchain.sentimentAnalysis",
+    type: "openflow-node-langchain.sentimentAnalysis",
     modulePath: "./executors/sentimentAnalysis",
     exportName: "sentimentAnalysisExecutor",
   },
   {
-    type: "@n8n/n8n-nodes-langchain.chat",
+    type: "openflow-node-langchain.chat",
     modulePath: "./executors/n8n-nodes-langchain.chat",
     exportName: "n8nNodesLangchainChatExecutor",
   },
   {
-    type: "n8n-nodes-base.postgresTool",
+    type: "openflow-node-base.postgresTool",
     modulePath: "./executors/PostgresTool",
     exportName: "postgresToolExecutor",
   },
   {
-    type: "n8n-nodes-base.typeformTrigger",
+    type: "openflow-node-base.typeformTrigger",
     modulePath: "./executors/n8n-nodes-base.typeformTrigger",
     exportName: "typeformTriggerExecutor",
   },
   {
-    type: "n8n-nodes-base.slackTool",
+    type: "openflow-node-base.slackTool",
     modulePath: "./executors/n8n-nodes-base.slackTool",
     exportName: "slackToolExecutor",
   },
   {
-    type: "n8n-nodes-base.googleSlidesTool",
+    type: "openflow-node-base.googleSlidesTool",
     modulePath: "./executors/n8n-nodes-base.googleSlidesTool",
     exportName: "googleSlidesToolExecutor",
   },
   {
-    type: "@n8n/n8n-nodes-langchain.rerankerCohere",
+    type: "openflow-node-langchain.rerankerCohere",
     modulePath: "./executors/reranker-cohere",
     exportName: "rerankerCohereExecutor",
   },
   {
-    type: "n8n-nodes-base.airtableTrigger",
+    type: "openflow-node-base.airtableTrigger",
     modulePath: "./executors/n8n-nodes-base.airtableTrigger",
     exportName: "airtableTriggerExecutor",
   },
   {
-    type: "@n8n/n8n-nodes-langchain.textSplitterCharacterTextSplitter",
+    type: "openflow-node-langchain.textSplitterCharacterTextSplitter",
     modulePath: "./executors/textSplitterCharacterTextSplitter",
     exportName: "textSplitterCharacterTextSplitterExecutor",
   },
   {
-    type: "n8n-nodes-base.googleCalendarTrigger",
+    type: "openflow-node-base.googleCalendarTrigger",
     modulePath: "./executors/google-calendar-trigger",
     exportName: "googleCalendarTriggerExecutor",
   },
   {
-    type: "n8n-nodes-base.dataTableTool",
+    type: "openflow-node-base.dataTableTool",
     modulePath: "./executors/n8n-nodes-base.dataTableTool",
     exportName: "dataTableToolExecutor",
   },
   {
-    type: "n8n-nodes-base.discourse",
+    type: "openflow-node-base.discourse",
     modulePath: "./executors/discourse",
     exportName: "discourseExecutor",
   },
   {
-    type: "n8n-nodes-base.hunter",
+    type: "openflow-node-base.hunter",
     modulePath: "./executors/n8n-nodes-base.hunter",
     exportName: "hunterExecutor",
   },
   {
-    type: "n8n-nodes-base.notionTrigger",
+    type: "openflow-node-base.notionTrigger",
     modulePath: "./executors/n8n-nodes-base.notionTrigger",
     exportName: "notionTriggerExecutor",
   },
   {
-    type: "n8n-nodes-base.calendlyTrigger",
+    type: "openflow-node-base.calendlyTrigger",
     modulePath: "./executors/n8n-nodes-base.calendlyTrigger",
     exportName: "calendlyTriggerExecutor",
   },
   {
-    type: "@n8n/n8n-nodes-langchain.textSplitterTokenSplitter",
+    type: "openflow-node-langchain.textSplitterTokenSplitter",
     modulePath: "./executors/textSplitterTokenSplitter",
     exportName: "textSplitterTokenSplitterExecutor",
   },
   {
-    type: "@n8n/n8n-nodes-langchain.lmOllama",
+    type: "openflow-node-langchain.lmOllama",
     modulePath: "./executors/lm-ollama",
     exportName: "lmOllamaExecutor",
   },
   {
-    type: "n8n-nodes-base.microsoftOutlookTrigger",
+    type: "openflow-node-base.microsoftOutlookTrigger",
     modulePath: "./executors/microsoft-outlook-trigger",
     exportName: "microsoftOutlookTriggerExecutor",
   },
   {
-    type: "n8n-nodes-base.splunkTool",
+    type: "openflow-node-base.splunkTool",
     modulePath: "./executors/n8n-nodes-base.splunkTool",
     exportName: "splunkToolExecutor",
   },
   {
-    type: "n8n-nodes-base.openWeatherMap",
+    type: "openflow-node-base.openWeatherMap",
     modulePath: "./executors/n8n-nodes-base.openWeatherMap",
     exportName: "openWeatherMapExecutor",
   },
   {
-    type: "n8n-nodes-base.openWeatherMapTool",
+    type: "openflow-node-base.openWeatherMapTool",
     modulePath: "./executors/n8n-nodes-base.openWeatherMapTool",
     exportName: "openWeatherMapToolExecutor",
   },
   {
-    type: "n8n-nodes-base.raindropTool",
+    type: "openflow-node-base.raindropTool",
     modulePath: "./executors/n8n-nodes-base.raindropTool",
     exportName: "raindropToolExecutor",
   },
   {
-    type: "n8n-nodes-base.htmlExtract",
+    type: "openflow-node-base.htmlExtract",
     modulePath: "./executors/htmlExtract",
     exportName: "htmlExtractExecutor",
   },
   {
-    type: "@n8n/n8n-nodes-langchain.lmChatXAiGrok",
+    type: "openflow-node-langchain.lmChatXAiGrok",
     modulePath: "./executors/lm-chat-xai-grok",
     exportName: "lmChatXAiGrokExecutor",
   },
   {
-    type: "@n8n/n8n-nodes-langchain.embeddingsOllama",
+    type: "openflow-node-langchain.embeddingsOllama",
     modulePath: "./executors/embeddings-ollama",
     exportName: "embeddingsOllamaExecutor",
   },
   {
-    type: "@n8n/n8n-nodes-langchain.vectorStoreMongoDBAtlas",
+    type: "openflow-node-langchain.vectorStoreMongoDBAtlas",
     modulePath: "./executors/vectorStoreMongoDBAtlas",
     exportName: "vectorStoreMongoDBAtlasExecutor",
   },
   {
-    type: "@n8n/n8n-nodes-langchain.embeddingsMistralCloud",
+    type: "openflow-node-langchain.embeddingsMistralCloud",
     modulePath: "./executors/embeddings-mistral-cloud",
     exportName: "embeddingsMistralCloudExecutor",
   },
   {
-    type: "n8n-nodes-base.spotify",
+    type: "openflow-node-base.spotify",
     modulePath: "./executors/spotify",
     exportName: "spotifyExecutor",
   },
   {
-    type: "n8n-nodes-base.strava",
+    type: "openflow-node-base.strava",
     modulePath: "./executors/n8n-nodes-base.strava",
     exportName: "stravaExecutor",
   },
   {
-    type: "n8n-nodes-base.wooCommerceTrigger",
+    type: "openflow-node-base.wooCommerceTrigger",
     modulePath: "./executors/n8n-nodes-base.wooCommerceTrigger",
     exportName: "wooCommerceTriggerExecutor",
   },
   {
-    type: "n8n-nodes-base.Brandfetch",
+    type: "openflow-node-base.Brandfetch",
     modulePath: "./executors/Brandfetch",
     exportName: "brandfetchExecutor",
   },
   {
-    type: "n8n-nodes-base.clearbit",
+    type: "openflow-node-base.clearbit",
     modulePath: "./executors/n8n-nodes-base.clearbit",
     exportName: "clearbitExecutor",
   },
   {
-    type: "n8n-nodes-base.deepL",
+    type: "openflow-node-base.deepL",
     modulePath: "./executors/deepL",
     exportName: "deepLExecutor",
   },
   {
-    type: "n8n-nodes-base.deepLTool",
+    type: "openflow-node-base.deepLTool",
     modulePath: "./executors/deepLTool",
     exportName: "deepLToolExecutor",
   },
   {
-    type: "n8n-nodes-base.zoom",
+    type: "openflow-node-base.zoom",
     modulePath: "./executors/n8n-nodes-base.zoom",
     exportName: "zoomExecutor",
   },
   {
-    type: "n8n-nodes-base.twilioTrigger",
+    type: "openflow-node-base.twilioTrigger",
     modulePath: "./executors/n8n-nodes-base.twilioTrigger",
     exportName: "twilioTriggerExecutor",
   },
   {
-    type: "n8n-nodes-base.telegramBot",
+    type: "openflow-node-base.telegramBot",
     modulePath: "./executors/telegram",
     exportName: "telegramExecutor",
   },
   {
-    type: "n8n-nodes-base.apiTemplateIo",
+    type: "openflow-node-base.apiTemplateIo",
     modulePath: "./executors/ApiTemplateIoExecutor",
     exportName: "apiTemplateIoExecutor",
   },
   {
-    type: "n8n-nodes-base.jinaAi",
+    type: "openflow-node-base.jinaAi",
     modulePath: "./executors/n8n-nodes-base.jinaAi",
     exportName: "jinaAiExecutor",
   },
   {
-    type: "n8n-nodes-base.mistralAi",
+    type: "openflow-node-base.mistralAi",
     modulePath: "./executors/n8n-nodes-base.mistralAi",
     exportName: "mistralAiExecutor",
   },
   {
-    type: "n8n-nodes-base.phantombuster",
+    type: "openflow-node-base.phantombuster",
     modulePath: "./executors/n8n-nodes-base.phantombuster",
     exportName: "phantombusterExecutor",
   },
   {
-    type: "@n8n/n8n-nodes-langchain.mcpClient",
+    type: "openflow-node-langchain.mcpClient",
     modulePath: "./executors/mcp-client",
     exportName: "mcpClientExecutor",
   },
   {
-    type: "n8n-nodes-base.mautic",
+    type: "openflow-node-base.mautic",
     modulePath: "./executors/mautic",
     exportName: "mauticExecutor",
   },
   {
-    type: "n8n-nodes-base.mauticTrigger",
+    type: "openflow-node-base.mauticTrigger",
     modulePath: "./executors/n8n-nodes-base.mauticTrigger",
     exportName: "mauticTriggerExecutor",
   },
   {
-    type: "n8n-nodes-base.pipedriveTrigger",
+    type: "openflow-node-base.pipedriveTrigger",
     modulePath: "./executors/n8n-nodes-base.pipedriveTrigger",
     exportName: "pipedriveTriggerExecutor",
   },
   {
-    type: "n8n-nodes-base.calTrigger",
+    type: "openflow-node-base.calTrigger",
     modulePath: "./executors/cal-trigger",
     exportName: "calTriggerExecutor",
   },
   {
-    type: "n8n-nodes-base.serviceNow",
+    type: "openflow-node-base.serviceNow",
     modulePath: "./executors/serviceNow",
     exportName: "serviceNowExecutor",
   },
   {
-    type: "n8n-nodes-base.uproc",
+    type: "openflow-node-base.uproc",
     modulePath: "./executors/n8n-nodes-base.uproc",
     exportName: "uprocExecutor",
   },
   {
-    type: "n8n-nodes-base.dropcontact",
+    type: "openflow-node-base.dropcontact",
     modulePath: "./executors/n8n-nodes-base.dropcontact",
     exportName: "dropcontactExecutor",
   },
   {
-    type: "n8n-nodes-base.highLevelTool",
+    type: "openflow-node-base.highLevelTool",
     modulePath: "./executors/n8n-nodes-base.highLevelTool",
     exportName: "highLevelToolExecutor",
   },
   {
-    type: "n8n-nodes-base.wordpressTool",
+    type: "openflow-node-base.wordpressTool",
     modulePath: "./executors/n8n-nodes-base.wordpressTool",
     exportName: "wordpressToolExecutor",
   },
   {
-    type: "n8n-nodes-base.nasa",
+    type: "openflow-node-base.nasa",
     modulePath: "./executors/nasa",
     exportName: "nasaExecutor",
   },
   {
-    type: "n8n-nodes-base.hubspotTool",
+    type: "openflow-node-base.hubspotTool",
     modulePath: "./executors/n8n-nodes-base.hubspotTool",
     exportName: "hubspotToolExecutor",
   },
   {
-    type: "n8n-nodes-base.lemlist",
+    type: "openflow-node-base.lemlist",
     modulePath: "./executors/n8n-nodes-base.lemlist",
     exportName: "lemlistExecutor",
   },
   {
-    type: "n8n-nodes-base.githubTool",
+    type: "openflow-node-base.githubTool",
     modulePath: "./executors/n8n-nodes-base.githubTool",
     exportName: "githubToolExecutor",
   },
   {
-    type: "n8n-nodes-base.webflowTrigger",
+    type: "openflow-node-base.webflowTrigger",
     modulePath: "./executors/n8n-nodes-base.webflowTrigger",
     exportName: "webflowTriggerExecutor",
   },
   {
-    type: "n8n-nodes-base.figmaTrigger",
+    type: "openflow-node-base.figmaTrigger",
     modulePath: "./executors/n8n-nodes-base.figmaTrigger",
     exportName: "figmaTriggerExecutor",
   },
   {
-    type: "@n8n/n8n-nodes-langchain.lmChatGoogleVertex",
+    type: "openflow-node-langchain.lmChatGoogleVertex",
     modulePath: "./executors/lm-chat-google-vertex",
     exportName: "lmChatGoogleVertexExecutor",
   },
   {
-    type: "n8n-nodes-base.clickUpTrigger",
+    type: "openflow-node-base.clickUpTrigger",
     modulePath: "./executors/clickUpTrigger",
     exportName: "clickUpTriggerExecutor",
   },
   {
-    type: "n8n-nodes-base.jiraTrigger",
+    type: "openflow-node-base.jiraTrigger",
     modulePath: "./executors/jira-trigger",
     exportName: "jiraTriggerExecutor",
   },
   {
-    type: "n8n-nodes-base.googleCloudNaturalLanguage",
+    type: "openflow-node-base.googleCloudNaturalLanguage",
     modulePath: "./executors/googleCloudNaturalLanguage",
     exportName: "googleCloudNaturalLanguageExecutor",
   },
   {
-    type: "n8n-nodes-base.jinaAiTool",
+    type: "openflow-node-base.jinaAiTool",
     modulePath: "./executors/jinaAiTool",
     exportName: "jinaAiToolExecutor",
   },
   {
-    type: "n8n-nodes-base.salesforceTrigger",
+    type: "openflow-node-base.salesforceTrigger",
     modulePath: "./executors/n8n-nodes-base.salesforceTrigger",
     exportName: "salesforceTriggerExecutor",
   },
   {
-    type: "n8n-nodes-base.telegramHitlTool",
+    type: "openflow-node-base.telegramHitlTool",
     modulePath: "./executors/n8n-nodes-base.telegramHitlTool",
     exportName: "telegramHitlToolExecutor",
   },
   {
-    type: "n8n-nodes-base.slackHitlTool",
+    type: "openflow-node-base.slackHitlTool",
     modulePath: "./executors/n8n-nodes-base.slackHitlTool",
     exportName: "slackHitlToolExecutor",
   },
   {
-    type: "n8n-nodes-base.todoistTool",
+    type: "openflow-node-base.todoistTool",
     modulePath: "./executors/n8n-nodes-base.todoistTool",
     exportName: "todoistToolExecutor",
   },
   {
-    type: "@n8n/n8n-nodes-langchain.vectorStoreWeaviate",
+    type: "openflow-node-langchain.vectorStoreWeaviate",
     modulePath: "./executors/vectorStoreWeaviate",
     exportName: "vectorStoreWeaviateExecutor",
   },
   {
-    type: "n8n-nodes-base.emailSendTool",
+    type: "openflow-node-base.emailSendTool",
     modulePath: "./executors/emailSendTool",
     exportName: "emailSendToolExecutor",
   },
   {
-    type: "n8n-nodes-base.facebookLeadAdsTrigger",
+    type: "openflow-node-base.facebookLeadAdsTrigger",
     modulePath: "./executors/n8n-nodes-base.facebookLeadAdsTrigger",
     exportName: "facebookLeadAdsTriggerExecutor",
   },
   {
-    type: "n8n-nodes-base.linearTrigger",
+    type: "openflow-node-base.linearTrigger",
     modulePath: "./executors/linearTrigger",
     exportName: "linearTriggerExecutor",
   },
   {
-    type: "n8n-nodes-base.microsoftOutlookTool",
+    type: "openflow-node-base.microsoftOutlookTool",
     modulePath: "./executors/n8n-nodes-base.microsoftOutlookTool",
     exportName: "microsoftOutlookToolExecutor",
   },
   {
-    type: "n8n-nodes-base.mqttTrigger",
+    type: "openflow-node-base.mqttTrigger",
     modulePath: "./executors/mqttTrigger",
     exportName: "mqttTriggerExecutor",
   },
   {
-    type: "n8n-nodes-base.shopifyTool",
+    type: "openflow-node-base.shopifyTool",
     modulePath: "./executors/n8n-nodes-base.shopifyTool",
     exportName: "shopifyToolExecutor",
   },
   {
-    type: "n8n-nodes-base.trelloTrigger",
+    type: "openflow-node-base.trelloTrigger",
     modulePath: "./executors/trelloTrigger",
     exportName: "trelloTriggerExecutor",
   },
   {
-    type: "@n8n/n8n-nodes-langchain.embeddingsAzureOpenAi",
+    type: "openflow-node-langchain.embeddingsAzureOpenAi",
     modulePath: "./executors/embeddings-azure-openai",
     exportName: "embeddingsAzureOpenAiExecutor",
   },
   {
-    type: "@n8n/n8n-nodes-langchain.lmChatAwsBedrock",
+    type: "openflow-node-langchain.lmChatAwsBedrock",
     modulePath: "./executors/lm-chat-aws-bedrock",
     exportName: "lmChatAwsBedrockExecutor",
   },
   {
-    type: "@n8n/n8n-nodes-langchain.manualChatTrigger",
+    type: "openflow-node-langchain.manualChatTrigger",
     modulePath: "./executors/langchain-manual-chat-trigger",
     exportName: "langchainManualChatTriggerExecutor",
   },
   {
-    type: "n8n-nodes-base.bambooHr",
+    type: "openflow-node-base.bambooHr",
     modulePath: "./executors/n8n-nodes-base.bambooHr",
     exportName: "bambooHrExecutor",
   },
   {
-    type: "n8n-nodes-base.bannerbear",
+    type: "openflow-node-base.bannerbear",
     modulePath: "./executors/BannerbearExecutor",
     exportName: "bannerbearExecutor",
   },
   {
-    type: "n8n-nodes-base.baserowTool",
+    type: "openflow-node-base.baserowTool",
     modulePath: "./executors/baserowTool",
     exportName: "baserowToolExecutor",
   },
   {
-    type: "n8n-nodes-base.box",
+    type: "openflow-node-base.box",
     modulePath: "./executors/box",
     exportName: "boxExecutor",
   },
   {
-    type: "n8n-nodes-base.googleContactsTool",
+    type: "openflow-node-base.googleContactsTool",
     modulePath: "./executors/n8n-nodes-base.googleContactsTool",
     exportName: "googleContactsToolExecutor",
   },
   {
-    type: "n8n-nodes-base.clockify",
+    type: "openflow-node-base.clockify",
     modulePath: "./executors/clockify",
     exportName: "clockifyExecutor",
   },
   {
-    type: "n8n-nodes-base.clockifyTool",
+    type: "openflow-node-base.clockifyTool",
     modulePath: "./executors/n8n-nodes-base.clockifyTool",
     exportName: "clockifyToolExecutor",
   },
   {
-    type: "n8n-nodes-base.googleFirebaseCloudFirestore",
+    type: "openflow-node-base.googleFirebaseCloudFirestore",
     modulePath: "./executors/googleFirebaseCloudFirestore",
     exportName: "googleFirebaseCloudFirestoreExecutor",
   },
   {
-    type: "n8n-nodes-base.googleFirebaseCloudFirestoreTool",
+    type: "openflow-node-base.googleFirebaseCloudFirestoreTool",
     modulePath: "./executors/googleFirebaseCloudFirestoreTool",
     exportName: "googleFirebaseCloudFirestoreToolExecutor",
   },
   {
-    type: "n8n-nodes-base.onfleetTrigger",
+    type: "openflow-node-base.onfleetTrigger",
     modulePath: "./executors/n8n-nodes-base.onfleetTrigger",
     exportName: "onfleetTriggerExecutor",
   },
   {
-    type: "n8n-nodes-base.mindee",
+    type: "openflow-node-base.mindee",
     modulePath: "./executors/mindee",
     exportName: "mindeeExecutor",
   },
   {
-    type: "n8n-nodes-base.redditTool",
+    type: "openflow-node-base.redditTool",
     modulePath: "./executors/n8n-nodes-base.redditTool",
     exportName: "redditToolExecutor",
   },
   {
-    type: "n8n-nodes-base.uptimeRobot",
+    type: "openflow-node-base.uptimeRobot",
     modulePath: "./executors/uptimeRobot",
     exportName: "uptimeRobotExecutor",
   },
   {
-    type: "@n8n/n8n-nodes-langchain.embeddingsHuggingFaceInference",
+    type: "openflow-node-langchain.embeddingsHuggingFaceInference",
     modulePath: "./executors/embeddings-huggingface-inference",
     exportName: "embeddingsHuggingFaceInferenceExecutor",
   },
   {
-    type: "@n8n/n8n-nodes-langchain.lmOpenHuggingFaceInference",
+    type: "openflow-node-langchain.lmOpenHuggingFaceInference",
     modulePath: "./executors/lmOpenHuggingFaceInference",
     exportName: "lmOpenHuggingFaceInferenceExecutor",
   },
   {
-    type: "n8n-nodes-base.awsTextract",
+    type: "openflow-node-base.awsTextract",
     modulePath: "./executors/awsTextract",
     exportName: "awsTextractExecutor",
   },
   {
-    type: "n8n-nodes-base.awsTranscribe",
+    type: "openflow-node-base.awsTranscribe",
     modulePath: "./executors/awsTranscribe",
     exportName: "awsTranscribeExecutor",
   },
   {
-    type: "n8n-nodes-base.azureStorage",
+    type: "openflow-node-base.azureStorage",
     modulePath: "./executors/azureStorage",
     exportName: "azureStorageExecutor",
   },
   {
-    type: "n8n-nodes-base.bitly",
+    type: "openflow-node-base.bitly",
     modulePath: "./executors/n8n-nodes-base.bitly",
     exportName: "bitlyExecutor",
   },
   {
-    type: "n8n-nodes-base.dropboxTool",
+    type: "openflow-node-base.dropboxTool",
     modulePath: "./executors/n8n-nodes-base.dropboxTool",
     exportName: "dropboxToolExecutor",
   },
   {
-    type: "n8n-nodes-base.eventbriteTrigger",
+    type: "openflow-node-base.eventbriteTrigger",
     modulePath: "./executors/eventbriteTrigger",
     exportName: "eventbriteTriggerExecutor",
   },
   {
-    type: "n8n-nodes-base.facebookTrigger",
+    type: "openflow-node-base.facebookTrigger",
     modulePath: "./executors/facebookTrigger",
     exportName: "facebookTriggerExecutor",
   },
   {
-    type: "n8n-nodes-base.freshdesk",
+    type: "openflow-node-base.freshdesk",
     modulePath: "./executors/freshdesk",
     exportName: "freshdeskExecutor",
   },
   {
-    type: "n8n-nodes-base.freshdeskTool",
+    type: "openflow-node-base.freshdeskTool",
     modulePath: "./executors/freshdeskTool",
     exportName: "freshdeskToolExecutor",
   },
   {
-    type: "n8n-nodes-base.ghost",
+    type: "openflow-node-base.ghost",
     modulePath: "./executors/ghost",
     exportName: "ghostExecutor",
   },
   {
-    type: "n8n-nodes-base.gumroadTrigger",
+    type: "openflow-node-base.gumroadTrigger",
     modulePath: "./executors/gumroad-trigger",
     exportName: "gumroadTriggerExecutor",
   },
   {
-    type: "n8n-nodes-base.humanticAi",
+    type: "openflow-node-base.humanticAi",
     modulePath: "./executors/humantic-ai",
     exportName: "humanticAiExecutor",
   },
   {
-    type: "n8n-nodes-base.googleAnalyticsTool",
+    type: "openflow-node-base.googleAnalyticsTool",
     modulePath: "./executors/googleAnalyticsTool",
     exportName: "googleAnalyticsToolExecutor",
   },
   {
-    type: "n8n-nodes-base.demio",
+    type: "openflow-node-base.demio",
     modulePath: "./executors/communication/demio",
     exportName: "demioExecutor",
   },
   {
-    type: "n8n-nodes-base.intercom",
+    type: "openflow-node-base.intercom",
     modulePath: "./executors/n8n-nodes-base.intercom",
     exportName: "intercomExecutor",
   },
   {
-    type: "n8n-nodes-base.lemlistTrigger",
+    type: "openflow-node-base.lemlistTrigger",
     modulePath: "./executors/n8n-nodes-base.lemlistTrigger",
     exportName: "lemlistTriggerExecutor",
   },
   {
-    type: "n8n-nodes-base.lingvaNex",
+    type: "openflow-node-base.lingvaNex",
     modulePath: "./executors/lingvaNex",
     exportName: "lingvaNexExecutor",
   },
   {
-    type: "n8n-nodes-base.mailchimpTrigger",
+    type: "openflow-node-base.mailchimpTrigger",
     modulePath: "./executors/n8n-nodes-base.mailchimpTrigger",
     exportName: "mailchimpTriggerExecutor",
   },
   {
-    type: "n8n-nodes-base.medium",
+    type: "openflow-node-base.medium",
     modulePath: "./executors/medium",
     exportName: "mediumExecutor",
   },
   {
-    type: "n8n-nodes-base.microsoftOneDriveTrigger",
+    type: "openflow-node-base.microsoftOneDriveTrigger",
     modulePath: "./executors/microsoft-one-drive-trigger",
     exportName: "microsoftOneDriveTriggerExecutor",
   },
   {
-    type: "n8n-nodes-base.onfleet",
+    type: "openflow-node-base.onfleet",
     modulePath: "./executors/n8n-nodes-base.onfleet",
     exportName: "onfleetExecutor",
   },
   {
-    type: "n8n-nodes-base.quickbooksTool",
+    type: "openflow-node-base.quickbooksTool",
     modulePath: "./executors/n8n-nodes-base.quickbooksTool",
     exportName: "quickbooksToolExecutor",
   },
   {
-    type: "n8n-nodes-base.redisTool",
+    type: "openflow-node-base.redisTool",
     modulePath: "./executors/n8n-nodes-base.redisTool",
     exportName: "redisToolExecutor",
   },
   {
-    type: "n8n-nodes-base.raindrop",
+    type: "openflow-node-base.raindrop",
     modulePath: "./executors/raindrop",
     exportName: "raindropExecutor",
   },
   {
-    type: "n8n-nodes-base.sendInBlueTrigger",
+    type: "openflow-node-base.sendInBlueTrigger",
     modulePath: "./executors/brevoTrigger",
     exportName: "brevoTriggerExecutor",
   },
   {
-    type: "n8n-nodes-base.strapi",
+    type: "openflow-node-base.strapi",
     modulePath: "./executors/n8n-nodes-base.strapi",
     exportName: "strapiExecutor",
   },
   {
-    type: "n8n-nodes-base.theHive",
+    type: "openflow-node-base.theHive",
     modulePath: "./executors/theHive",
     exportName: "theHiveExecutor",
   },
   {
-    type: "n8n-nodes-base.trelloTool",
+    type: "openflow-node-base.trelloTool",
     modulePath: "./executors/n8n-nodes-base.trelloTool",
     exportName: "trelloToolExecutor",
   },
   {
-    type: "n8n-nodes-base.urlScanIo",
+    type: "openflow-node-base.urlScanIo",
     modulePath: "./executors/n8n-nodes-base.urlScanIo",
     exportName: "urlScanIoExecutor",
   },
   {
-    type: "@n8n/n8n-nodes-langchain.chatHitlTool",
+    type: "openflow-node-langchain.chatHitlTool",
     modulePath: "./executors/n8n-nodes-langchain.chatHitlTool",
     exportName: "n8nNodesLangchainChatHitlToolExecutor",
   },
   {
-    type: "n8n-nodes-base.vonage",
+    type: "openflow-node-base.vonage",
     modulePath: "./executors/vonage",
     exportName: "vonageExecutor",
   },
   {
-    type: "@n8n/n8n-nodes-langchain.lmChatCohere",
+    type: "openflow-node-langchain.lmChatCohere",
     modulePath: "./executors/lm-chat-cohere",
     exportName: "lmChatCohereExecutor",
   },
   {
-    type: "n8n-nodes-base.awsCertificateManager",
+    type: "openflow-node-base.awsCertificateManager",
     modulePath: "./executors/awsCertificateManager",
     exportName: "awsCertificateManagerExecutor",
   },
   {
-    type: "@n8n/n8n-nodes-langchain.retrieverWorkflow",
+    type: "openflow-node-langchain.retrieverWorkflow",
     modulePath: "./executors/retrieverWorkflow",
     exportName: "retrieverWorkflowExecutor",
   },
   {
-    type: "@n8n/n8n-nodes-langchain.vectorStoreRedis",
+    type: "openflow-node-langchain.vectorStoreRedis",
     modulePath: "./executors/vectorStoreRedis",
     exportName: "vectorStoreRedisExecutor",
   },
   {
-    type: "n8n-nodes-base.amqpTrigger",
+    type: "openflow-node-base.amqpTrigger",
     modulePath: "./executors/amqpTrigger",
     exportName: "amqpTriggerExecutor",
   },
   {
-    type: "n8n-nodes-base.activeCampaign",
+    type: "openflow-node-base.activeCampaign",
     modulePath: "./executors/n8n-nodes-base.activeCampaign",
     exportName: "activeCampaignExecutor",
   },
   {
-    type: "n8n-nodes-base.asanaTrigger",
+    type: "openflow-node-base.asanaTrigger",
     modulePath: "./executors/n8n-nodes-base.asanaTrigger",
     exportName: "asanaTriggerExecutor",
   },
   {
-    type: "n8n-nodes-base.coinGecko",
+    type: "openflow-node-base.coinGecko",
     modulePath: "./executors/coinGecko",
     exportName: "coinGeckoExecutor",
   },
   {
-    type: "n8n-nodes-base.coinGeckoTool",
+    type: "openflow-node-base.coinGeckoTool",
     modulePath: "./executors/n8n-nodes-base.coinGeckoTool",
     exportName: "coinGeckoToolExecutor",
   },
   {
-    type: "n8n-nodes-base.cortex",
+    type: "openflow-node-base.cortex",
     modulePath: "./executors/n8n-nodes-base.cortex",
     exportName: "cortexExecutor",
   },
   {
-    type: "n8n-nodes-base.activeCampaignTrigger",
+    type: "openflow-node-base.activeCampaignTrigger",
     modulePath: "./executors/activeCampaignTrigger",
     exportName: "activeCampaignTriggerExecutor",
   },
   {
-    type: "n8n-nodes-base.convertKit",
+    type: "openflow-node-base.convertKit",
     modulePath: "./executors/convertKit",
     exportName: "convertKitExecutor",
   },
   {
-    type: "n8n-nodes-base.convertKitTool",
+    type: "openflow-node-base.convertKitTool",
     modulePath: "./executors/n8n-nodes-base.convertKitTool",
     exportName: "convertKitToolExecutor",
   },
   {
-    type: "n8n-nodes-base.crateDb",
+    type: "openflow-node-base.crateDb",
     modulePath: "./executors/n8n-nodes-base.crateDb",
     exportName: "crateDbExecutor",
   },
   {
-    type: "n8n-nodes-base.dhl",
+    type: "openflow-node-base.dhl",
     modulePath: "./executors/n8n-nodes-base.dhl",
     exportName: "dhlExecutor",
   },
   {
-    type: "n8n-nodes-base.dhlTool",
+    type: "openflow-node-base.dhlTool",
     modulePath: "./executors/dhlTool",
     exportName: "dhlToolExecutor",
   },
   {
-    type: "n8n-nodes-base.goToWebinar",
+    type: "openflow-node-base.goToWebinar",
     modulePath: "./executors/n8n-nodes-base.goToWebinar",
     exportName: "goToWebinarExecutor",
   },
   {
-    type: "n8n-nodes-base.filemaker",
+    type: "openflow-node-base.filemaker",
     modulePath: "./executors/filemaker",
     exportName: "filemakerExecutor",
   },
   {
-    type: "n8n-nodes-base.googleAdsTool",
+    type: "openflow-node-base.googleAdsTool",
     modulePath: "./executors/n8n-nodes-base.googleAdsTool",
     exportName: "googleAdsToolExecutor",
   },
   {
-    type: "n8n-nodes-base.googleBooks",
+    type: "openflow-node-base.googleBooks",
     modulePath: "./executors/googleBooks",
     exportName: "googleBooksExecutor",
   },
   {
-    type: "n8n-nodes-base.googleDriveSearch",
+    type: "openflow-node-base.googleDriveSearch",
     modulePath: "./executors/n8n-nodes-base.googleDriveSearch",
     exportName: "googleDriveSearchExecutor",
   },
   {
-    type: "n8n-nodes-base.hunterTool",
+    type: "openflow-node-base.hunterTool",
     modulePath: "./executors/hunterTool",
     exportName: "hunterToolExecutor",
   },
   {
-    type: "n8n-nodes-base.keap",
+    type: "openflow-node-base.keap",
     modulePath: "./executors/n8n-nodes-base.keap",
     exportName: "keapExecutor",
   },
   {
-    type: "n8n-nodes-base.linearTool",
+    type: "openflow-node-base.linearTool",
     modulePath: "./executors/n8n-nodes-base.linearTool",
     exportName: "linearToolExecutor",
   },
   {
-    type: "n8n-nodes-base.linkedInTool",
+    type: "openflow-node-base.linkedInTool",
     modulePath: "./executors/linkedInTool",
     exportName: "linkedInToolExecutor",
   },
   {
-    type: "n8n-nodes-base.nasaTool",
+    type: "openflow-node-base.nasaTool",
     modulePath: "./executors/nasaTool",
     exportName: "nasaToolExecutor",
   },
   {
-    type: "n8n-nodes-base.mongoDbTool",
+    type: "openflow-node-base.mongoDbTool",
     modulePath: "./executors/n8n-nodes-base.mongoDbTool",
     exportName: "mongoDbToolExecutor",
   },
   {
-    type: "n8n-nodes-base.nocoDbTool",
+    type: "openflow-node-base.nocoDbTool",
     modulePath: "./executors/n8n-nodes-base.nocoDbTool",
     exportName: "nocoDbToolExecutor",
   },
   {
-    type: "n8n-nodes-base.netlifyTrigger",
+    type: "openflow-node-base.netlifyTrigger",
     modulePath: "./executors/netlifyTrigger",
     exportName: "netlifyTriggerExecutor",
   },
   {
-    type: "n8n-nodes-base.oneSimpleApi",
+    type: "openflow-node-base.oneSimpleApi",
     modulePath: "./executors/oneSimpleApi",
     exportName: "oneSimpleApiExecutor",
   },
   {
-    type: "n8n-nodes-base.signl4",
+    type: "openflow-node-base.signl4",
     modulePath: "./executors/signl4",
     exportName: "signl4Executor",
   },
   {
-    type: "n8n-nodes-base.spotifyTool",
+    type: "openflow-node-base.spotifyTool",
     modulePath: "./executors/n8n-nodes-base.spotifyTool",
     exportName: "spotifyToolExecutor",
   },
   {
-    type: "n8n-nodes-base.theHiveProject",
+    type: "openflow-node-base.theHiveProject",
     modulePath: "./executors/theHiveProject",
     exportName: "theHiveProjectExecutor",
   },
   {
-    type: "n8n-nodes-base.webSearch",
+    type: "openflow-node-base.webSearch",
     modulePath: "./executors/webSearch",
     exportName: "webSearchExecutor",
   },
   {
-    type: "n8n-nodes-base.webSearchTool",
+    type: "openflow-node-base.webSearchTool",
     modulePath: "./executors/webSearchTool",
     exportName: "webSearchToolExecutor",
   },
   {
-    type: "n8n-nodes-base.gitTool",
+    type: "openflow-node-base.gitTool",
     modulePath: "./executors/gitTool",
     exportName: "gitToolExecutor",
   },
   {
-    type: "n8n-nodes-base.filesystemTool",
+    type: "openflow-node-base.filesystemTool",
     modulePath: "./executors/filesystemTool",
     exportName: "filesystemToolExecutor",
   },
   {
-    type: "n8n-nodes-base.webflowTool",
+    type: "openflow-node-base.webflowTool",
     modulePath: "./executors/n8n-nodes-base.webflowTool",
     exportName: "webflowToolExecutor",
   },
   {
-    type: "n8n-nodes-base.whatsAppTool",
+    type: "openflow-node-base.whatsAppTool",
     modulePath: "./executors/whatsapp-tool",
     exportName: "whatsAppToolExecutor",
   },
   {
-    type: "n8n-nodes-base.zulip",
+    type: "openflow-node-base.zulip",
     modulePath: "./executors/n8n-nodes-base.zulip",
     exportName: "zulipExecutor",
   },
   {
-    type: "n8n-nodes-base.discourse",
-    modulePath: "./executors/discourse",
-    exportName: "discourseExecutor",
-  },
-  {
-    type: "@n8n/n8n-nodes-langchain.anthropicTool",
+    type: "openflow-node-langchain.anthropicTool",
     modulePath: "./executors/n8n-nodes-langchain.anthropicTool",
     exportName: "anthropicToolExecutor",
   },
   {
-    type: "@n8n/n8n-nodes-langchain.embeddingsAwsBedrock",
+    type: "openflow-node-langchain.embeddingsAwsBedrock",
     modulePath: "./executors/embeddings-aws-bedrock",
     exportName: "embeddingsAwsBedrockExecutor",
   },
   {
-    type: "@n8n/n8n-nodes-langchain.lmChatMoonshot",
+    type: "openflow-node-langchain.lmChatMoonshot",
     modulePath: "./executors/lm-chat-moonshot",
     exportName: "lmChatMoonshotExecutor",
   },
   {
-    type: "@n8n/n8n-nodes-langchain.ollama",
+    type: "openflow-node-langchain.ollama",
     modulePath: "./executors/ollama-app",
     exportName: "ollamaAppExecutor",
   },
   {
-    type: "@n8n/n8n-nodes-langchain.vectorStoreSupabaseInsert",
+    type: "openflow-node-langchain.vectorStoreSupabaseInsert",
     modulePath: "./executors/vectorStoreSupabaseInsert",
     exportName: "vectorStoreSupabaseInsertExecutor",
   },
   {
-    type: "n8n-nodes-base.rundeck",
+    type: "openflow-node-base.rundeck",
     modulePath: "./executors/rundeck",
     exportName: "rundeckExecutor",
   },
   {
-    type: "n8n-nodes-base.acuitySchedulingTrigger",
+    type: "openflow-node-base.acuitySchedulingTrigger",
     modulePath: "./executors/acuitySchedulingTrigger",
     exportName: "acuitySchedulingTriggerExecutor",
   },
   {
-    type: "n8n-nodes-base.actionNetworkTool",
+    type: "openflow-node-base.actionNetworkTool",
     modulePath: "./executors/ActionNetworkTool",
     exportName: "actionNetworkToolExecutor",
   },
   {
-    type: "n8n-nodes-base.affinity",
+    type: "openflow-node-base.affinity",
     modulePath: "./executors/affinity",
     exportName: "affinityExecutor",
   },
   {
-    type: "n8n-nodes-base.affinityTrigger",
+    type: "openflow-node-base.affinityTrigger",
     modulePath: "./executors/affinityTrigger",
     exportName: "affinityTriggerExecutor",
   },
   {
-    type: "n8n-nodes-base.affinityTool",
+    type: "openflow-node-base.affinityTool",
     modulePath: "./executors/n8n-nodes-base.affinityTool",
     exportName: "affinityToolExecutor",
   },
   {
-    type: "n8n-nodes-base.agileCrm",
+    type: "openflow-node-base.agileCrm",
     modulePath: "./executors/n8n-nodes-base.agileCrm",
     exportName: "agileCrmExecutor",
   },
   {
-    type: "n8n-nodes-base.autopilotTool",
+    type: "openflow-node-base.autopilotTool",
     modulePath: "./executors/n8n-nodes-base.autopilotTool",
     exportName: "autopilotToolExecutor",
   },
   {
-    type: "n8n-nodes-base.autopilotTrigger",
+    type: "openflow-node-base.autopilotTrigger",
     modulePath: "./executors/autopilot-trigger",
     exportName: "autopilotTriggerExecutor",
   },
   {
-    type: "n8n-nodes-base.awsRekognition",
+    type: "openflow-node-base.awsRekognition",
     modulePath: "./executors/awsRekognition",
     exportName: "awsRekognitionExecutor",
   },
   {
-    type: "n8n-nodes-base.awsDynamoDb",
+    type: "openflow-node-base.awsDynamoDb",
     modulePath: "./executors/awsDynamoDb",
     exportName: "awsDynamoDbExecutor",
   },
   {
-    type: "n8n-nodes-base.awsSns",
+    type: "openflow-node-base.awsSns",
     modulePath: "./executors/awsSns",
     exportName: "awsSnsExecutor",
   },
   {
-    type: "n8n-nodes-base.awsSqs",
+    type: "openflow-node-base.awsSqs",
     modulePath: "./executors/awsSqs",
     exportName: "awsSqsExecutor",
   },
   {
-    type: "n8n-nodes-base.awsSnsTrigger",
+    type: "openflow-node-base.awsSnsTrigger",
     modulePath: "./executors/awsSnsTrigger",
     exportName: "awsSnsTriggerExecutor",
   },
   {
-    type: "n8n-nodes-base.awsTranscribeTool",
+    type: "openflow-node-base.awsTranscribeTool",
     modulePath: "./executors/awsTranscribeTool",
     exportName: "awsTranscribeToolExecutor",
   },
   {
-    type: "n8n-nodes-base.beeminderTool",
+    type: "openflow-node-base.beeminderTool",
     modulePath: "./executors/n8n-nodes-base.beeminderTool",
     exportName: "beeminderToolExecutor",
   },
   {
-    type: "n8n-nodes-base.bitlyTool",
+    type: "openflow-node-base.bitlyTool",
     modulePath: "./executors/n8n-nodes-base.bitlyTool",
     exportName: "bitlyToolExecutor",
   },
   {
-    type: "n8n-nodes-base.boxTrigger",
+    type: "openflow-node-base.boxTrigger",
     modulePath: "./executors/box-trigger",
     exportName: "boxTriggerExecutor",
   },
   {
-    type: "n8n-nodes-base.bitwardenTool",
+    type: "openflow-node-base.bitwardenTool",
     modulePath: "./executors/bitwardenTool",
     exportName: "bitwardenToolExecutor",
   },
   {
-    type: "n8n-nodes-base.bubbleTool",
+    type: "openflow-node-base.bubbleTool",
     modulePath: "./executors/n8n-nodes-base.bubbleTool",
     exportName: "bubbleToolExecutor",
   },
   {
-    type: "n8n-nodes-base.chargebee",
+    type: "openflow-node-base.chargebee",
     modulePath: "./executors/Chargebee",
     exportName: "chargebeeExecutor",
   },
   {
-    type: "n8n-nodes-base.cheerio",
+    type: "openflow-node-base.cheerio",
     modulePath: "./executors/cheerio",
     exportName: "cheerioExecutor",
   },
   {
-    type: "n8n-nodes-base.circleCiTool",
+    type: "openflow-node-base.circleCiTool",
     modulePath: "./executors/n8n-nodes-base.circleCiTool",
     exportName: "circleCiToolExecutor",
   },
   {
-    type: "n8n-nodes-base.clearbitTool",
+    type: "openflow-node-base.clearbitTool",
     modulePath: "./executors/n8n-nodes-base.clearbitTool",
     exportName: "clearbitToolExecutor",
   },
   {
-    type: "n8n-nodes-base.clockifyTrigger",
+    type: "openflow-node-base.clockifyTrigger",
     modulePath: "./executors/n8n-nodes-base.clockifyTrigger",
     exportName: "clockifyTriggerExecutor",
   },
   {
-    type: "n8n-nodes-base.cloudflareTool",
+    type: "openflow-node-base.cloudflareTool",
     modulePath: "./executors/cloudflareTool",
     exportName: "cloudflareToolExecutor",
   },
   {
-    type: "n8n-nodes-base.cockpit",
+    type: "openflow-node-base.cockpit",
     modulePath: "./executors/cockpit",
     exportName: "cockpitExecutor",
   },
   {
-    type: "n8n-nodes-base.codaTool",
+    type: "openflow-node-base.codaTool",
     modulePath: "./executors/n8n-nodes-base.codaTool",
     exportName: "codaToolExecutor",
   },
   {
-    type: "n8n-nodes-base.contentful",
+    type: "openflow-node-base.contentful",
     modulePath: "./executors/contentful",
     exportName: "contentfulExecutor",
   },
   {
-    type: "n8n-nodes-base.copper",
+    type: "openflow-node-base.copper",
     modulePath: "./executors/copper",
     exportName: "copperExecutor",
   },
   {
-    type: "n8n-nodes-base.copperTool",
+    type: "openflow-node-base.copperTool",
     modulePath: "./executors/n8n-nodes-base.copperTool",
     exportName: "copperToolExecutor",
   },
   {
-    type: "n8n-nodes-base.copperTrigger",
+    type: "openflow-node-base.copperTrigger",
     modulePath: "./executors/copperTrigger",
     exportName: "copperTriggerExecutor",
   },
   {
-    type: "n8n-nodes-base.customerIoTool",
+    type: "openflow-node-base.customerIoTool",
     modulePath: "./executors/n8n-nodes-base.customerIoTool",
     exportName: "customerIoToolExecutor",
   },
   {
-    type: "n8n-nodes-base.customerIoTrigger",
+    type: "openflow-node-base.customerIoTrigger",
     modulePath: "./executors/n8n-nodes-base.customerIoTrigger",
     exportName: "customerIoTriggerExecutor",
   },
   {
-    type: "n8n-nodes-base.discourse",
-    modulePath: "./executors/discourse",
-    exportName: "discourseExecutor",
-  },
-  {
-    type: "n8n-nodes-base.disqus",
+    type: "openflow-node-base.disqus",
     modulePath: "./executors/n8n-nodes-base.disqus",
     exportName: "disqusExecutor",
   },
   {
-    type: "n8n-nodes-base.drift",
+    type: "openflow-node-base.drift",
     modulePath: "./executors/drift",
     exportName: "driftExecutor",
   },
   {
-    type: "n8n-nodes-base.driftTool",
+    type: "openflow-node-base.driftTool",
     modulePath: "./executors/n8n-nodes-base.driftTool",
     exportName: "driftToolExecutor",
   },
   {
-    type: "n8n-nodes-base.dropcontactTool",
+    type: "openflow-node-base.dropcontactTool",
     modulePath: "./executors/n8n-nodes-base.dropcontactTool",
     exportName: "dropcontactToolExecutor",
   },
   {
-    type: "n8n-nodes-base.egoi",
+    type: "openflow-node-base.egoi",
     modulePath: "./executors/n8n-nodes-base.egoi",
     exportName: "egoiExecutor",
   },
   {
-    type: "n8n-nodes-base.elasticSecurityTool",
+    type: "openflow-node-base.elasticSecurityTool",
     modulePath: "./executors/ElasticSecurityExecutor",
     exportName: "elasticSecurityExecutor",
   },
   {
-    type: "n8n-nodes-base.elevenLabs",
+    type: "openflow-node-base.elevenLabs",
     modulePath: "./executors/ElevenLabs",
     exportName: "elevenLabsExecutor",
   },
   {
-    type: "n8n-nodes-base.emailSendHitlTool",
+    type: "openflow-node-base.emailSendHitlTool",
     modulePath: "./executors/n8n-nodes-base.emailSendHitlTool",
     exportName: "emailSendHitlToolExecutor",
   },
   {
-    type: "n8n-nodes-base.emelia",
+    type: "openflow-node-base.emelia",
     modulePath: "./executors/n8n-nodes-base.emelia",
     exportName: "emeliaExecutor",
   },
   {
-    type: "n8n-nodes-base.emeliaTrigger",
+    type: "openflow-node-base.emeliaTrigger",
     modulePath: "./executors/n8n-nodes-base.emeliaTrigger",
     exportName: "emeliaTriggerExecutor",
   },
   {
-    type: "n8n-nodes-base.flowTrigger",
+    type: "openflow-node-base.flowTrigger",
     modulePath: "./executors/flowTrigger",
     exportName: "flowTriggerExecutor",
   },
   {
-    type: "n8n-nodes-base.formIoTrigger",
+    type: "openflow-node-base.formIoTrigger",
     modulePath: "./executors/formIoTrigger",
     exportName: "formIoTriggerExecutor",
   },
   {
-    type: "n8n-nodes-base.freshworksCrm",
+    type: "openflow-node-base.freshworksCrm",
     modulePath: "./executors/n8n-nodes-base.freshworksCrm",
     exportName: "freshworksCrmExecutor",
   },
   {
-    type: "n8n-nodes-base.getResponse",
+    type: "openflow-node-base.getResponse",
     modulePath: "./executors/getResponse",
     exportName: "getResponseExecutor",
   },
   {
-    type: "n8n-nodes-base.gong",
+    type: "openflow-node-base.gong",
     modulePath: "./executors/gong",
     exportName: "gongExecutor",
   },
   {
-    type: "n8n-nodes-base.gongTool",
+    type: "openflow-node-base.gongTool",
     modulePath: "./executors/gongTool",
     exportName: "gongToolExecutor",
   },
   {
-    type: "n8n-nodes-base.grafanaTool",
+    type: "openflow-node-base.grafanaTool",
     modulePath: "./executors/grafana",
     exportName: "grafanaExecutor",
   },
   {
-    type: "n8n-nodes-base.googleCloudStorageTool",
+    type: "openflow-node-base.googleCloudStorageTool",
     modulePath: "./executors/n8n-nodes-base.googleCloudStorageTool",
     exportName: "googleCloudStorageToolExecutor",
   },
   {
-    type: "n8n-nodes-base.googleCloudNaturalLanguageTool",
+    type: "openflow-node-base.googleCloudNaturalLanguageTool",
     modulePath: "./executors/googleCloudNaturalLanguageTool",
     exportName: "googleCloudNaturalLanguageToolExecutor",
   },
   {
-    type: "n8n-nodes-base.googleCustomSearch",
+    type: "openflow-node-base.googleCustomSearch",
     modulePath: "./executors/googleCustomSearch",
     exportName: "googleCustomSearchExecutor",
   },
   {
-    type: "n8n-nodes-base.googleFirebaseRealtimeDatabase",
+    type: "openflow-node-base.googleFirebaseRealtimeDatabase",
     modulePath: "./executors/googleFirebaseRealtimeDatabase",
     exportName: "googleFirebaseRealtimeDatabaseExecutor",
   },
   {
-    type: "n8n-nodes-base.googlePageSpeedInsights",
+    type: "openflow-node-base.googlePageSpeedInsights",
     modulePath: "./executors/googlePageSpeedInsights",
     exportName: "googlePageSpeedInsightsExecutor",
   },
   {
-    type: "n8n-nodes-base.googlePerspective",
+    type: "openflow-node-base.googlePerspective",
     modulePath: "./executors/googlePerspective",
     exportName: "googlePerspectiveExecutor",
   },
   {
-    type: "n8n-nodes-base.googleSearchConsole",
+    type: "openflow-node-base.googleSearchConsole",
     modulePath: "./executors/googleSearchConsole",
     exportName: "googleSearchConsoleExecutor",
   },
   {
-    type: "n8n-nodes-base.googleTranslateTool",
+    type: "openflow-node-base.googleTranslateTool",
     modulePath: "./executors/googleTranslateTool",
     exportName: "googleTranslateToolExecutor",
   },
   {
-    type: "n8n-nodes-base.plivoTool",
+    type: "openflow-node-base.plivoTool",
     modulePath: "./executors/PlivoTool",
     exportName: "plivoToolExecutor",
   },
   {
-    type: "n8n-nodes-base.postBinTool",
+    type: "openflow-node-base.postBinTool",
     modulePath: "./executors/postBinTool",
     exportName: "postBinToolExecutor",
   },
   {
-    type: "n8n-nodes-base.postHogTool",
+    type: "openflow-node-base.postHogTool",
     modulePath: "./executors/postHogTool",
     exportName: "postHogToolExecutor",
   },
   {
-    type: "n8n-nodes-base.profitWell",
+    type: "openflow-node-base.profitWell",
     modulePath: "./executors/profitWell",
     exportName: "profitWellExecutor",
   },
   {
-    type: "n8n-nodes-base.profitWellTool",
+    type: "openflow-node-base.profitWellTool",
     modulePath: "./executors/profitWellTool",
     exportName: "profitWellToolExecutor",
   },
   {
-    type: "n8n-nodes-base.pushcut",
+    type: "openflow-node-base.pushcut",
     modulePath: "./executors/pushcut",
     exportName: "pushcutExecutor",
   },
   {
-    type: "n8n-nodes-base.pushcutTrigger",
+    type: "openflow-node-base.pushcutTrigger",
     modulePath: "./executors/pushcutTrigger",
     exportName: "pushcutTriggerExecutor",
   },
   {
-    type: "n8n-nodes-base.pushoverTool",
+    type: "openflow-node-base.pushoverTool",
     modulePath: "./executors/pushoverTool",
     exportName: "pushoverToolExecutor",
   },
   {
-    type: "n8n-nodes-base.questDb",
+    type: "openflow-node-base.questDb",
     modulePath: "./executors/n8n-nodes-base.questDb",
     exportName: "questDbExecutor",
   },
   {
-    type: "n8n-nodes-base.quickbase",
+    type: "openflow-node-base.quickbase",
     modulePath: "./executors/QuickBase",
     exportName: "quickBaseExecutor",
   },
   {
-    type: "n8n-nodes-base.salesmate",
+    type: "openflow-node-base.salesmate",
     modulePath: "./executors/salesmate",
     exportName: "salesmateExecutor",
   },
   {
-    type: "n8n-nodes-base.seaTable",
+    type: "openflow-node-base.seaTable",
     modulePath: "./executors/seaTable",
     exportName: "seaTableExecutor",
   },
   {
-    type: "n8n-nodes-base.securityScorecard",
+    type: "openflow-node-base.securityScorecard",
     modulePath: "./executors/securityScorecard",
     exportName: "securityScorecardExecutor",
   },
   {
-    type: "n8n-nodes-base.sendy",
+    type: "openflow-node-base.sendy",
     modulePath: "./executors/n8n-nodes-base.sendy",
     exportName: "sendyExecutor",
   },
   {
-    type: "n8n-nodes-base.sendyTool",
+    type: "openflow-node-base.sendyTool",
     modulePath: "./executors/sendyTool",
     exportName: "sendyToolExecutor",
   },
   {
-    type: "n8n-nodes-base.sentryIo",
+    type: "openflow-node-base.sentryIo",
     modulePath: "./executors/sentryIo",
     exportName: "sentryIoExecutor",
   },
   {
-    type: "n8n-nodes-base.sentryIoTool",
+    type: "openflow-node-base.sentryIoTool",
     modulePath: "./executors/sentryIoTool",
     exportName: "sentryIoToolExecutor",
   },
   {
-    type: "n8n-nodes-base.signl4Tool",
+    type: "openflow-node-base.signl4Tool",
     modulePath: "./executors/signl4Tool",
     exportName: "signl4ToolExecutor",
   },
   {
-    type: "n8n-nodes-base.sms77Tool",
+    type: "openflow-node-base.sms77Tool",
     modulePath: "./executors/sms77Tool",
     exportName: "sms77ToolExecutor",
   },
   {
-    type: "n8n-nodes-base.spontit",
+    type: "openflow-node-base.spontit",
     modulePath: "./executors/spontit",
     exportName: "spontitExecutor",
   },
   {
-    type: "n8n-nodes-base.storyblok",
+    type: "openflow-node-base.storyblok",
     modulePath: "./executors/n8n-nodes-base.storyblok",
     exportName: "storyblokExecutor",
   },
   {
-    type: "n8n-nodes-base.strapiTool",
+    type: "openflow-node-base.strapiTool",
     modulePath: "./executors/StrapiTool",
     exportName: "strapiToolExecutor",
   },
   {
-    type: "n8n-nodes-base.stravaTool",
+    type: "openflow-node-base.stravaTool",
     modulePath: "./executors/stravaTool",
     exportName: "stravaToolExecutor",
   },
   {
-    type: "n8n-nodes-base.stravaTrigger",
+    type: "openflow-node-base.stravaTrigger",
     modulePath: "./executors/stravaTrigger",
     exportName: "stravaTriggerExecutor",
   },
   {
-    type: "n8n-nodes-base.surveyMonkeyTrigger",
+    type: "openflow-node-base.surveyMonkeyTrigger",
     modulePath: "./executors/surveyMonkeyTrigger",
     exportName: "surveyMonkeyTriggerExecutor",
   },
   {
-    type: "n8n-nodes-base.tapfiliate",
+    type: "openflow-node-base.tapfiliate",
     modulePath: "./executors/tapfiliate",
     exportName: "tapfiliateExecutor",
   },
   {
-    type: "n8n-nodes-base.taiga",
+    type: "openflow-node-base.taiga",
     modulePath: "./executors/n8n-nodes-base.taiga",
     exportName: "taigaExecutor",
   },
   {
-    type: "n8n-nodes-base.theHiveProjectTrigger",
+    type: "openflow-node-base.theHiveProjectTrigger",
     modulePath: "./executors/theHiveProjectTrigger",
     exportName: "theHiveProjectTriggerExecutor",
   },
   {
-    type: "n8n-nodes-base.theHiveTrigger",
+    type: "openflow-node-base.theHiveTrigger",
     modulePath: "./executors/theHiveTrigger",
     exportName: "theHiveTriggerExecutor",
   },
   {
-    type: "n8n-nodes-base.theHiveTool",
+    type: "openflow-node-base.theHiveTool",
     modulePath: "./executors/theHiveTool",
     exportName: "theHiveToolExecutor",
   },
   {
-    type: "n8n-nodes-base.timescaleDb",
+    type: "openflow-node-base.timescaleDb",
     modulePath: "./executors/timescaleDb",
     exportName: "timescaleDbExecutor",
   },
   {
-    type: "n8n-nodes-base.travisCiTool",
+    type: "openflow-node-base.travisCiTool",
     modulePath: "./executors/n8n-nodes-base.travisCiTool",
     exportName: "travisCiToolExecutor",
   },
   {
-    type: "n8n-nodes-base.twake",
+    type: "openflow-node-base.twake",
     modulePath: "./executors/n8n-nodes-base.twake",
     exportName: "twakeExecutor",
   },
   {
-    type: "n8n-nodes-base.twilioTool",
+    type: "openflow-node-base.twilioTool",
     modulePath: "./executors/n8n-nodes-base.twilioTool",
     exportName: "twilioToolExecutor",
   },
   {
-    type: "n8n-nodes-base.twist",
+    type: "openflow-node-base.twist",
     modulePath: "./executors/twist",
     exportName: "twistExecutor",
   },
   {
-    type: "n8n-nodes-base.unleashedSoftware",
+    type: "openflow-node-base.unleashedSoftware",
     modulePath: "./executors/unleashedSoftware",
     exportName: "unleashedSoftwareExecutor",
   },
   {
-    type: "n8n-nodes-base.uplead",
+    type: "openflow-node-base.uplead",
     modulePath: "./executors/n8n-nodes-base.uplead",
     exportName: "upleadExecutor",
   },
   {
-    type: "n8n-nodes-base.urlScanIoTool",
+    type: "openflow-node-base.urlScanIoTool",
     modulePath: "./executors/n8n-nodes-base.urlScanIoTool",
     exportName: "urlScanIoToolExecutor",
   },
   {
-    type: "n8n-nodes-base.uptimeRobotTool",
+    type: "openflow-node-base.uptimeRobotTool",
     modulePath: "./executors/uptimeRobotTool",
     exportName: "uptimeRobotToolExecutor",
   },
   {
-    type: "n8n-nodes-base.venafiTlsProtectCloudTool",
+    type: "openflow-node-base.venafiTlsProtectCloudTool",
     modulePath: "./executors/venafiTlsProtectCloud",
     exportName: "venafiTlsProtectCloudToolExecutor",
   },
   {
-    type: "n8n-nodes-base.venafiTlsProtectDatacenterTool",
+    type: "openflow-node-base.venafiTlsProtectDatacenterTool",
     modulePath: "./executors/venafiTlsProtectDatacenterTool",
     exportName: "venafiTlsProtectDatacenterToolExecutor",
   },
   {
-    type: "n8n-nodes-base.vero",
+    type: "openflow-node-base.vero",
     modulePath: "./executors/n8n-nodes-base.vero",
     exportName: "veroExecutor",
   },
   {
-    type: "n8n-nodes-base.wise",
+    type: "openflow-node-base.wise",
     modulePath: "./executors/wise",
     exportName: "wiseExecutor",
   },
   {
-    type: "n8n-nodes-base.wekanTool",
+    type: "openflow-node-base.wekanTool",
     modulePath: "./executors/wekanTool",
     exportName: "wekanToolExecutor",
   },
   {
-    type: "n8n-nodes-base.wiseTrigger",
+    type: "openflow-node-base.wiseTrigger",
     modulePath: "./executors/wiseTrigger",
     exportName: "wiseTriggerExecutor",
   },
 {
-    type: "n8n-nodes-base.vonage",
+    type: "openflow-node-base.vonage",
     modulePath: "./executors/vonage",
     exportName: "vonageExecutor",
   },
   {
-    type: "n8n-nodes-base.yourlsTool",
+    type: "openflow-node-base.yourlsTool",
     modulePath: "./executors/yourlsTool",
     exportName: "yourlsToolExecutor",
   },
   {
-    type: "n8n-nodes-base.zohoCrmTool",
+    type: "openflow-node-base.zohoCrmTool",
     modulePath: "./executors/n8n-nodes-base.zohoCrmTool",
     exportName: "zohoCrmToolExecutor",
   },
   // Partial-job repairs: alternate ids + missing registrations
   {
-    type: "n8n-nodes-base.discourseTool",
+    type: "openflow-node-base.discourseTool",
     modulePath: "./executors/n8n-nodes-base.discourseTool",
     exportName: "discourseToolExecutor",
   },
   {
-    type: "n8n-nodes-base.egoiTool",
+    type: "openflow-node-base.egoiTool",
     modulePath: "./executors/egoiTool",
     exportName: "egoiToolExecutor",
   },
   {
-    type: "n8n-nodes-base.humanticAiTool",
+    type: "openflow-node-base.humanticAiTool",
     modulePath: "./executors/humantic-ai-tool",
     exportName: "humanticAiToolExecutor",
   },
   {
-    type: "n8n-nodes-base.iCal",
+    type: "openflow-node-base.iCal",
     modulePath: "./executors/iCalendar",
     exportName: "iCalendarExecutor",
   },
   {
-    type: "n8n-nodes-base.mandrill",
+    type: "openflow-node-base.mandrill",
     modulePath: "./executors/mandrill",
     exportName: "mandrillExecutor",
   },
   {
-    type: "n8n-nodes-base.mattermostTool",
+    type: "openflow-node-base.mattermostTool",
     modulePath: "./executors/n8n-nodes-base.mattermostTool",
     exportName: "mattermostToolExecutor",
   },
   {
-    type: "n8n-nodes-base.microsoftGraphSecurity",
+    type: "openflow-node-base.microsoftGraphSecurity",
     modulePath: "./executors/microsoftGraphSecurityExecutor",
     exportName: "microsoftGraphSecurityExecutor",
   },
   {
-    type: "n8n-nodes-base.microsoftGraphSecurityTool",
+    type: "openflow-node-base.microsoftGraphSecurityTool",
     modulePath: "./executors/microsoftGraphSecurityExecutor",
     exportName: "microsoftGraphSecurityExecutor",
   },
   {
-    type: "n8n-nodes-base.microsoftOneDriveTool",
+    type: "openflow-node-base.microsoftOneDriveTool",
     modulePath: "./executors/microsoft-one-drive",
     exportName: "microsoftOneDriveExecutor",
   },
   {
-    type: "n8n-nodes-base.mocean",
+    type: "openflow-node-base.mocean",
     modulePath: "./executors/mocean",
     exportName: "moceanExecutor",
   },
   {
-    type: "n8n-nodes-base.monicaCrmTool",
+    type: "openflow-node-base.monicaCrmTool",
     modulePath: "./executors/n8n-nodes-base.monicaCrmTool",
     exportName: "monicaCrmToolExecutor",
   },
   {
-    type: "n8n-nodes-base.ouraTool",
+    type: "openflow-node-base.ouraTool",
     modulePath: "./executors/ouraTool",
     exportName: "ouraExecutor",
   },
   {
-    type: "n8n-nodes-base.postHog",
+    type: "openflow-node-base.postHog",
     modulePath: "./executors/postHogTool",
     exportName: "postHogToolExecutor",
   },
   {
-    type: "n8n-nodes-base.schedule",
+    type: "openflow-node-base.schedule",
     modulePath: "./executors/schedule-trigger",
     exportName: "scheduleTriggerExecutor",
   },
   {
-    type: "n8n-nodes-base.sendEmail",
+    type: "openflow-node-base.sendEmail",
     modulePath: "./executors/email-send",
     exportName: "emailSendExecutor",
   },
   {
-    type: "n8n-nodes-base.twistTool",
+    type: "openflow-node-base.twistTool",
     modulePath: "./executors/twist",
     exportName: "twistExecutor",
   },
   {
-    type: "n8n-nodes-base.venafiTlsProtectCloud",
+    type: "openflow-node-base.venafiTlsProtectCloud",
     modulePath: "./executors/venafiTlsProtectCloud",
     exportName: "venafiTlsProtectCloudToolExecutor",
   },
   {
-    type: "n8n-nodes-base.wordPress",
+    type: "openflow-node-base.wordPress",
     modulePath: "./executors/wordpress",
     exportName: "wordpressExecutor",
   },
   {
-    type: "n8n-nodes-base.mandrillTool",
+    type: "openflow-node-base.mandrillTool",
     modulePath: "./executors/n8n-nodes-base.mandrillTool",
     exportName: "mandrillToolExecutor",
   },
   {
-    type: "n8n-nodes-base.moceanTool",
+    type: "openflow-node-base.moceanTool",
     modulePath: "./executors/moceanTool",
     exportName: "moceanToolExecutor",
   },
   {
-    type: "n8n-nodes-base.oura",
+    type: "openflow-node-base.oura",
     modulePath: "./executors/ouraTool",
     exportName: "ouraExecutor",
+  },
+  // Previously defined in palette but missing from the executor manifest
+  {
+    type: "openflow-node-base.haloPSATool",
+    modulePath: "./executors/n8n-nodes-base.haloPSATool",
+    exportName: "haloPSAToolExecutor",
+  },
+  {
+    type: "openflow-node-base.harvest",
+    modulePath: "./executors/harvest",
+    exportName: "harvestExecutor",
+  },
+  {
+    type: "openflow-node-base.helpScout",
+    modulePath: "./executors/helpScout",
+    exportName: "helpScoutExecutor",
+  },
+  {
+    type: "openflow-node-base.helpScoutTrigger",
+    modulePath: "./executors/n8n-nodes-base.helpScoutTrigger",
+    exportName: "helpScoutTriggerExecutor",
+  },
+  {
+    type: "openflow-node-base.hubGPT",
+    modulePath: "./executors/hub-gpt",
+    exportName: "hubGPTExecutor",
+  },
+  {
+    type: "openflow-node-base.invoiceNinja",
+    modulePath: "./executors/invoice-ninja",
+    exportName: "invoiceNinjaExecutor",
+  },
+  {
+    type: "openflow-node-base.invoiceNinjaTrigger",
+    modulePath: "./executors/invoice-ninja-trigger",
+    exportName: "invoiceNinjaTriggerExecutor",
+  },
+  {
+    type: "openflow-node-base.iterable",
+    modulePath: "./executors/iterable",
+    exportName: "iterableExecutor",
+  },
+  {
+    type: "openflow-node-base.iterableTool",
+    modulePath: "./executors/n8n-nodes-base.iterableTool",
+    exportName: "iterableToolExecutor",
+  },
+  {
+    type: "openflow-node-base.keapTrigger",
+    modulePath: "./executors/n8n-nodes-base.keapTrigger",
+    exportName: "keapTriggerExecutor",
+  },
+  {
+    type: "openflow-node-base.kitemakerTool",
+    modulePath: "./executors/kitemakerTool",
+    exportName: "kitemakerToolExecutor",
+  },
+  {
+    type: "openflow-node-base.koBoToolboxTool",
+    modulePath: "./executors/koBoToolboxTool",
+    exportName: "koBoToolboxToolExecutor",
+  },
+  {
+    type: "openflow-node-base.magento2",
+    modulePath: "./executors/magento2",
+    exportName: "magento2Executor",
+  },
+  {
+    type: "openflow-node-base.mailcheck",
+    modulePath: "./executors/mailcheck",
+    exportName: "mailcheckExecutor",
+  },
+  {
+    type: "openflow-node-base.mailcheckTool",
+    modulePath: "./executors/mailcheckTool",
+    exportName: "mailcheckToolExecutor",
+  },
+  {
+    type: "openflow-node-base.mailerLite",
+    modulePath: "./executors/mailerLite",
+    exportName: "mailerLiteExecutor",
+  },
+  {
+    type: "openflow-node-base.mailerLiteTool",
+    modulePath: "./executors/n8n-nodes-base.mailerLiteTool",
+    exportName: "mailerLiteToolExecutor",
+  },
+  {
+    type: "openflow-node-base.mailerLiteTrigger",
+    modulePath: "./executors/mailerLiteTrigger",
+    exportName: "mailerLiteTriggerExecutor",
+  },
+  {
+    type: "openflow-node-base.mailjetTrigger",
+    modulePath: "./executors/n8n-nodes-base.mailjetTrigger",
+    exportName: "mailjetTriggerExecutor",
+  },
+  {
+    type: "openflow-node-base.marketstack",
+    modulePath: "./executors/n8n-nodes-base.marketstack",
+    exportName: "marketstackExecutor",
+  },
+  {
+    type: "openflow-node-base.matrixTool",
+    modulePath: "./executors/matrixTool",
+    exportName: "matrixToolExecutor",
+  },
+  {
+    type: "openflow-node-base.mauticTool",
+    modulePath: "./executors/n8n-nodes-base.mauticTool",
+    exportName: "mauticToolExecutor",
+  },
+  {
+    type: "openflow-node-base.microsoftDynamicsCrmTool",
+    modulePath: "./executors/n8n-nodes-base.microsoftDynamicsCrmTool",
+    exportName: "microsoftDynamicsCrmToolExecutor",
+  },
+  {
+    type: "openflow-node-base.microsoftEntraTool",
+    modulePath: "./executors/n8n-nodes-base.microsoftEntraTool",
+    exportName: "microsoftEntraToolExecutor",
+  },
+  {
+    type: "openflow-node-base.microsoftExcelTool",
+    modulePath: "./executors/n8n-nodes-base.microsoftExcelTool",
+    exportName: "microsoftExcelToolExecutor",
+  },
+  {
+    type: "openflow-node-base.microsoftSharePointTool",
+    modulePath: "./executors/microsoftSharePointTool",
+    exportName: "microsoftSharePointToolExecutor",
+  },
+  {
+    type: "openflow-node-base.mispTool",
+    modulePath: "./executors/n8n-nodes-base.mispTool",
+    exportName: "mispToolExecutor",
+  },
+  {
+    type: "openflow-node-base.mondayComTool",
+    modulePath: "./executors/n8n-nodes-base.mondayComTool",
+    exportName: "mondayComToolExecutor",
+  },
+  {
+    type: "openflow-node-base.msg91",
+    modulePath: "./executors/n8n-nodes-base.msg91",
+    exportName: "msg91Executor",
+  },
+  {
+    type: "openflow-node-base.netlifyTool",
+    modulePath: "./executors/netlifyTool",
+    exportName: "netlifyToolExecutor",
+  },
+  {
+    type: "openflow-node-base.nextCloudTool",
+    modulePath: "./executors/n8n-nodes-base.nextCloudTool",
+    exportName: "nextCloudToolExecutor",
+  },
+  {
+    type: "openflow-node-base.npmTool",
+    modulePath: "./executors/n8n-nodes-base.npmTool",
+    exportName: "npmToolExecutor",
+  },
+  {
+    type: "openflow-node-base.odooTool",
+    modulePath: "./executors/n8n-nodes-base.odooTool",
+    exportName: "odooToolExecutor",
+  },
+  {
+    type: "openflow-node-base.oktaTool",
+    modulePath: "./executors/okta",
+    exportName: "oktaToolExecutor",
+  },
+  {
+    type: "openflow-node-base.oneSimpleApiTool",
+    modulePath: "./executors/oneSimpleApiTool",
+    exportName: "oneSimpleApiToolExecutor",
+  },
+  {
+    type: "openflow-node-base.onfleetTool",
+    modulePath: "./executors/n8n-nodes-base.onfleetTool",
+    exportName: "onfleetToolExecutor",
+  },
+  {
+    type: "openflow-node-base.orbit",
+    modulePath: "./executors/n8n-nodes-base.orbit",
+    exportName: "orbitExecutor",
+  },
+  {
+    type: "openflow-node-base.paddle",
+    modulePath: "./executors/paddle",
+    exportName: "paddleExecutor",
+  },
+  {
+    type: "openflow-node-base.paddleTool",
+    modulePath: "./executors/n8n-nodes-base.paddleTool",
+    exportName: "paddleToolExecutor",
+  },
+  {
+    type: "openflow-node-base.payPalTrigger",
+    modulePath: "./executors/n8n-nodes-base.payPalTrigger",
+    exportName: "payPalTriggerExecutor",
+  },
+  {
+    type: "openflow-node-base.peekalink",
+    modulePath: "./executors/peekalink",
+    exportName: "peekalinkExecutor",
+  },
+  {
+    type: "openflow-node-base.phantombusterTool",
+    modulePath: "./executors/n8n-nodes-base.phantombusterTool",
+    exportName: "phantombusterToolExecutor",
+  },
+  {
+    type: "openflow-node-base.philipsHue",
+    modulePath: "./executors/n8n-nodes-base.philipsHue",
+    exportName: "philipsHueExecutor",
+  },
+  {
+    type: "openflow-node-base.philipsHueTool",
+    modulePath: "./executors/n8n-nodes-base.philipsHueTool",
+    exportName: "philipsHueToolExecutor",
+  },
+  {
+    type: "openflow-node-base.plivo",
+    modulePath: "./executors/plivo",
+    exportName: "plivoExecutor",
+  },
+  {
+    type: "openflow-node-base.postBin",
+    modulePath: "./executors/postBin",
+    exportName: "postBinExecutor",
+  },
+  {
+    type: "openflow-node-base.wufooTrigger",
+    modulePath: "./executors/wufooTrigger",
+    exportName: "wufooTriggerExecutor",
   },
 ];
 
 /** Types OpenFlow ships an executor for. Derived, so it needs no maintenance. */
-const builtinExecutorTypes = new Set(BUILTIN_EXECUTOR_MODULES.map((e) => e.type));
+const builtinExecutorTypes = new Set(
+  BUILTIN_EXECUTOR_MODULES.flatMap((e) => typeKeys(e.type)),
+);
 
 const builtinUnavailable = new Map(
-  BUILTIN_EXECUTOR_MODULES.filter((e) => e.unavailable).map(
-    (e) => [e.type, e.unavailable!] as const,
-  ),
+  BUILTIN_EXECUTOR_MODULES.filter((e) => e.unavailable).flatMap((e) => {
+    const u = e.unavailable!;
+    return typeKeys(e.type).map((k) => [k, u] as const);
+  }),
 );
 
 /**

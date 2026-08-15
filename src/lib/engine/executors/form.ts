@@ -1,15 +1,22 @@
 import type { NodeExecutor } from "@/sdk";
 import { withPairedItem } from "@/sdk";
+import { parseFormElements } from "@/lib/forms/path";
+import { evaluateExpression, isExpression } from "@/lib/expressions/evaluate";
 
-interface FormField {
-  fieldLabel?: string;
-  fieldName?: string;
-  fieldType?: string;
-  defaultValue?: unknown;
-  fieldValue?: unknown;
-  requiredField?: boolean;
-  placeholder?: string;
-  [key: string]: unknown;
+function resolveAgainstItem(
+  raw: unknown,
+  itemJson: Record<string, unknown>,
+  nodeData?: Record<string, { json: Record<string, unknown> }[]>,
+): string {
+  if (raw == null) return "";
+  if (typeof raw !== "string") return String(raw);
+  if (!isExpression(raw) && !raw.includes("{{")) return raw;
+  const result = evaluateExpression(raw, {
+    json: itemJson,
+    nodeData: nodeData as never,
+  });
+  if (result.ok && result.value != null) return String(result.value);
+  return raw;
 }
 
 export const formExecutor: NodeExecutor = async (ctx) => {
@@ -17,12 +24,57 @@ export const formExecutor: NodeExecutor = async (ctx) => {
   const operation = ctx.getParam<string>("operation", "form");
 
   if (operation === "completion") {
-    if (items.length === 0) return [[{ json: {} }]];
-    return [items.map((item, idx) => withPairedItem(item, idx))];
+    if (items.length === 0) {
+      return [
+        [
+          {
+            json: {
+              formCompletion: {
+                title: "Done",
+                message: "",
+                pageTitle: "Submitted",
+              },
+            },
+          },
+        ],
+      ];
+    }
+
+    const titleRaw = ctx.getParam<unknown>("completionTitle", "");
+    const messageRaw = ctx.getParam<unknown>("completionMessage", "");
+    const pageTitleRaw = ctx.getParam<unknown>("completionPageTitle", "");
+
+    return [
+      items.map((item, idx) => {
+        const base = { ...(item.json ?? {}) };
+        const title =
+          resolveAgainstItem(titleRaw, base) ||
+          String(base.priceLine ?? base.symbol ?? "Done");
+        const message =
+          resolveAgainstItem(messageRaw, base) ||
+          String(base.reportHtml ?? base.reportText ?? "");
+        const pageTitle =
+          resolveAgainstItem(pageTitleRaw, base) || title || "Submitted";
+        return withPairedItem(
+          {
+            ...item,
+            json: {
+              ...base,
+              formCompletion: {
+                title,
+                message,
+                pageTitle,
+              },
+            },
+          },
+          idx,
+        );
+      }),
+    ];
   }
 
-  const formFieldsRaw = ctx.getParam<FormField[] | { values?: FormField[] }>("formFields", []);
-  const fields = extractFormFields(formFieldsRaw);
+  const formFieldsRaw = ctx.getParam<unknown>("formFields", []);
+  const fields = parseFormElements(formFieldsRaw);
 
   if (items.length === 0) return [[{ json: {} }]];
 
@@ -33,7 +85,7 @@ export const formExecutor: NodeExecutor = async (ctx) => {
         const name = f.fieldName;
         if (!name) continue;
         if (name in json) continue;
-        if (f.fieldType === "hiddenField" && f.fieldValue !== undefined) {
+        if (f.elementType === "hidden" && f.fieldValue !== undefined) {
           json[name] = f.fieldValue;
         } else if (f.defaultValue !== undefined) {
           json[name] = f.defaultValue;
@@ -43,12 +95,3 @@ export const formExecutor: NodeExecutor = async (ctx) => {
     }),
   ];
 };
-
-function extractFormFields(raw: unknown): FormField[] {
-  if (Array.isArray(raw)) return raw as FormField[];
-  if (raw && typeof raw === "object") {
-    const r = raw as { values?: FormField[] };
-    if (r.values && Array.isArray(r.values)) return r.values;
-  }
-  return [];
-}

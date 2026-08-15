@@ -4,7 +4,7 @@ const DOCS = "https://docs.n8n.io/integrations/builtin/core-nodes/";
 const GUMROAD_DOCS = "https://docs.n8n.io/integrations/builtin/trigger-nodes/n8n-nodes-base.gumroadtrigger/";
 
 export const gumroadTrigger: INodeTypeDescription = {
-  name: "n8n-nodes-base.gumroadTrigger",
+  name: "openflow-node-base.gumroadTrigger",
   displayName: "Gumroad Trigger",
   category: "Sales",
   group: ["trigger"],
@@ -39,7 +39,7 @@ export const gumroadTrigger: INodeTypeDescription = {
 };
 
 export const activationTrigger: INodeTypeDescription = {
-  name: "n8n-nodes-base.activationTrigger",
+  name: "openflow-node-base.activationTrigger",
   displayName: "Activation Trigger",
   category: "Triggers",
   group: ["trigger"],
@@ -68,7 +68,7 @@ export const activationTrigger: INodeTypeDescription = {
 };
 
 export const errorTrigger: INodeTypeDescription = {
-  name: "n8n-nodes-base.errorTrigger",
+  name: "openflow-node-base.errorTrigger",
   displayName: "Error Trigger",
   category: "Triggers",
   group: ["trigger"],
@@ -91,7 +91,7 @@ export const errorTrigger: INodeTypeDescription = {
 };
 
 export const executeWorkflowTrigger: INodeTypeDescription = {
-  name: "n8n-nodes-base.executeWorkflowTrigger",
+  name: "openflow-node-base.executeWorkflowTrigger",
   displayName: "When Executed by Another Workflow",
   category: "Triggers",
   group: ["trigger"],
@@ -192,7 +192,7 @@ export const executeWorkflowTrigger: INodeTypeDescription = {
 };
 
 export const workflowTrigger: INodeTypeDescription = {
-  name: "n8n-nodes-base.workflowTrigger",
+  name: "openflow-node-base.workflowTrigger",
   displayName: "Workflow Trigger",
   category: "Triggers",
   group: ["trigger"],
@@ -230,13 +230,13 @@ export const workflowTrigger: INodeTypeDescription = {
 };
 
 export const n8nTrigger: INodeTypeDescription = {
-  name: "n8n-nodes-base.n8nTrigger",
-  displayName: "n8n Trigger",
+  name: "openflow-node-base.n8nTrigger",
+  displayName: "Workflow Trigger",
   category: "Triggers",
   group: ["trigger"],
   version: 1,
   description: "Starts the workflow when a workflow lifecycle event occurs (published, started, or updated).",
-  defaults: { name: "n8n Trigger" },
+  defaults: { name: "Workflow Trigger" },
   inputs: [],
   outputs: ["main"],
   icon: "Workflow",
@@ -259,7 +259,7 @@ export const n8nTrigger: INodeTypeDescription = {
 };
 
 export const manualTrigger: INodeTypeDescription = {
-  name: "n8n-nodes-base.manualTrigger",
+  name: "openflow-node-base.manualTrigger",
   displayName: "Manual Trigger",
   category: "Triggers",
   group: ["trigger"],
@@ -282,7 +282,7 @@ export const manualTrigger: INodeTypeDescription = {
 };
 
 export const scheduleTrigger: INodeTypeDescription = {
-  name: "n8n-nodes-base.scheduleTrigger",
+  name: "openflow-node-base.scheduleTrigger",
   displayName: "Schedule Trigger",
   category: "Triggers",
   group: ["trigger"],
@@ -427,7 +427,7 @@ export const scheduleTrigger: INodeTypeDescription = {
 };
 
 export const webhook: INodeTypeDescription = {
-  name: "n8n-nodes-base.webhook",
+  name: "openflow-node-base.webhook",
   displayName: "Webhook",
   category: "Triggers",
   group: ["trigger"],
@@ -500,12 +500,12 @@ export const webhook: INodeTypeDescription = {
 };
 
 export const formTrigger: INodeTypeDescription = {
-  name: "n8n-nodes-base.formTrigger",
-  displayName: "n8n Form",
+  name: "openflow-node-base.formTrigger",
+  displayName: "Form",
   category: "Triggers",
   group: ["trigger"],
   version: 2,
-  description: "Starts the workflow when a user submits a form served by n8n.",
+  description: "Starts the workflow when a user submits a form served by OpenFlow.",
   defaults: { name: "On form submission" },
   inputs: [],
   outputs: ["main"],
@@ -539,14 +539,15 @@ export const formTrigger: INodeTypeDescription = {
       description: "Custom slug appended to /form/. Replaces the auto-generated UUID when set.",
     },
     {
-      displayName: "Form Elements",
-      name: "formElements",
+      displayName: "Form Fields",
+      name: "formFields",
       type: "fixedCollection",
       default: {},
       typeOptions: { multipleValues: true },
       noDataExpression: true,
       required: true,
-      description: "Ordered list of form fields.",
+      description:
+        "Ordered list of form fields (n8n wire key formFields; formElements still accepted at runtime).",
       options: [
         {
           name: "values",
@@ -564,8 +565,8 @@ export const formTrigger: INodeTypeDescription = {
               name: "fieldName",
               type: "string",
               default: "",
-              required: true,
-              description: "Key used for this field's value in the node output.",
+              description:
+                "Key used for this field's value in the node output. Defaults from the label when empty.",
             },
             {
               displayName: "Element Type",
@@ -630,6 +631,7 @@ export const formTrigger: INodeTypeDescription = {
       options: [
         { name: "Form Is Submitted", value: "formSubmitted" },
         { name: "Workflow Finishes", value: "workflowFinishes" },
+        { name: "Last Node (n8n alias)", value: "lastNode" },
       ],
     },
     {
@@ -651,7 +653,7 @@ export const formTrigger: INodeTypeDescription = {
       placeholder: "Add option",
       options: [
         {
-          displayName: "Append n8n Attribution",
+          displayName: "Append OpenFlow Attribution",
           name: "appendAttribution",
           type: "boolean",
           default: true,
@@ -705,7 +707,7 @@ export const formTrigger: INodeTypeDescription = {
 };
 
 export const localFileTrigger: INodeTypeDescription = {
-  name: "n8n-nodes-base.localFileTrigger",
+  name: "openflow-node-base.localFileTrigger",
   displayName: "Local File Trigger",
   category: "Triggers",
   group: ["trigger"],
@@ -838,7 +840,7 @@ const WUFOO_DOCS =
   "https://docs.n8n.io/integrations/builtin/trigger-nodes/n8n-nodes-base.wufootrigger/";
 
 export const wufooTrigger: INodeTypeDescription = {
-  name: "n8n-nodes-base.wufooTrigger",
+  name: "openflow-node-base.wufooTrigger",
   displayName: "Wufoo Trigger",
   category: "Communication",
   group: ["trigger"],
@@ -869,7 +871,7 @@ export const wufooTrigger: INodeTypeDescription = {
 };
 
 export const sseTrigger: INodeTypeDescription = {
-  name: "n8n-nodes-base.sseTrigger",
+  name: "openflow-node-base.sseTrigger",
   displayName: "SSE Trigger",
   category: "Triggers",
   group: ["trigger"],
@@ -904,7 +906,7 @@ const CHAT_TRIGGER_DOCS =
   "https://docs.n8n.io/integrations/builtin/core-nodes/n8n-nodes-langchain.chattrigger.md";
 
 export const chatTrigger: INodeTypeDescription = {
-  name: "@n8n/n8n-nodes-langchain.chatTrigger",
+  name: "openflow-node-langchain.chatTrigger",
   displayName: "Chat Trigger",
   category: "Triggers",
   group: ["trigger"],
@@ -966,7 +968,7 @@ export const chatTrigger: INodeTypeDescription = {
       displayOptions: { show: { public: [true], mode: ["hosted"] } },
     },
     {
-      displayName: "Make Available in n8n Chat",
+      displayName: "Make Available in OpenFlow Chat",
       name: "makeAvailableInChat",
       type: "boolean",
       default: false,
@@ -1059,7 +1061,7 @@ const MCP_TRIGGER_DOCS =
   "https://docs.n8n.io/integrations/builtin/core-nodes/n8n-nodes-langchain.mcptrigger.md";
 
 export const mcpTrigger: INodeTypeDescription = {
-  name: "@n8n/n8n-nodes-langchain.mcpTrigger",
+  name: "openflow-node-langchain.mcpTrigger",
   displayName: "MCP Server Trigger",
   category: "Triggers",
   group: ["trigger"],
@@ -1214,7 +1216,7 @@ const BOX_EVENT_OPTIONS: INodePropertyOption[] = [
 ];
 
 export const chargebeeTrigger: INodeTypeDescription = {
-  name: "n8n-nodes-base.chargebeeTrigger",
+  name: "openflow-node-base.chargebeeTrigger",
   displayName: "Chargebee Trigger",
   category: "Finance & Accounting",
   group: ["trigger"],
@@ -1262,7 +1264,7 @@ const EMELIA_DOCS =
   "https://docs.n8n.io/integrations/builtin/trigger-nodes/n8n-nodes-base.emeliatrigger/";
 
 export const emeliaTrigger: INodeTypeDescription = {
-  name: "n8n-nodes-base.emeliaTrigger",
+  name: "openflow-node-base.emeliaTrigger",
   displayName: "Emelia Trigger",
   category: "Communication",
   group: ["trigger"],
@@ -1306,7 +1308,7 @@ export const emeliaTrigger: INodeTypeDescription = {
 };
 
 export const boxTrigger: INodeTypeDescription = {
-  name: "n8n-nodes-base.boxTrigger",
+  name: "openflow-node-base.boxTrigger",
   displayName: "Box Trigger",
   category: "Data & Storage",
   group: ["trigger"],
@@ -1365,7 +1367,7 @@ const CUSTOMER_IO_TRIGGER_DOCS =
   "https://docs.n8n.io/integrations/builtin/trigger-nodes/n8n-nodes-base.customeriotrigger/";
 
 export const mailjetTrigger: INodeTypeDescription = {
-  name: "n8n-nodes-base.mailjetTrigger",
+  name: "openflow-node-base.mailjetTrigger",
   displayName: "Mailjet Trigger",
   category: "Triggers",
   group: ["trigger"],
@@ -1437,7 +1439,7 @@ const CUSTOMER_IO_EVENT_OPTIONS: INodePropertyOption[] = [
 ];
 
 export const customerIoTrigger: INodeTypeDescription = {
-  name: "n8n-nodes-base.customerIoTrigger",
+  name: "openflow-node-base.customerIoTrigger",
   displayName: "Customer.io Trigger",
   category: "Communication",
   group: ["trigger"],
@@ -1466,7 +1468,7 @@ export const customerIoTrigger: INodeTypeDescription = {
 };
 
 export const convertKitTrigger: INodeTypeDescription = {
-  name: "n8n-nodes-base.convertKitTrigger",
+  name: "openflow-node-base.convertKitTrigger",
   displayName: "ConvertKit Trigger",
   category: "Marketing",
   group: ["trigger"],
@@ -1507,7 +1509,7 @@ export const convertKitTrigger: INodeTypeDescription = {
 };
 
 export const zendeskTrigger: INodeTypeDescription = {
-  name: "n8n-nodes-base.zendeskTrigger",
+  name: "openflow-node-base.zendeskTrigger",
   displayName: "Zendesk Trigger",
   category: "Communication",
   group: ["trigger"],
@@ -1573,7 +1575,7 @@ export const zendeskTrigger: INodeTypeDescription = {
 };
 
 export const pipedriveTrigger: INodeTypeDescription = {
-  name: "n8n-nodes-base.pipedriveTrigger",
+  name: "openflow-node-base.pipedriveTrigger",
   displayName: "Pipedrive Trigger",
   category: "Sales",
   group: ["trigger"],
@@ -1637,7 +1639,7 @@ export const pipedriveTrigger: INodeTypeDescription = {
 };
 
 export const notionTrigger: INodeTypeDescription = {
-  name: "n8n-nodes-base.notionTrigger",
+  name: "openflow-node-base.notionTrigger",
   displayName: "Notion Trigger",
   category: "Triggers",
   group: ["trigger"],
@@ -1747,7 +1749,7 @@ const MQTT_DOCS =
   "https://docs.n8n.io/integrations/builtin/trigger-nodes/n8n-nodes-base.mqtttrigger/";
 
 export const microsoftOneDriveTrigger: INodeTypeDescription = {
-  name: "n8n-nodes-base.microsoftOneDriveTrigger",
+  name: "openflow-node-base.microsoftOneDriveTrigger",
   displayName: "Microsoft OneDrive Trigger",
   category: "Data & Storage",
   group: ["trigger"],
@@ -1913,7 +1915,7 @@ export const microsoftOneDriveTrigger: INodeTypeDescription = {
 };
 
 export const mqttTrigger: INodeTypeDescription = {
-  name: "n8n-nodes-base.mqttTrigger",
+  name: "openflow-node-base.mqttTrigger",
   displayName: "MQTT Trigger",
   category: "Communication",
   group: ["trigger"],
@@ -1975,7 +1977,7 @@ const AMQP_DOCS =
   "https://docs.n8n.io/integrations/builtin/trigger-nodes/n8n-nodes-base.amqptrigger/";
 
 export const rabbitmqTrigger: INodeTypeDescription = {
-  name: "n8n-nodes-base.rabbitmqTrigger",
+  name: "openflow-node-base.rabbitmqTrigger",
   displayName: "RabbitMQ Trigger",
   category: "Communication",
   group: ["trigger"],
@@ -2042,7 +2044,7 @@ export const rabbitmqTrigger: INodeTypeDescription = {
 };
 
 export const amqpTrigger: INodeTypeDescription = {
-  name: "n8n-nodes-base.amqpTrigger",
+  name: "openflow-node-base.amqpTrigger",
   displayName: "AMQP Trigger",
   category: "Development",
   group: ["trigger"],
@@ -2179,7 +2181,7 @@ const NETLIFY_EVENT_OPTIONS = [
 ];
 
 export const netlifyTrigger: INodeTypeDescription = {
-  name: "n8n-nodes-base.netlifyTrigger",
+  name: "openflow-node-base.netlifyTrigger",
   displayName: "Netlify Trigger",
   category: "Triggers",
   group: ["trigger"],
@@ -2208,7 +2210,7 @@ export const netlifyTrigger: INodeTypeDescription = {
 };
 
 export const googleBusinessProfileTrigger: INodeTypeDescription = {
-  name: "n8n-nodes-base.googleBusinessProfileTrigger",
+  name: "openflow-node-base.googleBusinessProfileTrigger",
   displayName: "Google Business Profile Trigger",
   category: "Communication",
   group: ["trigger"],
@@ -2239,7 +2241,7 @@ export const googleBusinessProfileTrigger: INodeTypeDescription = {
 };
 
 export const manualChatTrigger: INodeTypeDescription = {
-  name: "@n8n/n8n-nodes-langchain.manualChatTrigger",
+  name: "openflow-node-langchain.manualChatTrigger",
   displayName: "Manual Chat Trigger",
   category: "Triggers",
   group: ["trigger"],
@@ -2263,7 +2265,7 @@ export const manualChatTrigger: INodeTypeDescription = {
 };
 
 export const calTrigger: INodeTypeDescription = {
-  name: "n8n-nodes-base.calTrigger",
+  name: "openflow-node-base.calTrigger",
   displayName: "Cal Trigger",
   category: "Productivity",
   group: ["trigger"],
@@ -2330,7 +2332,7 @@ export const calTrigger: INodeTypeDescription = {
 };
 
 export const facebookTrigger: INodeTypeDescription = {
-  name: "n8n-nodes-base.facebookTrigger",
+  name: "openflow-node-base.facebookTrigger",
   displayName: "Facebook Trigger",
   category: "Marketing",
   group: ["trigger"],
@@ -2407,7 +2409,7 @@ export const facebookTrigger: INodeTypeDescription = {
 };
 
 export const facebookLeadAdsTrigger: INodeTypeDescription = {
-  name: "n8n-nodes-base.facebookLeadAdsTrigger",
+  name: "openflow-node-base.facebookLeadAdsTrigger",
   displayName: "Facebook Lead Ads Trigger",
   category: "Marketing",
   group: ["trigger"],
@@ -2433,7 +2435,7 @@ export const facebookLeadAdsTrigger: INodeTypeDescription = {
 };
 
 export const linearTrigger: INodeTypeDescription = {
-  name: "n8n-nodes-base.linearTrigger",
+  name: "openflow-node-base.linearTrigger",
   displayName: "Linear Trigger",
   category: "Triggers",
   group: ["trigger"],
@@ -2495,7 +2497,7 @@ export const linearTrigger: INodeTypeDescription = {
 };
 
 export const calendlyTrigger: INodeTypeDescription = {
-  name: "n8n-nodes-base.calendlyTrigger",
+  name: "openflow-node-base.calendlyTrigger",
   displayName: "Calendly Trigger",
   category: "Triggers",
   group: ["trigger"],
@@ -2562,7 +2564,7 @@ export const calendlyTrigger: INodeTypeDescription = {
 };
 
 export const shopifyTrigger: INodeTypeDescription = {
-  name: "n8n-nodes-base.shopifyTrigger",
+  name: "openflow-node-base.shopifyTrigger",
   displayName: "Shopify Trigger",
   category: "Sales",
   group: ["trigger"],
@@ -2666,7 +2668,7 @@ export const shopifyTrigger: INodeTypeDescription = {
 };
 
 export const evaluationTrigger: INodeTypeDescription = {
-  name: "n8n-nodes-base.evaluationTrigger",
+  name: "openflow-node-base.evaluationTrigger",
   displayName: "Evaluation Trigger",
   category: "Triggers",
   group: ["trigger"],
@@ -2836,7 +2838,7 @@ export const evaluationTrigger: INodeTypeDescription = {
 };
 
 export const respondToWebhook: INodeTypeDescription = {
-  name: "n8n-nodes-base.respondToWebhook",
+  name: "openflow-node-base.respondToWebhook",
   displayName: "Respond to Webhook",
   category: "Actions",
   group: ["output"],
@@ -2987,7 +2989,7 @@ const pollTimeOptions = [
 ];
 
 export const googleCalendarTrigger: INodeTypeDescription = {
-  name: "n8n-nodes-base.googleCalendarTrigger",
+  name: "openflow-node-base.googleCalendarTrigger",
   displayName: "Google Calendar Trigger",
   category: "Triggers",
   group: ["trigger"],
@@ -3133,7 +3135,7 @@ export const googleCalendarTrigger: INodeTypeDescription = {
 };
 
 export const airtableTrigger: INodeTypeDescription = {
-  name: "n8n-nodes-base.airtableTrigger",
+  name: "openflow-node-base.airtableTrigger",
   displayName: "Airtable Trigger",
   category: "Triggers",
   group: ["trigger"],
@@ -3238,7 +3240,7 @@ export const airtableTrigger: INodeTypeDescription = {
 };
 
 export const rssFeedReadTrigger: INodeTypeDescription = {
-  name: "n8n-nodes-base.rssFeedReadTrigger",
+  name: "openflow-node-base.rssFeedReadTrigger",
   displayName: "RSS Feed Trigger",
   category: "Triggers",
   group: ["trigger"],
@@ -3367,7 +3369,7 @@ export const rssFeedReadTrigger: INodeTypeDescription = {
 };
 
 export const gmailTrigger: INodeTypeDescription = {
-  name: "n8n-nodes-base.gmailTrigger",
+  name: "openflow-node-base.gmailTrigger",
   displayName: "Gmail Trigger",
   category: "Communication",
   group: ["trigger"],
@@ -3456,7 +3458,7 @@ const FIGMA_DOCS =
   "https://docs.n8n.io/integrations/builtin/trigger-nodes/n8n-nodes-base.figmatrigger/";
 
 export const lemlistTrigger: INodeTypeDescription = {
-  name: "n8n-nodes-base.lemlistTrigger",
+  name: "openflow-node-base.lemlistTrigger",
   displayName: "Lemlist Trigger",
   category: "Communication",
   group: ["trigger"],
@@ -3538,7 +3540,7 @@ const THE_HIVE_PROJECT_TRIGGER_DOCS =
   "https://docs.n8n.io/integrations/builtin/trigger-nodes/n8n-nodes-base.thehivetrigger/";
 
 export const theHiveProjectTrigger: INodeTypeDescription = {
-  name: "n8n-nodes-base.theHiveProjectTrigger",
+  name: "openflow-node-base.theHiveProjectTrigger",
   displayName: "TheHive Project Trigger",
   category: "Triggers",
   group: ["trigger"],
@@ -3563,7 +3565,7 @@ export const theHiveProjectTrigger: INodeTypeDescription = {
 };
 
 export const figmaTrigger: INodeTypeDescription = {
-  name: "n8n-nodes-base.figmaTrigger",
+  name: "openflow-node-base.figmaTrigger",
   displayName: "Figma Trigger (Beta)",
   category: "Miscellaneous",
   group: ["trigger"],
@@ -3639,7 +3641,7 @@ const SURVEYMONKEY_DOCS =
   "https://docs.n8n.io/integrations/builtin/trigger-nodes/n8n-nodes-base.surveymonkeytrigger/";
 
 export const surveyMonkeyTrigger: INodeTypeDescription = {
-  name: "n8n-nodes-base.surveyMonkeyTrigger",
+  name: "openflow-node-base.surveyMonkeyTrigger",
   displayName: "SurveyMonkey Trigger",
   category: "Communication",
   group: ["trigger"],
@@ -3747,7 +3749,7 @@ export const surveyMonkeyTrigger: INodeTypeDescription = {
 };
 
 export const emailReadImap: INodeTypeDescription = {
-  name: "n8n-nodes-base.emailReadImap",
+  name: "openflow-node-base.emailReadImap",
   displayName: "Email Trigger (IMAP)",
   category: "Triggers",
   group: ["trigger"],
@@ -3847,7 +3849,7 @@ const STRIPE_DOCS =
   "https://docs.n8n.io/integrations/builtin/trigger-nodes/n8n-nodes-base.stripetrigger/";
 
 export const stripeTrigger: INodeTypeDescription = {
-  name: "n8n-nodes-base.stripeTrigger",
+  name: "openflow-node-base.stripeTrigger",
   displayName: "Stripe Trigger",
   category: "Triggers",
   group: ["trigger"],
@@ -3905,7 +3907,7 @@ export const stripeTrigger: INodeTypeDescription = {
 };
 
 export const postmarkTrigger: INodeTypeDescription = {
-  name: "n8n-nodes-base.postmarkTrigger",
+  name: "openflow-node-base.postmarkTrigger",
   displayName: "Postmark Trigger",
   category: "Triggers",
   group: ["trigger"],
@@ -3960,7 +3962,7 @@ export const postmarkTrigger: INodeTypeDescription = {
 };
 
 export const postgresTrigger: INodeTypeDescription = {
-  name: "n8n-nodes-base.postgresTrigger",
+  name: "openflow-node-base.postgresTrigger",
   displayName: "Postgres Trigger",
   category: "Development",
   group: ["trigger"],
@@ -4062,7 +4064,7 @@ export const postgresTrigger: INodeTypeDescription = {
 };
 
 export const githubTrigger: INodeTypeDescription = {
-  name: "n8n-nodes-base.githubTrigger",
+  name: "openflow-node-base.githubTrigger",
   displayName: "GitHub Trigger",
   category: "Triggers",
   group: ["trigger"],
@@ -4126,7 +4128,7 @@ export const githubTrigger: INodeTypeDescription = {
 };
 
 export const gitlabTrigger: INodeTypeDescription = {
-  name: "n8n-nodes-base.gitlabTrigger",
+  name: "openflow-node-base.gitlabTrigger",
   displayName: "GitLab Trigger",
   category: "Triggers",
   group: ["trigger"],
@@ -4209,7 +4211,7 @@ const BITBUCKET_DOCS =
   "https://docs.n8n.io/integrations/builtin/trigger-nodes/n8n-nodes-base.bitbuckettrigger/";
 
 export const bitbucketTrigger: INodeTypeDescription = {
-  name: "n8n-nodes-base.bitbucketTrigger",
+  name: "openflow-node-base.bitbucketTrigger",
   displayName: "Bitbucket Trigger",
   category: "Triggers",
   group: ["trigger"],
@@ -4274,7 +4276,7 @@ const HUBSPOT_TRIGGER_DOCS =
   "https://docs.n8n.io/integrations/builtin/trigger-nodes/n8n-nodes-base.hubspottrigger/";
 
 export const hubspotTrigger: INodeTypeDescription = {
-  name: "n8n-nodes-base.hubspotTrigger",
+  name: "openflow-node-base.hubspotTrigger",
   displayName: "HubSpot Trigger",
   category: "Triggers",
   group: ["trigger"],
@@ -4363,7 +4365,7 @@ const PAGERDUTY_DOCS =
   "https://docs.n8n.io/integrations/builtin/app-nodes/n8n-nodes-base.pagerDuty/";
 
 export const pagerDuty: INodeTypeDescription = {
-  name: "n8n-nodes-base.pagerDuty",
+  name: "openflow-node-base.pagerDuty",
   displayName: "PagerDuty",
   category: "Helpers",
   group: ["transform"],
@@ -4631,7 +4633,7 @@ export const pagerDuty: INodeTypeDescription = {
 };
 
 export const googleDriveTrigger: INodeTypeDescription = {
-  name: "n8n-nodes-base.googleDriveTrigger",
+  name: "openflow-node-base.googleDriveTrigger",
   displayName: "Google Drive Trigger",
   category: "Data & Storage",
   group: ["trigger"],
@@ -4737,7 +4739,7 @@ export const googleDriveTrigger: INodeTypeDescription = {
 };
 
 export const googleSheetsTrigger: INodeTypeDescription = {
-  name: "n8n-nodes-base.googleSheetsTrigger",
+  name: "openflow-node-base.googleSheetsTrigger",
   displayName: "Google Sheets Trigger",
   category: "Data & Storage",
   group: ["trigger"],
@@ -4899,7 +4901,7 @@ const WHATSAPP_TRIGGER_DOCS =
   "https://docs.n8n.io/integrations/builtin/trigger-nodes/n8n-nodes-base.whatsapptrigger/";
 
 export const whatsAppTrigger: INodeTypeDescription = {
-  name: "n8n-nodes-base.whatsAppTrigger",
+  name: "openflow-node-base.whatsAppTrigger",
   displayName: "WhatsApp Trigger",
   category: "Communication",
   group: ["trigger"],
@@ -4956,7 +4958,7 @@ export const whatsAppTrigger: INodeTypeDescription = {
 const SLACK_TRIGGER_DOCS = "https://docs.n8n.io/integrations/builtin/trigger-nodes/n8n-nodes-base.slacktrigger/";
 
 export const slackTrigger: INodeTypeDescription = {
-  name: "n8n-nodes-base.slackTrigger",
+  name: "openflow-node-base.slackTrigger",
   displayName: "Slack Trigger",
   category: "Communication",
   group: ["trigger"],
@@ -5045,7 +5047,7 @@ export const slackTrigger: INodeTypeDescription = {
 };
 
 export const redisTrigger: INodeTypeDescription = {
-  name: "n8n-nodes-base.redisTrigger",
+  name: "openflow-node-base.redisTrigger",
   displayName: "Redis Trigger",
   category: "Triggers",
   group: ["trigger"],
@@ -5098,7 +5100,7 @@ const JOTFORM_DOCS =
   "https://docs.n8n.io/integrations/builtin/trigger-nodes/n8n-nodes-base.jotformtrigger.md";
 
 export const jotFormTrigger: INodeTypeDescription = {
-  name: "n8n-nodes-base.jotFormTrigger",
+  name: "openflow-node-base.jotFormTrigger",
   displayName: "Jotform Trigger",
   category: "Communication",
   group: ["trigger"],
@@ -5141,7 +5143,7 @@ const TYPEFORM_DOCS =
   "https://docs.n8n.io/integrations/builtin/trigger-nodes/n8n-nodes-base.typeformtrigger/";
 
 export const typeformTrigger: INodeTypeDescription = {
-  name: "n8n-nodes-base.typeformTrigger",
+  name: "openflow-node-base.typeformTrigger",
   displayName: "Typeform Trigger",
   category: "Communication",
   group: ["trigger"],
@@ -5201,7 +5203,7 @@ const OUTLOOK_TRIGGER_DOCS =
   "https://docs.n8n.io/integrations/builtin/trigger-nodes/n8n-nodes-base.microsoftoutlooktrigger/";
 
 export const microsoftOutlookTrigger: INodeTypeDescription = {
-  name: "n8n-nodes-base.microsoftOutlookTrigger",
+  name: "openflow-node-base.microsoftOutlookTrigger",
   displayName: "Microsoft Outlook Trigger",
   category: "Communication",
   group: ["trigger"],
@@ -5313,7 +5315,7 @@ const WOOCOMMERCE_DOCS =
   "https://docs.n8n.io/integrations/builtin/trigger-nodes/n8n-nodes-base.woocommercetrigger/";
 
 export const wooCommerceTrigger: INodeTypeDescription = {
-  name: "n8n-nodes-base.wooCommerceTrigger",
+  name: "openflow-node-base.wooCommerceTrigger",
   displayName: "WooCommerce Trigger",
   category: "Sales",
   group: ["trigger"],
@@ -5356,7 +5358,7 @@ const WEBFLOW_DOCS =
   "https://docs.n8n.io/integrations/builtin/trigger-nodes/n8n-nodes-base.webflowtrigger/";
 
 export const webflowTrigger: INodeTypeDescription = {
-  name: "n8n-nodes-base.webflowTrigger",
+  name: "openflow-node-base.webflowTrigger",
   displayName: "Webflow Trigger",
   category: "Marketing",
   group: ["trigger"],
@@ -5402,7 +5404,7 @@ export const webflowTrigger: INodeTypeDescription = {
 };
 
 export const formIoTrigger: INodeTypeDescription = {
-  name: "n8n-nodes-base.formIoTrigger",
+  name: "openflow-node-base.formIoTrigger",
   displayName: "Form.io Trigger",
   category: "Communication",
   group: ["trigger"],
@@ -5467,7 +5469,7 @@ export const formIoTrigger: INodeTypeDescription = {
 };
 
 export const jiraTrigger: INodeTypeDescription = {
-  name: "n8n-nodes-base.jiraTrigger",
+  name: "openflow-node-base.jiraTrigger",
   displayName: "Jira Trigger",
   category: "Triggers",
   group: ["trigger"],
@@ -5548,7 +5550,7 @@ export const jiraTrigger: INodeTypeDescription = {
 };
 
 export const clickUpTrigger: INodeTypeDescription = {
-  name: "n8n-nodes-base.clickUpTrigger",
+  name: "openflow-node-base.clickUpTrigger",
   displayName: "ClickUp Trigger",
   category: "Productivity",
   group: ["trigger"],
@@ -5630,7 +5632,7 @@ const pollScheduleModes = [
 ];
 
 export const salesforceTrigger: INodeTypeDescription = {
-  name: "n8n-nodes-base.salesforceTrigger",
+  name: "openflow-node-base.salesforceTrigger",
   displayName: "Salesforce Trigger",
   category: "Sales",
   group: ["trigger"],
@@ -5762,7 +5764,7 @@ const TRELLO_DOCS =
   "https://docs.n8n.io/integrations/builtin/trigger-nodes/n8n-nodes-base.trellotrigger/";
 
 export const trelloTrigger: INodeTypeDescription = {
-  name: "n8n-nodes-base.trelloTrigger",
+  name: "openflow-node-base.trelloTrigger",
   displayName: "Trello Trigger",
   category: "Productivity",
   group: ["trigger"],
@@ -5788,7 +5790,7 @@ export const trelloTrigger: INodeTypeDescription = {
 };
 
 export const onfleetTrigger: INodeTypeDescription = {
-  name: "n8n-nodes-base.onfleetTrigger",
+  name: "openflow-node-base.onfleetTrigger",
   displayName: "Onfleet Trigger",
   category: "Miscellaneous",
   group: ["trigger"],
@@ -5862,7 +5864,7 @@ const BREVO_EVENT_OPTIONS = [
 ];
 
 export const sendInBlueTrigger: INodeTypeDescription = {
-  name: "n8n-nodes-base.sendInBlueTrigger",
+  name: "openflow-node-base.sendInBlueTrigger",
   displayName: "Brevo Trigger",
   category: "Communication",
   group: ["trigger"],
@@ -5889,7 +5891,7 @@ export const sendInBlueTrigger: INodeTypeDescription = {
 };
 
 export const eventbriteTrigger: INodeTypeDescription = {
-  name: "n8n-nodes-base.eventbriteTrigger",
+  name: "openflow-node-base.eventbriteTrigger",
   displayName: "Eventbrite Trigger",
   category: "Sales",
   group: ["trigger"],
@@ -5969,7 +5971,7 @@ const ASANA_DOCS =
   "https://docs.n8n.io/integrations/builtin/trigger-nodes/n8n-nodes-base.asanatrigger/";
 
 export const asanaTrigger: INodeTypeDescription = {
-  name: "n8n-nodes-base.asanaTrigger",
+  name: "openflow-node-base.asanaTrigger",
   displayName: "Asana Trigger",
   category: "Productivity",
   group: ["trigger"],
@@ -6018,7 +6020,7 @@ export const asanaTrigger: INodeTypeDescription = {
 };
 
 export const awsSnsTrigger: INodeTypeDescription = {
-  name: "n8n-nodes-base.awsSnsTrigger",
+  name: "openflow-node-base.awsSnsTrigger",
   displayName: "AWS SNS Trigger",
   category: "Communication",
   group: ["trigger"],
@@ -6085,7 +6087,7 @@ const CLOCKIFY_DOCS =
   "https://docs.n8n.io/integrations/builtin/trigger-nodes/n8n-nodes-base.clockifytrigger/";
 
 export const clockifyTrigger: INodeTypeDescription = {
-  name: "n8n-nodes-base.clockifyTrigger",
+  name: "openflow-node-base.clockifyTrigger",
   displayName: "Clockify Trigger",
   category: "Productivity",
   group: ["trigger"],
@@ -6137,7 +6139,7 @@ const FLOW_TRIGGER_DOCS =
   "https://docs.n8n.io/integrations/builtin/trigger-nodes/n8n-nodes-base.flowtrigger/";
 
 export const flowTrigger: INodeTypeDescription = {
-  name: "n8n-nodes-base.flowTrigger",
+  name: "openflow-node-base.flowTrigger",
   displayName: "Flow Trigger",
   category: "Productivity",
   group: ["trigger"],
@@ -6205,7 +6207,7 @@ const HELP_SCOUT_EVENT_OPTIONS: INodePropertyOption[] = [
 ];
 
 export const helpScoutTrigger: INodeTypeDescription = {
-  name: "n8n-nodes-base.helpScoutTrigger",
+  name: "openflow-node-base.helpScoutTrigger",
   displayName: "Help Scout Trigger",
   category: "Communication",
   group: ["trigger"],
@@ -6237,7 +6239,7 @@ const INVOICE_NINJA_DOCS =
   "https://docs.n8n.io/integrations/builtin/trigger-nodes/n8n-nodes-base.invoiceninjatrigger/";
 
 export const invoiceNinjaTrigger: INodeTypeDescription = {
-  name: "n8n-nodes-base.invoiceNinjaTrigger",
+  name: "openflow-node-base.invoiceNinjaTrigger",
   displayName: "Invoice Ninja Trigger",
   category: "Finance & Accounting",
   group: ["trigger"],
@@ -6288,7 +6290,7 @@ const KEAP_TRIGGER_DOCS =
   "https://docs.n8n.io/integrations/builtin/trigger-nodes/n8n-nodes-base.keaptrigger/";
 
 export const keapTrigger: INodeTypeDescription = {
-  name: "n8n-nodes-base.keapTrigger",
+  name: "openflow-node-base.keapTrigger",
   displayName: "Keap Trigger",
   category: "Triggers",
   group: ["trigger"],
@@ -6362,7 +6364,7 @@ const MAILERLITE_V2_EVENTS = [
 ];
 
 export const mailerLiteTrigger: INodeTypeDescription = {
-  name: "n8n-nodes-base.mailerLiteTrigger",
+  name: "openflow-node-base.mailerLiteTrigger",
   displayName: "MailerLite Trigger",
   category: "Communication",
   group: ["trigger"],
@@ -6407,7 +6409,7 @@ const PAYPAL_TRIGGER_DOCS =
   "https://docs.n8n.io/integrations/builtin/trigger-nodes/n8n-nodes-base.paypaltrigger/";
 
 export const payPalTrigger: INodeTypeDescription = {
-  name: "n8n-nodes-base.payPalTrigger",
+  name: "openflow-node-base.payPalTrigger",
   displayName: "PayPal Trigger",
   category: "Finance & Accounting",
   group: ["trigger"],
@@ -6458,7 +6460,7 @@ const PUSHCUT_TRIGGER_DOCS =
   "https://docs.n8n.io/integrations/builtin/trigger-nodes/n8n-nodes-base.pushcuttrigger/";
 
 export const pushcutTrigger: INodeTypeDescription = {
-  name: "n8n-nodes-base.pushcutTrigger",
+  name: "openflow-node-base.pushcutTrigger",
   displayName: "Pushcut Trigger",
   category: "Communication",
   group: ["trigger"],
@@ -6488,7 +6490,7 @@ const STRAVA_TRIGGER_DOCS =
   "https://docs.n8n.io/integrations/builtin/trigger-nodes/n8n-nodes-base.stravatrigger/";
 
 export const stravaTrigger: INodeTypeDescription = {
-  name: "n8n-nodes-base.stravaTrigger",
+  name: "openflow-node-base.stravaTrigger",
   displayName: "Strava Trigger",
   category: "Productivity",
   group: ["trigger"],
@@ -6537,7 +6539,7 @@ const WISE_DOCS =
   "https://docs.n8n.io/integrations/builtin/trigger-nodes/n8n-nodes-base.wisetrigger/";
 
 export const wiseTrigger: INodeTypeDescription = {
-  name: "n8n-nodes-base.wiseTrigger",
+  name: "openflow-node-base.wiseTrigger",
   displayName: "Wise Trigger",
   category: "Finance & Accounting",
   group: ["trigger"],
@@ -6592,7 +6594,7 @@ const THE_HIVE_EVENTS = [
 ];
 
 export const theHiveTrigger: INodeTypeDescription = {
-  name: "n8n-nodes-base.theHiveTrigger",
+  name: "openflow-node-base.theHiveTrigger",
   displayName: "TheHive Trigger",
   category: "Development",
   group: ["trigger"],

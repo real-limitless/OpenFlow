@@ -226,19 +226,127 @@ describe("batch-02 triggers-flow", () => {
       expect(out[0][1].json.n).toBe(2);
     });
 
-    it("errors on unsupported pythonNative language", async () => {
+    it("pythonNative all-items maps via _items", async () => {
+      const out = await runNode(
+        "n8n-nodes-base.code",
+        {
+          mode: "runOnceForAllItems",
+          language: "pythonNative",
+          pythonCode: `return [ {"json": {"n": i["json"]["x"]}} for i in _items ]`,
+        },
+        [{ x: 1 }, { x: 2 }],
+      );
+      expect(out[0]).toHaveLength(2);
+      expect(out[0][0].json.n).toBe(1);
+      expect(out[0][1].json.n).toBe(2);
+    });
+
+    it("pythonNative each-item uses _item", async () => {
+      const out = await runNode(
+        "n8n-nodes-base.code",
+        {
+          mode: "runOnceForEachItem",
+          language: "pythonNative",
+          pythonCode: `return {"json": {"doubled": _item["json"]["v"] * 2}}`,
+        },
+        [{ v: 3 }, { v: 5 }],
+      );
+      expect(out[0]).toHaveLength(2);
+      expect(out[0][0].json.doubled).toBe(6);
+      expect(out[0][1].json.doubled).toBe(10);
+    });
+
+    it("pythonNative errors when json property is an array", async () => {
       await expect(
         runNode(
           "n8n-nodes-base.code",
           {
             mode: "runOnceForAllItems",
             language: "pythonNative",
-            pythonCode: `return []`,
+            pythonCode: `return [{"json": [1, 2, 3]}]`,
           },
-          [{ x: 1 }],
+          [{ a: 1 }],
         ),
-      ).rejects.toThrow(/pythonNative.*not supported/i);
+      ).rejects.toThrow(/json.*object/i);
     });
+
+    it("pythonNative errors on None return", async () => {
+      await expect(
+        runNode(
+          "n8n-nodes-base.code",
+          {
+            mode: "runOnceForAllItems",
+            language: "pythonNative",
+            pythonCode: `return None`,
+          },
+          [{ a: 1 }],
+        ),
+      ).rejects.toThrow(/doesn't return/i);
+    });
+
+    it("pythonNative allows safe stdlib imports", async () => {
+      const out = await runNode(
+        "n8n-nodes-base.code",
+        {
+          mode: "runOnceForAllItems",
+          language: "pythonNative",
+          pythonCode: `
+import json
+import re
+from datetime import datetime
+return [{"json": {"ok": True, "n": len(_items), "has_j": hasattr(json, "dumps")}}]
+`,
+        },
+        [{ x: 1 }],
+      );
+      expect(out[0][0].json.ok).toBe(true);
+      expect(out[0][0].json.n).toBe(1);
+      expect(out[0][0].json.has_j).toBe(true);
+    });
+
+    it("pythonNative blocks os import", async () => {
+      await expect(
+        runNode(
+          "n8n-nodes-base.code",
+          {
+            mode: "runOnceForAllItems",
+            language: "pythonNative",
+            pythonCode: `import os\nreturn [{"json": {}}]`,
+          },
+          [{ a: 1 }],
+        ),
+      ).rejects.toThrow(/not allowed/i);
+    });
+
+    it("python (pyodide) all-items maps via _items", async () => {
+      const out = await runNode(
+        "n8n-nodes-base.code",
+        {
+          mode: "runOnceForAllItems",
+          language: "python",
+          pythonCode: `return [ {"json": {"n": i["json"]["x"]}} for i in _items ]`,
+        },
+        [{ x: 1 }, { x: 2 }],
+      );
+      expect(out[0]).toHaveLength(2);
+      expect(out[0][0].json.n).toBe(1);
+      expect(out[0][1].json.n).toBe(2);
+    }, 120_000);
+
+    it("python (pyodide) each-item uses _json", async () => {
+      const out = await runNode(
+        "n8n-nodes-base.code",
+        {
+          mode: "runOnceForEachItem",
+          language: "python",
+          pythonCode: `return {"json": {"doubled": _json["v"] * 2}}`,
+        },
+        [{ v: 3 }, { v: 5 }],
+      );
+      expect(out[0]).toHaveLength(2);
+      expect(out[0][0].json.doubled).toBe(6);
+      expect(out[0][1].json.doubled).toBe(10);
+    }, 120_000);
   });
 
   describe("splitInBatches", () => {

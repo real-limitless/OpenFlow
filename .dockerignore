@@ -8,7 +8,10 @@ dist
 .git
 .github
 graphify-out
-docs
+# Exclude most docs from API image; allow specs for toolbox catalog RAG if present
+docs/**
+!docs/specs/
+!docs/specs/**
 workflows
 scripts/factory
 scripts/scrape-n8n-workflows
@@ -16,6 +19,7 @@ scripts/scrape-n8n-workflows
 *.tmp
 *.md
 !README.md
+!docs/specs/**/*.md
 .env
 .env.*
 !.env.example

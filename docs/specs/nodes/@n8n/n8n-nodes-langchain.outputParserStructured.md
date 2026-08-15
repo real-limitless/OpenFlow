@@ -55,7 +55,7 @@ UI labels from **public docs**; wire names from **public workflow JSON**.
 | name | type | default | required | displayOptions | notes |
 |------|------|---------|----------|----------------|-------|
 | schemaType | options / string | Generate from JSON Example (omitted) (**public JSON** — templates using the example mode omit this key) | no | — | UI: **Schema Type**. Values: `manual` = **Define using JSON Schema** (**public JSON**); the default (omitted) = **Generate from JSON Example** (**public JSON** + **documented**). |
-| jsonSchemaExample | string | — | when `schemaType` is not `manual` | show when Schema Type is "Generate from JSON Example" | UI: **JSON Example** — a JSON object whose property **names and types** are used to auto-generate the schema; actual values are ignored (**documented**). n8n treats every field as **mandatory** when generating from an example (**documented**). |
+| jsonSchemaExample | string | — | when `schemaType` is not `manual` | show when Schema Type is "Generate from JSON Example" | UI: **JSON Example** — a JSON object whose property **names and types** are used to auto-generate the schema; actual values are ignored (**documented**). n8n treats every field as **mandatory** when generating from an example (**documented**). **OpenFlow:** also accepts a **root JSON array** (common in public templates); schema is `{ type: "array", items: <derived from first element> }` (**public JSON** interop). |
 | inputSchema | string | — | when `schemaType` is `manual` | show when Schema Type is "Define using JSON Schema" | UI: **JSON Schema** — a hand-written JSON Schema string (**documented**). `$ref` references are **not supported** (**documented**). |
 | autoFix | boolean | `false` when omitted (**inferred**) | no | — | UI label not documented (**gap**). When `true`, invalid model output is auto-corrected before parsing (**inferred** from **public JSON** — template sets `autoFix: true` alongside `jsonSchemaExample`; not described on the docs page). |
 
@@ -259,6 +259,7 @@ Auto-fixing Output Parser behavior).
 | Wire value for example mode (non-default explicit) | gap | Not observed; default-omitted is sufficient |
 | Every field mandatory when generated from example | documented | Primary docs page |
 | Example values ignored; only names + types used | documented | Primary docs page |
+| Root array as `jsonSchemaExample` | public JSON | Docs say object; templates use `[{...}]`; OpenFlow accepts both |
 | `$ref` unsupported in JSON Schema | documented | Primary docs page |
 | Channel name `ai_outputParser` | public JSON + in-repo | Confirmed in template exports + `langchain-agent.ts` |
 | Parser handle `parse(text)` contract | inferred / OpenFlow contract | In-repo `OutputParserHandle.parse`; docs describe behavior, not the interface |

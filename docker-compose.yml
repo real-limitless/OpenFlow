@@ -2,6 +2,10 @@
 #   docker compose up -d
 #   open http://localhost:3000
 #
+# Toolbox (git/shell/RAG reindex) starts with the stack:
+#   docker compose exec toolbox bash
+#   docker compose exec toolbox catalog-reindex-hash
+#
 # No .env required. Optional: cp .env.example .env and edit.
 # Production: docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
 
@@ -9,8 +13,8 @@ services:
   api:
     build: .
     image: openflow:local
-    ports:
-      - "3000:3000"
+    expose:
+      - "3000"
     env_file:
       - path: .env
         required: false
@@ -22,6 +26,7 @@ services:
       # Fixed container paths (do not interpolate host .env — breaks the volume mounts)
       BINARY_STORAGE_DIR: /data/binary
       OPENFLOW_SECRETS_DIR: /data/secrets
+      OPENFLOW_WORKSPACE_DIR: /data/workspace
       RUN_WORKER: ${RUN_WORKER:-true}
       WORKER_CONCURRENCY: ${WORKER_CONCURRENCY:-5}
       OPENFLOW_HOT_NODES: ${OPENFLOW_HOT_NODES:-true}
@@ -31,6 +36,18 @@ services:
       OPENFLOW_ASSISTANT_API_KEY: ${OPENFLOW_ASSISTANT_API_KEY:-}
       OPENFLOW_ASSISTANT_BASE_URL: ${OPENFLOW_ASSISTANT_BASE_URL:-https://openrouter.ai/api/v1}
       OPENFLOW_ASSISTANT_MODEL: ${OPENFLOW_ASSISTANT_MODEL:-openai/gpt-4o-mini}
+      OPENFLOW_MCP_ENABLED: ${OPENFLOW_MCP_ENABLED:-true}
+      OPENFLOW_PUBLIC_URL: ${OPENFLOW_PUBLIC_URL:-}
+      OPENFLOW_CATALOG_RAG_ENABLED: ${OPENFLOW_CATALOG_RAG_ENABLED:-true}
+      OPENFLOW_CATALOG_EMBED_API_KEY: ${OPENFLOW_CATALOG_EMBED_API_KEY:-${OPENFLOW_ASSISTANT_API_KEY:-}}
+      OPENFLOW_CATALOG_EMBED_BASE_URL: ${OPENFLOW_CATALOG_EMBED_BASE_URL:-${OPENFLOW_ASSISTANT_BASE_URL:-https://openrouter.ai/api/v1}}
+      OPENFLOW_CATALOG_EMBED_MODEL: ${OPENFLOW_CATALOG_EMBED_MODEL:-text-embedding-3-small}
+      OPENFLOW_CATALOG_EMBED_DIMS: ${OPENFLOW_CATALOG_EMBED_DIMS:-1536}
+      OPENFLOW_CATALOG_EMBED_BATCH: ${OPENFLOW_CATALOG_EMBED_BATCH:-32}
+      OPENFLOW_CATALOG_EMBED_CONCURRENCY: ${OPENFLOW_CATALOG_EMBED_CONCURRENCY:-4}
+      OPENFLOW_CATALOG_EMBED_NO_AUTH: ${OPENFLOW_CATALOG_EMBED_NO_AUTH:-}
+      OPENFLOW_CATALOG_SHELL_PENALTY: ${OPENFLOW_CATALOG_SHELL_PENALTY:-0.35}
+      OPENFLOW_CATALOG_USE_PGVECTOR: ${OPENFLOW_CATALOG_USE_PGVECTOR:-true}
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
       OPENAI_BASE_URL: ${OPENAI_BASE_URL:-}
       OPENAI_MODEL: ${OPENAI_MODEL:-}
@@ -44,6 +61,7 @@ services:
     volumes:
       - binary-data:/data/binary
       - secrets-data:/data/secrets
+      - workspace-data:/data/workspace
     healthcheck:
       test:
         [
@@ -60,10 +78,50 @@ services:
       redis:
         condition: service_healthy
 
+  # Toolbox: git/bash/python + baked-in app for catalog RAG.
+  # App lives at /app (in the image). /data/workspace is agent scratch (shared with api).
+  toolbox:
+    build:
+      context: .
+      dockerfile: Dockerfile.toolbox
+    image: openflow-toolbox:local
+    working_dir: /app
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      DATABASE_URL: postgresql://openflow:openflow@db:5432/openflow
+      REDIS_URL: redis://redis:6379
+      OPENFLOW_APP_DIR: /app
+      OPENFLOW_WORKSPACE_DIR: /data/workspace
+      OPENFLOW_CATALOG_RAG_ENABLED: ${OPENFLOW_CATALOG_RAG_ENABLED:-true}
+      OPENFLOW_CATALOG_EMBED_API_KEY: ${OPENFLOW_CATALOG_EMBED_API_KEY:-${OPENFLOW_ASSISTANT_API_KEY:-}}
+      OPENFLOW_CATALOG_EMBED_BASE_URL: ${OPENFLOW_CATALOG_EMBED_BASE_URL:-${OPENFLOW_ASSISTANT_BASE_URL:-https://openrouter.ai/api/v1}}
+      OPENFLOW_CATALOG_EMBED_MODEL: ${OPENFLOW_CATALOG_EMBED_MODEL:-text-embedding-3-small}
+      OPENFLOW_CATALOG_EMBED_DIMS: ${OPENFLOW_CATALOG_EMBED_DIMS:-1536}
+      OPENFLOW_CATALOG_EMBED_BATCH: ${OPENFLOW_CATALOG_EMBED_BATCH:-32}
+      OPENFLOW_CATALOG_EMBED_CONCURRENCY: ${OPENFLOW_CATALOG_EMBED_CONCURRENCY:-4}
+      OPENFLOW_CATALOG_EMBED_NO_AUTH: ${OPENFLOW_CATALOG_EMBED_NO_AUTH:-}
+      OPENFLOW_CATALOG_SHELL_PENALTY: ${OPENFLOW_CATALOG_SHELL_PENALTY:-0.35}
+      OPENFLOW_CATALOG_USE_PGVECTOR: ${OPENFLOW_CATALOG_USE_PGVECTOR:-true}
+      OPENFLOW_ASSISTANT_API_KEY: ${OPENFLOW_ASSISTANT_API_KEY:-}
+      OPENFLOW_ASSISTANT_BASE_URL: ${OPENFLOW_ASSISTANT_BASE_URL:-https://openrouter.ai/api/v1}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      OPENAI_BASE_URL: ${OPENAI_BASE_URL:-}
+    volumes:
+      # Agent scratch only — NOT the OpenFlow source tree
+      - workspace-data:/data/workspace
+      - catalog-data:/data/catalog
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
   db:
-    image: postgres:16-alpine
-    ports:
-      - "15432:5432"
+    # pgvector-enabled Postgres for semantic node catalog (RAG)
+    image: pgvector/pgvector:pg16
+    expose:
+      - "5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
     environment:
@@ -78,8 +136,8 @@ services:
 
   redis:
     image: redis:7-alpine
-    ports:
-      - "6379:6379"
+    expose:
+      - "6379"
     volumes:
       - redis-data:/data
     healthcheck:
@@ -93,3 +151,5 @@ volumes:
   binary-data:
   secrets-data:
   redis-data:
+  workspace-data:
+  catalog-data:

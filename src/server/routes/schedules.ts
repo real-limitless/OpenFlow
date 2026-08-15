@@ -3,6 +3,7 @@ import { prisma } from "../db";
 import type { AppEnv } from "../middleware/auth";
 import { enqueueOrRun } from "../execute";
 import { log } from "../log";
+import { notifyExecutionStarted } from "../services/workflow-events";
 
 const scheduledJobs = new Map<string, NodeJS.Timeout>();
 
@@ -44,6 +45,7 @@ async function startSchedule(schedule: { id: string; workflowId: string; cronExp
           mode: "trigger",
         },
       });
+      notifyExecutionStarted(schedule.workflowId, execution.id, "trigger");
 
       await enqueueOrRun(
         schedule.workflowId,

@@ -183,6 +183,72 @@
         </div>
       </section>
 
+      <!-- Ansible -->
+      <section id="ansible" class="section-shots" aria-labelledby="ansible-title">
+        <div class="container">
+          <div class="section-head center">
+            <span class="section-label">Ansible</span>
+            <h2 id="ansible-title">Modules and playbooks on the canvas</h2>
+            <p>
+              Browse an Ansible module gallery, configure args with Form or JSON, run
+              path-jailed playbooks, and bind SSH/become credentials — dual-tracked with
+              <a href="https://github.com/real-limitless/ansible-flow-mcp">ansible-flow-mcp</a>
+              for IDE agents.
+            </p>
+          </div>
+          <div class="shot-grid">
+            <figure class="shot-card">
+              <div class="shot-frame compact">
+                <img
+                  src="./assets/screenshots/app-ansible-gallery.png"
+                  width="1440"
+                  height="900"
+                  alt="Ansible module gallery in the OpenFlow node palette"
+                  loading="lazy"
+                  decoding="async"
+                />
+              </div>
+              <figcaption>
+                <strong>Gallery</strong>
+                <span>Many palette cards, one runtime type — drop presets the module FQCN.</span>
+              </figcaption>
+            </figure>
+            <figure class="shot-card">
+              <div class="shot-frame compact">
+                <img
+                  src="./assets/screenshots/app-ansible-module-form.png"
+                  width="1440"
+                  height="900"
+                  alt="Ansible module Form and JSON parameter panel"
+                  loading="lazy"
+                  decoding="async"
+                />
+              </div>
+              <figcaption>
+                <strong>Module Form</strong>
+                <span>Schema-driven fields when available; JSON escape hatch always.</span>
+              </figcaption>
+            </figure>
+            <figure class="shot-card">
+              <div class="shot-frame compact">
+                <img
+                  src="./assets/screenshots/app-ansible-playbook.png"
+                  width="1440"
+                  height="900"
+                  alt="Ansible playbook resource configuration"
+                  loading="lazy"
+                  decoding="async"
+                />
+              </div>
+              <figcaption>
+                <strong>Playbooks</strong>
+                <span>Path-jailed ansible-playbook with extra vars, limit, and tags.</span>
+              </figcaption>
+            </figure>
+          </div>
+        </div>
+      </section>
+
       <!-- Features -->
       <section id="features" class="section-alt" aria-labelledby="features-title">
         <div class="container">
@@ -201,6 +267,15 @@
               <p>
                 Canvas-first UI powered by React Flow. Drag nodes, wire branches, inspect
                 data, and iterate without leaving the browser.
+              </p>
+            </article>
+            <article class="card">
+              <div class="card-icon" aria-hidden="true">⚙</div>
+              <h3>Ansible automation</h3>
+              <p>
+                Module gallery, hybrid Form/JSON args, playbooks, and SSH/become
+                credentials on the worker — same contract as the ansible-flow-mcp agent
+                server.
               </p>
             </article>
             <article class="card">

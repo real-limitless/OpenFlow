@@ -4,7 +4,7 @@ const COCKPIT_DOCS =
   "https://docs.n8n.io/integrations/builtin/app-nodes/n8n-nodes-base.cockpit/";
 
 export const cockpit: INodeTypeDescription = {
-  name: "n8n-nodes-base.cockpit",
+  name: "openflow-node-base.cockpit",
   displayName: "Cockpit",
   category: "Data & Content",
   group: ["output"],
@@ -181,7 +181,7 @@ const QUICKBASE_DOCS =
   "https://docs.n8n.io/integrations/builtin/app-nodes/n8n-nodes-base.quickbase/";
 
 export const quickbase: INodeTypeDescription = {
-  name: "n8n-nodes-base.quickbase",
+  name: "openflow-node-base.quickbase",
   displayName: "Quick Base",
   category: "Data & Storage",
   group: ["output"],

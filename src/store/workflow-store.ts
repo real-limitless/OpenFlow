@@ -8,7 +8,8 @@ import {
   renameInConnections,
   uniqueNodeName,
 } from "@/lib/workflow/graph";
-import { defaultParameters } from "@/lib/workflow/mutations";
+import { addNode as mutateAddNode, defaultParameters } from "@/lib/workflow/mutations";
+import type { AddNodeInit } from "@/lib/workflow/add-node";
 import { getNodeType } from "@/lib/nodes/registry";
 import { newId } from "@/lib/workflow/schema";
 import { getRepository } from "@/lib/storage/repository";
@@ -39,7 +40,11 @@ interface WorkflowState {
   setActive: (active: boolean) => void;
   selectNode: (name: string | null) => void;
 
-  addNode: (type: string, position: { x: number; y: number }) => string;
+  addNode: (
+    type: string,
+    position: { x: number; y: number },
+    init?: string | AddNodeInit,
+  ) => string;
   duplicateNode: (name: string) => void;
   deleteNode: (name: string) => void;
   moveNode: (name: string, position: { x: number; y: number }) => void;
@@ -147,23 +152,11 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
   setActive: (active) => get().commit((wf) => ({ ...wf, active })),
   selectNode: (name) => set({ selectedNode: name }),
 
-  addNode: (type, position) => {
-    const description = getNodeType(type);
-    const existing = get().workflow.nodes.map((n) => n.name);
-    const name = uniqueNodeName(existing, description.defaults.name);
-    const node: INode = {
-      id: newId("node"),
-      name,
-      type,
-      typeVersion: Array.isArray(description.version)
-        ? description.version[description.version.length - 1]
-        : description.version,
-      position: [Math.round(position.x), Math.round(position.y)],
-      parameters: defaultParameters(description.properties),
-    };
-    get().commit((wf) => ({ ...wf, nodes: [...wf.nodes, node] }));
-    set({ selectedNode: name });
-    return name;
+  addNode: (type, position, init) => {
+    const { workflow: next, result } = mutateAddNode(get().workflow, type, position, init);
+    get().commit(() => next);
+    set({ selectedNode: result.name });
+    return result.name;
   },
 
   duplicateNode: (name) => {
@@ -263,13 +256,7 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
 
   connect: (source, sourceHandle, target, targetHandle) =>
     get().commit((wf) => {
-      const connections = addConnection(
-        wf.connections,
-        source,
-        sourceHandle,
-        target,
-        targetHandle,
-      );
+      const connections = addConnection(wf.connections, source, sourceHandle, target, targetHandle);
       const handle = targetHandle ?? "main-0";
       const dash = handle.lastIndexOf("-");
       const channel = dash === -1 ? handle : handle.slice(0, dash);

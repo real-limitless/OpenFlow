@@ -4,8 +4,19 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PropertiesPanel } from "./PropertiesPanel";
 import { AssistantPanel } from "./AssistantPanel";
 import { useWorkflowStore } from "@/store/workflow-store";
+import type { ExecutionRunData } from "@/lib/engine/types";
 
-export function EditorRightRail({ workflowId }: { workflowId: string }) {
+export function EditorRightRail({
+  workflowId,
+  runData = null,
+  onExecutePrevious,
+  isExecuting = false,
+}: {
+  workflowId: string;
+  runData?: ExecutionRunData | null;
+  onExecutePrevious?: (nodeName: string) => void;
+  isExecuting?: boolean;
+}) {
   const selected = useWorkflowStore((s) => s.selectedNode);
   const [tab, setTab] = useState<string>("assistant");
   const prevSelected = useRef<string | null>(null);
@@ -34,7 +45,12 @@ export function EditorRightRail({ workflowId }: { workflowId: string }) {
           value="properties"
           className="mt-0 min-h-0 min-w-0 flex-1 overflow-hidden data-[state=inactive]:hidden"
         >
-          <PropertiesPanel embedded />
+          <PropertiesPanel
+            embedded
+            runData={runData}
+            onExecutePrevious={onExecutePrevious}
+            isExecuting={isExecuting}
+          />
         </TabsContent>
         <TabsContent
           value="assistant"

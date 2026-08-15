@@ -1,22 +1,35 @@
 import { useEffect, useRef, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import {
+  AppWindow,
   Braces,
+  Bug,
   Check,
   Download,
   KeyRound,
   LayoutGrid,
+  LayoutTemplate,
+  MoreHorizontal,
+  PanelRight,
   Redo2,
   Save,
+  Bot,
   Share2,
   Table2,
   Undo2,
   Upload,
 } from "lucide-react";
+import type { DockviewApi } from "dockview";
 import { toast } from "sonner";
 import { OpenFlowLogo } from "@/components/brand/openflow-logo";
 import { useWorkflowStore } from "@/store/workflow-store";
-import { parseWorkflowJson, serializeWorkflow } from "@/lib/workflow/schema";
+import {
+  parseWorkflowJson,
+  serializeWorkflow,
+  type WorkflowExportMode,
+} from "@/lib/workflow/schema";
+import { openGeneralIssueUrl } from "@/lib/feedback/github-issue";
+import { prepareIssueReport } from "@/lib/feedback/debug-bundle";
 import { autoLayout } from "@/lib/workflow/layout";
 import {
   collectWorkflowCredentials,
@@ -24,22 +37,38 @@ import {
 } from "@/lib/workflow/credentials-inventory";
 import { serializeForRuntime } from "@/lib/runtime/serialize";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Switch } from "@/components/ui/switch";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Input } from "@/components/ui/input";
-import { Switch } from "@/components/ui/switch";
 import { MigrationReportDialog } from "./MigrationReport";
 import { ImportCredentialsDialog } from "@/components/credentials";
 import { ShareDialog } from "@/components/share/share-dialog";
+import { McpShareDialog } from "@/components/editor/McpShareDialog";
 import { projectHeaders } from "@/lib/projects/client";
 import type { IWorkflow } from "@/lib/workflow/types";
 import { EnvironmentSwitcher } from "./EnvironmentSwitcher";
+import { cn } from "@/lib/utils";
+import { EDITOR_PANELS, type EditorPanelId } from "@/components/editor/dock/panel-registry";
+import {
+  floatEditorPanel,
+  openEditorPanel,
+  popoutEditorPanel,
+  resetEditorDockLayout,
+} from "@/components/editor/dock/EditorDockHost";
 
-export function EditorTopBar({ actions }: { actions?: React.ReactNode }) {
+export function EditorTopBar({
+  actions,
+  dockApiRef,
+}: {
+  actions?: React.ReactNode;
+  dockApiRef?: React.MutableRefObject<DockviewApi | null>;
+}) {
   const workflow = useWorkflowStore((s) => s.workflow);
   const dirty = useWorkflowStore((s) => s.dirty);
   const { setName, setActive, commit, persist, undo, redo, load } = useWorkflowStore();
@@ -47,6 +76,7 @@ export function EditorTopBar({ actions }: { actions?: React.ReactNode }) {
   const [reportOpen, setReportOpen] = useState(false);
   const [credsOpen, setCredsOpen] = useState(false);
   const [shareOpen, setShareOpen] = useState(false);
+  const [mcpShareOpen, setMcpShareOpen] = useState(false);
   const [importDraft, setImportDraft] = useState<IWorkflow | null>(null);
   const [missingCount, setMissingCount] = useState(0);
 
@@ -78,29 +108,33 @@ export function EditorTopBar({ actions }: { actions?: React.ReactNode }) {
     }
   };
 
-  const downloadJson = (json: string, suffix = "") => {
-    const blob = new Blob([json], { type: "application/json" });
+  const handleExport = (mode: WorkflowExportMode = "openflow") => {
+    const blob = new Blob([serializeWorkflow(workflow, { mode })], {
+      type: "application/json",
+    });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
     const base = workflow.name.replace(/[^a-z0-9-_ ]/gi, "").trim() || "workflow";
-    a.download = `${base}${suffix}.json`;
+    a.download = mode === "n8n" ? `${base}.n8n.json` : `${base}.json`;
     a.click();
     URL.revokeObjectURL(url);
-  };
-
-  const handleExport = () => {
-    downloadJson(serializeWorkflow(workflow));
-    toast.success("Workflow exported");
+    toast.success(mode === "n8n" ? "Exported n8n-compatible JSON" : "Workflow exported");
   };
 
   const handleExportRuntime = () => {
     const report = serializeForRuntime(workflow, "harness");
-    downloadJson(serializeWorkflow(report.workflow), ".runtime");
+    const blob = new Blob([serializeWorkflow(report.workflow)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    const base = workflow.name.replace(/[^a-z0-9-_ ]/gi, "").trim() || "workflow";
+    a.download = `${base}.runtime.json`;
+    a.click();
+    URL.revokeObjectURL(url);
     if (report.unsupportedNodes.length > 0) {
-      const names = report.unsupportedNodes.map((n) => n.name).join(", ");
       toast.warning(`Runtime export: ${report.unsupportedNodes.length} unsupported node(s)`, {
-        description: names,
+        description: report.unsupportedNodes.map((n) => n.name).join(", "),
       });
       return;
     }
@@ -111,6 +145,34 @@ export function EditorTopBar({ actions }: { actions?: React.ReactNode }) {
       return;
     }
     toast.success("Exported for runtime");
+  };
+
+  const handleReportIssue = async () => {
+    try {
+      toast.message("Preparing debug bundle…");
+      const diagnostics = {
+        summary: `Issue report from workflow editor`,
+        workflowId: workflow.id,
+        workflowName: workflow.name,
+        extra: {
+          nodeCount: workflow.nodes.length,
+          nodeTypes: [...new Set(workflow.nodes.map((n) => n.type))].slice(0, 80),
+        },
+      };
+      const { bundleName } = await prepareIssueReport(diagnostics);
+      const url = openGeneralIssueUrl({
+        ...diagnostics,
+        summary: `Issue report from workflow editor (bundle: ${bundleName})`,
+      });
+      window.open(url, "_blank", "noopener,noreferrer");
+      toast.success(`Downloaded ${bundleName} — attach it on GitHub`);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Could not prepare report");
+      window.open(
+        openGeneralIssueUrl({ workflowId: workflow.id, workflowName: workflow.name }),
+        "_blank",
+      );
+    }
   };
 
   const handleImport = async (file: File) => {
@@ -139,11 +201,92 @@ export function EditorTopBar({ actions }: { actions?: React.ReactNode }) {
     toast.success("Workflow imported");
   };
 
+  const handleSave = () => {
+    void persist();
+    toast.success("Workflow saved");
+  };
+
+  const dockApi = () => dockApiRef?.current ?? null;
+
+  const viewPanelItems = EDITOR_PANELS.filter((p) => p.viewMenu).map((p) => (
+    <DropdownMenuItem
+      key={p.id}
+      onClick={() => {
+        openEditorPanel(dockApi(), p.id as EditorPanelId);
+      }}
+    >
+      <PanelRight className="mr-2 size-4" />
+      {p.title}
+    </DropdownMenuItem>
+  ));
+
+  const moreItems = (
+    <>
+      <DropdownMenuItem onClick={() => commit((wf) => autoLayout(wf))}>
+        <LayoutGrid className="mr-2 size-4" /> Tidy layout
+      </DropdownMenuItem>
+      <DropdownMenuSeparator />
+      <DropdownMenuItem onClick={() => fileInput.current?.click()}>
+        <Upload className="mr-2 size-4" /> Import
+      </DropdownMenuItem>
+      <DropdownMenuItem onClick={() => handleExport("openflow")}>
+        <Download className="mr-2 size-4" /> Export (OpenFlow)
+      </DropdownMenuItem>
+      <DropdownMenuItem onClick={() => handleExport("n8n")}>
+        <Download className="mr-2 size-4" /> Export (n8n-compatible)
+      </DropdownMenuItem>
+      <DropdownMenuItem onClick={handleExportRuntime}>
+        <Download className="mr-2 size-4" /> Export for runtime…
+      </DropdownMenuItem>
+      <DropdownMenuSeparator />
+      <DropdownMenuItem onClick={() => setReportOpen(true)}>
+        <Check className="mr-2 size-4" /> Migration report
+      </DropdownMenuItem>
+      <DropdownMenuItem onClick={() => void handleReportIssue()}>
+        <Bug className="mr-2 size-4" /> Report issue
+      </DropdownMenuItem>
+      <DropdownMenuItem onClick={() => setCredsOpen(true)}>
+        <KeyRound className="mr-2 size-4" /> Credentials
+        {missingCount > 0 && (
+          <span className="ml-auto rounded bg-destructive/15 px-1.5 py-0.5 text-[10px] font-medium text-destructive">
+            {missingCount}
+          </span>
+        )}
+      </DropdownMenuItem>
+      <DropdownMenuItem onClick={() => setShareOpen(true)}>
+        <Share2 className="mr-2 size-4" /> Share
+      </DropdownMenuItem>
+      <DropdownMenuItem onClick={() => setMcpShareOpen(true)}>
+        <Bot className="mr-2 size-4" /> Share with AI (MCP)
+      </DropdownMenuItem>
+      <DropdownMenuSeparator />
+      <DropdownMenuItem asChild>
+        <Link to="/credentials">
+          <KeyRound className="mr-2 size-4" /> Vault
+        </Link>
+      </DropdownMenuItem>
+      <DropdownMenuItem asChild>
+        <Link to="/variables">
+          <Braces className="mr-2 size-4" /> Variables
+        </Link>
+      </DropdownMenuItem>
+      <DropdownMenuItem asChild>
+        <Link to="/data-tables">
+          <Table2 className="mr-2 size-4" /> Data tables
+        </Link>
+      </DropdownMenuItem>
+    </>
+  );
+
   return (
-    <header className="flex h-14 shrink-0 items-center gap-2 border-b border-border bg-sidebar px-3">
-      <Link to="/" className="flex items-center gap-2 pr-2 text-primary" aria-label="All workflows">
+    <header className="flex h-12 shrink-0 items-center gap-1.5 overflow-hidden border-b border-border bg-sidebar px-2 sm:gap-2 sm:px-3">
+      <Link
+        to="/"
+        className="flex shrink-0 items-center gap-1.5 pr-1 text-primary"
+        aria-label="All workflows"
+      >
         <OpenFlowLogo className="size-5" withPlate />
-        <span className="hidden font-mono text-[13px] font-semibold tracking-tight text-foreground sm:inline">
+        <span className="hidden font-mono text-[13px] font-semibold tracking-tight text-foreground lg:inline">
           OpenFlow
         </span>
       </Link>
@@ -151,126 +294,145 @@ export function EditorTopBar({ actions }: { actions?: React.ReactNode }) {
       <Input
         value={workflow.name}
         onChange={(e) => setName(e.target.value)}
-        className="h-9 w-56 border-transparent bg-transparent text-[14px] font-medium hover:border-border focus:border-border"
+        title={workflow.name}
+        className="h-8 min-w-0 max-w-[10rem] flex-1 border-transparent bg-transparent px-1.5 text-[13px] font-medium hover:border-border focus:border-border sm:max-w-[14rem] md:max-w-[18rem]"
       />
 
-      <span className="font-mono text-[11px] text-muted-foreground">
-        {dirty ? "unsaved" : "saved"}
-      </span>
-
-      <div className="ml-auto flex items-center gap-1">
-        <Button variant="ghost" size="icon" className="size-8" onClick={undo} aria-label="Undo">
+      {/* Left tools — may shrink; never push Execute/Save off-screen */}
+      <div className="flex min-w-0 shrink items-center gap-0.5">
+        <Button
+          variant="ghost"
+          size="icon"
+          className="size-8 shrink-0"
+          onClick={undo}
+          aria-label="Undo"
+        >
           <Undo2 className="size-4" />
         </Button>
-        <Button variant="ghost" size="icon" className="size-8" onClick={redo} aria-label="Redo">
+        <Button
+          variant="ghost"
+          size="icon"
+          className="size-8 shrink-0"
+          onClick={redo}
+          aria-label="Redo"
+        >
           <Redo2 className="size-4" />
         </Button>
-        <Button
-          variant="ghost"
-          size="sm"
-          className="h-8 text-[12px]"
-          onClick={() => commit((wf) => autoLayout(wf))}
-        >
-          <LayoutGrid className="mr-1 size-4" /> Tidy
-        </Button>
 
-        <span className="mx-1 h-5 w-px bg-border" />
+        {dockApiRef && (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="size-8 shrink-0"
+                aria-label="View panels"
+                title="View panels"
+              >
+                <LayoutTemplate className="size-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start" className="w-52">
+              {viewPanelItems}
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                onClick={() => {
+                  const api = dockApi();
+                  const active = api?.activePanel?.id as EditorPanelId | undefined;
+                  if (active && active !== "canvas") floatEditorPanel(api, active);
+                  else toast.message("Select a panel tab first, then float it");
+                }}
+              >
+                <AppWindow className="mr-2 size-4" /> Float active panel
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => {
+                  const api = dockApi();
+                  const active = api?.activePanel?.id as EditorPanelId | undefined;
+                  if (active && active !== "canvas") void popoutEditorPanel(api, active);
+                  else toast.message("Select a panel tab first, then pop out");
+                }}
+              >
+                <AppWindow className="mr-2 size-4" /> Pop out active panel
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={() => resetEditorDockLayout(dockApi())}>
+                <LayoutTemplate className="mr-2 size-4" /> Reset layout
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )}
 
-        <input
-          ref={fileInput}
-          type="file"
-          accept="application/json,.json"
-          hidden
-          onChange={(e) => {
-            const file = e.target.files?.[0];
-            if (file) void handleImport(file);
-            e.target.value = "";
-          }}
-        />
-        <Button
-          variant="ghost"
-          size="sm"
-          className="h-8 text-[12px]"
-          onClick={() => fileInput.current?.click()}
-        >
-          <Upload className="mr-1 size-4" /> Import
-        </Button>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="sm" className="h-8 text-[12px]">
-              <Download className="mr-1 size-4" /> Export
+            <Button
+              variant="ghost"
+              size="icon"
+              className="relative size-8 shrink-0"
+              aria-label="More actions"
+              title="More"
+            >
+              <MoreHorizontal className="size-4" />
+              {missingCount > 0 && (
+                <span className="absolute right-1 top-1 size-1.5 rounded-full bg-destructive" />
+              )}
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuItem onClick={handleExport}>Workflow JSON</DropdownMenuItem>
-            <DropdownMenuItem onClick={handleExportRuntime}>For runtime…</DropdownMenuItem>
+          <DropdownMenuContent align="start" className="w-56">
+            {moreItems}
           </DropdownMenuContent>
         </DropdownMenu>
-        <Button
-          variant="ghost"
-          size="sm"
-          className="h-8 text-[12px]"
-          onClick={() => setReportOpen(true)}
+      </div>
+
+      <input
+        ref={fileInput}
+        type="file"
+        accept="application/json,.json"
+        hidden
+        onChange={(e) => {
+          const file = e.target.files?.[0];
+          if (file) void handleImport(file);
+          e.target.value = "";
+        }}
+      />
+
+      {/* Core right cluster — always visible, never shrinks */}
+      <div className="ml-auto flex shrink-0 items-center gap-1 sm:gap-1.5">
+        <div className="hidden min-w-0 max-w-[9rem] sm:block">
+          <EnvironmentSwitcher />
+        </div>
+
+        <span className="mx-0.5 hidden h-5 w-px bg-border sm:block" />
+
+        <div className="flex shrink-0 items-center">{actions}</div>
+
+        <label
+          className="flex shrink-0 items-center gap-1 text-[11px] text-muted-foreground"
+          title="Active workflow"
         >
-          <Check className="mr-1 size-4" /> Report
-        </Button>
-        <Button
-          variant="ghost"
-          size="sm"
-          className="h-8 text-[12px]"
-          onClick={() => setCredsOpen(true)}
-        >
-          <KeyRound className="mr-1 size-4" /> Credentials
-          {missingCount > 0 && (
-            <span className="ml-1 rounded bg-destructive/15 px-1.5 py-0.5 text-[10px] font-medium text-destructive">
-              {missingCount}
-            </span>
-          )}
-        </Button>
-        <Button
-          variant="ghost"
-          size="sm"
-          className="h-8 text-[12px]"
-          onClick={() => setShareOpen(true)}
-        >
-          <Share2 className="mr-1 size-4" /> Share
-        </Button>
-        <Button variant="ghost" size="sm" className="h-8 text-[12px]" asChild>
-          <Link to="/credentials">Vault</Link>
-        </Button>
-        <Button variant="ghost" size="sm" className="h-8 text-[12px]" asChild>
-          <Link to="/variables">
-            <Braces className="mr-1 size-4" /> Vars
-          </Link>
-        </Button>
-        <Button variant="ghost" size="sm" className="h-8 text-[12px]" asChild>
-          <Link to="/data-tables">
-            <Table2 className="mr-1 size-4" /> Tables
-          </Link>
-        </Button>
-
-        <span className="mx-1 h-5 w-px bg-border" />
-
-        <EnvironmentSwitcher />
-
-        <span className="mx-1 h-5 w-px bg-border" />
-
-        {actions}
-
-        <label className="flex items-center gap-2 pr-1 text-[12px] text-muted-foreground">
-          Active
+          <span className="hidden md:inline">Active</span>
           <Switch checked={workflow.active} onCheckedChange={handleActiveChange} />
         </label>
 
         <Button
           size="sm"
-          className="h-8 text-[12px]"
-          onClick={() => {
-            void persist();
-            toast.success("Workflow saved");
-          }}
+          variant={dirty ? "default" : "outline"}
+          className={cn("h-8 shrink-0 px-2.5 text-[12px]", !dirty && "text-muted-foreground")}
+          disabled={!dirty}
+          onClick={handleSave}
         >
-          <Save className="mr-1 size-4" /> Save
+          {dirty ? (
+            <>
+              <Save className="mr-1 size-3.5" />
+              <span>Save</span>
+            </>
+          ) : (
+            <>
+              <Check className="mr-1 size-3.5" />
+              <span className="hidden sm:inline">Saved</span>
+              <span className="sm:hidden">OK</span>
+            </>
+          )}
         </Button>
       </div>
 
@@ -280,6 +442,12 @@ export function EditorTopBar({ actions }: { actions?: React.ReactNode }) {
         resourceType="workflow"
         resourceId={workflow.id}
         resourceName={workflow.name}
+      />
+      <McpShareDialog
+        open={mcpShareOpen}
+        onOpenChange={setMcpShareOpen}
+        workflowId={workflow.id}
+        workflowName={workflow.name}
       />
       <MigrationReportDialog open={reportOpen} onOpenChange={setReportOpen} />
       <ImportCredentialsDialog

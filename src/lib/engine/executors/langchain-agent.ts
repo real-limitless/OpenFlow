@@ -137,9 +137,33 @@ function observationFromMcpResult(result: unknown): string {
   }
 }
 
+function observationFromToolResult(obs: unknown): string {
+  if (obs == null) return "";
+  if (typeof obs === "string") return obs;
+  if (typeof obs === "object") {
+    const o = obs as { content?: unknown; isError?: boolean };
+    if (typeof o.content === "string") {
+      return o.isError ? `Error: ${o.content}` : o.content;
+    }
+    try {
+      return JSON.stringify(obs);
+    } catch {
+      return String(obs);
+    }
+  }
+  return String(obs);
+}
+
 function expandToolJson(json: Record<string, unknown>): ToolHandle[] {
   if (typeof json.name === "string") {
-    return [json as unknown as ToolHandle];
+    const handle = json as unknown as ToolHandle & { inputSchema?: unknown; parameters?: unknown };
+    if (handle.schema == null && handle.inputSchema != null) {
+      handle.schema = handle.inputSchema;
+    }
+    if (handle.schema == null && handle.parameters != null) {
+      handle.schema = handle.parameters;
+    }
+    return [handle];
   }
 
   const bundle = json as unknown as McpBundleHandle;
@@ -385,7 +409,7 @@ export const langchainAgentExecutor: NodeExecutor = async (ctx, node) => {
           let observation = "";
           if (typeof tool.invoke === "function") {
             const obs = await tool.invoke(call.args ?? {});
-            observation = observationFromMcpResult(obs);
+            observation = observationFromToolResult(obs);
           }
           messages.push({
             role: "tool",
@@ -425,7 +449,10 @@ export const langchainAgentExecutor: NodeExecutor = async (ctx, node) => {
       output = await parserHandle.parse(finalText);
     }
 
-    const json: Record<string, unknown> = { output };
+    const json: Record<string, unknown> = {
+      ...itemJson,
+      output,
+    };
     if (returnIntermediateSteps) {
       json.intermediateSteps = intermediateSteps;
     }

@@ -15,8 +15,8 @@ import { Route as DataTablesRouteImport } from './routes/data-tables'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as ProjectsRouteImport } from './routes/projects'
 import { Route as RegisterRouteImport } from './routes/register'
-import { Route as SetupRouteImport } from './routes/setup'
 import { Route as SettingsRouteImport } from './routes/settings'
+import { Route as SetupRouteImport } from './routes/setup'
 import { Route as SharedRouteImport } from './routes/shared'
 import { Route as TemplatesRouteImport } from './routes/templates'
 import { Route as VariablesRouteImport } from './routes/variables'
@@ -24,6 +24,8 @@ import { Route as DataTablesIdRouteImport } from './routes/data-tables_.$id'
 import { Route as DocsCompatibilityRouteImport } from './routes/docs.compatibility'
 import { Route as ProjectsIdRouteImport } from './routes/projects.$id'
 import { Route as SettingsApiKeysRouteImport } from './routes/settings.api-keys'
+import { Route as SettingsCodeRouteImport } from './routes/settings.code'
+import { Route as SettingsMcpRouteImport } from './routes/settings.mcp'
 import { Route as SettingsEnvironmentsRouteImport } from './routes/settings.environments'
 import { Route as SettingsLogsRouteImport } from './routes/settings.logs'
 import { Route as SettingsSecretProvidersRouteImport } from './routes/settings.secret-providers'
@@ -61,14 +63,14 @@ const RegisterRoute = RegisterRouteImport.update({
   path: '/register',
   getParentRoute: () => rootRouteImport,
 } as any)
-const SetupRoute = SetupRouteImport.update({
-  id: '/setup',
-  path: '/setup',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const SettingsRoute = SettingsRouteImport.update({
   id: '/settings',
   path: '/settings',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SetupRoute = SetupRouteImport.update({
+  id: '/setup',
+  path: '/setup',
   getParentRoute: () => rootRouteImport,
 } as any)
 const SharedRoute = SharedRouteImport.update({
@@ -104,6 +106,16 @@ const ProjectsIdRoute = ProjectsIdRouteImport.update({
 const SettingsApiKeysRoute = SettingsApiKeysRouteImport.update({
   id: '/api-keys',
   path: '/api-keys',
+  getParentRoute: () => SettingsRoute,
+} as any)
+const SettingsCodeRoute = SettingsCodeRouteImport.update({
+  id: '/code',
+  path: '/code',
+  getParentRoute: () => SettingsRoute,
+} as any)
+const SettingsMcpRoute = SettingsMcpRouteImport.update({
+  id: '/mcp',
+  path: '/mcp',
   getParentRoute: () => SettingsRoute,
 } as any)
 const SettingsEnvironmentsRoute = SettingsEnvironmentsRouteImport.update({
@@ -144,8 +156,8 @@ export interface FileRoutesByFullPath {
   '/login': typeof LoginRoute
   '/projects': typeof ProjectsRouteWithChildren
   '/register': typeof RegisterRoute
-  '/setup': typeof SetupRoute
   '/settings': typeof SettingsRouteWithChildren
+  '/setup': typeof SetupRoute
   '/shared': typeof SharedRoute
   '/templates': typeof TemplatesRoute
   '/variables': typeof VariablesRoute
@@ -153,6 +165,8 @@ export interface FileRoutesByFullPath {
   '/docs/compatibility': typeof DocsCompatibilityRoute
   '/projects/$id': typeof ProjectsIdRoute
   '/settings/api-keys': typeof SettingsApiKeysRoute
+  '/settings/code': typeof SettingsCodeRoute
+  '/settings/mcp': typeof SettingsMcpRoute
   '/settings/environments': typeof SettingsEnvironmentsRoute
   '/settings/logs': typeof SettingsLogsRoute
   '/settings/secret-providers': typeof SettingsSecretProvidersRoute
@@ -167,8 +181,8 @@ export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/projects': typeof ProjectsRouteWithChildren
   '/register': typeof RegisterRoute
-  '/setup': typeof SetupRoute
   '/settings': typeof SettingsRouteWithChildren
+  '/setup': typeof SetupRoute
   '/shared': typeof SharedRoute
   '/templates': typeof TemplatesRoute
   '/variables': typeof VariablesRoute
@@ -176,6 +190,8 @@ export interface FileRoutesByTo {
   '/docs/compatibility': typeof DocsCompatibilityRoute
   '/projects/$id': typeof ProjectsIdRoute
   '/settings/api-keys': typeof SettingsApiKeysRoute
+  '/settings/code': typeof SettingsCodeRoute
+  '/settings/mcp': typeof SettingsMcpRoute
   '/settings/environments': typeof SettingsEnvironmentsRoute
   '/settings/logs': typeof SettingsLogsRoute
   '/settings/secret-providers': typeof SettingsSecretProvidersRoute
@@ -191,8 +207,8 @@ export interface FileRoutesById {
   '/login': typeof LoginRoute
   '/projects': typeof ProjectsRouteWithChildren
   '/register': typeof RegisterRoute
-  '/setup': typeof SetupRoute
   '/settings': typeof SettingsRouteWithChildren
+  '/setup': typeof SetupRoute
   '/shared': typeof SharedRoute
   '/templates': typeof TemplatesRoute
   '/variables': typeof VariablesRoute
@@ -200,6 +216,8 @@ export interface FileRoutesById {
   '/docs/compatibility': typeof DocsCompatibilityRoute
   '/projects/$id': typeof ProjectsIdRoute
   '/settings/api-keys': typeof SettingsApiKeysRoute
+  '/settings/code': typeof SettingsCodeRoute
+  '/settings/mcp': typeof SettingsMcpRoute
   '/settings/environments': typeof SettingsEnvironmentsRoute
   '/settings/logs': typeof SettingsLogsRoute
   '/settings/secret-providers': typeof SettingsSecretProvidersRoute
@@ -216,8 +234,8 @@ export interface FileRouteTypes {
     | '/login'
     | '/projects'
     | '/register'
-    | '/setup'
     | '/settings'
+    | '/setup'
     | '/shared'
     | '/templates'
     | '/variables'
@@ -225,6 +243,8 @@ export interface FileRouteTypes {
     | '/docs/compatibility'
     | '/projects/$id'
     | '/settings/api-keys'
+    | '/settings/code'
+    | '/settings/mcp'
     | '/settings/environments'
     | '/settings/logs'
     | '/settings/secret-providers'
@@ -239,8 +259,8 @@ export interface FileRouteTypes {
     | '/login'
     | '/projects'
     | '/register'
-    | '/setup'
     | '/settings'
+    | '/setup'
     | '/shared'
     | '/templates'
     | '/variables'
@@ -248,6 +268,8 @@ export interface FileRouteTypes {
     | '/docs/compatibility'
     | '/projects/$id'
     | '/settings/api-keys'
+    | '/settings/code'
+    | '/settings/mcp'
     | '/settings/environments'
     | '/settings/logs'
     | '/settings/secret-providers'
@@ -262,8 +284,8 @@ export interface FileRouteTypes {
     | '/login'
     | '/projects'
     | '/register'
-    | '/setup'
     | '/settings'
+    | '/setup'
     | '/shared'
     | '/templates'
     | '/variables'
@@ -271,6 +293,8 @@ export interface FileRouteTypes {
     | '/docs/compatibility'
     | '/projects/$id'
     | '/settings/api-keys'
+    | '/settings/code'
+    | '/settings/mcp'
     | '/settings/environments'
     | '/settings/logs'
     | '/settings/secret-providers'
@@ -286,8 +310,8 @@ export interface RootRouteChildren {
   LoginRoute: typeof LoginRoute
   ProjectsRoute: typeof ProjectsRouteWithChildren
   RegisterRoute: typeof RegisterRoute
-  SetupRoute: typeof SetupRoute
   SettingsRoute: typeof SettingsRouteWithChildren
+  SetupRoute: typeof SetupRoute
   SharedRoute: typeof SharedRoute
   TemplatesRoute: typeof TemplatesRoute
   VariablesRoute: typeof VariablesRoute
@@ -341,18 +365,18 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof RegisterRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/setup': {
-      id: '/setup'
-      path: '/setup'
-      fullPath: '/setup'
-      preLoaderRoute: typeof SetupRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/settings': {
       id: '/settings'
       path: '/settings'
       fullPath: '/settings'
       preLoaderRoute: typeof SettingsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/setup': {
+      id: '/setup'
+      path: '/setup'
+      fullPath: '/setup'
+      preLoaderRoute: typeof SetupRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/shared': {
@@ -402,6 +426,20 @@ declare module '@tanstack/react-router' {
       path: '/api-keys'
       fullPath: '/settings/api-keys'
       preLoaderRoute: typeof SettingsApiKeysRouteImport
+      parentRoute: typeof SettingsRoute
+    }
+    '/settings/code': {
+      id: '/settings/code'
+      path: '/code'
+      fullPath: '/settings/code'
+      preLoaderRoute: typeof SettingsCodeRouteImport
+      parentRoute: typeof SettingsRoute
+    }
+    '/settings/mcp': {
+      id: '/settings/mcp'
+      path: '/mcp'
+      fullPath: '/settings/mcp'
+      preLoaderRoute: typeof SettingsMcpRouteImport
       parentRoute: typeof SettingsRoute
     }
     '/settings/environments': {
@@ -463,6 +501,8 @@ const ProjectsRouteWithChildren = ProjectsRoute._addFileChildren(
 
 interface SettingsRouteChildren {
   SettingsApiKeysRoute: typeof SettingsApiKeysRoute
+  SettingsCodeRoute: typeof SettingsCodeRoute
+  SettingsMcpRoute: typeof SettingsMcpRoute
   SettingsEnvironmentsRoute: typeof SettingsEnvironmentsRoute
   SettingsLogsRoute: typeof SettingsLogsRoute
   SettingsSecretProvidersRoute: typeof SettingsSecretProvidersRoute
@@ -471,6 +511,8 @@ interface SettingsRouteChildren {
 
 const SettingsRouteChildren: SettingsRouteChildren = {
   SettingsApiKeysRoute: SettingsApiKeysRoute,
+  SettingsCodeRoute: SettingsCodeRoute,
+  SettingsMcpRoute: SettingsMcpRoute,
   SettingsEnvironmentsRoute: SettingsEnvironmentsRoute,
   SettingsLogsRoute: SettingsLogsRoute,
   SettingsSecretProvidersRoute: SettingsSecretProvidersRoute,
@@ -488,8 +530,8 @@ const rootRouteChildren: RootRouteChildren = {
   LoginRoute: LoginRoute,
   ProjectsRoute: ProjectsRouteWithChildren,
   RegisterRoute: RegisterRoute,
-  SetupRoute: SetupRoute,
   SettingsRoute: SettingsRouteWithChildren,
+  SetupRoute: SetupRoute,
   SharedRoute: SharedRoute,
   TemplatesRoute: TemplatesRoute,
   VariablesRoute: VariablesRoute,

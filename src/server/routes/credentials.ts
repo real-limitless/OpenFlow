@@ -1,61 +1,34 @@
 import type { Hono } from "hono";
-import { prisma } from "../db";
 import type { AppEnv } from "../middleware/auth";
-import { ensureUserWithProject } from "../services/users";
 import {
-  listAccessibleProjectIds,
-  projectIdFromRequest,
-  requireProjectPermission,
-} from "../services/projects";
+  agentMayManageCredentials,
+} from "../services/agent-policy";
 import {
-  listSharedResourceIds,
-  requireResourceAccess,
-} from "../services/shares";
-import {
-  getDefaultSecretProvider,
-  storeCredentialSecret,
-} from "../secrets";
-
-function metaSelect() {
-  return {
-    id: true,
-    name: true,
-    type: true,
-    projectId: true,
-    secretProviderId: true,
-    externalRef: true,
-    createdAt: true,
-  } as const;
-}
-
-function toMeta(row: {
-  id: string;
-  name: string;
-  type: string;
-  projectId: string;
-  secretProviderId?: string | null;
-  externalRef?: string | null;
-  createdAt: Date;
-  shared?: boolean;
-}) {
-  return {
-    id: row.id,
-    name: row.name,
-    type: row.type,
-    projectId: row.projectId,
-    secretProviderId: row.secretProviderId ?? null,
-    externalRef: row.externalRef ?? null,
-    external: Boolean(row.secretProviderId && row.externalRef),
-    shared: row.shared,
-    createdAt:
-      row.createdAt instanceof Date ? row.createdAt.toISOString() : row.createdAt,
-  };
-}
+  createCredential,
+  deleteCredential,
+  isServiceError,
+  listCredentialsMeta,
+  updateCredential,
+} from "../services/credentials-admin";
+import { prisma } from "../db";
+import { requireResourceAccess } from "../services/shares";
+import { projectIdFromRequest } from "../services/projects";
 
 export default function credentialsRoute(app: Hono<AppEnv>) {
   app.post("/api/v1/credentials", async (c) => {
     const userId = c.get("userId");
-    const { projectId: personalId } = await ensureUserWithProject(userId);
+    const authKind = c.get("authKind");
+    const scopes = c.get("scopes");
+    if (!agentMayManageCredentials({ authKind, scopes })) {
+      return c.json(
+        {
+          error:
+            "Missing scope openflow:credentials. Opt in when minting the API key / OAuth / temporary MCP token.",
+        },
+        403,
+      );
+    }
+
     const body = await c.req.json<{
       name?: string;
       type?: string;
@@ -73,80 +46,38 @@ export default function credentialsRoute(app: Hono<AppEnv>) {
       return c.json({ error: "data must be an object" }, 400);
     }
 
-    const projectId = body.projectId || projectIdFromRequest(c) || personalId;
-    const access = await requireProjectPermission(projectId, userId, "editor");
-    if (!access.ok) return c.json({ error: access.error }, access.status);
-
-    let secretProviderId = body.secretProviderId ?? null;
-    if (secretProviderId === undefined || secretProviderId === null) {
-      const def = await getDefaultSecretProvider();
-      if (def && def.type !== "local") secretProviderId = def.id;
-    }
-
-    const id = crypto.randomUUID();
-    const stored = await storeCredentialSecret({
+    const result = await createCredential(userId, {
+      name,
+      type,
       data: data as Record<string, unknown>,
-      secretProviderId,
-      externalRef: body.externalRef ?? null,
-      credentialId: id,
+      projectId: body.projectId || projectIdFromRequest(c),
+      secretProviderId: body.secretProviderId,
+      externalRef: body.externalRef,
     });
-
-    const credential = await prisma.credential.create({
-      data: {
-        id,
-        userId,
-        projectId,
-        name,
-        type,
-        dataEncrypted: stored.dataEncrypted,
-        secretProviderId: stored.secretProviderId,
-        externalRef: stored.externalRef,
-      },
-      select: metaSelect(),
-    });
-
-    return c.json(toMeta(credential), 201);
+    if (isServiceError(result)) return c.json({ error: result.error }, result.status as 400);
+    return c.json(result, 201);
   });
 
   app.get("/api/v1/credentials", async (c) => {
     const userId = c.get("userId");
-    await ensureUserWithProject(userId);
-
     const filterProjectId = projectIdFromRequest(c);
-    let projectIds: string[];
-    if (filterProjectId) {
-      const access = await requireProjectPermission(filterProjectId, userId, "viewer");
-      if (!access.ok) return c.json({ error: access.error }, access.status);
-      projectIds = [filterProjectId];
-    } else {
-      projectIds = await listAccessibleProjectIds(userId, "viewer");
-    }
-
+    const type = c.req.query("type") || undefined;
     const includeUse = c.req.query("includeUse") === "1" || c.req.query("includeUse") === "true";
-    const sharedIds = filterProjectId
-      ? []
-      : await listSharedResourceIds("credential", userId, includeUse ? "use" : "view");
 
-    const credentials = await prisma.credential.findMany({
-      where: {
-        OR: [
-          { projectId: { in: projectIds } },
-          ...(sharedIds.length > 0 ? [{ id: { in: sharedIds } }] : []),
-        ],
-      },
-      select: metaSelect(),
-      orderBy: { createdAt: "desc" },
-    });
-
-    const sharedSet = new Set(sharedIds);
-    return c.json(
-      credentials.map((row) =>
-        toMeta({
-          ...row,
-          shared: sharedSet.has(row.id) && !projectIds.includes(row.projectId),
-        }),
-      ),
-    );
+    try {
+      const rows = await listCredentialsMeta(userId, {
+        projectId: filterProjectId,
+        type,
+        includeUse,
+      });
+      return c.json(rows);
+    } catch (err) {
+      const e = err as { serviceError?: { error: string; status: number }; message?: string };
+      if (e.serviceError) {
+        return c.json({ error: e.serviceError.error }, e.serviceError.status as 403);
+      }
+      throw err;
+    }
   });
 
   app.get("/api/v1/credentials/:id", async (c) => {
@@ -155,7 +86,15 @@ export default function credentialsRoute(app: Hono<AppEnv>) {
 
     const credential = await prisma.credential.findUnique({
       where: { id },
-      select: metaSelect(),
+      select: {
+        id: true,
+        name: true,
+        type: true,
+        projectId: true,
+        secretProviderId: true,
+        externalRef: true,
+        createdAt: true,
+      },
     });
     if (!credential) return c.json({ error: "Not found" }, 404);
 
@@ -169,28 +108,34 @@ export default function credentialsRoute(app: Hono<AppEnv>) {
     if (!access.ok) return c.json({ error: "Not found" }, 404);
 
     return c.json({
-      ...toMeta(credential),
+      id: credential.id,
+      name: credential.name,
+      type: credential.type,
+      projectId: credential.projectId,
+      secretProviderId: credential.secretProviderId ?? null,
+      externalRef: credential.externalRef ?? null,
+      external: Boolean(credential.secretProviderId && credential.externalRef),
       shared: access.via === "share",
       sharePermission: access.via === "share" ? access.permission : undefined,
+      createdAt: credential.createdAt.toISOString(),
     });
   });
 
   app.put("/api/v1/credentials/:id", async (c) => {
     const userId = c.get("userId");
+    const authKind = c.get("authKind");
+    const scopes = c.get("scopes");
+    if (!agentMayManageCredentials({ authKind, scopes })) {
+      return c.json(
+        {
+          error:
+            "Missing scope openflow:credentials. Opt in when minting the API key / OAuth / temporary MCP token.",
+        },
+        403,
+      );
+    }
+
     const { id } = c.req.param();
-
-    const existing = await prisma.credential.findUnique({ where: { id } });
-    if (!existing) return c.json({ error: "Not found" }, 404);
-
-    const access = await requireResourceAccess(
-      "credential",
-      id,
-      userId,
-      "edit",
-      existing.projectId,
-    );
-    if (!access.ok) return c.json({ error: "Not found" }, 404);
-
     const body = await c.req.json<{
       name?: string;
       data?: unknown;
@@ -198,63 +143,36 @@ export default function credentialsRoute(app: Hono<AppEnv>) {
       externalRef?: string | null;
     }>();
 
-    const update: {
-      name?: string;
-      dataEncrypted?: string;
-      secretProviderId?: string | null;
-      externalRef?: string | null;
-    } = {};
-    if (body.name !== undefined) update.name = body.name;
-
-    if (body.data !== undefined) {
-      if (typeof body.data !== "object" || body.data === null || Array.isArray(body.data)) {
-        return c.json({ error: "data must be an object" }, 400);
-      }
-      const providerId =
-        body.secretProviderId !== undefined
-          ? body.secretProviderId
-          : existing.secretProviderId;
-      const stored = await storeCredentialSecret({
-        data: body.data as Record<string, unknown>,
-        secretProviderId: providerId,
-        externalRef:
-          body.externalRef !== undefined ? body.externalRef : existing.externalRef,
-        credentialId: id,
-      });
-      update.dataEncrypted = stored.dataEncrypted;
-      update.secretProviderId = stored.secretProviderId;
-      update.externalRef = stored.externalRef;
-    } else if (body.secretProviderId !== undefined || body.externalRef !== undefined) {
-      if (body.secretProviderId !== undefined) update.secretProviderId = body.secretProviderId;
-      if (body.externalRef !== undefined) update.externalRef = body.externalRef;
-    }
-
-    const credential = await prisma.credential.update({
-      where: { id },
-      data: update,
-      select: metaSelect(),
+    const result = await updateCredential(userId, id, {
+      name: body.name,
+      data:
+        body.data !== undefined
+          ? (body.data as Record<string, unknown>)
+          : undefined,
+      secretProviderId: body.secretProviderId,
+      externalRef: body.externalRef,
     });
-
-    return c.json(toMeta(credential));
+    if (isServiceError(result)) return c.json({ error: result.error }, result.status as 404);
+    return c.json(result);
   });
 
   app.delete("/api/v1/credentials/:id", async (c) => {
     const userId = c.get("userId");
+    const authKind = c.get("authKind");
+    const scopes = c.get("scopes");
+    if (!agentMayManageCredentials({ authKind, scopes })) {
+      return c.json(
+        {
+          error:
+            "Missing scope openflow:credentials. Opt in when minting the API key / OAuth / temporary MCP token.",
+        },
+        403,
+      );
+    }
+
     const { id } = c.req.param();
-
-    const existing = await prisma.credential.findUnique({ where: { id } });
-    if (!existing) return c.json({ error: "Not found" }, 404);
-
-    const access = await requireResourceAccess(
-      "credential",
-      id,
-      userId,
-      "edit",
-      existing.projectId,
-    );
-    if (!access.ok) return c.json({ error: "Not found" }, 404);
-
-    await prisma.credential.delete({ where: { id } });
-    return c.json({ success: true });
+    const result = await deleteCredential(userId, id);
+    if (isServiceError(result)) return c.json({ error: result.error }, result.status as 404);
+    return c.json(result);
   });
 }

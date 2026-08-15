@@ -244,6 +244,7 @@ describe("batch-queue salesforceTrigger — n8n-nodes-base.salesforceTrigger", (
       credentials: { salesforceOAuth2Api: { id: "mock", name: "Mock SF" } },
       parameters: { triggerOn: "contactCreated", ...pollItem("everyMinute") },
     });
+    const triggerItem = { json: { Id: "003xx", Name: "Ada Lovelace" } };
     const wf = makeWorkflow(
       [sfNode, makeNode({ id: "n1", name: "No Operation", type: "n8n-nodes-base.noOp" })],
       { Salesforce: { main: [[{ node: "No Operation", type: "main", index: 0 }]] } },
@@ -252,9 +253,11 @@ describe("batch-queue salesforceTrigger — n8n-nodes-base.salesforceTrigger", (
       workflow: wf,
       nodeExecutors: getExecutorMap(),
       credentialResolver: async () => ({ accessToken: "mock-00D-token", instanceUrl: "https://test.salesforce.com" }),
+      pinData: { Salesforce: [triggerItem] },
     });
     expect(result.success).toBe(true);
     expect(result.runData["No Operation"]?.status).toBe("success");
+    expect(result.runData["No Operation"]?.items?.[0][0].json).toEqual(triggerItem.json);
   });
 
   it("uses pin data instead of generated output when pinned (edge)", async () => {

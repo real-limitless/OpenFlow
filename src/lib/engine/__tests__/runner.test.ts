@@ -103,6 +103,62 @@ describe("Runner", () => {
     expect(plan.startNodes).toEqual([]);
   });
 
+  it("execute previous nodes stops before destination", async () => {
+    const workflow = makeWorkflow(
+      [
+        {
+          id: "1",
+          name: "Start",
+          type: "n8n-nodes-base.manualTrigger",
+          typeVersion: 1,
+          position: [0, 0],
+          parameters: {},
+        },
+        {
+          id: "2",
+          name: "Set",
+          type: "set",
+          typeVersion: 1,
+          position: [200, 0],
+          parameters: {},
+        },
+        {
+          id: "3",
+          name: "IF",
+          type: "if",
+          typeVersion: 1,
+          position: [400, 0],
+          parameters: {},
+        },
+      ],
+      {
+        Start: { main: [[{ node: "Set", type: "main", index: 0 }]] },
+        Set: { main: [[{ node: "IF", type: "main", index: 0 }]] },
+      },
+    );
+
+    const plan = createExecutionPlan(workflow, "Start", "IF", true);
+    expect(plan.runOrder).toContain("Start");
+    expect(plan.runOrder).toContain("Set");
+    expect(plan.runOrder).not.toContain("IF");
+
+    const mock: NodeExecutor = async (_ctx, node) => [[{ json: { from: node.name } }]];
+    const result = await executeWorkflow({
+      workflow,
+      nodeExecutors: {
+        "n8n-nodes-base.manualTrigger": mock,
+        set: mock,
+        if: mock,
+      },
+      destinationNode: "IF",
+      stopBeforeDestination: true,
+    });
+    expect(result.success).toBe(true);
+    expect(result.runData.Start?.status).toBe("success");
+    expect(result.runData.Set?.status).toBe("success");
+    expect(result.runData.IF).toBeUndefined();
+  });
+
   it("executes simple workflow", async () => {
     const workflow = makeWorkflow(
       [

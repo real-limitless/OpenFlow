@@ -1,7 +1,7 @@
 import type { INodeTypeDescription } from "@/lib/nodes/types";
 
 export const mqtt: INodeTypeDescription = {
-  name: "n8n-nodes-base.mqtt",
+  name: "openflow-node-base.mqtt",
   displayName: "MQTT",
   category: "Communication",
   group: ["communication"],

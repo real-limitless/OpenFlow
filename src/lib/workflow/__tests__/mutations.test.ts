@@ -39,4 +39,21 @@ describe("workflow mutations", () => {
     const node = wf.nodes.find((n) => n.name === a.result.name)!;
     expect(node.parameters.url).toBe("https://example.com");
   });
+
+  it("addNode accepts initial parameters and preferred name", () => {
+    let wf = EMPTY_WORKFLOW("wf3");
+    const a = m.addNode(
+      wf,
+      "openflow-node-base.ansible",
+      { x: 10, y: 20 },
+      { name: "file", parameters: { module: "ansible.builtin.file", checkMode: true } },
+    );
+    wf = a.workflow;
+    expect(a.result.name).toBe("file");
+    const node = wf.nodes.find((n) => n.name === "file")!;
+    expect(node.type).toMatch(/ansible/);
+    expect(node.parameters.module).toBe("ansible.builtin.file");
+    expect(node.parameters.checkMode).toBe(true);
+    expect(node.position).toEqual([10, 20]);
+  });
 });

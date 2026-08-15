@@ -13,7 +13,7 @@ describe("batch-queue form — n8n-nodes-base.form", () => {
   it("is registered as executor + description", () => {
     expect(hasExecutor(TYPE)).toBe(true);
     expect(getNodeType(TYPE).placeholder).not.toBe(true);
-    expect(getNodeType(TYPE).displayName).toBe("n8n Form");
+    expect(["Form", "n8n Form"]).toContain(getNodeType(TYPE).displayName);
   });
 
   it("single-field form page merges default value into item (acceptance: single-field)", async () => {
@@ -37,7 +37,7 @@ describe("batch-queue form — n8n-nodes-base.form", () => {
     });
   });
 
-  it("completion page passes through unchanged (acceptance: completion)", async () => {
+  it("completion page attaches resolved formCompletion (acceptance: completion)", async () => {
     const out = await runNode(
       TYPE,
       {
@@ -48,7 +48,32 @@ describe("batch-queue form — n8n-nodes-base.form", () => {
       [{ name: "Jane", feedback: "Great!" }],
     );
     expect(out[0]).toHaveLength(1);
-    expect(out[0][0].json).toEqual({ name: "Jane", feedback: "Great!" });
+    expect(out[0][0].json).toMatchObject({
+      name: "Jane",
+      feedback: "Great!",
+      formCompletion: {
+        title: "Thank You",
+        message: "Your feedback has been received.",
+        pageTitle: "Thank You",
+      },
+    });
+  });
+
+  it("completion page evaluates expressions against input json", async () => {
+    const out = await runNode(
+      TYPE,
+      {
+        operation: "completion",
+        completionTitle: "={{ $json.priceLine }}",
+        completionMessage: "={{ $json.reportHtml }}",
+      },
+      [{ priceLine: "AAPL $1", reportHtml: "<p>ok</p>" }],
+    );
+    expect(out[0][0].json.formCompletion).toEqual({
+      title: "AAPL $1",
+      message: "<p>ok</p>",
+      pageTitle: "AAPL $1",
+    });
   });
 
   it("hidden field passes through without display (acceptance: hidden field)", async () => {

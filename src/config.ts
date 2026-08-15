@@ -89,6 +89,112 @@ export const config = {
       );
     },
   },
+  /** Public base URL for OAuth issuer / MCP metadata (no trailing slash). */
+  get publicUrl() {
+    const raw =
+      process.env.OPENFLOW_PUBLIC_URL?.trim() ||
+      process.env.PUBLIC_URL?.trim() ||
+      "";
+    return raw.replace(/\/$/, "");
+  },
+  /** Remote MCP server for third-party chatbots (tools + OAuth). */
+  mcp: {
+    get enabled() {
+      return (
+        process.env.OPENFLOW_MCP_ENABLED !== "false" &&
+        process.env.OPENFLOW_MCP_ENABLED !== "0"
+      );
+    },
+  },
+  /**
+   * Shared workspace for Execute Command / Git / toolbox container clones.
+   * Docker Compose mounts this at /data/workspace on api + toolbox.
+   */
+  get workspaceDir() {
+    return (
+      process.env.OPENFLOW_WORKSPACE_DIR?.trim() ||
+      process.env.WORKSPACE_DIR?.trim() ||
+      ""
+    );
+  },
+  /** Semantic node catalog (RAG) for MCP / palette / agent discovery. */
+  catalog: {
+    get enabled() {
+      return (
+        process.env.OPENFLOW_CATALOG_RAG_ENABLED !== "false" &&
+        process.env.OPENFLOW_CATALOG_RAG_ENABLED !== "0"
+      );
+    },
+    /**
+     * OpenAI-compatible embeddings base URL (no trailing slash).
+     * Prefer OPENFLOW_CATALOG_EMBED_BASE_URL for a dedicated remote TEI/Ollama/OpenRouter
+     * embed server so catalog reindex does not share the chat LLM endpoint.
+     */
+    get embedBaseUrl() {
+      return (
+        process.env.OPENFLOW_CATALOG_EMBED_BASE_URL?.trim() ||
+        process.env.OPENFLOW_ASSISTANT_BASE_URL?.trim() ||
+        process.env.OPENAI_BASE_URL?.trim() ||
+        "https://api.openai.com/v1"
+      );
+    },
+    /** True when catalog embed URL was set explicitly (not chat LLM fallback). */
+    get embedBaseUrlExplicit() {
+      return Boolean(process.env.OPENFLOW_CATALOG_EMBED_BASE_URL?.trim());
+    },
+    get embedApiKey() {
+      return (
+        process.env.OPENFLOW_CATALOG_EMBED_API_KEY?.trim() ||
+        process.env.OPENFLOW_ASSISTANT_API_KEY?.trim() ||
+        process.env.OPENAI_API_KEY?.trim() ||
+        ""
+      );
+    },
+    /**
+     * Allow remote embed servers that need no Bearer token (Ollama, many TEI deploys).
+     * Default on when OPENFLOW_CATALOG_EMBED_BASE_URL is set explicitly.
+     */
+    get embedAllowNoAuth() {
+      const v = process.env.OPENFLOW_CATALOG_EMBED_NO_AUTH?.trim().toLowerCase();
+      if (v === "true" || v === "1") return true;
+      if (v === "false" || v === "0") return false;
+      return Boolean(process.env.OPENFLOW_CATALOG_EMBED_BASE_URL?.trim());
+    },
+    get embedModel() {
+      return (
+        process.env.OPENFLOW_CATALOG_EMBED_MODEL?.trim() ||
+        "text-embedding-3-small"
+      );
+    },
+    /** Fixed pgvector dimension (must match embed model / hash fallback). */
+    get dimensions() {
+      return Math.max(
+        32,
+        parseInt(process.env.OPENFLOW_CATALOG_EMBED_DIMS ?? "1536", 10) || 1536,
+      );
+    },
+    /** Texts per embeddings API request (higher = fewer round-trips on remote GPU). */
+    get embedBatchSize() {
+      const n = parseInt(process.env.OPENFLOW_CATALOG_EMBED_BATCH ?? "32", 10);
+      return Number.isFinite(n) ? Math.min(256, Math.max(1, n)) : 32;
+    },
+    /** Parallel embed batches in flight during reindex. */
+    get embedConcurrency() {
+      const n = parseInt(process.env.OPENFLOW_CATALOG_EMBED_CONCURRENCY ?? "4", 10);
+      return Number.isFinite(n) ? Math.min(16, Math.max(1, n)) : 4;
+    },
+    /** Penalty applied to shell-tier nodes in hybrid rank (0–1 scale before normalize). */
+    get shellPenalty() {
+      const n = parseFloat(process.env.OPENFLOW_CATALOG_SHELL_PENALTY ?? "0.35");
+      return Number.isFinite(n) ? Math.min(1, Math.max(0, n)) : 0.35;
+    },
+    get usePgvector() {
+      return (
+        process.env.OPENFLOW_CATALOG_USE_PGVECTOR !== "false" &&
+        process.env.OPENFLOW_CATALOG_USE_PGVECTOR !== "0"
+      );
+    },
+  },
   /** Workflow editor assistant (chat + OpenFlow MCP). */
   assistant: {
     get enabled() {
@@ -101,7 +207,7 @@ export const config = {
     get backend(): "builtin" | "opencode" {
       return process.env.OPENFLOW_ASSISTANT_BACKEND === "opencode" ? "opencode" : "builtin";
     },
-    maxSteps: Math.max(1, parseInt(process.env.OPENFLOW_ASSISTANT_MAX_STEPS ?? "24", 10) || 24),
+    maxSteps: Math.max(1, parseInt(process.env.OPENFLOW_ASSISTANT_MAX_STEPS ?? "48", 10) || 48),
     llm: {
       get baseUrl() {
         return (

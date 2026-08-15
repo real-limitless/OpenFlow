@@ -73,10 +73,10 @@ export function ImportCredentialsDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="flex max-h-[85vh] flex-col gap-0 p-0 sm:max-w-lg">
-        <DialogHeader className="border-b border-border px-5 py-4">
+      <DialogContent className="flex max-h-[85vh] flex-col gap-0 overflow-hidden p-0 sm:max-w-xl">
+        <DialogHeader className="shrink-0 border-b border-border px-5 py-4 pr-12">
           <DialogTitle>{title}</DialogTitle>
-          <DialogDescription className="text-[12px]">
+          <DialogDescription className="text-left text-[12px] leading-snug text-balance">
             {inventory.slots.length === 0
               ? "This workflow does not reference any credentials."
               : unresolved.length > 0
@@ -85,34 +85,36 @@ export function ImportCredentialsDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <ScrollArea className="min-h-0 flex-1 px-5 py-3">
-          {loading ? (
-            <p className="py-8 text-center text-[13px] text-muted-foreground">Loading…</p>
-          ) : inventory.slots.length === 0 ? (
-            <p className="py-8 text-center text-[13px] text-muted-foreground">Nothing to configure.</p>
-          ) : (
-            <div className="space-y-4 pb-2">
-              {inventory.slots.map((slot) => (
-                <SlotRow
-                  key={slot.key}
-                  slot={slot}
-                  mapped={mappings[slot.key]}
-                  onMap={(cred) =>
-                    setMappings((prev) => {
-                      const next = { ...prev };
-                      if (!cred) delete next[slot.key];
-                      else next[slot.key] = cred;
-                      return next;
-                    })
-                  }
-                  onCreatedLocal={(cred) => setLocals((prev) => [...prev.filter((c) => c.id !== cred.id), cred])}
-                />
-              ))}
-            </div>
-          )}
+        <ScrollArea className="min-h-0 flex-1">
+          <div className="px-5 py-3">
+            {loading ? (
+              <p className="py-8 text-center text-[13px] text-muted-foreground">Loading…</p>
+            ) : inventory.slots.length === 0 ? (
+              <p className="py-8 text-center text-[13px] text-muted-foreground">Nothing to configure.</p>
+            ) : (
+              <div className="space-y-4 pb-2">
+                {inventory.slots.map((slot) => (
+                  <SlotRow
+                    key={slot.key}
+                    slot={slot}
+                    mapped={mappings[slot.key]}
+                    onMap={(cred) =>
+                      setMappings((prev) => {
+                        const next = { ...prev };
+                        if (!cred) delete next[slot.key];
+                        else next[slot.key] = cred;
+                        return next;
+                      })
+                    }
+                    onCreatedLocal={(cred) => setLocals((prev) => [...prev.filter((c) => c.id !== cred.id), cred])}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
         </ScrollArea>
 
-        <DialogFooter className="border-t border-border px-5 py-3">
+        <DialogFooter className="shrink-0 border-t border-border px-5 py-3">
           {allowSkip && (
             <Button
               variant="ghost"
@@ -148,19 +150,19 @@ function SlotRow({
   return (
     <div className="rounded-md border border-border bg-background/40 p-3">
       <div className="mb-2 flex items-start justify-between gap-2">
-        <div className="min-w-0">
-          <p className="text-[13px] font-medium">
+        <div className="min-w-0 flex-1 space-y-0.5">
+          <p className="break-words text-[13px] font-medium leading-snug">
             {slot.displayName}
-            <span className="ml-1.5 font-mono text-[10px] font-normal text-muted-foreground">
+            <span className="ml-1.5 break-all font-mono text-[10px] font-normal text-muted-foreground">
               {slot.type}
             </span>
           </p>
-          <p className="truncate text-[11px] text-muted-foreground">
+          <p className="break-words text-[11px] leading-snug text-muted-foreground">
             Used by: {slot.nodes.map((n) => n.nodeName).join(", ")}
           </p>
           {slot.suggestedName && (
-            <p className="text-[11px] text-muted-foreground">
-              Imported as: <span className="text-foreground">{slot.suggestedName}</span>
+            <p className="break-words text-[11px] leading-snug text-muted-foreground">
+              Imported as: <span className="break-all text-foreground">{slot.suggestedName}</span>
             </p>
           )}
         </div>

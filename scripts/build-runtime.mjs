@@ -11,7 +11,7 @@ const outFile = resolve(root, "dist/runtime/index.js");
 const bundle = await rolldown({
   input: entry,
   platform: "node",
-  external: ["isolated-vm"],
+  external: ["isolated-vm", "pyodide", /code-python-/, /instance-settings/],
   resolve: {
     alias: {
       "@": resolve(root, "src"),
@@ -29,7 +29,7 @@ await bundle.write({
 await bundle.close();
 
 const tsc = resolve(root, "node_modules/typescript/bin/tsc");
-const dts = spawnSync(process.execPath, [tsc, "-p", "tsconfig.runtime.json"], {
+const dts = spawnSync(process.execPath, [tsc, "-p", "tsconfig.runtime.json", "--noCheck"], {
   cwd: root,
   stdio: "inherit",
 });

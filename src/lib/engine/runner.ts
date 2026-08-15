@@ -8,6 +8,7 @@ import {
   buildIncoming,
   filterAdjacency,
   isTriggerNode,
+  nodesLeadingTo,
   nodesReachableFrom,
   resolveStartNodes,
   topologicalSort,
@@ -18,16 +19,37 @@ import { createExecutionContext } from "@/sdk";
 export function createExecutionPlan(
   workflow: IWorkflow,
   preferredStart?: string | null,
+  /**
+   * When set with stopBefore, only ancestors of this node run (for
+   * “Execute previous nodes”). When set without stopBefore, run through
+   * this node inclusive.
+   */
+  destinationNode?: string | null,
+  stopBefore = true,
 ): ExecutionPlan {
   const fullAdjacency = buildAdjacency(workflow.connections);
+  const incoming = buildIncoming(workflow.connections);
   const startNodes = resolveStartNodes(workflow, preferredStart);
-  const reachable =
+  let reachable =
     startNodes.length > 0
       ? nodesReachableFrom(fullAdjacency, startNodes)
       : new Set(workflow.nodes.map((n) => n.name));
   // Isolated start with no outgoing edges still runs
   for (const s of startNodes) reachable.add(s);
-  addSubNodeDependencies(buildIncoming(workflow.connections), reachable);
+
+  if (destinationNode && workflow.nodes.some((n) => n.name === destinationNode)) {
+    const leading = nodesLeadingTo(incoming, destinationNode, {
+      includeTarget: !stopBefore,
+    });
+    // Intersect path-from-start with path-to-destination
+    reachable = new Set([...reachable].filter((n) => leading.has(n)));
+    // Always keep starts that can reach destination via leading set
+    for (const s of startNodes) {
+      if (leading.has(s) || s === destinationNode) reachable.add(s);
+    }
+  }
+
+  addSubNodeDependencies(incoming, reachable);
   const adjacency = filterAdjacency(fullAdjacency, reachable);
   // Ensure every reachable node appears even with zero edges
   for (const name of reachable) {
@@ -83,11 +105,23 @@ export interface RunOptions {
    * its downstream graph run — like n8n’s “execute this trigger”.
    */
   startNode?: string | null;
+  /**
+   * Optional destination for partial upstream runs (“execute previous nodes”).
+   * Combined with {@link stopBeforeDestination} (default true).
+   */
+  destinationNode?: string | null;
+  /** When true (default), destination itself is not executed. */
+  stopBeforeDestination?: boolean;
 }
 
 export interface RunResult {
   runData: ExecutionRunData;
   success: boolean;
+}
+
+/** Expressions that must be evaluated per input item inside the executor. */
+function isItemScopedExpression(value: string): boolean {
+  return /\$json\b|\$item\b|\$input\b|\$itemIndex\b/.test(value);
 }
 
 function resolveParameters(
@@ -108,6 +142,12 @@ function resolveParameters(
   const resolved: Record<string, unknown> = {};
   for (const [key, value] of Object.entries(params)) {
     if (typeof value === "string" && isExpression(value)) {
+      // Leave $json/$item/$input expressions for the executor (per-item eval).
+      // Pre-resolving them with empty json collapses e.g. Filter expression mode.
+      if (isItemScopedExpression(value)) {
+        resolved[key] = value;
+        continue;
+      }
       const result = evaluateExpression(value, {
         json: {},
         nodeData,
@@ -148,7 +188,12 @@ export async function executeWorkflow(options: RunOptions): Promise<RunResult> {
     options.env ?? (typeof process !== "undefined" ? (process.env as Record<string, string>) : {});
   const depth = options._depth ?? 0;
   const maxDepth = options.maxSubWorkflowDepth ?? 5;
-  const plan = createExecutionPlan(workflow, options.startNode);
+  const plan = createExecutionPlan(
+    workflow,
+    options.startNode,
+    options.destinationNode,
+    options.stopBeforeDestination !== false,
+  );
   const runData: ExecutionRunData = {};
   const nodeOutputs: Map<string, INodeExecutionData[][]> = new Map();
   const customData: Record<string, string> = {};
@@ -300,12 +345,17 @@ export async function executeWorkflow(options: RunOptions): Promise<RunResult> {
           }
 
           const start =
-            child.nodes.find(
-              (n) =>
-                n.type === "n8n-nodes-base.executeWorkflowTrigger" ||
-                n.type === "n8n-nodes-base.manualTrigger" ||
-                n.type === "n8n-nodes-base.webhook",
-            ) ?? child.nodes[0];
+            child.nodes.find((n) => {
+              const t = n.type;
+              return (
+                t === "openflow-node-base.executeWorkflowTrigger" ||
+                t === "openflow-node-base.manualTrigger" ||
+                t === "openflow-node-base.webhook" ||
+                t === "n8n-nodes-base.executeWorkflowTrigger" ||
+                t === "n8n-nodes-base.manualTrigger" ||
+                t === "n8n-nodes-base.webhook"
+              );
+            }) ?? child.nodes[0];
 
           const childPin =
             start && subOpts.items.length > 0 ? { [start.name]: subOpts.items } : undefined;
@@ -380,8 +430,11 @@ export async function executeWorkflow(options: RunOptions): Promise<RunResult> {
       if (nodeContinueOnFail || node.onError === "continueErrorOutput") {
         runData[nodeName].status = "error";
         runData[nodeName].error = lastError.message;
-        if (node.alwaysOutputData) {
-          outputs = [[{ json: {} }]];
+        // continueOnFail / continueRegularOutput: still emit items on main so
+        // downstream nodes run (n8n passes prior input through on failure).
+        if (nodeContinueOnFail || node.alwaysOutputData) {
+          const inputItems = lookupInputItems(nodeName, 0);
+          outputs = inputItems.length > 0 ? [inputItems] : [[{ json: {} }]];
           nodeOutputs.set(nodeName, outputs);
           runData[nodeName].items = outputs;
         }

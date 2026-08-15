@@ -12,7 +12,7 @@ const OPERATIONS = [
 ];
 
 export const elasticsearch: INodeTypeDescription = {
-  name: "n8n-nodes-base.elasticsearch",
+  name: "openflow-node-base.elasticsearch",
   displayName: "Elasticsearch",
   category: "Data & Storage",
   group: ["integration"],

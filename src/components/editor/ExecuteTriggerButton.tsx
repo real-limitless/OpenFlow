@@ -39,12 +39,17 @@ export function ExecuteTriggerButton({
         typeof window !== "undefined" ? window.localStorage.getItem(storageKey(workflow.id)) : null;
       if (stored && names.has(stored)) return stored;
       if (triggers.length === 0) return null;
-      const manual = triggers.find(
-        (n) =>
-          n.type === "n8n-nodes-base.manualTrigger" ||
-          n.type === "n8n-nodes-base.manualWorkflowTrigger" ||
-          n.type === "n8n-nodes-base.start",
-      );
+      const manual = triggers.find((n) => {
+        const t = n.type;
+        return (
+          t === "openflow-node-base.manualTrigger" ||
+          t === "openflow-node-base.manualWorkflowTrigger" ||
+          t === "openflow-node-base.start" ||
+          t === "n8n-nodes-base.manualTrigger" ||
+          t === "n8n-nodes-base.manualWorkflowTrigger" ||
+          t === "n8n-nodes-base.start"
+        );
+      });
       return manual?.name ?? triggers[0]!.name;
     });
   }, [workflow.id, triggers]);

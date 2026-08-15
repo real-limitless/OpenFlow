@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { Braces, Layers } from "lucide-react";
 import { Link } from "@tanstack/react-router";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Popover,
@@ -83,9 +82,9 @@ export function EnvironmentSwitcher() {
   }
 
   return (
-    <div className="flex items-center gap-1">
+    <div className="flex min-w-0 items-center gap-0.5">
       <select
-        className="h-8 max-w-[9rem] rounded-md border border-input bg-background px-2 text-[12px] text-foreground"
+        className="h-8 min-w-0 max-w-[7.5rem] truncate rounded-md border border-input bg-background px-1.5 text-[11px] text-foreground sm:max-w-[9rem] sm:px-2 sm:text-[12px]"
         value={environmentId ?? ""}
         onChange={(e) => {
           const id = e.target.value || null;
@@ -94,10 +93,14 @@ export function EnvironmentSwitcher() {
           window.dispatchEvent(new CustomEvent("openflow:scope-change"));
         }}
         aria-label="Environment"
-        title="Variables and execution use this environment"
+        title={
+          current
+            ? `Environment: ${current.name}${current.isDefault ? " (default)" : ""}`
+            : "Variables and execution use this environment"
+        }
       >
         {envs.map((e) => (
-          <option key={e.id} value={e.id}>
+          <option key={e.id} value={e.id} title={e.name}>
             {e.name}
             {e.isDefault ? " ★" : ""}
           </option>
@@ -108,13 +111,12 @@ export function EnvironmentSwitcher() {
         <PopoverTrigger asChild>
           <Button
             variant="ghost"
-            size="sm"
-            className="h-8 gap-1 px-2 text-[11px] text-muted-foreground"
+            size="icon"
+            className="size-8 shrink-0 text-muted-foreground"
             title="Environment context for this workflow"
+            aria-label="Environment details"
           >
-            <Badge variant="secondary" className="h-5 font-mono text-[10px]">
-              {current?.name ?? "env"}
-            </Badge>
+            <Layers className="size-3.5" />
           </Button>
         </PopoverTrigger>
         <PopoverContent align="end" className="w-72 space-y-3 p-3">

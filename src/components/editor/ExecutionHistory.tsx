@@ -29,8 +29,9 @@ export function ExecutionHistory({
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [loadingId, setLoadingId] = useState<string | null>(null);
 
-  const fetchHistory = useCallback(async () => {
-    setLoading(true);
+  const fetchHistory = useCallback(async (opts?: { silent?: boolean }) => {
+    const silent = opts?.silent === true;
+    if (!silent) setLoading(true);
     try {
       const res = await fetch(`/api/v1/workflows/${workflowId}/executions`);
       if (!res.ok) {
@@ -45,7 +46,7 @@ export function ExecutionHistory({
     } catch (err) {
       console.error("Failed to load executions", err);
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   }, [workflowId]);
 
@@ -53,12 +54,30 @@ export function ExecutionHistory({
     void fetchHistory();
   }, [fetchHistory, refreshKey]);
 
+  // Fast poll while any listed execution is in-flight
   useEffect(() => {
     const hasRunning = executions.some((e) => e.status === "running" || e.status === "waiting");
     if (!hasRunning) return;
-    const t = setInterval(() => void fetchHistory(), 1500);
+    const t = setInterval(() => void fetchHistory({ silent: true }), 1500);
     return () => clearInterval(t);
   }, [executions, fetchHistory]);
+
+  // Safety net: slow idle poll while the History panel is open (catches missed SSE)
+  useEffect(() => {
+    const tick = () => {
+      if (typeof document !== "undefined" && document.visibilityState === "hidden") return;
+      void fetchHistory({ silent: true });
+    };
+    const t = setInterval(tick, 8000);
+    const onVis = () => {
+      if (document.visibilityState === "visible") void fetchHistory({ silent: true });
+    };
+    document.addEventListener("visibilitychange", onVis);
+    return () => {
+      clearInterval(t);
+      document.removeEventListener("visibilitychange", onVis);
+    };
+  }, [fetchHistory]);
 
   const handleSelect = async (execId: string) => {
     setLoadingId(execId);

@@ -63,12 +63,22 @@ export const ifExecutor: NodeExecutor = async (ctx, node) => {
   const trueItems: INodeExecutionData[] = [];
   const falseItems: INodeExecutionData[] = [];
 
+  const exprExtras = {
+    vars: ctx.vars,
+    env:
+      typeof process !== "undefined"
+        ? (process.env as Record<string, string>)
+        : undefined,
+  };
+
   if (rawRows.length === 0) {
     return [trueItems, inputItems.slice()];
   }
 
   for (const item of inputItems) {
-    const results = rawRows.map((row) => evaluateConditionRow(row, item.json, ignoreCase));
+    const results = rawRows.map((row) =>
+      evaluateConditionRow(row, item.json, ignoreCase, exprExtras),
+    );
     const passes = combineConditionResults(results, combinator);
 
     if (passes) {

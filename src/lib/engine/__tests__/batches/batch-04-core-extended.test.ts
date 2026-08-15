@@ -140,12 +140,25 @@ describe("batch-04 core-extended", () => {
           Err: { main: [[{ node: "Pass", type: "main", index: 0 }]] },
         },
       );
+      const errorItem = {
+        json: {
+          execution: {
+            id: "1",
+            error: { message: "boom" },
+            lastNodeExecuted: "X",
+            mode: "manual",
+          },
+          workflow: { id: "w", name: "W" },
+        },
+      };
       const result = await executeWorkflow({
         workflow: wf,
         nodeExecutors: getExecutorMap(),
+        pinData: { Err: [errorItem] },
       });
       expect(result.success).toBe(true);
       expect(result.runData.Pass?.status).toBe("success");
+      expect(result.runData.Pass?.items?.[0][0].json).toEqual(errorItem.json);
     });
   });
 

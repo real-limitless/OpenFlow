@@ -11,7 +11,7 @@ Thanks for helping with OpenFlow.
 ## Before you push
 
 - Do not commit secrets (`.env`, keys, tokens). Run `bash scripts/check-no-secrets.sh`.
-- Prefer small, focused commits. This repo syncs with Lovable — **do not force-push or rewrite published history** on the connected branch (see [AGENTS.md](AGENTS.md)).
+- Prefer small, focused commits. Avoid force-push or rewriting published history on shared branches unless maintainers agree.
 - Run what you can locally: `npm test`, `npm run lint`, `npm run typecheck` as relevant.
 
 ## Clean-room nodes

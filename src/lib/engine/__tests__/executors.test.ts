@@ -18,7 +18,11 @@ function makeNode(overrides: Partial<INode> = {}): INode {
   };
 }
 
-function makeCtx(items: unknown[] = [], node: INode = makeNode()): ExecutionContext {
+function makeCtx(
+  items: unknown[] = [],
+  node: INode = makeNode(),
+  extras?: { vars?: Record<string, unknown> },
+): ExecutionContext {
   return createExecutionContext({
     node,
     workflow: {
@@ -32,6 +36,7 @@ function makeCtx(items: unknown[] = [], node: INode = makeNode()): ExecutionCont
     getNodeInputItems: () =>
       items.map((json) => ({ json: json as Record<string, unknown> })),
     continueOnFail: false,
+    vars: extras?.vars,
   });
 }
 
@@ -188,6 +193,27 @@ describe("IF Executor", () => {
       },
     });
     const result = await ifExecutor(makeCtx([{ x: 10 }], node), node);
+    expect(result[0]).toHaveLength(1);
+    expect(result[1]).toHaveLength(0);
+  });
+
+  it("resolves $vars in condition expressions", async () => {
+    const node = makeNode({
+      parameters: {
+        conditions: [
+          {
+            leftValue: "={{ $vars.threshold }}",
+            rightValue: "5",
+            operator: "gt",
+          },
+        ],
+        combinator: "and",
+      },
+    });
+    const result = await ifExecutor(
+      makeCtx([{}], node, { vars: { threshold: 10 } }),
+      node,
+    );
     expect(result[0]).toHaveLength(1);
     expect(result[1]).toHaveLength(0);
   });

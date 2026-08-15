@@ -3,7 +3,7 @@ import type { INodeTypeDescription } from "../types";
 const MAILGUN_DOCS = "https://docs.n8n.io/integrations/builtin/app-nodes/n8n-nodes-base.mailgun/";
 
 export const mailgun: INodeTypeDescription = {
-  name: "n8n-nodes-base.mailgun",
+  name: "openflow-node-base.mailgun",
   displayName: "Mailgun",
   category: "Communication",
   group: ["communication"],
@@ -84,7 +84,7 @@ export const mailgun: INodeTypeDescription = {
 const MAILJET_DOCS = "https://docs.n8n.io/integrations/builtin/app-nodes/n8n-nodes-base.mailjet/";
 
 export const mailjet: INodeTypeDescription = {
-  name: "n8n-nodes-base.mailjet",
+  name: "openflow-node-base.mailjet",
   displayName: "Mailjet",
   category: "Communication",
   group: ["communication"],
@@ -366,7 +366,7 @@ const GOOGLE_CHAT_DOCS =
   "https://docs.n8n.io/integrations/builtin/app-nodes/n8n-nodes-base.googlechat/";
 
 export const googleChat: INodeTypeDescription = {
-  name: "n8n-nodes-base.googleChat",
+  name: "openflow-node-base.googleChat",
   displayName: "Google Chat",
   category: "Communication",
   group: ["communication"],
@@ -712,7 +712,7 @@ const ZENDESK_DOCS =
   "https://docs.n8n.io/integrations/builtin/app-nodes/n8n-nodes-base.zendesk/";
 
 export const zendesk: INodeTypeDescription = {
-  name: "n8n-nodes-base.zendesk",
+  name: "openflow-node-base.zendesk",
   displayName: "Zendesk",
   category: "Communication",
   group: ["communication"],
@@ -872,7 +872,7 @@ export const zendesk: INodeTypeDescription = {
 const AWS_SES_DOCS = "https://docs.n8n.io/integrations/builtin/app-nodes/n8n-nodes-base.awsses/";
 
 export const awsSes: INodeTypeDescription = {
-  name: "n8n-nodes-base.awsSes",
+  name: "openflow-node-base.awsSes",
   displayName: "AWS SES",
   category: "Communication",
   group: ["communication"],
@@ -948,7 +948,7 @@ export const awsSes: INodeTypeDescription = {
 const GOTIFY_DOCS = "https://docs.n8n.io/integrations/builtin/app-nodes/n8n-nodes-base.gotify/";
 
 export const gotify: INodeTypeDescription = {
-  name: "n8n-nodes-base.gotify",
+  name: "openflow-node-base.gotify",
   displayName: "Gotify",
   category: "Communication",
   group: ["communication"],
@@ -1025,7 +1025,7 @@ export const gotify: INodeTypeDescription = {
 const REDDIT_DOCS = "https://docs.n8n.io/integrations/builtin/app-nodes/n8n-nodes-base.reddit/";
 
 export const reddit: INodeTypeDescription = {
-  name: "n8n-nodes-base.reddit",
+  name: "openflow-node-base.reddit",
   displayName: "Reddit",
   category: "Communication",
   group: ["communication"],
@@ -1330,7 +1330,7 @@ export const reddit: INodeTypeDescription = {
 const AMQP_DOCS = "https://docs.n8n.io/integrations/builtin/app-nodes/n8n-nodes-base.amqp/";
 
 export const amqp: INodeTypeDescription = {
-  name: "n8n-nodes-base.amqp",
+  name: "openflow-node-base.amqp",
   displayName: "AMQP Sender",
   category: "Communication",
   group: ["communication"],
@@ -1380,7 +1380,7 @@ const TELEGRAM_DOCS =
   "https://docs.n8n.io/integrations/builtin/trigger-nodes/n8n-nodes-base.telegramtrigger/";
 
 export const telegramTrigger: INodeTypeDescription = {
-  name: "n8n-nodes-base.telegramTrigger",
+  name: "openflow-node-base.telegramTrigger",
   displayName: "Telegram Trigger",
   category: "Communication",
   group: ["trigger"],
@@ -1477,7 +1477,7 @@ const MICROSOFT_OUTLOOK_DOCS =
   "https://docs.n8n.io/integrations/builtin/app-nodes/n8n-nodes-base.microsoftoutlook/";
 
 export const microsoftOutlook: INodeTypeDescription = {
-  name: "n8n-nodes-base.microsoftOutlook",
+  name: "openflow-node-base.microsoftOutlook",
   displayName: "Microsoft Outlook",
   category: "Communication",
   group: ["communication"],
@@ -1877,7 +1877,7 @@ export const microsoftOutlook: INodeTypeDescription = {
       default: {},
       options: [
         {
-          displayName: "Append n8n Attribution",
+          displayName: "Append OpenFlow Attribution",
           name: "appendAttribution",
           type: "boolean",
           default: true,
@@ -1903,7 +1903,7 @@ const FRESHDESK_DOCS =
   "https://docs.n8n.io/integrations/builtin/app-nodes/n8n-nodes-base.freshdesk/";
 
 export const freshdesk: INodeTypeDescription = {
-  name: "n8n-nodes-base.freshdesk",
+  name: "openflow-node-base.freshdesk",
   displayName: "Freshdesk",
   category: "Communication",
   group: ["communication"],
@@ -2025,7 +2025,7 @@ const MICROSOFT_TEAMS_DOCS =
   "https://docs.n8n.io/integrations/builtin/app-nodes/n8n-nodes-base.microsoftteams/";
 
 export const microsoftTeams: INodeTypeDescription = {
-  name: "n8n-nodes-base.microsoftTeams",
+  name: "openflow-node-base.microsoftTeams",
   displayName: "Microsoft Teams",
   category: "Communication",
   group: ["communication"],
@@ -2255,7 +2255,7 @@ export const microsoftTeams: INodeTypeDescription = {
       },
     },
     {
-      displayName: "Append n8n Attribution",
+      displayName: "Append OpenFlow Attribution",
       name: "appendAttribution",
       type: "boolean",
       default: true,
@@ -2289,7 +2289,7 @@ export const microsoftTeams: INodeTypeDescription = {
 const RABBITMQ_DOCS = "https://docs.n8n.io/integrations/builtin/app-nodes/n8n-nodes-base.rabbitmq/";
 
 export const rabbitmq: INodeTypeDescription = {
-  name: "n8n-nodes-base.rabbitmq",
+  name: "openflow-node-base.rabbitmq",
   displayName: "RabbitMQ",
   category: "Communication",
   group: ["communication"],
@@ -2451,7 +2451,7 @@ export const rabbitmq: INodeTypeDescription = {
 const SLACK_TOOL_DOCS = "https://docs.n8n.io/integrations/builtin/app-nodes/n8n-nodes-base.slack/";
 
 export const slackTool: INodeTypeDescription = {
-  name: "n8n-nodes-base.slackTool",
+  name: "openflow-node-base.slackTool",
   displayName: "Slack (AI Tool)",
   category: "Actions",
   group: ["input"],
@@ -2681,7 +2681,7 @@ const TWILIO_TRIGGER_DOCS =
   "https://docs.n8n.io/integrations/builtin/trigger-nodes/n8n-nodes-base.twiliotrigger/";
 
 export const twilioTrigger: INodeTypeDescription = {
-  name: "n8n-nodes-base.twilioTrigger",
+  name: "openflow-node-base.twilioTrigger",
   displayName: "Twilio Trigger",
   category: "Communication",
   group: ["trigger"],
@@ -2718,7 +2718,7 @@ export const twilioTrigger: INodeTypeDescription = {
 const LEMLIST_DOCS = "https://docs.n8n.io/integrations/builtin/app-nodes/n8n-nodes-base.lemlist/";
 
 export const lemlist: INodeTypeDescription = {
-  name: "n8n-nodes-base.lemlist",
+  name: "openflow-node-base.lemlist",
   displayName: "Lemlist",
   category: "Communication",
   group: ["communication"],
@@ -3023,7 +3023,7 @@ export const lemlist: INodeTypeDescription = {
 const ZAMMAD_DOCS = "https://docs.n8n.io/integrations/builtin/app-nodes/n8n-nodes-base.zammad/";
 
 export const zammad: INodeTypeDescription = {
-  name: "n8n-nodes-base.zammad",
+  name: "openflow-node-base.zammad",
   displayName: "Zammad",
   category: "Communication",
   group: ["communication"],
@@ -3392,7 +3392,7 @@ const INTERCOM_API_DOCS = "https://developers.intercom.com/docs/references/intro
 const DEMIO_DOCS = "https://docs.n8n.io/integrations/builtin/app-nodes/n8n-nodes-base.demio/";
 
 export const demio: INodeTypeDescription = {
-  name: "n8n-nodes-base.demio",
+  name: "openflow-node-base.demio",
   displayName: "Demio",
   category: "Communication",
   group: ["communication"],
@@ -3645,7 +3645,7 @@ const GETRESPONSE_DOCS =
   "https://docs.n8n.io/integrations/builtin/app-nodes/n8n-nodes-base.getresponse/";
 
 export const getResponse: INodeTypeDescription = {
-  name: "n8n-nodes-base.getResponse",
+  name: "openflow-node-base.getResponse",
   displayName: "GetResponse",
   category: "Communication",
   group: ["communication"],
@@ -3876,7 +3876,7 @@ export const getResponse: INodeTypeDescription = {
 };
 
 export const intercom: INodeTypeDescription = {
-  name: "n8n-nodes-base.intercom",
+  name: "openflow-node-base.intercom",
   displayName: "Intercom",
   category: "Communication",
   group: ["communication"],
@@ -4335,7 +4335,7 @@ export const intercom: INodeTypeDescription = {
 };
 
 export const vonage: INodeTypeDescription = {
-  name: "n8n-nodes-base.vonage",
+  name: "openflow-node-base.vonage",
   displayName: "Vonage",
   category: "Communication",
   group: ["communication"],
@@ -4455,7 +4455,7 @@ export const vonage: INodeTypeDescription = {
 const ZULIP_DOCS = "https://docs.n8n.io/integrations/builtin/app-nodes/n8n-nodes-base.zulip/";
 
 export const zulip: INodeTypeDescription = {
-  name: "n8n-nodes-base.zulip",
+  name: "openflow-node-base.zulip",
   displayName: "Zulip",
   category: "Communication",
   group: ["communication"],
@@ -4822,7 +4822,7 @@ const DISCOURSE_DOCS =
   "https://docs.n8n.io/integrations/builtin/app-nodes/n8n-nodes-base.discourse/";
 
 export const discourse: INodeTypeDescription = {
-  name: "n8n-nodes-base.discourse",
+  name: "openflow-node-base.discourse",
   displayName: "Discourse",
   category: "Communication",
   group: ["communication"],
@@ -5223,7 +5223,7 @@ export const discourse: INodeTypeDescription = {
 const EGOI_DOCS = "https://docs.n8n.io/integrations/builtin/app-nodes/n8n-nodes-base.egoi/";
 
 export const egoi: INodeTypeDescription = {
-  name: "n8n-nodes-base.egoi",
+  name: "openflow-node-base.egoi",
   displayName: "E-goi",
   category: "Communication",
   group: ["communication"],
@@ -5430,7 +5430,7 @@ export const egoi: INodeTypeDescription = {
 const EGOI_TOOL_DOCS = "https://docs.n8n.io/integrations/builtin/app-nodes/n8n-nodes-base.egoi/";
 
 export const egoiTool: INodeTypeDescription = {
-  name: "n8n-nodes-base.egoiTool",
+  name: "openflow-node-base.egoiTool",
   displayName: "E-goi (AI Tool)",
   category: "AI Tool",
   group: ["input"],

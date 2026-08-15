@@ -6,7 +6,7 @@ const FIREBASE_RTDB_DOCS =
   "https://docs.n8n.io/integrations/builtin/app-nodes/n8n-nodes-base.googlecloudrealtimedatabase/";
 
 export const azureStorage: INodeTypeDescription = {
-  name: "n8n-nodes-base.azureStorage",
+  name: "openflow-node-base.azureStorage",
   displayName: "Azure Storage",
   category: "Data & Storage",
   group: ["output"],
@@ -211,7 +211,7 @@ export const azureStorage: INodeTypeDescription = {
 };
 
 export const googleFirebaseRealtimeDatabase: INodeTypeDescription = {
-  name: "n8n-nodes-base.googleFirebaseRealtimeDatabase",
+  name: "openflow-node-base.googleFirebaseRealtimeDatabase",
   displayName: "Google Cloud Realtime Database",
   category: "Data & Storage",
   group: ["output"],

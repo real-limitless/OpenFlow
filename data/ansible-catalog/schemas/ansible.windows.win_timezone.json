@@ -1,0 +1,19 @@
+{
+  "fqcn": "ansible.windows.win_timezone",
+  "shortDescription": "Sets Windows machine timezone",
+  "docUrl": "https://docs.ansible.com/ansible/latest/collections/ansible/windows/win_timezone_module.html",
+  "options": [
+    {
+      "name": "timezone",
+      "displayName": "Timezone",
+      "type": "string",
+      "required": true,
+      "default": null,
+      "description": "Timezone to set to. Example: Central Standard Time To disable Daylight Saving time, add the suffix C(_dstoff) on timezones that support this.",
+      "choices": null,
+      "noLog": false,
+      "suboptions": null
+    }
+  ],
+  "source": "ansible-doc"
+}

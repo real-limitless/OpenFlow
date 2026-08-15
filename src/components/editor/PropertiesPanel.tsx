@@ -1,5 +1,16 @@
-import { useMemo, useState } from "react";
-import { Copy, PowerOff, Trash2, TriangleAlert, X } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import {
+  BookOpen,
+  Bug,
+  Code2,
+  Copy,
+  ExternalLink,
+  Play,
+  PowerOff,
+  Trash2,
+  TriangleAlert,
+  X,
+} from "lucide-react";
 import { useWorkflowStore } from "@/store/workflow-store";
 import { getNodeType } from "@/lib/nodes/registry";
 import { ParameterField, shouldDisplay } from "./ParameterField";
@@ -11,11 +22,31 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { ExpressionContext } from "@/lib/expressions/evaluate";
+import type { ExecutionRunData } from "@/lib/engine/types";
 import { CredentialPicker } from "@/components/credentials";
 import { FormTriggerUrls } from "./FormTriggerUrls";
 import { isFormTriggerNode } from "@/lib/forms/path";
+import { apiFetch } from "@/lib/auth/client";
+import { getSelectedEnvironmentId } from "@/lib/environments/client";
+import { buildIncoming } from "@/lib/engine/graph";
+import { openNodeIssueUrl } from "@/lib/feedback/github-issue";
+import { executorSourceBlobUrl } from "@/lib/engine/node-runtime";
+import { specBlobUrl, toCanonicalType, toWireType } from "@/lib/nodes/type-ids";
+import { mergeNodeSampleData, resolveIncomingItems } from "@/lib/editor/sample-data";
+import { AnsibleModuleOptions } from "./AnsibleModuleOptions";
+import { ANSIBLE_NODE_TYPES } from "@/lib/nodes/ansible/types";
 
-export function PropertiesPanel({ embedded = false }: { embedded?: boolean }) {
+export function PropertiesPanel({
+  embedded = false,
+  runData = null,
+  onExecutePrevious,
+  isExecuting = false,
+}: {
+  embedded?: boolean;
+  runData?: ExecutionRunData | null;
+  onExecutePrevious?: (nodeName: string) => void;
+  isExecuting?: boolean;
+}) {
   const selected = useWorkflowStore((s) => s.selectedNode);
   const workflow = useWorkflowStore((s) => s.workflow);
   const {
@@ -30,6 +61,7 @@ export function PropertiesPanel({ embedded = false }: { embedded?: boolean }) {
   } = useWorkflowStore();
   const node = workflow.nodes.find((n) => n.name === selected);
   const [nameDraft, setNameDraft] = useState<string | null>(null);
+  const [vars, setVars] = useState<Record<string, unknown>>({});
   const shellClass = embedded
     ? "flex h-full min-h-0 w-full flex-col bg-sidebar"
     : "flex h-full w-[380px] shrink-0 flex-col border-l border-border bg-sidebar";
@@ -37,19 +69,62 @@ export function PropertiesPanel({ embedded = false }: { embedded?: boolean }) {
     ? "flex h-full min-h-0 w-full flex-col bg-sidebar"
     : "hidden h-full w-[380px] shrink-0 flex-col border-l border-border bg-sidebar xl:flex";
 
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      try {
+        const envId = getSelectedEnvironmentId();
+        const q = new URLSearchParams({ scope: "project", layer: "all" });
+        if (envId) q.set("environmentId", envId);
+        const res = await apiFetch(`/api/v1/variables?${q}`);
+        if (!res.ok || cancelled) return;
+        const rows = (await res.json()) as Array<{
+          key: string;
+          value?: unknown;
+          secret?: boolean;
+          environmentId?: string | null;
+        }>;
+        const base: Record<string, unknown> = {};
+        const env: Record<string, unknown> = {};
+        for (const r of rows) {
+          if (r.secret) continue;
+          const v = r.value;
+          if (r.environmentId == null || r.environmentId === "") {
+            base[r.key] = v;
+          } else if (envId && r.environmentId === envId) {
+            env[r.key] = v;
+          }
+        }
+        if (!cancelled) setVars({ ...base, ...env });
+      } catch {
+        if (!cancelled) setVars({});
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [workflow.id]);
+
+  const hasUpstream = useMemo(() => {
+    if (!node) return false;
+    const incoming = buildIncoming(workflow.connections ?? {});
+    return (incoming.get(node.name) ?? []).length > 0;
+  }, [workflow.connections, node]);
+
   const context: ExpressionContext = useMemo(() => {
-    const pin = workflow.pinData ?? {};
-    const nodeData = Object.fromEntries(
-      Object.entries(pin).map(([k, v]) => [k, v as Array<{ json: Record<string, unknown> }>]),
-    );
-    const incoming = node ? findIncomingSample(workflow, node.name, nodeData) : [{ json: {} }];
+    const nodeData = mergeNodeSampleData(workflow.pinData, runData);
+    const resolved = node
+      ? resolveIncomingItems(workflow.connections, node.name, nodeData, runData)
+      : [];
+    const incoming = resolved.length ? resolved : [{ json: {} }];
     return {
       json: incoming[0]?.json ?? {},
       allItems: incoming,
       nodeData,
       itemIndex: 0,
+      vars,
     };
-  }, [workflow, node]);
+  }, [workflow, node, runData, vars]);
 
   if (!node) {
     return (
@@ -66,6 +141,7 @@ export function PropertiesPanel({ embedded = false }: { embedded?: boolean }) {
 
   const description = getNodeType(node.type);
   const parameters = node.parameters ?? {};
+  const sourceUrl = executorSourceBlobUrl(node.type);
 
   return (
     <aside className={shellClass}>
@@ -84,14 +160,16 @@ export function PropertiesPanel({ embedded = false }: { embedded?: boolean }) {
             onKeyDown={(e) => e.key === "Enter" && (e.target as HTMLInputElement).blur()}
             className="h-8 border-transparent bg-transparent px-1 text-[14px] font-medium hover:border-border focus:border-border"
           />
-          <p className="px-1 font-mono text-[10px] text-muted-foreground">{node.type}</p>
+          <p className="px-1 font-mono text-[10px] text-muted-foreground">
+            {toCanonicalType(node.type)}
+          </p>
         </div>
         <Button size="icon" variant="ghost" className="size-7" onClick={() => selectNode(null)}>
           <X className="size-4" />
         </Button>
       </div>
 
-      <div className="flex items-center gap-1 border-b border-border px-2 py-1.5">
+      <div className="flex flex-wrap items-center gap-1 border-b border-border px-2 py-1.5">
         <Button
           size="sm"
           variant="ghost"
@@ -116,6 +194,18 @@ export function PropertiesPanel({ embedded = false }: { embedded?: boolean }) {
         >
           <Trash2 className="mr-1 size-3.5" /> Delete
         </Button>
+        {hasUpstream && onExecutePrevious && (
+          <Button
+            size="sm"
+            variant="ghost"
+            className="h-7 text-[12px]"
+            disabled={isExecuting}
+            onClick={() => onExecutePrevious(node.name)}
+            title="Run upstream nodes to feed expression preview"
+          >
+            <Play className="mr-1 size-3.5" /> Previous
+          </Button>
+        )}
       </div>
 
       <Tabs defaultValue="parameters" className="flex min-h-0 flex-1 flex-col">
@@ -176,8 +266,19 @@ export function PropertiesPanel({ embedded = false }: { embedded?: boolean }) {
               ) : (
                 <>
                   {isFormTriggerNode(node) && <FormTriggerUrls node={node} />}
-                  {description.properties
-                    .filter((prop) => shouldDisplay(prop, parameters))
+                  {(description.properties ?? [])
+                    .filter((prop) => {
+                      if (!shouldDisplay(prop, parameters)) return false;
+                      // Hybrid module options UI owns `args` for ansible nodes
+                      if (
+                        ANSIBLE_NODE_TYPES.has(toCanonicalType(node.type)) &&
+                        prop.name === "args" &&
+                        String(parameters.resource ?? "module") === "module"
+                      ) {
+                        return false;
+                      }
+                      return true;
+                    })
                     .map((prop) => (
                       <ParameterField
                         key={prop.name}
@@ -193,6 +294,17 @@ export function PropertiesPanel({ embedded = false }: { embedded?: boolean }) {
                         }
                       />
                     ))}
+                  {ANSIBLE_NODE_TYPES.has(toCanonicalType(node.type)) &&
+                    String(parameters.resource ?? "module") === "module" && (
+                      <AnsibleModuleOptions
+                        moduleFqcn={String(parameters.module ?? "")}
+                        args={parameters.args}
+                        context={context}
+                        onChangeArgs={(args) =>
+                          updateParameters(node.name, { ...parameters, args })
+                        }
+                      />
+                    )}
                 </>
               )}
             </div>
@@ -260,7 +372,7 @@ export function PropertiesPanel({ embedded = false }: { embedded?: boolean }) {
                   placeholder="Why does this node exist?"
                 />
               </div>
-              <div className="space-y-1 rounded-md border border-border bg-background/40 p-3 text-[12px] text-muted-foreground">
+              <div className="space-y-2 rounded-md border border-border bg-background/40 p-3 text-[12px] text-muted-foreground">
                 <p>
                   <span className="text-foreground">Type version:</span> {node.typeVersion}
                 </p>
@@ -268,22 +380,67 @@ export function PropertiesPanel({ embedded = false }: { embedded?: boolean }) {
                   <span className="text-foreground">Node id:</span>{" "}
                   <span className="font-mono">{node.id}</span>
                 </p>
-                {description.sources.length > 0 && (
+                <p>
+                  <span className="text-foreground">Type:</span>{" "}
+                  <span className="font-mono break-all">{toCanonicalType(node.type)}</span>
+                </p>
+                <p>
+                  <span className="text-foreground">Alias ID:</span>{" "}
+                  <span className="font-mono break-all">{toWireType(node.type)}</span>
+                </p>
+                <p className="pt-1">
+                  <span className="text-foreground">OpenFlow spec: </span>
+                  <a
+                    href={specBlobUrl(node.type)}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex items-center gap-1 break-all text-primary underline-offset-2 hover:underline"
+                  >
+                    <BookOpen className="size-3 shrink-0" />
+                    View behavioural spec
+                    <ExternalLink className="size-3 shrink-0 opacity-70" />
+                  </a>
+                </p>
+                {sourceUrl && (
                   <p className="pt-1">
-                    Written from:{" "}
-                    {description.sources.map((s) => (
-                      <a
-                        key={s}
-                        href={s}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="break-all text-primary underline-offset-2 hover:underline"
-                      >
-                        {s}
-                      </a>
-                    ))}
+                    <span className="text-foreground">OpenFlow node source: </span>
+                    <a
+                      href={sourceUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="inline-flex items-center gap-1 break-all text-primary underline-offset-2 hover:underline"
+                    >
+                      <Code2 className="size-3 shrink-0" />
+                      View executor source
+                      <ExternalLink className="size-3 shrink-0 opacity-70" />
+                    </a>
                   </p>
                 )}
+                <div className="pt-2">
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    className="h-8 w-full text-[12px]"
+                    onClick={() => {
+                      window.open(
+                        openNodeIssueUrl({
+                          nodeType: node.type,
+                          nodeName: node.name,
+                          nodeDisplayName: description.displayName,
+                          typeVersion: node.typeVersion,
+                          workflowId: workflow.id,
+                          workflowName: workflow.name,
+                        }),
+                        "_blank",
+                        "noopener,noreferrer",
+                      );
+                    }}
+                  >
+                    <Bug className="mr-1.5 size-3.5" />
+                    Report issue with this node
+                  </Button>
+                </div>
               </div>
             </div>
           </ScrollArea>
@@ -299,21 +456,4 @@ export function PropertiesPanel({ embedded = false }: { embedded?: boolean }) {
       </Tabs>
     </aside>
   );
-}
-
-function findIncomingSample(
-  workflow: { connections: Record<string, Record<string, Array<Array<{ node: string }> | null>>> },
-  nodeName: string,
-  pinData: Record<string, Array<{ json: Record<string, unknown> }>>,
-) {
-  for (const [source, channels] of Object.entries(workflow.connections ?? {})) {
-    for (const outputs of Object.values(channels)) {
-      for (const targets of outputs) {
-        if (targets?.some((t) => t.node === nodeName) && pinData[source]?.length) {
-          return pinData[source];
-        }
-      }
-    }
-  }
-  return [{ json: {} }];
 }

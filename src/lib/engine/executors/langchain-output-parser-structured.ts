@@ -44,27 +44,50 @@ function jsonTypeOf(value: unknown): JsonType {
   return "object";
 }
 
+function deriveSchemaFromValue(value: unknown): JsonSchema {
+  const type = jsonTypeOf(value);
+  if (type === "object" && value !== null) {
+    return deriveSchemaFromExample(value as Record<string, unknown>);
+  }
+  if (type === "array") {
+    const arr = value as unknown[];
+    if (arr.length === 0) {
+      return { type: "array", items: {} };
+    }
+    return { type: "array", items: deriveSchemaFromValue(arr[0]) };
+  }
+  return { type };
+}
+
 function deriveSchemaFromExample(example: Record<string, unknown>): JsonSchema {
   const properties: Record<string, JsonSchema> = {};
   for (const [key, value] of Object.entries(example)) {
-    const type = jsonTypeOf(value);
-    if (type === "object" && value !== null) {
-      properties[key] = deriveSchemaFromExample(value as Record<string, unknown>);
-    } else if (type === "array") {
-      const arr = value as unknown[];
-      properties[key] = {
-        type: "array",
-        items: arr.length > 0 ? { type: jsonTypeOf(arr[0]) } : {},
-      };
-    } else {
-      properties[key] = { type };
-    }
+    properties[key] = deriveSchemaFromValue(value);
   }
   return {
     type: "object",
     properties,
     required: Object.keys(example),
   };
+}
+
+/** Best-effort extract of a JSON object or array embedded in prose (autoFix). */
+function tryExtractJson(text: string): unknown | undefined {
+  const objStart = text.indexOf("{");
+  const arrStart = text.indexOf("[");
+  if (objStart === -1 && arrStart === -1) return undefined;
+
+  const useArray =
+    arrStart !== -1 && (objStart === -1 || arrStart < objStart);
+  const start = useArray ? arrStart : objStart;
+  const endChar = useArray ? "]" : "}";
+  const end = text.lastIndexOf(endChar);
+  if (end <= start) return undefined;
+  try {
+    return JSON.parse(text.slice(start, end + 1));
+  } catch {
+    return undefined;
+  }
 }
 
 function containsRef(schema: unknown): boolean {
@@ -164,15 +187,10 @@ function parseText(text: string, schema: JsonSchema, autoFix: boolean): unknown 
     parsed = true;
   } catch {
     if (autoFix) {
-      const start = text.indexOf("{");
-      const end = text.lastIndexOf("}");
-      if (start !== -1 && end > start) {
-        try {
-          value = JSON.parse(text.slice(start, end + 1));
-          parsed = true;
-        } catch {
-          // leave parsed = false
-        }
+      const extracted = tryExtractJson(text);
+      if (extracted !== undefined) {
+        value = extracted;
+        parsed = true;
       }
     }
   }
@@ -225,10 +243,13 @@ export const langchainOutputParserStructuredExecutor: NodeExecutor = async (ctx)
     } catch {
       throw new Error("Structured Output Parser: jsonSchemaExample is not valid JSON");
     }
-    if (typeof example !== "object" || example === null || Array.isArray(example)) {
-      throw new Error("Structured Output Parser: jsonSchemaExample must be a JSON object");
+    // n8n docs say "object"; public templates often use a root array — accept both.
+    if (typeof example !== "object" || example === null) {
+      throw new Error(
+        "Structured Output Parser: jsonSchemaExample must be a JSON object or array",
+      );
     }
-    schema = deriveSchemaFromExample(example as Record<string, unknown>);
+    schema = deriveSchemaFromValue(example);
   }
 
   const handle: OutputParserHandle = {

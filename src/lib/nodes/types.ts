@@ -153,14 +153,14 @@ export function resolveOutputs(
   description: INodeTypeDescription,
   parameters: Record<string, unknown>,
 ): string[] {
-  if (description.dynamicOutputs) return description.dynamicOutputs(parameters);
-  return description.outputs;
+  if (description.dynamicOutputs) return description.dynamicOutputs(parameters) ?? [];
+  return description.outputs ?? [];
 }
 
 export function resolveInputs(
   description: INodeTypeDescription,
   parameters: Record<string, unknown>,
 ): string[] {
-  if (description.dynamicInputs) return description.dynamicInputs(parameters);
-  return description.inputs;
+  if (description.dynamicInputs) return description.dynamicInputs(parameters) ?? [];
+  return description.inputs ?? [];
 }

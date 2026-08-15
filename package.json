@@ -3,6 +3,14 @@
   "private": true,
   "sideEffects": false,
   "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/real-limitless/OpenFlow.git"
+  },
+  "bugs": {
+    "url": "https://github.com/real-limitless/OpenFlow/issues"
+  },
+  "homepage": "https://github.com/real-limitless/OpenFlow",
   "engines": {
     "node": ">=22"
   },
@@ -30,6 +38,11 @@
     "docker:down": "docker compose down",
     "docker:logs": "docker compose logs -f --tail=100",
     "docker:prod": "docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d",
+    "docker:toolbox": "docker compose up -d --build toolbox",
+    "docker:toolbox:reindex": "docker compose exec toolbox catalog-reindex",
+    "docker:toolbox:reindex:hash": "docker compose exec toolbox catalog-reindex-hash",
+    "docker:toolbox:eval": "docker compose exec toolbox catalog-eval",
+    "docker:toolbox:shell": "docker compose exec toolbox bash",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "format": "prettier --write .",
@@ -49,7 +62,13 @@
     "templates:sync:scraped": "npx tsx scripts/templates/sync-from-scraped.ts",
     "tui": "bash scripts/tui.sh",
     "generate:executors": "node scripts/generate-executor-register.mjs",
-    "screenshots": "node scripts/capture-screenshots.mjs"
+    "catalog:reindex": "npx tsx scripts/catalog-reindex.ts",
+    "catalog:reindex:hash": "npx tsx scripts/catalog-reindex.ts --hash",
+    "catalog:eval": "npx tsx scripts/catalog-eval.ts",
+    "catalog:reindex:hash:local": "npx tsx scripts/catalog-reindex.ts --hash",
+    "screenshots": "node scripts/capture-screenshots.mjs",
+    "screenshots:ansible": "node scripts/capture-ansible-screenshots.mjs",
+    "ansible:sync-catalog": "bash scripts/sync-ansible-catalog.sh"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
@@ -98,8 +117,12 @@
     "cmdk": "^1.1.1",
     "dagre": "^0.8.5",
     "date-fns": "^4.1.0",
+    "dockview": "^7.0.4",
+    "dockview-react": "^7.0.4",
     "embla-carousel-react": "^8.6.0",
+    "fflate": "^0.8.3",
     "hono": "^4.7.10",
+    "html2canvas": "^1.4.1",
     "input-otp": "^1.4.2",
     "ioredis": "^5.11.1",
     "isolated-vm": "^5.0.4",
@@ -111,6 +134,7 @@
     "nodemailer": "^9.0.3",
     "pdf-parse": "^2.4.5",
     "pg": "^8.22.0",
+    "pyodide": "^0.27.7",
     "react": "^19.2.0",
     "react-day-picker": "^9.14.0",
     "react-dom": "^19.2.0",
@@ -134,9 +158,9 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.32.0",
-    "@lovable.dev/vite-tanstack-config": "^2.7.7",
     "@types/bcryptjs": "^2.4.6",
     "@types/better-sqlite3": "^7.6.13",
+    "@types/html2canvas": "^0.5.35",
     "@types/node": "^22.16.5",
     "@types/nodemailer": "^8.0.1",
     "@types/pg": "^8.20.0",

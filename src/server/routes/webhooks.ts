@@ -11,6 +11,10 @@ import { enqueueOrRun } from "../execute";
 import { resolveSubWorkflowFromDb } from "../workflow-loader";
 import { loadVarsMap } from "../services/variables";
 import { getDefaultEnvironment } from "../services/environments";
+import {
+  notifyExecutionFinished,
+  notifyExecutionStarted,
+} from "../services/workflow-events";
 
 export default function webhooksRoute(app: Hono<AppEnv>) {
   // Public webhook endpoint — no auth required
@@ -55,19 +59,25 @@ export default function webhooksRoute(app: Hono<AppEnv>) {
         mode: "webhook",
       },
     });
+    notifyExecutionStarted(workflow.id, execution.id, "webhook");
+
+    const isWebhookType = (t: string) =>
+      t === "openflow-node-base.webhook" || t === "n8n-nodes-base.webhook";
+    const isRespondType = (t: string) =>
+      t === "openflow-node-base.respondToWebhook" || t === "n8n-nodes-base.respondToWebhook";
 
     const webhookNodeName = definition.nodes.find(
-      (n: { type: string }) => n.type === "n8n-nodes-base.webhook",
+      (n: { type: string }) => isWebhookType(n.type),
     )?.name;
 
     // Determine if workflow uses "Respond to Webhook" node
     const hasRespondNode = definition.nodes.some(
-      (n: { type: string }) => n.type === "n8n-nodes-base.respondToWebhook",
+      (n: { type: string }) => isRespondType(n.type),
     );
 
     // Check the webhook trigger's responseMode setting
     const webhookNode = definition.nodes.find(
-      (n: { type: string }) => n.type === "n8n-nodes-base.webhook",
+      (n: { type: string }) => isWebhookType(n.type),
     );
     const responseMode = (webhookNode?.parameters as Record<string, unknown>)?.responseMode as string | undefined;
     const shouldWait = hasRespondNode || responseMode === "lastNode" || responseMode === "responseNode";
@@ -92,14 +102,16 @@ export default function webhooksRoute(app: Hono<AppEnv>) {
     };
 
     const updateExecution = async (result: { success: boolean; runData: unknown }) => {
+      const status = result.success ? "success" : "error";
       await prisma.execution.update({
         where: { id: execution.id },
         data: {
-          status: result.success ? "success" : "error",
+          status,
           finishedAt: new Date(),
           runData: JSON.stringify(result.runData),
         },
       });
+      notifyExecutionFinished(workflow.id, execution.id, status, "webhook");
     };
 
     const handleError = async (err: unknown) => {
@@ -111,6 +123,7 @@ export default function webhooksRoute(app: Hono<AppEnv>) {
           error: JSON.stringify({ message: err instanceof Error ? err.message : String(err) }),
         },
       });
+      notifyExecutionFinished(workflow.id, execution.id, "error", "webhook");
     };
 
     if (!shouldWait) {

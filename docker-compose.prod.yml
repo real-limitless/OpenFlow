@@ -29,3 +29,8 @@ services:
     ports: !override
       - "127.0.0.1:6379:6379"
     restart: unless-stopped
+
+  toolbox:
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production

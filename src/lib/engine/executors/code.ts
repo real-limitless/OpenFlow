@@ -1,4 +1,5 @@
 import type { NodeExecutor, INodeExecutionData } from "@/sdk";
+import { normalizeCodeResult, toExecutionData } from "./code-result";
 
 interface IVMModule {
   Isolate: new () => IIsolate;
@@ -35,10 +36,21 @@ export const codeExecutor: NodeExecutor = async (ctx) => {
   const mode = ctx.getParam<string>("mode", "runOnceForAllItems");
   const language = ctx.getParam<string>("language", "javaScript");
 
-  if (language === "pythonNative" || language === "python") {
-    // TODO: Python runner not implemented — documented gap per spec.
+  if (language === "pythonNative") {
+    const { runPythonNative } = await import("./code-python-native");
+    const code = ctx.getParam<string>("pythonCode", "") ?? "";
+    return runPythonMode(code, mode, inputItems, runPythonNative);
+  }
+
+  if (language === "python") {
+    const { runPythonPyodide } = await import("./code-python-pyodide");
+    const code = ctx.getParam<string>("pythonCode", "") ?? "";
+    return runPythonMode(code, mode, inputItems, runPythonPyodide);
+  }
+
+  if (language !== "javaScript") {
     throw new Error(
-      `Code node language '${language}' is not supported in this build; only 'javaScript' is available.`,
+      `Code node language '${language}' is not supported; use 'javaScript', 'pythonNative', or 'python'.`,
     );
   }
 
@@ -85,44 +97,36 @@ export const codeExecutor: NodeExecutor = async (ctx) => {
   return [normalizeCodeResult(result)];
 };
 
-function normalizeCodeResult(result: unknown): INodeExecutionData[] {
-  if (result === null || result === undefined) {
-    throw new Error("Code node doesn't return an object");
-  }
-  if (Array.isArray(result)) {
-    return result.map((r) => toExecutionData(r));
-  }
-  return [toExecutionData(result)];
-}
+type PythonRunner = (
+  code: string,
+  mode: string,
+  items: INodeExecutionData[],
+  activeItem?: INodeExecutionData,
+) => Promise<unknown>;
 
-function toExecutionData(value: unknown): INodeExecutionData {
-  if (value === null || value === undefined) {
-    throw new Error("Code node doesn't return an object");
-  }
-
-  if (value && typeof value === "object" && "json" in value) {
-    const item = value as INodeExecutionData;
-    if (
-      item.json === null ||
-      typeof item.json !== "object" ||
-      Array.isArray(item.json)
-    ) {
-      throw new Error(
-        "Code node output 'json' property must be an object, not an array or primitive",
-      );
+async function runPythonMode(
+  code: string,
+  mode: string,
+  inputItems: INodeExecutionData[],
+  runner: PythonRunner,
+): Promise<INodeExecutionData[][]> {
+  if (mode === "runOnceForEachItem") {
+    const outputItems: INodeExecutionData[] = [];
+    const source = inputItems.length > 0 ? inputItems : [{ json: {} }];
+    for (const item of source) {
+      const result = await runner(code, mode, source, item);
+      if (Array.isArray(result)) {
+        outputItems.push(...normalizeCodeResult(result));
+      } else {
+        outputItems.push(toExecutionData(result));
+      }
     }
-    return {
-      json: item.json as Record<string, unknown>,
-      pairedItem: item.pairedItem,
-      binary: item.binary,
-    };
+    return [outputItems];
   }
 
-  if (value && typeof value === "object" && !Array.isArray(value)) {
-    return { json: value as Record<string, unknown> };
-  }
-
-  return { json: { result: value } };
+  const source = inputItems.length > 0 ? inputItems : [{ json: {} }];
+  const result = await runner(code, mode, source);
+  return [normalizeCodeResult(result)];
 }
 
 async function runInSandbox(

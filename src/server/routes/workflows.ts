@@ -23,6 +23,7 @@ import {
   type SharePermission,
 } from "../services/shares";
 import { environmentIdFromRequest } from "../services/environments";
+import { notifyExecutionStarted } from "../services/workflow-events";
 
 function minShareForRole(minRole: ProjectRole): SharePermission {
   return minRole === "viewer" ? "view" : "edit";
@@ -314,7 +315,10 @@ export default function workflowsRoute(app: Hono<AppEnv>) {
     })();
 
     if (active) {
-      const webhookNodes = nodes.filter((n: any) => n.type === "n8n-nodes-base.webhook");
+      const webhookNodes = nodes.filter(
+        (n: any) =>
+          n.type === "n8n-nodes-base.webhook" || n.type === "openflow-node-base.webhook",
+      );
       for (const node of webhookNodes) {
         const path = node.parameters?.path ?? node.name.toLowerCase().replace(/\s+/g, "-");
         const method = (node.parameters?.httpMethod as string) ?? "POST";
@@ -325,7 +329,11 @@ export default function workflowsRoute(app: Hono<AppEnv>) {
         });
       }
 
-      const scheduleNodes = nodes.filter((n: any) => n.type === "n8n-nodes-base.scheduleTrigger");
+      const scheduleNodes = nodes.filter(
+        (n: any) =>
+          n.type === "n8n-nodes-base.scheduleTrigger" ||
+          n.type === "openflow-node-base.scheduleTrigger",
+      );
       for (const node of scheduleNodes) {
         const cronExpr = (node.parameters?.rule?.interval?.[0]?.field as string) ?? "0 * * * *";
         await prisma.scheduledTrigger.upsert({
@@ -417,6 +425,11 @@ export default function workflowsRoute(app: Hono<AppEnv>) {
       environmentId?: string;
       /** Trigger / node name to start from (partial run). */
       startNode?: string;
+      /** Run ancestors of this node (expression preview / execute previous). */
+      destinationNode?: string;
+      /** Alias for destinationNode with stop-before semantics. */
+      executePreviousOf?: string;
+      stopBeforeDestination?: boolean;
     } = {};
     try {
       body = await c.req.json();
@@ -428,6 +441,17 @@ export default function workflowsRoute(app: Hono<AppEnv>) {
       typeof body.startNode === "string" && body.startNode.trim()
         ? body.startNode.trim()
         : undefined;
+    const destinationNode =
+      (typeof body.executePreviousOf === "string" && body.executePreviousOf.trim()
+        ? body.executePreviousOf.trim()
+        : undefined) ||
+      (typeof body.destinationNode === "string" && body.destinationNode.trim()
+        ? body.destinationNode.trim()
+        : undefined);
+    const stopBeforeDestination =
+      body.executePreviousOf != null
+        ? true
+        : body.stopBeforeDestination !== false;
 
     let snapshot: IWorkflow | undefined = body.workflow
       ? { ...body.workflow, id: body.workflow.id || id }
@@ -532,6 +556,7 @@ export default function workflowsRoute(app: Hono<AppEnv>) {
         mode: "manual",
       },
     });
+    notifyExecutionStarted(id, execution.id, "manual");
 
     const pinData = body.pinData ?? snapshot.pinData;
     await enqueueOrRun(
@@ -544,6 +569,8 @@ export default function workflowsRoute(app: Hono<AppEnv>) {
       projectId,
       environmentId,
       startNode,
+      destinationNode,
+      stopBeforeDestination,
     );
 
     return c.json({ executionId: execution.id }, 202);

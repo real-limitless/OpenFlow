@@ -18,6 +18,7 @@ Never commit or paste these into issues, PRs, or logs:
 | --- | --- |
 | `CREDENTIALS_KEY` | `.env` or Docker `secrets-data` volume — encrypts stored credentials |
 | `OPENFLOW_ASSISTANT_API_KEY` / `OPENAI_API_KEY` | `.env` — LLM assistant |
+| OAuth access/refresh tokens (`ofa_` / `ofr_`) | Hashed in DB; issued to remote MCP clients |
 | `OPENCODE_API_KEY` / server password | `.env` when using the OpenCode backend |
 | Database passwords | Compose / `DATABASE_URL` |
 | Cloud keys (AWS, Vault, S3, Datadog, …) | `.env` or secret providers UI |
@@ -57,4 +58,13 @@ If a secret may have leaked:
 - Do not publish Postgres/Redis ports publicly.
 - Back up `pgdata`, `binary-data`, and `secrets-data` volumes.
 
-Details: [docs/install.md](docs/install.md#production-checklist).
+## Agents and secrets
+
+AI agents (MCP, API keys, OAuth) authenticate as an OpenFlow user but are **not** given secret-write by default:
+
+- Opt-in scopes: `openflow:credentials`, `openflow:variables` (API Keys UI / OAuth consent / temp MCP mint).
+- Create/update/delete via MCP or REST never returns decrypted secret payloads (variables with `secret: true` are redacted as `••••••••`).
+- Runtime executors still resolve credentials and `$vars` inside workflow runs.
+- Prefer binding existing credentials with `list_credentials` + `update_node` when possible.
+
+Details: [docs/mcp.md](docs/mcp.md), [docs/install.md](docs/install.md#production-checklist).

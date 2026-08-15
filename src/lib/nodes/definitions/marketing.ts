@@ -83,7 +83,7 @@ const campaignOptions: INodeTypeDescription["properties"] = [
 ];
 
 export const mailchimp: INodeTypeDescription = {
-  name: "n8n-nodes-base.mailchimp",
+  name: "openflow-node-base.mailchimp",
   displayName: "Mailchimp",
   category: "Marketing",
   group: ["marketing"],
@@ -499,7 +499,7 @@ export const mailchimp: INodeTypeDescription = {
 const BANNERBEAR_DOCS = "https://docs.n8n.io/integrations/builtin/app-nodes/n8n-nodes-base.bannerbear/";
 
 export const bannerbear: INodeTypeDescription = {
-  name: "n8n-nodes-base.bannerbear",
+  name: "openflow-node-base.bannerbear",
   displayName: "Bannerbear",
   category: "Marketing",
   group: ["marketing"],
@@ -624,7 +624,7 @@ const MAILCHIMP_TRIGGER_DOCS =
   "https://docs.n8n.io/integrations/builtin/trigger-nodes/n8n-nodes-base.mailchimptrigger/";
 
 export const mailchimpTrigger: INodeTypeDescription = {
-  name: "n8n-nodes-base.mailchimpTrigger",
+  name: "openflow-node-base.mailchimpTrigger",
   displayName: "Mailchimp Trigger",
   category: "Marketing",
   group: ["trigger"],
@@ -705,7 +705,7 @@ const MAUTIC_TRIGGER_DOCS =
 const ACTIVECAMPAIGN_DOCS = "https://docs.n8n.io/integrations/builtin/app-nodes/n8n-nodes-base.activecampaign/";
 
 export const activeCampaign: INodeTypeDescription = {
-  name: "n8n-nodes-base.activeCampaign",
+  name: "openflow-node-base.activeCampaign",
   displayName: "ActiveCampaign",
   category: "Marketing",
   group: ["marketing"],
@@ -896,7 +896,7 @@ export const activeCampaign: INodeTypeDescription = {
 };
 
 export const automizy: INodeTypeDescription = {
-  name: "n8n-nodes-base.automizy",
+  name: "openflow-node-base.automizy",
   displayName: "Automizy",
   category: "Marketing",
   group: ["marketing"],
@@ -1037,7 +1037,7 @@ export const automizy: INodeTypeDescription = {
 const ITERABLE_DOCS = "https://docs.n8n.io/integrations/builtin/app-nodes/n8n-nodes-base.iterable/";
 
 export const iterable: INodeTypeDescription = {
-  name: "n8n-nodes-base.iterable",
+  name: "openflow-node-base.iterable",
   displayName: "Iterable",
   category: "Marketing",
   group: ["marketing"],
@@ -1288,7 +1288,7 @@ export const iterable: INodeTypeDescription = {
 };
 
 export const mauticTool: INodeTypeDescription = {
-  name: "n8n-nodes-base.mauticTool",
+  name: "openflow-node-base.mauticTool",
   displayName: "Mautic (AI Tool)",
   category: "Marketing",
   group: ["input"],
@@ -1446,7 +1446,7 @@ export const mauticTool: INodeTypeDescription = {
 };
 
 export const mauticTrigger: INodeTypeDescription = {
-  name: "n8n-nodes-base.mauticTrigger",
+  name: "openflow-node-base.mauticTrigger",
   displayName: "Mautic Trigger",
   category: "Marketing",
   group: ["trigger"],
@@ -1500,7 +1500,7 @@ export const mauticTrigger: INodeTypeDescription = {
 const SENDY_DOCS = "https://docs.n8n.io/integrations/builtin/app-nodes/n8n-nodes-base.sendy/";
 
 export const sendy: INodeTypeDescription = {
-  name: "n8n-nodes-base.sendy",
+  name: "openflow-node-base.sendy",
   displayName: "Sendy",
   category: "Marketing",
   group: ["marketing"],

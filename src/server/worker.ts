@@ -14,6 +14,7 @@ import { loadVarsMap } from "./services/variables";
 import { getDefaultEnvironment } from "./services/environments";
 import { initBinaryStorage } from "./binary-init";
 import { initLogStreaming, log } from "./log";
+import { notifyExecutionFinished } from "./services/workflow-events";
 import type { ExecutionJobData } from "./queue";
 import type { INodeExecutionData, IWorkflow } from "../lib/workflow/types";
 
@@ -37,6 +38,8 @@ export function startWorker(concurrency = 5): Worker<ExecutionJobData> {
         projectId: jobProjectId,
         environmentId: jobEnvironmentId,
         startNode: jobStartNode,
+        destinationNode: jobDestinationNode,
+        stopBeforeDestination: jobStopBefore,
       } = job.data;
 
       const wlog = log.child({
@@ -59,6 +62,7 @@ export function startWorker(concurrency = 5): Worker<ExecutionJobData> {
             where: { id: executionId },
             data: { status: "error", finishedAt: new Date(), error: "Workflow not found" },
           });
+          notifyExecutionFinished(workflowId, executionId, "error");
           wlog.error("workflow not found");
           throw new Error("Workflow not found");
         }
@@ -109,6 +113,8 @@ export function startWorker(concurrency = 5): Worker<ExecutionJobData> {
         dataTables,
         vars,
         startNode: jobStartNode,
+        destinationNode: jobDestinationNode,
+        stopBeforeDestination: jobStopBefore !== false,
         resolveSubWorkflow: resolveSubWorkflowFromDb,
         onProgress: async (partial) => {
           await prisma.execution.update({
@@ -118,14 +124,16 @@ export function startWorker(concurrency = 5): Worker<ExecutionJobData> {
         },
       });
 
+      const status = result.success ? "success" : "error";
       await prisma.execution.update({
         where: { id: executionId },
         data: {
-          status: result.success ? "success" : "error",
+          status,
           finishedAt: new Date(),
           runData: JSON.stringify(result.runData),
         },
       });
+      notifyExecutionFinished(workflowId, executionId, status);
 
       if (result.success) {
         wlog.info("execution succeeded");

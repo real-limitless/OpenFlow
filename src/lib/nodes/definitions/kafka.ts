@@ -1,7 +1,7 @@
 import type { INodeTypeDescription } from "@/lib/nodes/types";
 
 export const kafka: INodeTypeDescription = {
-  name: "n8n-nodes-base.kafka",
+  name: "openflow-node-base.kafka",
   displayName: "Kafka",
   category: "Transform",
   group: ["transform"],

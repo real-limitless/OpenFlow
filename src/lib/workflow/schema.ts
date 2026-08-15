@@ -1,5 +1,6 @@
 import { z } from "zod";
 import type { IWorkflow } from "./types";
+import { toCanonicalType, toWireType } from "@/lib/nodes/type-ids";
 
 /**
  * Permissive validation: we accept anything that has the structural minimum and
@@ -41,8 +42,14 @@ export const workflowSchema = z
     active: z.boolean().default(false),
     nodes: z.array(nodeSchema),
     connections: connectionsSchema.default({}),
-    settings: z.record(z.unknown()).default({}),
-    pinData: z.record(z.array(z.record(z.unknown()))).optional(),
+    settings: z.preprocess(
+      (v) => (v == null ? {} : v),
+      z.record(z.unknown()).default({}),
+    ),
+    pinData: z.preprocess(
+      (v) => (v == null ? undefined : v),
+      z.record(z.array(z.record(z.unknown()))).optional(),
+    ),
     // Accept array, or a JSON-stringified array (legacy double-encoded `extra` field).
     tags: z.preprocess((v) => {
       if (typeof v !== "string") return v;
@@ -148,7 +155,8 @@ export function parseWorkflowJson(input: string | unknown, fallbackId?: string):
       ...(n as Record<string, unknown>),
       id: (n.id as string) ?? newId("node"),
       name: n.name,
-      type: n.type,
+      // Always store OpenFlow canonical type ids; n8n wire strings remain aliases.
+      type: toCanonicalType(n.type),
       typeVersion: n.typeVersion ?? 1,
       position: [n.position?.[0] ?? 0, n.position?.[1] ?? 0] as [number, number],
       parameters: (n.parameters ?? {}) as Record<string, unknown>,
@@ -160,9 +168,27 @@ export function parseWorkflowJson(input: string | unknown, fallbackId?: string):
   return { ok: true, workflow };
 }
 
-/** Serialise back to the public JSON shape, preserving unmodelled fields. */
-export function serializeWorkflow(workflow: IWorkflow): string {
-  const { ...rest } = workflow;
+export type WorkflowExportMode = "openflow" | "n8n";
+
+/** Rewrite node types for a given export mode (does not mutate input). */
+export function mapWorkflowTypes(workflow: IWorkflow, mode: WorkflowExportMode): IWorkflow {
+  const mapType = mode === "n8n" ? toWireType : toCanonicalType;
+  return {
+    ...workflow,
+    nodes: workflow.nodes.map((n) => ({
+      ...n,
+      type: mapType(n.type),
+    })),
+  };
+}
+
+/** Serialise back to JSON. Default mode is OpenFlow-native type ids. */
+export function serializeWorkflow(
+  workflow: IWorkflow,
+  options?: { mode?: WorkflowExportMode },
+): string {
+  const mode = options?.mode ?? "openflow";
+  const rest = mapWorkflowTypes(workflow, mode);
   const ordered = {
     name: rest.name,
     nodes: rest.nodes,

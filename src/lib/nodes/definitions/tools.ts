@@ -1,7 +1,7 @@
 import type { INodeTypeDescription } from "../types";
 
 export const linearTool: INodeTypeDescription = {
-  name: "n8n-nodes-base.linearTool",
+  name: "openflow-node-base.linearTool",
   displayName: "Linear (AI Tool)",
   category: "AI Tool",
   group: ["input"],
@@ -195,7 +195,7 @@ export const linearTool: INodeTypeDescription = {
 };
 
 export const linkedInTool: INodeTypeDescription = {
-  name: "n8n-nodes-base.linkedInTool",
+  name: "openflow-node-base.linkedInTool",
   displayName: "LinkedIn (AI Tool)",
   category: "AI Tool",
   group: ["input"],
@@ -297,7 +297,7 @@ export const linkedInTool: INodeTypeDescription = {
 };
 
 export const microsoftToDoTool: INodeTypeDescription = {
-  name: "n8n-nodes-base.microsoftToDoTool",
+  name: "openflow-node-base.microsoftToDoTool",
   displayName: "Microsoft To Do (AI Tool)",
   category: "AI Tool",
   group: ["input"],
@@ -385,7 +385,7 @@ export const microsoftToDoTool: INodeTypeDescription = {
 };
 
 export const nasaTool: INodeTypeDescription = {
-  name: "n8n-nodes-base.nasaTool",
+  name: "openflow-node-base.nasaTool",
   displayName: "NASA (AI Tool)",
   category: "AI Tool",
   group: ["input"],
@@ -544,7 +544,7 @@ export const nasaTool: INodeTypeDescription = {
 const NOCO_DOCS = "https://docs.n8n.io/integrations/builtin/app-nodes/n8n-nodes-base.nocodb/";
 
 export const nocoDbTool: INodeTypeDescription = {
-  name: "n8n-nodes-base.nocoDbTool",
+  name: "openflow-node-base.nocoDbTool",
   displayName: "NocoDB (AI Tool)",
   category: "AI Tool",
   group: ["input"],
@@ -710,7 +710,7 @@ export const nocoDbTool: INodeTypeDescription = {
 };
 
 export const microsoftExcelTool: INodeTypeDescription = {
-  name: "n8n-nodes-base.microsoftExcelTool",
+  name: "openflow-node-base.microsoftExcelTool",
   displayName: "Microsoft Excel (AI Tool)",
   category: "AI Tool",
   group: ["input"],
@@ -888,7 +888,7 @@ export const microsoftExcelTool: INodeTypeDescription = {
 };
 
 export const mongoDbTool: INodeTypeDescription = {
-  name: "n8n-nodes-base.mongoDbTool",
+  name: "openflow-node-base.mongoDbTool",
   displayName: "MongoDB (AI Tool)",
   category: "AI Tool",
   group: ["input"],
@@ -959,7 +959,7 @@ export const mongoDbTool: INodeTypeDescription = {
 };
 
 export const pagerDutyTool: INodeTypeDescription = {
-  name: "n8n-nodes-base.pagerDutyTool",
+  name: "openflow-node-base.pagerDutyTool",
   displayName: "PagerDuty (AI Tool)",
   category: "AI Tool",
   group: ["input"],
@@ -1140,7 +1140,7 @@ export const pagerDutyTool: INodeTypeDescription = {
 };
 
 export const trelloTool: INodeTypeDescription = {
-  name: "n8n-nodes-base.trelloTool",
+  name: "openflow-node-base.trelloTool",
   displayName: "Trello (AI Tool)",
   category: "AI Tool",
   group: ["input"],
@@ -1355,7 +1355,7 @@ export const trelloTool: INodeTypeDescription = {
 };
 
 export const clickUpTool: INodeTypeDescription = {
-  name: "n8n-nodes-base.clickUpTool",
+  name: "openflow-node-base.clickUpTool",
   displayName: "ClickUp (AI Tool)",
   category: "AI Tool",
   group: ["input"],
@@ -1655,7 +1655,7 @@ export const clickUpTool: INodeTypeDescription = {
 };
 
 export const venafiTlsProtectDatacenterTool: INodeTypeDescription = {
-  name: "n8n-nodes-base.venafiTlsProtectDatacenterTool",
+  name: "openflow-node-base.venafiTlsProtectDatacenterTool",
   displayName: "Venafi TLS Protect Datacenter (AI Tool)",
   category: "AI Tool",
   group: ["input"],
@@ -1870,7 +1870,7 @@ export const venafiTlsProtectDatacenterTool: INodeTypeDescription = {
 };
 
 export const stripeTool: INodeTypeDescription = {
-  name: "n8n-nodes-base.stripeTool",
+  name: "openflow-node-base.stripeTool",
   displayName: "Stripe (AI Tool)",
   category: "AI Tool",
   group: ["output"],
@@ -2188,7 +2188,7 @@ export const stripeTool: INodeTypeDescription = {
 };
 
 export const marketstackTool: INodeTypeDescription = {
-  name: "n8n-nodes-base.marketstackTool",
+  name: "openflow-node-base.marketstackTool",
   displayName: "Marketstack (AI Tool)",
   category: "AI Tool",
   group: ["input"],
@@ -2317,7 +2317,7 @@ export const marketstackTool: INodeTypeDescription = {
 };
 
 export const gSuiteAdminTool: INodeTypeDescription = {
-  name: "n8n-nodes-base.gSuiteAdminTool",
+  name: "openflow-node-base.gSuiteAdminTool",
   displayName: "Google Workspace Admin (AI Tool)",
   category: "AI Tool",
   group: ["input"],
@@ -2399,7 +2399,7 @@ export const gSuiteAdminTool: INodeTypeDescription = {
 };
 
 export const googleAdsTool: INodeTypeDescription = {
-  name: "n8n-nodes-base.googleAdsTool",
+  name: "openflow-node-base.googleAdsTool",
   displayName: "Google Ads (AI Tool)",
   category: "AI Tool",
   group: ["input"],
@@ -2538,7 +2538,7 @@ export const googleAdsTool: INodeTypeDescription = {
 };
 
 export const spotifyTool: INodeTypeDescription = {
-  name: "n8n-nodes-base.spotifyTool",
+  name: "openflow-node-base.spotifyTool",
   displayName: "Spotify (AI Tool)",
   category: "AI Tool",
   group: ["input"],
@@ -2777,7 +2777,7 @@ export const spotifyTool: INodeTypeDescription = {
 };
 
 export const webflowTool: INodeTypeDescription = {
-  name: "n8n-nodes-base.webflowTool",
+  name: "openflow-node-base.webflowTool",
   displayName: "Webflow (AI Tool)",
   category: "AI Tool",
   group: ["output"],
@@ -2913,7 +2913,7 @@ export const webflowTool: INodeTypeDescription = {
 };
 
 export const yourlsTool: INodeTypeDescription = {
-  name: "n8n-nodes-base.yourlsTool",
+  name: "openflow-node-base.yourlsTool",
   displayName: "Yourls (AI Tool)",
   category: "AI Tool",
   group: ["output"],
@@ -2998,7 +2998,7 @@ export const yourlsTool: INodeTypeDescription = {
 };
 
 export const actionNetworkTool: INodeTypeDescription = {
-  name: "n8n-nodes-base.actionNetworkTool",
+  name: "openflow-node-base.actionNetworkTool",
   displayName: "Action Network (AI Tool)",
   category: "AI Tool",
   group: ["input"],
@@ -3269,7 +3269,7 @@ export const actionNetworkTool: INodeTypeDescription = {
 };
 
 export const whatsAppTool: INodeTypeDescription = {
-  name: "n8n-nodes-base.whatsAppTool",
+  name: "openflow-node-base.whatsAppTool",
   displayName: "WhatsApp Business Cloud",
   category: "AI Tool",
   group: ["transform"],
@@ -3513,7 +3513,7 @@ export const whatsAppTool: INodeTypeDescription = {
 };
 
 export const koBoToolboxTool: INodeTypeDescription = {
-  name: "n8n-nodes-base.koBoToolboxTool",
+  name: "openflow-node-base.koBoToolboxTool",
   displayName: "KoboToolbox (AI Tool)",
   category: "AI Tool",
   group: ["output"],
@@ -3729,7 +3729,7 @@ export const koBoToolboxTool: INodeTypeDescription = {
 };
 
 export const autopilotTool: INodeTypeDescription = {
-  name: "n8n-nodes-base.autopilotTool",
+  name: "openflow-node-base.autopilotTool",
   displayName: "Autopilot (AI Tool)",
   category: "AI Tool",
   group: ["input"],
@@ -3846,7 +3846,7 @@ export const autopilotTool: INodeTypeDescription = {
 };
 
 export const awsTranscribeTool: INodeTypeDescription = {
-  name: "n8n-nodes-base.awsTranscribeTool",
+  name: "openflow-node-base.awsTranscribeTool",
   displayName: "AWS Transcribe (AI Tool)",
   category: "AI Tool",
   group: ["input"],
@@ -4088,7 +4088,7 @@ export const awsTranscribeTool: INodeTypeDescription = {
 };
 
 export const beeminderTool: INodeTypeDescription = {
-  name: "n8n-nodes-base.beeminderTool",
+  name: "openflow-node-base.beeminderTool",
   displayName: "Beeminder (AI Tool)",
   category: "AI Tool",
   group: ["input"],
@@ -4408,7 +4408,7 @@ const BITLY_DOCS = "https://docs.n8n.io/integrations/builtin/app-nodes/n8n-nodes
 const BITLY_CRED_DOCS = "https://docs.n8n.io/integrations/builtin/credentials/bitly.html";
 
 export const bitlyTool: INodeTypeDescription = {
-  name: "n8n-nodes-base.bitlyTool",
+  name: "openflow-node-base.bitlyTool",
   displayName: "Bitly (AI Tool)",
   category: "AI Tool",
   group: ["input"],
@@ -4543,7 +4543,7 @@ export const bitlyTool: INodeTypeDescription = {
 };
 
 export const bitwardenTool: INodeTypeDescription = {
-  name: "n8n-nodes-base.bitwardenTool",
+  name: "openflow-node-base.bitwardenTool",
   displayName: "Bitwarden Tool",
   category: "AI Tool",
   group: ["transform"],
@@ -4774,7 +4774,7 @@ export const bitwardenTool: INodeTypeDescription = {
 };
 
 export const bubbleTool: INodeTypeDescription = {
-  name: "n8n-nodes-base.bubbleTool",
+  name: "openflow-node-base.bubbleTool",
   displayName: "Bubble (AI Tool)",
   category: "AI Tool",
   group: ["input"],
@@ -4861,7 +4861,7 @@ export const bubbleTool: INodeTypeDescription = {
 };
 
 export const coinGeckoTool: INodeTypeDescription = {
-  name: "n8n-nodes-base.coinGeckoTool",
+  name: "openflow-node-base.coinGeckoTool",
   displayName: "CoinGecko (AI Tool)",
   category: "AI Tool",
   group: ["input"],
@@ -5007,7 +5007,7 @@ export const coinGeckoTool: INodeTypeDescription = {
 const CONVERTKIT_TOOL_DOCS = "https://docs.n8n.io/integrations/builtin/app-nodes/n8n-nodes-base.convertkit.md";
 
 export const convertKitTool: INodeTypeDescription = {
-  name: "n8n-nodes-base.convertKitTool",
+  name: "openflow-node-base.convertKitTool",
   displayName: "ConvertKit (AI Tool)",
   category: "Marketing",
   group: ["output"],
@@ -5213,7 +5213,7 @@ export const convertKitTool: INodeTypeDescription = {
 };
 
 export const mondayComTool: INodeTypeDescription = {
-  name: "n8n-nodes-base.mondayComTool",
+  name: "openflow-node-base.mondayComTool",
   displayName: "monday.com (AI Tool)",
   category: "AI Tool",
   group: ["input"],
@@ -5461,7 +5461,7 @@ export const mondayComTool: INodeTypeDescription = {
 };
 
 export const gotifyTool: INodeTypeDescription = {
-  name: "n8n-nodes-base.gotifyTool",
+  name: "openflow-node-base.gotifyTool",
   displayName: "Gotify (AI Tool)",
   category: "AI Tool",
   group: ["input"],
@@ -5575,7 +5575,7 @@ export const gotifyTool: INodeTypeDescription = {
 };
 
 export const copperTool: INodeTypeDescription = {
-  name: "n8n-nodes-base.copperTool",
+  name: "openflow-node-base.copperTool",
   displayName: "Copper (AI Tool)",
   category: "AI Tool",
   group: ["input"],
@@ -5758,7 +5758,7 @@ export const copperTool: INodeTypeDescription = {
 };
 
 export const customerIoTool: INodeTypeDescription = {
-  name: "n8n-nodes-base.customerIoTool",
+  name: "openflow-node-base.customerIoTool",
   displayName: "Customer.io (AI Tool)",
   category: "AI Tool",
   group: ["input"],
@@ -5934,7 +5934,7 @@ export const customerIoTool: INodeTypeDescription = {
 };
 
 export const deepLTool: INodeTypeDescription = {
-  name: "n8n-nodes-base.deepLTool",
+  name: "openflow-node-base.deepLTool",
   displayName: "DeepL (AI Tool)",
   category: "AI Tool",
   group: ["output"],
@@ -6036,7 +6036,7 @@ export const deepLTool: INodeTypeDescription = {
 };
 
 export const driftTool: INodeTypeDescription = {
-  name: "n8n-nodes-base.driftTool",
+  name: "openflow-node-base.driftTool",
   displayName: "Drift (AI Tool)",
   category: "AI Tool",
   group: ["input"],
@@ -6128,7 +6128,7 @@ export const driftTool: INodeTypeDescription = {
 };
 
 export const emailSendHitlTool: INodeTypeDescription = {
-  name: "n8n-nodes-base.emailSendHitlTool",
+  name: "openflow-node-base.emailSendHitlTool",
   displayName: "Send Email (HITL)",
   category: "AI Tool",
   group: ["input"],
@@ -6235,7 +6235,7 @@ export const emailSendHitlTool: INodeTypeDescription = {
 };
 
 export const freshdeskTool: INodeTypeDescription = {
-  name: "n8n-nodes-base.freshdeskTool",
+  name: "openflow-node-base.freshdeskTool",
   displayName: "Freshdesk (AI Tool)",
   category: "AI Tool",
   group: ["input"],
@@ -6357,7 +6357,7 @@ export const freshdeskTool: INodeTypeDescription = {
 };
 
 export const gongTool: INodeTypeDescription = {
-  name: "n8n-nodes-base.gongTool",
+  name: "openflow-node-base.gongTool",
   displayName: "Gong Tool",
   category: "Development, Developer Tools",
   group: ["output"],
@@ -6467,7 +6467,7 @@ export const gongTool: INodeTypeDescription = {
       description: "Pagination offset",
     },
     {
-      displayName: "All parameter values support n8n expressions (={{ }}) and $fromAI() for dynamic AI population",
+      displayName: "All parameter values support OpenFlow expressions (={{ }}) and $fromAI() for dynamic AI population",
       name: "expressionNotice",
       type: "notice",
       default: "",
@@ -6476,7 +6476,7 @@ export const gongTool: INodeTypeDescription = {
 };
 
 export const googleCloudStorageTool: INodeTypeDescription = {
-  name: "n8n-nodes-base.googleCloudStorageTool",
+  name: "openflow-node-base.googleCloudStorageTool",
   displayName: "Google Cloud Storage (AI Tool)",
   category: "AI Tool",
   group: ["input"],
@@ -6707,7 +6707,7 @@ export const googleCloudStorageTool: INodeTypeDescription = {
 };
 
 export const grafanaTool: INodeTypeDescription = {
-  name: "n8n-nodes-base.grafanaTool",
+  name: "openflow-node-base.grafanaTool",
   displayName: "Grafana (AI Tool)",
   category: "AI Tool",
   group: ["input"],
@@ -7011,10 +7011,73 @@ export const grafanaTool: INodeTypeDescription = {
   ],
 };
 
+export const emailSendTool: INodeTypeDescription = {
+  name: "openflow-node-base.emailSendTool",
+  displayName: "Send Email",
+  category: "AI Tool",
+  group: ["output"],
+  version: 1,
+  description: "Send an email (AI tool variant)",
+  defaults: { name: "Send Email" },
+  inputs: ["main"],
+  outputs: ["main"],
+  icon: "Mail",
+  usableAsTool: true,
+  properties: [],
+};
+
+export const hubspotTool: INodeTypeDescription = {
+  name: "openflow-node-base.hubspotTool",
+  displayName: "HubSpot (AI Tool)",
+  category: "AI Tool",
+  group: ["input"],
+  version: 1,
+  description: "Consume HubSpot API (AI tool variant)",
+  defaults: { name: "HubSpot Tool" },
+  inputs: ["main"],
+  outputs: ["main"],
+  icon: "Briefcase",
+  usableAsTool: true,
+  credentials: [{ name: "hubspotApi", required: false }, { name: "hubspotOAuth2Api", required: false }],
+  properties: [],
+};
+
+export const microsoftOutlookTool: INodeTypeDescription = {
+  name: "openflow-node-base.microsoftOutlookTool",
+  displayName: "Microsoft Outlook (AI Tool)",
+  category: "AI Tool",
+  group: ["input"],
+  version: 1,
+  description: "Consume Microsoft Outlook API (AI tool variant)",
+  defaults: { name: "Microsoft Outlook Tool" },
+  inputs: ["main"],
+  outputs: ["main"],
+  icon: "Mail",
+  usableAsTool: true,
+  credentials: [{ name: "microsoftOutlookOAuth2Api", required: false }],
+  properties: [],
+};
+
+export const twitterTool: INodeTypeDescription = {
+  name: "openflow-node-base.twitterTool",
+  displayName: "X (Twitter) Tool",
+  category: "AI Tool",
+  group: ["input"],
+  version: 1,
+  description: "Consume the X (Twitter) API (AI tool variant)",
+  defaults: { name: "X Tool" },
+  inputs: ["main"],
+  outputs: ["main"],
+  icon: "Twitter",
+  usableAsTool: true,
+  credentials: [{ name: "twitterOAuth2Api", required: false }],
+  properties: [],
+};
+
 const MAILERLITE_TOOL_DOCS = "https://docs.n8n.io/integrations/builtin/app-nodes/n8n-nodes-base.mailerlite/";
 
 export const mailerLiteTool: INodeTypeDescription = {
-  name: "n8n-nodes-base.mailerLiteTool",
+  name: "openflow-node-base.mailerLiteTool",
   displayName: "MailerLite (AI Tool)",
   category: "AI Tool",
   group: ["input"],
@@ -7130,7 +7193,7 @@ export const mailerLiteTool: INodeTypeDescription = {
 };
 
 export const iterableTool: INodeTypeDescription = {
-  name: "n8n-nodes-base.iterableTool",
+  name: "openflow-node-base.iterableTool",
   displayName: "Iterable (AI Tool)",
   category: "AI Tool",
   group: ["input"],
@@ -7434,7 +7497,7 @@ export const iterableTool: INodeTypeDescription = {
 const MATRIX_TOOL_DOCS = "https://docs.n8n.io/integrations/builtin/app-nodes/n8n-nodes-base.matrix.md";
 
 export const matrixTool: INodeTypeDescription = {
-  name: "n8n-nodes-base.matrixTool",
+  name: "openflow-node-base.matrixTool",
   displayName: "Matrix (AI Tool)",
   category: "AI Tool",
   group: ["input"],
@@ -7821,7 +7884,7 @@ export const matrixTool: INodeTypeDescription = {
 };
 
 export const microsoftDynamicsCrmTool: INodeTypeDescription = {
-  name: "n8n-nodes-base.microsoftDynamicsCrmTool",
+  name: "openflow-node-base.microsoftDynamicsCrmTool",
   displayName: "Microsoft Dynamics CRM",
   category: "AI Tool",
   group: ["input"],
@@ -7974,7 +8037,7 @@ export const microsoftDynamicsCrmTool: INodeTypeDescription = {
 };
 
 export const microsoftEntraTool: INodeTypeDescription = {
-  name: "n8n-nodes-base.microsoftEntraTool",
+  name: "openflow-node-base.microsoftEntraTool",
   displayName: "Microsoft Entra ID (AI Tool)",
   category: "AI Tool",
   group: ["input"],
@@ -8293,7 +8356,7 @@ export const microsoftEntraTool: INodeTypeDescription = {
 };
 
 export const moceanTool: INodeTypeDescription = {
-  name: "n8n-nodes-base.moceanTool",
+  name: "openflow-node-base.moceanTool",
   displayName: "Mocean (AI Tool)",
   category: "AI Tool",
   group: ["input"],
@@ -8395,7 +8458,7 @@ export const moceanTool: INodeTypeDescription = {
 };
 
 export const nextCloudTool: INodeTypeDescription = {
-  name: "n8n-nodes-base.nextCloudTool",
+  name: "openflow-node-base.nextCloudTool",
   displayName: "Nextcloud (AI Tool)",
   category: "AI Tool",
   group: ["input"],
@@ -8578,7 +8641,7 @@ export const nextCloudTool: INodeTypeDescription = {
 };
 
 export const npmTool: INodeTypeDescription = {
-  name: "n8n-nodes-base.npmTool",
+  name: "openflow-node-base.npmTool",
   displayName: "npm (AI Tool)",
   category: "AI Tool",
   group: ["input"],
@@ -8670,7 +8733,7 @@ export const npmTool: INodeTypeDescription = {
 };
 
 export const onfleetTool: INodeTypeDescription = {
-  name: "n8n-nodes-base.onfleetTool",
+  name: "openflow-node-base.onfleetTool",
   displayName: "Onfleet (AI Tool)",
   category: "AI Tool",
   group: ["input"],
@@ -8858,7 +8921,7 @@ export const onfleetTool: INodeTypeDescription = {
       ],
     },
     {
-      displayName: "All parameter values support n8n expressions ({{ }}) and $fromAI() for dynamic AI population",
+      displayName: "All parameter values support OpenFlow expressions ({{ }}) and $fromAI() for dynamic AI population",
       name: "expressionNotice",
       type: "notice",
       default: "",
@@ -8867,7 +8930,7 @@ export const onfleetTool: INodeTypeDescription = {
 };
 
 export const phantombusterTool: INodeTypeDescription = {
-  name: "n8n-nodes-base.phantombusterTool",
+  name: "openflow-node-base.phantombusterTool",
   displayName: "PhantomBuster (AI Tool)",
   category: "AI Tool",
   group: ["input"],
@@ -9063,7 +9126,7 @@ export const phantombusterTool: INodeTypeDescription = {
 };
 
 export const quickChartTool: INodeTypeDescription = {
-  name: "n8n-nodes-base.quickChartTool",
+  name: "openflow-node-base.quickChartTool",
   displayName: "QuickChart (AI Tool)",
   category: "AI Tool",
   group: ["input"],
@@ -9179,7 +9242,7 @@ export const quickChartTool: INodeTypeDescription = {
 };
 
 export const quickbaseTool: INodeTypeDescription = {
-  name: "n8n-nodes-base.quickbaseTool",
+  name: "openflow-node-base.quickbaseTool",
   displayName: "Quick Base (AI Tool)",
   category: "AI Tool",
   group: ["input"],
@@ -9436,7 +9499,7 @@ export const quickbaseTool: INodeTypeDescription = {
 };
 
 export const raindropTool: INodeTypeDescription = {
-  name: "n8n-nodes-base.raindropTool",
+  name: "openflow-node-base.raindropTool",
   displayName: "Raindrop (AI Tool)",
   category: "AI Tool",
   group: ["input"],
@@ -9648,7 +9711,7 @@ export const raindropTool: INodeTypeDescription = {
 };
 
 export const sentryIoTool: INodeTypeDescription = {
-  name: "n8n-nodes-base.sentryIoTool",
+  name: "openflow-node-base.sentryIoTool",
   displayName: "Sentry.io (AI Tool)",
   category: "AI Tool",
   group: ["output"],
@@ -9952,7 +10015,7 @@ export const sentryIoTool: INodeTypeDescription = {
 };
 
 export const signl4Tool: INodeTypeDescription = {
-  name: "n8n-nodes-base.signl4Tool",
+  name: "openflow-node-base.signl4Tool",
   displayName: "SIGNL4 (AI Tool)",
   category: "AI Tool",
   group: ["input"],
@@ -10090,7 +10153,7 @@ export const signl4Tool: INodeTypeDescription = {
 };
 
 export const splunkTool: INodeTypeDescription = {
-  name: "n8n-nodes-base.splunkTool",
+  name: "openflow-node-base.splunkTool",
   displayName: "Splunk (AI Tool)",
   category: "AI Tool",
   group: ["input"],
@@ -10376,7 +10439,7 @@ export const splunkTool: INodeTypeDescription = {
 // sms77Tool definition lives in communication.ts
 
 export const twilioTool: INodeTypeDescription = {
-  name: "n8n-nodes-base.twilioTool",
+  name: "openflow-node-base.twilioTool",
   displayName: "Twilio (AI Tool)",
   category: "AI Tool",
   group: ["input"],
@@ -10498,7 +10561,7 @@ export const twilioTool: INodeTypeDescription = {
 };
 
 export const stravaTool: INodeTypeDescription = {
-  name: "n8n-nodes-base.stravaTool",
+  name: "openflow-node-base.stravaTool",
   displayName: "Strava (AI Tool)",
   category: "AI Tool",
   group: ["input"],
@@ -10679,7 +10742,7 @@ export const stravaTool: INodeTypeDescription = {
 };
 
 export const uptimeRobotTool: INodeTypeDescription = {
-  name: "n8n-nodes-base.uptimeRobotTool",
+  name: "openflow-node-base.uptimeRobotTool",
   displayName: "UptimeRobot (AI Tool)",
   category: "AI Tool",
   group: ["input"],
@@ -10929,7 +10992,7 @@ export const uptimeRobotTool: INodeTypeDescription = {
       ],
     },
     {
-      displayName: "All parameter values support n8n expressions (={{ }}) and $fromAI() for dynamic AI population",
+      displayName: "All parameter values support OpenFlow expressions (={{ }}) and $fromAI() for dynamic AI population",
       name: "expressionNotice",
       type: "notice",
       default: "",
@@ -10938,7 +11001,7 @@ export const uptimeRobotTool: INodeTypeDescription = {
 };
 
 export const urlScanIoTool: INodeTypeDescription = {
-  name: "n8n-nodes-base.urlScanIoTool",
+  name: "openflow-node-base.urlScanIoTool",
   displayName: "urlscan.io (AI Tool)",
   category: "Utility",
   group: ["input"],
@@ -11046,7 +11109,7 @@ const VENAFI_DOCS = "https://docs.n8n.io/integrations/builtin/app-nodes/n8n-node
 const TOOL_DOCS = "https://docs.n8n.io/build/integrate-ai/understand-ai-components/how-tools-work.md";
 
 export const venafiTlsProtectCloudTool: INodeTypeDescription = {
-  name: "n8n-nodes-base.venafiTlsProtectCloudTool",
+  name: "openflow-node-base.venafiTlsProtectCloudTool",
   displayName: "Venafi TLS Protect Cloud (AI Tool)",
   category: "AI Tool",
   group: ["input"],
@@ -11387,4 +11450,3 @@ export const venafiTlsProtectCloudTool: INodeTypeDescription = {
     },
   ],
 };
-

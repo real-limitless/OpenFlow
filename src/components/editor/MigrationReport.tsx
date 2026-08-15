@@ -38,7 +38,7 @@ function rowStatus(type: string): RowStatus {
   const desc = getNodeType(type);
   if (getExecutorUnavailability(desc.name)) return "needs-setup";
   if (hasBuiltinExecutor(desc.name)) return "supported";
-  if (desc.inputs.length === 0 && desc.outputs.length === 0) return "supported";
+  if ((desc.inputs ?? []).length === 0 && (desc.outputs ?? []).length === 0) return "supported";
   return desc.placeholder ? "placeholder" : "partial";
 }
 

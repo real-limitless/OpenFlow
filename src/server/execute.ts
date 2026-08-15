@@ -15,6 +15,7 @@ import { LOCAL_USER_ID } from "./services/users";
 import { loadVarsMap } from "./services/variables";
 import { getDefaultEnvironment, resolveEnvironment } from "./services/environments";
 import { log } from "./log";
+import { notifyExecutionFinished } from "./services/workflow-events";
 import type { IWorkflow, INodeExecutionData } from "../lib/workflow/types";
 
 let redisAvailable: boolean | null = null;
@@ -83,10 +84,14 @@ export async function enqueueOrRun(
   projectId?: string,
   environmentId?: string | null,
   startNode?: string | null,
+  destinationNode?: string | null,
+  stopBeforeDestination?: boolean,
 ): Promise<void> {
   const scope = await resolveScope(workflowId, userId, projectId);
   const envId = await resolveEnvId(scope.projectId, environmentId);
   const start = startNode?.trim() || undefined;
+  const dest = destinationNode?.trim() || undefined;
+  const stopBefore = stopBeforeDestination !== false;
 
   if (await checkRedis()) {
     await executionQueue.add("execute", {
@@ -99,6 +104,8 @@ export async function enqueueOrRun(
       pinData,
       workflow: workflow as unknown as Record<string, unknown> | undefined,
       startNode: start,
+      destinationNode: dest,
+      stopBeforeDestination: stopBefore,
     });
     return;
   }
@@ -109,6 +116,7 @@ export async function enqueueOrRun(
       where: { id: executionId },
       data: { status: "error", finishedAt: new Date(), error: "Workflow not found" },
     });
+    notifyExecutionFinished(workflowId, executionId, "error");
     return;
   }
 
@@ -129,6 +137,8 @@ export async function enqueueOrRun(
     dataTables,
     vars,
     startNode: start,
+    destinationNode: dest,
+    stopBeforeDestination: stopBefore,
     resolveSubWorkflow: resolveSubWorkflowFromDb,
     onProgress: async (partial) => {
       await prisma.execution.update({
@@ -138,10 +148,11 @@ export async function enqueueOrRun(
     },
   })
     .then(async (result) => {
+      const status = result.success ? "success" : "error";
       await prisma.execution.update({
         where: { id: executionId },
         data: {
-          status: result.success ? "success" : "error",
+          status,
           finishedAt: new Date(),
           runData: JSON.stringify(result.runData),
           error: result.success
@@ -153,6 +164,7 @@ export async function enqueueOrRun(
               }),
         },
       });
+      notifyExecutionFinished(workflowId, executionId, status);
     })
     .catch(async (err) => {
       log.error("in-process execution failed", {
@@ -169,5 +181,6 @@ export async function enqueueOrRun(
           error: JSON.stringify({ message: err instanceof Error ? err.message : String(err) }),
         },
       });
+      notifyExecutionFinished(workflowId, executionId, "error");
     });
 }

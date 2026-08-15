@@ -9,9 +9,11 @@ export const Route = createFileRoute("/settings")({
 const LINKS = [
   { to: "/settings", label: "Overview", exact: true },
   { to: "/settings/api-keys", label: "API keys" },
+  { to: "/settings/mcp", label: "MCP" },
   { to: "/settings/environments", label: "Environments" },
   { to: "/settings/secret-providers", label: "Secret providers" },
   { to: "/settings/templates", label: "Templates" },
+  { to: "/settings/code", label: "Code node" },
   { to: "/settings/logs", label: "Logs" },
 ] as const;
 
@@ -59,6 +61,12 @@ function SettingsOverview() {
           — machine access with of_… tokens
         </li>
         <li>
+          <Link to="/settings/mcp" className="text-primary hover:underline">
+            MCP
+          </Link>{" "}
+          — remote MCP URL, OAuth, and enable toggle for third-party chatbots
+        </li>
+        <li>
           <Link to="/settings/environments" className="text-primary hover:underline">
             Environments
           </Link>{" "}
@@ -75,6 +83,12 @@ function SettingsOverview() {
             Templates
           </Link>{" "}
           — marketplace libraries (default n8n-workflow-library + your repos)
+        </li>
+        <li>
+          <Link to="/settings/code" className="text-primary hover:underline">
+            Code node
+          </Link>{" "}
+          — Python import allowlist for the Code node
         </li>
         <li>
           <Link to="/settings/logs" className="text-primary hover:underline">
