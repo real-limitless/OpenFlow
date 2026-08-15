@@ -7,7 +7,7 @@ import { notifyExecutionFinished, notifyExecutionStarted } from "./workflow-even
 
 export const MAX_RUN_DATA_BYTES = 2 * 1024 * 1024;
 
-const INGEST_KINDS = new Set(["api_key", "oauth", "temporary"]);
+const INGEST_KINDS = new Set(["api_key", "oauth", "temporary", "disabled"]);
 const STATUSES = new Set(["running", "success", "error"]);
 
 export type IngestAuth = {

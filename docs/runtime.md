@@ -6,7 +6,7 @@ Ingest is optional. If OpenFlow is down, `run()` must still succeed.
 
 ## Ingest API
 
-Authenticate with a user API key (`of_…`) that has `openflow:execute`. Restricted keys need a `canExecute` grant on the target workflow. Session cookies are rejected.
+Authenticate with a user API key (`of_…`) that has `openflow:execute`. Restricted keys need a `canExecute` grant on the target workflow. Session cookies are rejected. `AUTH_DISABLED=true` still resolves `of_…` keys (so grants apply); requests without a key ingest as the local user.
 
 | Method | Path | Role |
 | --- | --- | --- |
