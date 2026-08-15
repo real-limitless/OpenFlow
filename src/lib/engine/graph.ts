@@ -1,8 +1,7 @@
 import type { IConnections, INode, IWorkflow } from "../workflow/types";
-import { getNodeType } from "../nodes/registry";
 
 /** Known trigger type strings (fallback when description lookup is thin). */
-const TRIGGER_TYPES = new Set([
+const TRIGGER_TYPE_LIST = [
   "n8n-nodes-base.manualTrigger",
   "n8n-nodes-base.manualWorkflowTrigger",
   "n8n-nodes-base.start",
@@ -18,25 +17,37 @@ const TRIGGER_TYPES = new Set([
   "n8n-nodes-base.n8nTrigger",
   "@n8n/n8n-nodes-langchain.chatTrigger",
   "@n8n/n8n-nodes-langchain.mcpTrigger",
+];
+
+const TRIGGER_TYPES = new Set<string>([
+  ...TRIGGER_TYPE_LIST,
+  ...TRIGGER_TYPE_LIST.filter((t) => t.startsWith("n8n-")).map((t) => t.slice(4)),
 ]);
+
+export type TriggerDescriptionLookup = (type: string) => {
+  group?: string[];
+  category?: string;
+  inputs?: unknown[];
+  outputs?: unknown[];
+  placeholder?: boolean;
+} | null;
+
+let descriptionLookup: TriggerDescriptionLookup | undefined;
+
+/** Product registry binds this so unknown trigger types still resolve. Lite leaves it unset. */
+export function setTriggerDescriptionLookup(fn?: TriggerDescriptionLookup): void {
+  descriptionLookup = fn;
+}
 
 export function isTriggerNode(node: INode): boolean {
   if (node.disabled) return false;
   if (TRIGGER_TYPES.has(node.type)) return true;
-  try {
-    const desc = getNodeType(node.type);
-    if (desc.group?.includes("trigger")) return true;
-    if (desc.category === "Triggers") return true;
-    // Trigger-like: no inputs, at least one output
-    if ((desc.inputs?.length ?? 0) === 0 && (desc.outputs?.length ?? 0) > 0) {
-      if (desc.placeholder) return false;
-      // Sticky / inspect canvas nodes have no outputs either — skip empty outputs
-      if ((desc.outputs?.length ?? 0) === 0) return false;
-      // Prefer explicit group; empty-input action nodes still aren't triggers
-      return desc.group?.includes("trigger") === true;
-    }
-  } catch {
-    /* ignore */
+  const desc = descriptionLookup?.(node.type);
+  if (!desc || desc.placeholder) return false;
+  if (desc.group?.includes("trigger")) return true;
+  if (desc.category === "Triggers") return true;
+  if ((desc.inputs?.length ?? 0) === 0 && (desc.outputs?.length ?? 0) > 0) {
+    return desc.group?.includes("trigger") === true;
   }
   return false;
 }

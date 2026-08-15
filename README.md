@@ -134,6 +134,7 @@ Or step through setup interactively: **`npm run tui`**.
 | `npm run db:migrate` | Prisma migrate (dev) |
 | `npm run db:studio` | Prisma Studio |
 | `npm run screenshots` | Capture README / marketing PNGs (Playwright) |
+| `npm run build:runtime` | Bundle lite runtime (`openflow/runtime`) |
 
 Copy `.env.example` → `.env` if you skip `setup` (it generates `CREDENTIALS_KEY` for you).
 

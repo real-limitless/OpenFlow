@@ -12,6 +12,7 @@ const FORBIDDEN = [
   /src\/lib\/engine\/index\.ts$/,
   /src\/lib\/engine\/binary(?:-fs|-s3)?\.ts$/,
   /src\/lib\/engine\/executors\/index\.ts$/,
+  /src\/lib\/nodes\/registry\.ts$/,
   /node_modules\/@prisma\//,
   /node_modules\/prisma\//,
   /node_modules\/bullmq\//,
