@@ -8124,8 +8124,8 @@ export const httpRequestTool: INodeTypeDescription = {
   version: 1,
   description: "Makes an HTTP request and returns the response. Designed for AI agent tool use.",
   defaults: { name: "HTTP Request Tool" },
-  inputs: ["main"],
-  outputs: ["main"],
+  inputs: [],
+  outputs: ["ai_tool"],
   icon: "Globe",
   credentials: [
     { name: "httpBasicAuth" },

@@ -57,8 +57,6 @@ describe("channels", () => {
       "main",
       "ai_languageModel",
       "ai_tool",
-      "ai_tool",
-      "ai_tool",
       "ai_memory",
       "ai_outputParser",
     ]);

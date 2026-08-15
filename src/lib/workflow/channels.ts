@@ -209,14 +209,14 @@ export function nodesAcceptingChannel(channel: string): INodeTypeDescription[] {
 
 /**
  * Expand static inputs for multi-index AI slots:
- * - ai_tool: one handle per existing connection index + one empty next slot
+ * - ai_tool: one handle (unlimited incoming tools attach to ai_tool-0)
  * - ai_languageModel: second handle when needsFallback
  * - ai_outputParser: always shown (structured output port)
  */
 export function expandAiInputs(
   inputs: string[],
   parameters: Record<string, unknown>,
-  connectedCounts: Record<string, number> = {},
+  _connectedCounts: Record<string, number> = {},
 ): string[] {
   const result: string[] = [];
   const needsFallback = Boolean(parameters.needsFallback);
@@ -225,12 +225,6 @@ export function expandAiInputs(
     if (channel === "ai_languageModel") {
       result.push(channel);
       if (needsFallback) result.push(channel);
-      continue;
-    }
-    if (channel === "ai_tool") {
-      const connected = Math.max(0, connectedCounts[channel] ?? 0);
-      const slots = Math.max(1, connected + 1);
-      for (let i = 0; i < slots; i++) result.push(channel);
       continue;
     }
     result.push(channel);

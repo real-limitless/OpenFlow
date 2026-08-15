@@ -218,7 +218,7 @@ describe("graph mapping", () => {
     expect((edge.data as { color?: string }).color).toBeTruthy();
   });
 
-  it("handlesFor expands ai_tool slots from connections", () => {
+  it("handlesFor keeps a single ai_tool input for many tools", () => {
     const agent = {
       id: "a",
       name: "AI Agent",
@@ -233,6 +233,42 @@ describe("graph mapping", () => {
     };
     const { inputs } = handlesFor(agent, connections);
     const tools = inputs.filter((c) => c === "ai_tool");
-    expect(tools.length).toBe(3); // 2 connected + 1 empty
+    expect(tools.length).toBe(1);
+  });
+
+  it("toFlowEdges pins every ai_tool target to the single Tool handle", () => {
+    const wf: IWorkflow = {
+      id: "wf",
+      name: "t",
+      active: false,
+      nodes: [
+        {
+          id: "a",
+          name: "AI Agent",
+          type: "@n8n/n8n-nodes-langchain.agent",
+          typeVersion: 1,
+          position: [0, 0],
+          parameters: {},
+        },
+        {
+          id: "t",
+          name: "GitHub Tool",
+          type: "openflow-node-base.githubTool",
+          typeVersion: 1,
+          position: [0, 0],
+          parameters: {},
+        },
+      ],
+      connections: {
+        "GitHub Tool": {
+          ai_tool: [[{ node: "AI Agent", type: "ai_tool", index: 4 }]],
+        },
+      },
+      settings: { executionOrder: "v1" },
+    };
+    const edge = toFlowEdges(wf)[0];
+    expect(edge.sourceHandle).toBe("ai_tool-0");
+    expect(edge.targetHandle).toBe("ai_tool-0");
+    expect(handlesFor(wf.nodes[1]!).outputs).toEqual(["ai_tool"]);
   });
 });

@@ -143,6 +143,8 @@ export interface INodeTypeDescription {
   sources: string[];
   /** Marks placeholder nodes created for unsupported imported types. */
   placeholder?: boolean;
+  /** Regular node that an agent may invoke as a tool. */
+  usableAsTool?: boolean;
 }
 
 export interface NodeType {
@@ -155,6 +157,16 @@ export function resolveOutputs(
 ): string[] {
   if (description.dynamicOutputs) return description.dynamicOutputs(parameters) ?? [];
   return description.outputs ?? [];
+}
+
+/** Dedicated AI-agent tool sub-node (cluster tool), not a regular main-chain node. */
+export function isAiToolSubnode(description: INodeTypeDescription): boolean {
+  if (description.outputs.includes("ai_tool") && !description.outputs.includes("main")) return true;
+  if (description.category === "AI Tool") return true;
+  const short = description.name.split(".").pop() ?? "";
+  if (/Tool$/i.test(short)) return true;
+  if (/^tool[A-Z]/.test(short)) return true;
+  return false;
 }
 
 export function resolveInputs(

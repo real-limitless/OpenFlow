@@ -229,7 +229,10 @@ function BaseNodeInner({ data, selected, id }: NodeProps<OpenFlowNode>) {
     >
       {inputs.map((channel, i) => {
         const handleId = inputHandleIds[i];
-        const filled = filledIn.has(handleId);
+        const filled =
+          channel === "ai_tool"
+            ? [...filledIn].some((h) => h.startsWith("ai_tool-"))
+            : filledIn.has(handleId);
         const label = inputLabel(channel, i);
         const { role, style } = handleVisual(
           handleId,
@@ -268,11 +271,16 @@ function BaseNodeInner({ data, selected, id }: NodeProps<OpenFlowNode>) {
       {showInputLabels &&
         inputs.map((channel, i) => {
           const handleId = inputHandleIds[i];
-          const filled = filledIn.has(handleId);
+          const filled =
+            channel === "ai_tool"
+              ? [...filledIn].some((h) => h.startsWith("ai_tool-"))
+              : filledIn.has(handleId);
           const label = inputLabel(channel, i);
           const color = channelColor(channel);
           const role = roleOf(handleId, "target");
-          const showPlus = !connecting && !filled && (isAiChannel(channel) || inputs.length > 1);
+          const showPlus =
+            !connecting &&
+            (channel === "ai_tool" || (!filled && (isAiChannel(channel) || inputs.length > 1)));
           return (
             <div
               key={`in-label-${handleId}`}
