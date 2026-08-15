@@ -215,6 +215,9 @@ describe("batch-queue langchainAgentTool — @n8n/n8n-nodes-langchain.agentTool"
     const handle = getHandle(out);
     const result = await handle.invoke({});
     expect(result).toBe("42");
+    expect(handle.agentTrace).toMatchObject({
+      turns: [{ iteration: 0, assistantText: "42", toolCalls: [], observations: [] }],
+    });
   });
 
   it("uses the invocation prompt from text parameter", async () => {
@@ -231,10 +234,13 @@ describe("batch-queue langchainAgentTool — @n8n/n8n-nodes-langchain.agentTool"
       },
     });
 
-    const out = await runAgentTool({
-      toolDescription: "Helper.",
-      text: "Calculate the sum of 1 through 10",
-    }, { modelHandle });
+    const out = await runAgentTool(
+      {
+        toolDescription: "Helper.",
+        text: "Calculate the sum of 1 through 10",
+      },
+      { modelHandle },
+    );
 
     const handle = getHandle(out);
     const result = await handle.invoke({});
@@ -273,22 +279,27 @@ describe("batch-queue langchainAgentTool — @n8n/n8n-nodes-langchain.agentTool"
       },
     });
 
-    const out = await runAgentTool({
-      toolDescription: "Helper.",
-      text: "Do something",
-      options: { maxIterations: 5 },
-    }, {
-      modelHandle,
-      toolHandles: [{
-        name: "my_tool",
-        description: "A test tool",
-        invoke(args: Record<string, unknown>) {
-          toolInvoked = true;
-          expect(args.input).toBe("test");
-          return "tool observed";
-        },
-      }],
-    });
+    const out = await runAgentTool(
+      {
+        toolDescription: "Helper.",
+        text: "Do something",
+        options: { maxIterations: 5 },
+      },
+      {
+        modelHandle,
+        toolHandles: [
+          {
+            name: "my_tool",
+            description: "A test tool",
+            invoke(args: Record<string, unknown>) {
+              toolInvoked = true;
+              expect(args.input).toBe("test");
+              return "tool observed";
+            },
+          },
+        ],
+      },
+    );
 
     const handle = getHandle(out);
     const result = await handle.invoke({});
@@ -305,19 +316,22 @@ describe("batch-queue langchainAgentTool — @n8n/n8n-nodes-langchain.agentTool"
       }),
     });
 
-    const out = await runAgentTool({
-      toolDescription: "Parser test agent.",
-      text: "Return structured data",
-      hasOutputParser: true,
-    }, {
-      modelHandle,
-      parserHandle: {
-        parse(text: string) {
-          const parsed = JSON.parse(text);
-          return parsed;
+    const out = await runAgentTool(
+      {
+        toolDescription: "Parser test agent.",
+        text: "Return structured data",
+        hasOutputParser: true,
+      },
+      {
+        modelHandle,
+        parserHandle: {
+          parse(text: string) {
+            const parsed = JSON.parse(text);
+            return parsed;
+          },
         },
       },
-    });
+    );
 
     const handle = getHandle(out);
     const result = await handle.invoke({});
@@ -327,7 +341,9 @@ describe("batch-queue langchainAgentTool — @n8n/n8n-nodes-langchain.agentTool"
   it("fallback model on primary failure", async () => {
     let fallbackCalled = false;
     const primaryModel = makeModelHandle({
-      invoke: async () => { throw new Error("Primary failed"); },
+      invoke: async () => {
+        throw new Error("Primary failed");
+      },
     });
     const fallbackModel = makeModelHandle({
       invoke: async () => {
@@ -340,14 +356,17 @@ describe("batch-queue langchainAgentTool — @n8n/n8n-nodes-langchain.agentTool"
       },
     });
 
-    const out = await runAgentTool({
-      toolDescription: "Fallback test.",
-      text: "Do it",
-      needsFallback: true,
-    }, {
-      modelHandle: primaryModel,
-      fallbackModelHandle: fallbackModel,
-    });
+    const out = await runAgentTool(
+      {
+        toolDescription: "Fallback test.",
+        text: "Do it",
+        needsFallback: true,
+      },
+      {
+        modelHandle: primaryModel,
+        fallbackModelHandle: fallbackModel,
+      },
+    );
 
     const handle = getHandle(out);
     const result = await handle.invoke({});
@@ -369,11 +388,14 @@ describe("batch-queue langchainAgentTool — @n8n/n8n-nodes-langchain.agentTool"
       },
     });
 
-    const out = await runAgentTool({
-      toolDescription: "System test.",
-      text: "Process this",
-      options: { systemMessage: "You are a helpful specialist." },
-    }, { modelHandle });
+    const out = await runAgentTool(
+      {
+        toolDescription: "System test.",
+        text: "Process this",
+        options: { systemMessage: "You are a helpful specialist." },
+      },
+      { modelHandle },
+    );
 
     const handle = getHandle(out);
     await handle.invoke({});
@@ -400,15 +422,16 @@ describe("batch-queue langchainAgentTool — @n8n/n8n-nodes-langchain.agentTool"
       },
     });
 
-    const inputItems: INodeExecutionData[] = [
-      { json: { chatInput: "What is 6*7?" } },
-    ];
+    const inputItems: INodeExecutionData[] = [{ json: { chatInput: "What is 6*7?" } }];
 
-    const out = await runAgentTool({
-      toolDescription: "Math helper agent.",
-      text: "={{ $json.chatInput }}",
-      options: { maxIterations: 3 },
-    }, { modelHandle, inputItems });
+    const out = await runAgentTool(
+      {
+        toolDescription: "Math helper agent.",
+        text: "={{ $json.chatInput }}",
+        options: { maxIterations: 3 },
+      },
+      { modelHandle, inputItems },
+    );
 
     const handle = getHandle(out);
     const result = await handle.invoke({});

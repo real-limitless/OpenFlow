@@ -18,8 +18,22 @@ describe("Runner", () => {
   it("creates execution plan", () => {
     const workflow = makeWorkflow(
       [
-        { id: "1", name: "Start", type: "n8n-nodes-base.manualTrigger", typeVersion: 1, position: [0, 0], parameters: {} },
-        { id: "2", name: "End", type: "n8n-nodes-base.noOp", typeVersion: 1, position: [200, 0], parameters: {} },
+        {
+          id: "1",
+          name: "Start",
+          type: "n8n-nodes-base.manualTrigger",
+          typeVersion: 1,
+          position: [0, 0],
+          parameters: {},
+        },
+        {
+          id: "2",
+          name: "End",
+          type: "n8n-nodes-base.noOp",
+          typeVersion: 1,
+          position: [200, 0],
+          parameters: {},
+        },
       ],
       { Start: { main: [[{ node: "End", type: "main", index: 0 }]] } },
     );
@@ -162,8 +176,22 @@ describe("Runner", () => {
   it("executes simple workflow", async () => {
     const workflow = makeWorkflow(
       [
-        { id: "1", name: "Start", type: "trigger", typeVersion: 1, position: [0, 0], parameters: {} },
-        { id: "2", name: "Set", type: "set", typeVersion: 1, position: [200, 0], parameters: { value: "hello" } },
+        {
+          id: "1",
+          name: "Start",
+          type: "trigger",
+          typeVersion: 1,
+          position: [0, 0],
+          parameters: {},
+        },
+        {
+          id: "2",
+          name: "Set",
+          type: "set",
+          typeVersion: 1,
+          position: [200, 0],
+          parameters: { value: "hello" },
+        },
       ],
       { Start: { main: [[{ node: "Set", type: "main", index: 0 }]] } },
     );
@@ -248,8 +276,23 @@ describe("Runner", () => {
   it("skips disabled nodes", async () => {
     const workflow = makeWorkflow(
       [
-        { id: "1", name: "Start", type: "trigger", typeVersion: 1, position: [0, 0], parameters: {} },
-        { id: "2", name: "Disabled", type: "set", typeVersion: 1, position: [200, 0], parameters: {}, disabled: true },
+        {
+          id: "1",
+          name: "Start",
+          type: "trigger",
+          typeVersion: 1,
+          position: [0, 0],
+          parameters: {},
+        },
+        {
+          id: "2",
+          name: "Disabled",
+          type: "set",
+          typeVersion: 1,
+          position: [200, 0],
+          parameters: {},
+          disabled: true,
+        },
       ],
       { Start: { main: [[{ node: "Disabled", type: "main", index: 0 }]] } },
     );
@@ -268,8 +311,22 @@ describe("Runner", () => {
   it("skips nodes with no matching executor", async () => {
     const workflow = makeWorkflow(
       [
-        { id: "1", name: "Start", type: "trigger", typeVersion: 1, position: [0, 0], parameters: {} },
-        { id: "2", name: "Unknown", type: "unknown-type", typeVersion: 1, position: [200, 0], parameters: {} },
+        {
+          id: "1",
+          name: "Start",
+          type: "trigger",
+          typeVersion: 1,
+          position: [0, 0],
+          parameters: {},
+        },
+        {
+          id: "2",
+          name: "Unknown",
+          type: "unknown-type",
+          typeVersion: 1,
+          position: [200, 0],
+          parameters: {},
+        },
       ],
       { Start: { main: [[{ node: "Unknown", type: "main", index: 0 }]] } },
     );
@@ -286,8 +343,23 @@ describe("Runner", () => {
   it("handles continueOnFail", async () => {
     const workflow = makeWorkflow(
       [
-        { id: "1", name: "Start", type: "trigger", typeVersion: 1, position: [0, 0], parameters: {} },
-        { id: "2", name: "Fail", type: "failing", typeVersion: 1, position: [200, 0], parameters: {}, continueOnFail: true },
+        {
+          id: "1",
+          name: "Start",
+          type: "trigger",
+          typeVersion: 1,
+          position: [0, 0],
+          parameters: {},
+        },
+        {
+          id: "2",
+          name: "Fail",
+          type: "failing",
+          typeVersion: 1,
+          position: [200, 0],
+          parameters: {},
+          continueOnFail: true,
+        },
       ],
       { Start: { main: [[{ node: "Fail", type: "main", index: 0 }]] } },
     );
@@ -309,8 +381,23 @@ describe("Runner", () => {
   it("continues regular output on onError", async () => {
     const workflow = makeWorkflow(
       [
-        { id: "1", name: "Start", type: "trigger", typeVersion: 1, position: [0, 0], parameters: {} },
-        { id: "2", name: "Fail", type: "failing", typeVersion: 1, position: [200, 0], parameters: {}, onError: "continueRegularOutput" },
+        {
+          id: "1",
+          name: "Start",
+          type: "trigger",
+          typeVersion: 1,
+          position: [0, 0],
+          parameters: {},
+        },
+        {
+          id: "2",
+          name: "Fail",
+          type: "failing",
+          typeVersion: 1,
+          position: [200, 0],
+          parameters: {},
+          onError: "continueRegularOutput",
+        },
       ],
       { Start: { main: [[{ node: "Fail", type: "main", index: 0 }]] } },
     );
@@ -331,8 +418,25 @@ describe("Runner", () => {
   it("retries on failure", async () => {
     const workflow = makeWorkflow(
       [
-        { id: "1", name: "Start", type: "trigger", typeVersion: 1, position: [0, 0], parameters: {} },
-        { id: "2", name: "Retry", type: "flaky", typeVersion: 1, position: [200, 0], parameters: {}, retryOnFail: true, maxTries: 3, waitBetweenTries: 10 },
+        {
+          id: "1",
+          name: "Start",
+          type: "trigger",
+          typeVersion: 1,
+          position: [0, 0],
+          parameters: {},
+        },
+        {
+          id: "2",
+          name: "Retry",
+          type: "flaky",
+          typeVersion: 1,
+          position: [200, 0],
+          parameters: {},
+          retryOnFail: true,
+          maxTries: 3,
+          waitBetweenTries: 10,
+        },
       ],
       { Start: { main: [[{ node: "Retry", type: "main", index: 0 }]] } },
     );
@@ -356,8 +460,25 @@ describe("Runner", () => {
   it("fails after max retries exhausted", async () => {
     const workflow = makeWorkflow(
       [
-        { id: "1", name: "Start", type: "trigger", typeVersion: 1, position: [0, 0], parameters: {} },
-        { id: "2", name: "Retry", type: "flaky", typeVersion: 1, position: [200, 0], parameters: {}, retryOnFail: true, maxTries: 2, waitBetweenTries: 10 },
+        {
+          id: "1",
+          name: "Start",
+          type: "trigger",
+          typeVersion: 1,
+          position: [0, 0],
+          parameters: {},
+        },
+        {
+          id: "2",
+          name: "Retry",
+          type: "flaky",
+          typeVersion: 1,
+          position: [200, 0],
+          parameters: {},
+          retryOnFail: true,
+          maxTries: 2,
+          waitBetweenTries: 10,
+        },
       ],
       { Start: { main: [[{ node: "Retry", type: "main", index: 0 }]] } },
     );
@@ -379,15 +500,32 @@ describe("Runner", () => {
   it("uses pin data when available", async () => {
     const workflow = makeWorkflow(
       [
-        { id: "1", name: "Start", type: "trigger", typeVersion: 1, position: [0, 0], parameters: {} },
-        { id: "2", name: "Pinned", type: "noop", typeVersion: 1, position: [200, 0], parameters: {} },
+        {
+          id: "1",
+          name: "Start",
+          type: "trigger",
+          typeVersion: 1,
+          position: [0, 0],
+          parameters: {},
+        },
+        {
+          id: "2",
+          name: "Pinned",
+          type: "noop",
+          typeVersion: 1,
+          position: [200, 0],
+          parameters: {},
+        },
       ],
       { Start: { main: [[{ node: "Pinned", type: "main", index: 0 }]] } },
     );
 
     const result = await executeWorkflow({
       workflow,
-      nodeExecutors: { trigger: async () => [[{ json: {} }]], noop: async () => [[{ json: { from: "executor" } }]] },
+      nodeExecutors: {
+        trigger: async () => [[{ json: {} }]],
+        noop: async () => [[{ json: { from: "executor" } }]],
+      },
       pinData: { Pinned: [{ json: { from: "pin" } }] },
     });
 
@@ -414,6 +552,60 @@ describe("Runner", () => {
     expect(result.success).toBe(true);
   });
 
+  it("forwards reportProgress onto runData while the node is running", async () => {
+    const snapshots: Array<string | undefined> = [];
+    const workflow = makeWorkflow([
+      { id: "1", name: "A", type: "agentish", typeVersion: 1, position: [0, 0], parameters: {} },
+    ]);
+    const result = await executeWorkflow({
+      workflow,
+      nodeExecutors: {
+        agentish: async (ctx) => {
+          await ctx.reportProgress?.({
+            progress: { iteration: 0, stepCount: 1, tool: "calc" },
+            trace: { turns: [{ iteration: 0, toolCalls: [], observations: [] }] },
+          });
+          return [[{ json: { output: "ok" } }]];
+        },
+      },
+      onProgress: (rd) => {
+        snapshots.push(rd.A?.progress?.tool);
+      },
+    });
+    expect(snapshots).toContain("calc");
+    expect(result.runData.A.trace?.turns).toHaveLength(1);
+  });
+
+  it("attaches NodeExecutionError items and trace on failure", async () => {
+    const { NodeExecutionError } = await import("../agent-trace");
+    const workflow = makeWorkflow([
+      { id: "1", name: "A", type: "agentish", typeVersion: 1, position: [0, 0], parameters: {} },
+    ]);
+    const result = await executeWorkflow({
+      workflow,
+      nodeExecutors: {
+        agentish: async () => {
+          throw new NodeExecutionError("boom", {
+            items: [
+              [
+                {
+                  json: {
+                    agentTrace: { turns: [{ iteration: 0, toolCalls: [], observations: [] }] },
+                  },
+                },
+              ],
+            ],
+            trace: { turns: [{ iteration: 0, toolCalls: [], observations: [] }] },
+          });
+        },
+      },
+    });
+    expect(result.success).toBe(false);
+    expect(result.runData.A.status).toBe("error");
+    expect(result.runData.A.trace?.turns).toHaveLength(1);
+    expect(result.runData.A.items?.[0]?.[0]?.json.agentTrace).toBeDefined();
+  });
+
   it("reports failure when any node errors", async () => {
     const workflow = makeWorkflow(
       [
@@ -427,7 +619,9 @@ describe("Runner", () => {
       workflow,
       nodeExecutors: {
         trigger: async () => [[{ json: {} }]],
-        failing: async () => { throw new Error("fail"); },
+        failing: async () => {
+          throw new Error("fail");
+        },
       },
     });
 

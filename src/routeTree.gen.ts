@@ -32,6 +32,7 @@ import { Route as SettingsSecretProvidersRouteImport } from './routes/settings.s
 import { Route as SettingsTemplatesRouteImport } from './routes/settings.templates'
 import { Route as TemplatesIdRouteImport } from './routes/templates_.$id'
 import { Route as WorkflowIdRouteImport } from './routes/workflow.$id'
+import { Route as ExecutionsIdRouteImport } from './routes/executions.$id'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -148,6 +149,11 @@ const WorkflowIdRoute = WorkflowIdRouteImport.update({
   path: '/workflow/$id',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ExecutionsIdRoute = ExecutionsIdRouteImport.update({
+  id: '/executions/$id',
+  path: '/executions/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -173,6 +179,7 @@ export interface FileRoutesByFullPath {
   '/settings/templates': typeof SettingsTemplatesRoute
   '/templates/$id': typeof TemplatesIdRoute
   '/workflow/$id': typeof WorkflowIdRoute
+  '/executions/$id': typeof ExecutionsIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -198,6 +205,7 @@ export interface FileRoutesByTo {
   '/settings/templates': typeof SettingsTemplatesRoute
   '/templates/$id': typeof TemplatesIdRoute
   '/workflow/$id': typeof WorkflowIdRoute
+  '/executions/$id': typeof ExecutionsIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -224,6 +232,7 @@ export interface FileRoutesById {
   '/settings/templates': typeof SettingsTemplatesRoute
   '/templates_/$id': typeof TemplatesIdRoute
   '/workflow/$id': typeof WorkflowIdRoute
+  '/executions/$id': typeof ExecutionsIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -251,6 +260,7 @@ export interface FileRouteTypes {
     | '/settings/templates'
     | '/templates/$id'
     | '/workflow/$id'
+    | '/executions/$id'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -276,6 +286,7 @@ export interface FileRouteTypes {
     | '/settings/templates'
     | '/templates/$id'
     | '/workflow/$id'
+    | '/executions/$id'
   id:
     | '__root__'
     | '/'
@@ -301,6 +312,7 @@ export interface FileRouteTypes {
     | '/settings/templates'
     | '/templates_/$id'
     | '/workflow/$id'
+    | '/executions/$id'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -319,6 +331,7 @@ export interface RootRouteChildren {
   DocsCompatibilityRoute: typeof DocsCompatibilityRoute
   TemplatesIdRoute: typeof TemplatesIdRoute
   WorkflowIdRoute: typeof WorkflowIdRoute
+  ExecutionsIdRoute: typeof ExecutionsIdRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -484,6 +497,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof WorkflowIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/executions/$id': {
+      id: '/executions/$id'
+      path: '/executions/$id'
+      fullPath: '/executions/$id'
+      preLoaderRoute: typeof ExecutionsIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -539,6 +559,7 @@ const rootRouteChildren: RootRouteChildren = {
   DocsCompatibilityRoute: DocsCompatibilityRoute,
   TemplatesIdRoute: TemplatesIdRoute,
   WorkflowIdRoute: WorkflowIdRoute,
+  ExecutionsIdRoute: ExecutionsIdRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

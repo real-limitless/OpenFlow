@@ -40,6 +40,20 @@ describe("reportRuntimeExecution", () => {
     expect((fetchImpl.mock.calls[0]![1] as RequestInit).method).toBe("PATCH");
   });
 
+  it("POSTs status running without finishedAt", async () => {
+    const fetchImpl = vi.fn(async () => {
+      return new Response(JSON.stringify({ id: "ex-2", status: "running" }), { status: 201 });
+    });
+    await reportRuntimeExecution({
+      target: { url: "http://localhost:3000", token: "of_test", workflowId: "wf-1" },
+      result: { status: "running", runData: { Agent: { status: "running" } } },
+      fetchImpl: fetchImpl as unknown as typeof fetch,
+    });
+    const body = JSON.parse(String((fetchImpl.mock.calls[0]![1] as RequestInit).body));
+    expect(body.status).toBe("running");
+    expect(body.finishedAt).toBeUndefined();
+  });
+
   it("returns null on network failure", async () => {
     const out = await reportRuntimeExecution({
       target: { url: "http://localhost:3000", token: "of_test", workflowId: "wf-1" },

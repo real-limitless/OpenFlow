@@ -10,6 +10,7 @@ import { EditorDockHost } from "@/components/editor/dock/EditorDockHost";
 import { ExecuteTriggerButton } from "@/components/editor/ExecuteTriggerButton";
 import type { ExecutionRunData } from "@/lib/engine/types";
 import type { IWorkflow } from "@/lib/workflow/types";
+import { openExecutionStream } from "@/lib/editor/execution-stream";
 import {
   consumeOnboardingBanner,
   loadOnboardingState,
@@ -108,13 +109,15 @@ function EditorPage() {
       if (!res.ok) throw new Error("Failed to start execution");
       const { executionId } = await res.json();
       bumpHistory();
-      const sse = new EventSource(`/api/v1/executions/${executionId}/stream`);
-      eventSourceRef.current = sse;
-      sse.onmessage = (event) => {
-        const data = JSON.parse(event.data);
-        if (data.type === "complete") {
-          if (data.data) setRunData(data.data as ExecutionRunData);
-          if (data.status === "error") {
+      eventSourceRef.current?.close();
+      eventSourceRef.current = openExecutionStream(executionId, {
+        onStatus: (payload) => {
+          if (payload.runData) setRunData(payload.runData);
+          if (payload.status === "running") bumpHistory();
+        },
+        onComplete: (payload) => {
+          if (payload.data) setRunData(payload.data);
+          if (payload.status === "error") {
             toast.error("Execution failed", {
               description: "One or more nodes errored. See Execution data for details.",
             });
@@ -123,33 +126,18 @@ function EditorPage() {
           }
           setIsExecuting(false);
           bumpHistory();
-          sse.close();
-        } else if (data.type === "error") {
-          if (data.data) setRunData(data.data as ExecutionRunData);
-          toast.error("Execution failed", {
-            description: typeof data.message === "string" ? data.message : undefined,
-          });
-          setIsExecuting(false);
-          bumpHistory();
-          sse.close();
-        } else if (data.type === "timeout") {
+        },
+        onTimeout: () => {
           toast.error("Execution timed out");
           setIsExecuting(false);
           bumpHistory();
-          sse.close();
-        } else if (data.type === "status") {
-          if (data.runData && typeof data.runData === "object") {
-            setRunData(data.runData as ExecutionRunData);
-          }
-          if (data.status === "running") bumpHistory();
-        }
-      };
-      sse.onerror = () => {
-        toast.error("Execution stream failed");
-        setIsExecuting(false);
-        bumpHistory();
-        sse.close();
-      };
+        },
+        onError: (message) => {
+          toast.error("Execution failed", { description: message });
+          setIsExecuting(false);
+          bumpHistory();
+        },
+      });
     } catch (err) {
       console.error("Execute failed:", err);
       toast.error("Execution failed");
@@ -288,7 +276,25 @@ function EditorPage() {
                 init,
               )
             }
-            onSelectExecution={(rd) => setRunData(rd)}
+            onSelectExecution={(rd, meta) => {
+              setRunData(rd);
+              eventSourceRef.current?.close();
+              eventSourceRef.current = null;
+              if (meta && (meta.status === "running" || meta.status === "waiting")) {
+                eventSourceRef.current = openExecutionStream(meta.id, {
+                  onStatus: (payload) => {
+                    if (payload.runData) setRunData(payload.runData);
+                  },
+                  onComplete: (payload) => {
+                    if (payload.data) setRunData(payload.data);
+                    bumpHistory();
+                  },
+                  onError: () => {
+                    bumpHistory();
+                  },
+                });
+              }
+            }}
             dockApiRef={dockApiRef}
           />
         ) : (

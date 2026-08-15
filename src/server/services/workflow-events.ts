@@ -18,8 +18,10 @@ export type WorkflowEvent =
     };
 
 type Listener = (event: WorkflowEvent) => void;
+type ProgressListener = (runData: unknown) => void;
 
 const listeners = new Map<string, Set<Listener>>();
+const progressListeners = new Map<string, Set<ProgressListener>>();
 
 export function subscribeWorkflowEvents(workflowId: string, listener: Listener): () => void {
   let set = listeners.get(workflowId);
@@ -58,6 +60,34 @@ export function notifyExecutionStarted(
     executionId,
     mode,
   });
+}
+
+export function subscribeExecutionProgress(
+  executionId: string,
+  listener: ProgressListener,
+): () => void {
+  let set = progressListeners.get(executionId);
+  if (!set) {
+    set = new Set();
+    progressListeners.set(executionId, set);
+  }
+  set.add(listener);
+  return () => {
+    set!.delete(listener);
+    if (set!.size === 0) progressListeners.delete(executionId);
+  };
+}
+
+export function notifyExecutionProgress(executionId: string, runData?: unknown): void {
+  const set = progressListeners.get(executionId);
+  if (!set) return;
+  for (const listener of set) {
+    try {
+      listener(runData);
+    } catch (err) {
+      console.error("[workflow-events] progress listener error", err);
+    }
+  }
 }
 
 /** Notify open editors that an execution reached a terminal status. */

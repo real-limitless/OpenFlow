@@ -10,7 +10,7 @@ export type EditorDockContextValue = {
   isExecuting: boolean;
   onExecutePrevious?: (nodeName: string) => void;
   onAddNode: (type: string, init?: AddNodeInit) => void;
-  onSelectExecution: (runData: ExecutionRunData) => void;
+  onSelectExecution: (runData: ExecutionRunData, meta?: { id: string; status: string }) => void;
   /** Live dockview API after ready (for View menu / focus). */
   dockApiRef: React.MutableRefObject<DockviewApi | null>;
 };

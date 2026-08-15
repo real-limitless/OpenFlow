@@ -2,6 +2,8 @@ import { Copy } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import type { ExecutionEntry } from "./types";
+import { AgentTraceView } from "./AgentTraceView";
+import { isAgentTrace } from "@/lib/engine/agent-trace";
 
 export function ExecutionEntryDetail({ entry }: { entry: ExecutionEntry }) {
   return (
@@ -40,19 +42,51 @@ export function ExecutionEntryDetail({ entry }: { entry: ExecutionEntry }) {
           </pre>
         </div>
       )}
-      {entry.items && entry.items.length > 0 ? (
-        <pre className="max-h-48 overflow-auto rounded bg-muted p-2 font-mono text-[11px]">
-          {JSON.stringify(entry.items, null, 2)}
-        </pre>
-      ) : entry.status !== "error" ? (
-        <p className="px-1 py-2 text-[11px] text-muted-foreground">
-          {entry.status === "running"
-            ? "Node is running…"
-            : entry.status === "pending"
-              ? "Waiting to run…"
-              : "No output items"}
-        </p>
-      ) : null}
+      {(() => {
+        const firstJson = entry.items?.[0]?.[0]?.json;
+        const trace =
+          entry.trace ?? (isAgentTrace(firstJson?.agentTrace) ? firstJson.agentTrace : undefined);
+        const steps = firstJson?.intermediateSteps;
+        const hasTrace = !!trace || (Array.isArray(steps) && steps.length > 0) || !!entry.progress;
+        if (hasTrace) {
+          return (
+            <>
+              <AgentTraceView
+                trace={trace}
+                intermediateSteps={Array.isArray(steps) ? steps : undefined}
+                output={firstJson?.output}
+                progress={entry.progress}
+              />
+              <pre className="max-h-32 overflow-auto rounded bg-muted p-2 font-mono text-[11px]">
+                {JSON.stringify(
+                  entry.items ?? { progress: entry.progress, trace: entry.trace },
+                  null,
+                  2,
+                )}
+              </pre>
+            </>
+          );
+        }
+        if (entry.items && entry.items.length > 0) {
+          return (
+            <pre className="max-h-48 overflow-auto rounded bg-muted p-2 font-mono text-[11px]">
+              {JSON.stringify(entry.items, null, 2)}
+            </pre>
+          );
+        }
+        if (entry.status !== "error") {
+          return (
+            <p className="px-1 py-2 text-[11px] text-muted-foreground">
+              {entry.status === "running"
+                ? "Node is running…"
+                : entry.status === "pending"
+                  ? "Waiting to run…"
+                  : "No output items"}
+            </p>
+          );
+        }
+        return null;
+      })()}
       {(entry.startedAt || entry.finishedAt) && (
         <p className="px-1 text-[10px] text-muted-foreground">
           {entry.startedAt && `started ${new Date(entry.startedAt).toLocaleTimeString()}`}

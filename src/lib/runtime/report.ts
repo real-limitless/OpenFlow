@@ -9,7 +9,8 @@ export type RuntimeReportTarget = {
 };
 
 export type RuntimeReportResult = {
-  success: boolean;
+  success?: boolean;
+  status?: "running" | "success" | "error";
   runData: unknown;
   error?: { message: string } | string | null;
   startedAt?: string;
@@ -35,13 +36,15 @@ export async function reportRuntimeExecution(
   if (!target.url || !target.token || !target.workflowId) return null;
 
   const origin = target.url.replace(/\/+$/, "");
-  const status = result.success ? "success" : "error";
+  const status =
+    result.status ??
+    (result.success === true ? "success" : result.success === false ? "error" : "running");
   const body = {
     status,
     startedAt: result.startedAt,
-    finishedAt: result.finishedAt ?? new Date().toISOString(),
+    ...(status === "running" ? {} : { finishedAt: result.finishedAt ?? new Date().toISOString() }),
     runData: result.runData ?? {},
-    error: result.error ?? (result.success ? null : { message: "runtime run failed" }),
+    error: result.error ?? (status === "error" ? { message: "runtime run failed" } : null),
     host: target.host,
     stageId: target.stageId,
     projectId: target.projectId,

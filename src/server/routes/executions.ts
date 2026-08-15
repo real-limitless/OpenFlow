@@ -9,6 +9,7 @@ import {
   type IngestAuth,
   type IngestBody,
 } from "../services/execution-ingest";
+import { subscribeExecutionProgress } from "../services/workflow-events";
 
 function ingestAuthFrom(c: { get: (k: string) => unknown }): IngestAuth {
   return {
@@ -112,15 +113,16 @@ export default function executionsRoute(app: Hono<AppEnv>) {
     const stream = new ReadableStream({
       start(controller) {
         const encoder = new TextEncoder();
-        let pollCount = 0;
         let closed = false;
+        let inFlight = false;
         let timer: ReturnType<typeof setTimeout> | undefined;
-        const maxPolls = 600;
+        const progressSub = { off: () => {} };
 
         const close = () => {
           if (closed) return;
           closed = true;
           if (timer) clearTimeout(timer);
+          progressSub.off();
           try {
             controller.close();
           } catch {
@@ -145,15 +147,10 @@ export default function executionsRoute(app: Hono<AppEnv>) {
             close();
             return;
           }
+          if (inFlight) return;
+          inFlight = true;
 
           try {
-            pollCount++;
-            if (pollCount > maxPolls) {
-              sendEvent({ type: "timeout" });
-              close();
-              return;
-            }
-
             const execution = await prisma.execution.findFirst({
               where: {
                 id: executionId,
@@ -197,14 +194,20 @@ export default function executionsRoute(app: Hono<AppEnv>) {
               return;
             }
 
-            timer = setTimeout(poll, 250);
+            timer = setTimeout(() => void poll(), 250);
           } catch {
             sendEvent({ type: "error", message: "Polling error" });
             close();
+          } finally {
+            inFlight = false;
           }
         };
 
-        poll();
+        progressSub.off = subscribeExecutionProgress(executionId, () => {
+          if (timer) clearTimeout(timer);
+          void poll();
+        });
+        void poll();
       },
       cancel() {
         /* client disconnected */
@@ -230,6 +233,7 @@ export default function executionsRoute(app: Hono<AppEnv>) {
         id: executionId,
         workflow: { project: { members: { some: { userId } } } },
       },
+      include: { workflow: { select: { id: true, name: true } } },
     });
 
     if (!execution) {

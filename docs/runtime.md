@@ -12,6 +12,7 @@ Authenticate with a user API key (`of_…`) that has `openflow:execute`. Restric
 | --- | --- | --- |
 | `POST` | `/api/v1/workflows/:id/executions` | Create `mode: "runtime"` |
 | `PATCH` | `/api/v1/executions/:id` | Update the same row (`onProgress`) |
+| UI | `/executions/:id` | History detail (live-follows `running`) |
 
 ```json
 {
@@ -68,5 +69,7 @@ const reported = await reportRuntimeExecution({
 });
 // reported?.id → History row; null if OpenFlow was unreachable
 ```
+
+POST `{ status: "running", runData }` at start, then PATCH snapshots via `reportRuntimeExecution({ executionId, result: { status: "running", runData } })`. Terminal POST/PATCH still uses `success` / `error`.
 
 After `src/lib/runtime/create-runtime.ts` is on this branch, wire `createRuntime({ report: { url, token, workflowId } })` to this helper (POST on start / first snapshot, PATCH on later `onProgress` and finish).

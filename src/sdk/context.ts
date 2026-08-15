@@ -52,6 +52,7 @@ export function createExecutionContext(options: CreateContextOptions): Execution
     dataTables: options.dataTables,
     vars: options.vars,
     fsRoot: options.fsRoot,
+    reportProgress: options.reportProgress,
   };
 
   return ctx;

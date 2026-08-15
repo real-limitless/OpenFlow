@@ -58,7 +58,7 @@ export function DockHistoryPanel(_props: IDockviewPanelProps) {
       <ExecutionHistory
         workflowId={workflowId}
         refreshKey={historyKey}
-        onSelectExecution={(rd) => onSelectExecution(rd as ExecutionRunData)}
+        onSelectExecution={(rd, meta) => onSelectExecution(rd as ExecutionRunData, meta)}
       />
     </PanelShell>
   );

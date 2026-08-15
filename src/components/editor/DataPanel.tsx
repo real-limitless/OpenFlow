@@ -21,6 +21,7 @@ import {
   resolveIncomingItems,
   type SampleItem,
 } from "@/lib/editor/sample-data";
+import { AgentTraceBlock, extractAgentView } from "@/components/editor/execution/AgentTraceView";
 
 function readStoredLayout(): ExecutionLayoutMode {
   if (typeof window === "undefined") return "list";
@@ -70,7 +71,13 @@ export function DataPanel({ runData }: { runData?: ExecutionRunData | null }) {
     return [...keys];
   }, [inputItems]);
 
-  const defaultDetailTab = hasInput ? "input" : pinned?.length ? "table" : selectedOutput ? "output" : "table";
+  const defaultDetailTab = hasInput
+    ? "input"
+    : pinned?.length
+      ? "table"
+      : selectedOutput
+        ? "output"
+        : "table";
 
   useEffect(() => {
     if (hasRunData) {
@@ -331,9 +338,20 @@ export function DataPanel({ runData }: { runData?: ExecutionRunData | null }) {
                     value="output"
                     className="mt-0 min-h-0 flex-1 overflow-y-auto px-3 pb-3"
                   >
-                    <pre className="rounded bg-muted p-2 font-mono text-[11px]">
-                      {JSON.stringify(selectedOutput, null, 2)}
-                    </pre>
+                    {(() => {
+                      const view = extractAgentView(selectedOutput);
+                      const hasTrace =
+                        !!view.trace ||
+                        !!view.progress ||
+                        (view.intermediateSteps?.length ?? 0) > 0;
+                      return hasTrace ? (
+                        <AgentTraceBlock source={selectedOutput} />
+                      ) : (
+                        <pre className="rounded bg-muted p-2 font-mono text-[11px]">
+                          {JSON.stringify(selectedOutput, null, 2)}
+                        </pre>
+                      );
+                    })()}
                   </TabsContent>
                 )}
               </Tabs>

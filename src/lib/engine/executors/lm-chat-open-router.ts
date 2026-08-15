@@ -36,6 +36,7 @@ export interface OpenRouterCompletionResult {
   model: string;
   usage: { promptTokens: number; completionTokens: number; totalTokens: number };
   toolCalls?: OpenRouterToolCall[];
+  reasoning?: string;
 }
 
 export interface OpenRouterModelHandle {
@@ -192,6 +193,8 @@ function parseChatCompletionsResponse(body: unknown): OpenRouterCompletionResult
     choices?: Array<{
       message?: {
         content?: string | null;
+        reasoning_content?: string | null;
+        reasoning?: string | null;
         tool_calls?: Array<{
           id?: string;
           type?: string;
@@ -204,6 +207,9 @@ function parseChatCompletionsResponse(body: unknown): OpenRouterCompletionResult
   };
   const message = b.choices?.[0]?.message;
   const text = message?.content ?? "";
+  const reasoningRaw = message?.reasoning_content ?? message?.reasoning;
+  const reasoning =
+    typeof reasoningRaw === "string" && reasoningRaw.length > 0 ? reasoningRaw : undefined;
   const toolCalls: OpenRouterToolCall[] = [];
   for (const tc of message?.tool_calls ?? []) {
     const name = tc.function?.name;
@@ -223,6 +229,7 @@ function parseChatCompletionsResponse(body: unknown): OpenRouterCompletionResult
       totalTokens: b.usage?.total_tokens ?? 0,
     },
     ...(toolCalls.length > 0 ? { toolCalls } : {}),
+    ...(reasoning ? { reasoning } : {}),
   };
 }
 

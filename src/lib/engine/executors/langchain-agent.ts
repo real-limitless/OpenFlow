@@ -1,4 +1,12 @@
 import type { NodeExecutor, INodeExecutionData, ExecutionContext, IWorkflow } from "@/sdk";
+import {
+  capText,
+  capTrace,
+  NodeExecutionError,
+  PROGRESS_TEXT_CAP,
+  usageFromResult,
+  type AgentTraceTurn,
+} from "../agent-trace";
 
 interface ChatMessage {
   role: "system" | "user" | "assistant" | "tool";
@@ -282,6 +290,24 @@ function toolCallId(call: ToolCall, index: number): string {
   return `call_${call.name}_${index}`;
 }
 
+function failWithTrace(
+  message: string,
+  itemJson: Record<string, unknown>,
+  item: INodeExecutionData,
+  itemIndex: number,
+  outputItems: INodeExecutionData[],
+  turns: AgentTraceTurn[],
+): NodeExecutionError {
+  const trace = capTrace({ turns });
+  const pairedItem = item.pairedItem ?? { item: itemIndex, input: 0 };
+  return new NodeExecutionError(message, {
+    items: [
+      [...outputItems, { json: { ...itemJson, agentTrace: trace, error: message }, pairedItem }],
+    ],
+    trace,
+  });
+}
+
 export const langchainAgentExecutor: NodeExecutor = async (ctx, node) => {
   const items = ctx.getInputItems(0);
   const workflow = ctx.getWorkflow();
@@ -316,9 +342,7 @@ export const langchainAgentExecutor: NodeExecutor = async (ctx, node) => {
     subs.tools.map((t) => t.name),
   );
   if (toolHandles.length === 0) {
-    throw new Error(
-      "Tool sub-nodes connected but no valid tool handles were produced",
-    );
+    throw new Error("Tool sub-nodes connected but no valid tool handles were produced");
   }
   const toolDefs = toolHandles.map((t) => ({
     name: t.name,
@@ -372,62 +396,113 @@ export const langchainAgentExecutor: NodeExecutor = async (ctx, node) => {
       action: { tool: string; toolInput: Record<string, unknown> };
       observation: string;
     }> = [];
+    const turns: AgentTraceTurn[] = [];
+
+    const publishProgress = async (iteration: number, tool?: string, lastObservation?: string) => {
+      await ctx.reportProgress?.({
+        progress: {
+          iteration,
+          maxIterations,
+          ...(tool ? { tool } : {}),
+          stepCount: intermediateSteps.length,
+          ...(lastObservation
+            ? { lastObservation: capText(lastObservation, PROGRESS_TEXT_CAP) }
+            : {}),
+        },
+        trace: capTrace({ turns }),
+      });
+    };
 
     let finalText: string | null = null;
 
-    for (let iteration = 0; iteration < maxIterations; iteration++) {
-      const result = await invokeWithFallback(
-        primaryModel,
-        fallbackModel,
-        needsFallback,
-        messages,
-        toolDefs,
-      );
+    try {
+      for (let iteration = 0; iteration < maxIterations; iteration++) {
+        await publishProgress(iteration);
+        const result = await invokeWithFallback(
+          primaryModel,
+          fallbackModel,
+          needsFallback,
+          messages,
+          toolDefs,
+        );
 
-      const toolCalls = Array.isArray(result.toolCalls) ? result.toolCalls : [];
-      if (toolCalls.length > 0) {
-        messages.push({
-          role: "assistant",
-          content: result.text ?? "",
-          tool_calls: toolCalls.map((call, i) => ({
-            id: toolCallId(call, i),
-            type: "function" as const,
-            function: {
-              name: call.name,
-              arguments: JSON.stringify(call.args ?? {}),
-            },
+        const toolCalls = Array.isArray(result.toolCalls) ? result.toolCalls : [];
+        const usage = usageFromResult(result);
+        const reasoning = typeof result.reasoning === "string" ? result.reasoning : undefined;
+        const turn: AgentTraceTurn = {
+          iteration,
+          ...(result.text ? { assistantText: String(result.text) } : {}),
+          ...(reasoning ? { reasoning } : {}),
+          toolCalls: toolCalls.map((call) => ({
+            id: call.id,
+            name: call.name,
+            args: call.args ?? {},
           })),
-        });
-        for (let i = 0; i < toolCalls.length; i++) {
-          const call = toolCalls[i];
-          const tool = toolHandles.find((t) => t.name === call.name);
-          if (!tool) {
-            throw new Error(`Tool not found: ${call.name}`);
-          }
-          let observation = "";
-          if (typeof tool.invoke === "function") {
-            const obs = await tool.invoke(call.args ?? {});
-            observation = observationFromToolResult(obs);
-          }
-          messages.push({
-            role: "tool",
-            content: observation,
-            tool_call_id: toolCallId(call, i),
-          });
-          intermediateSteps.push({
-            action: { tool: call.name, toolInput: call.args ?? {} },
-            observation,
-          });
-        }
-        continue;
-      }
+          observations: [],
+          ...(usage ? { usage } : {}),
+        };
+        turns.push(turn);
 
-      finalText = result.text ?? "";
-      break;
+        if (toolCalls.length > 0) {
+          messages.push({
+            role: "assistant",
+            content: result.text ?? "",
+            tool_calls: toolCalls.map((call, i) => ({
+              id: toolCallId(call, i),
+              type: "function" as const,
+              function: {
+                name: call.name,
+                arguments: JSON.stringify(call.args ?? {}),
+              },
+            })),
+          });
+          for (let i = 0; i < toolCalls.length; i++) {
+            const call = toolCalls[i];
+            const tool = toolHandles.find((t) => t.name === call.name);
+            let observation = "";
+            if (!tool) {
+              observation = `Tool not found: ${call.name}. Available: ${toolHandles.map((t) => t.name).join(", ") || "(none)"}`;
+            } else if (typeof tool.invoke === "function") {
+              try {
+                observation = observationFromToolResult(await tool.invoke(call.args ?? {}));
+              } catch (err) {
+                observation = err instanceof Error ? err.message : String(err);
+              }
+            }
+            messages.push({
+              role: "tool",
+              content: observation,
+              tool_call_id: toolCallId(call, i),
+            });
+            intermediateSteps.push({
+              action: { tool: call.name, toolInput: call.args ?? {} },
+              observation,
+            });
+            turn.observations.push({ tool: call.name, content: observation });
+            await publishProgress(iteration, call.name, observation);
+          }
+          continue;
+        }
+
+        finalText = result.text ?? "";
+        await publishProgress(iteration);
+        break;
+      }
+    } catch (err) {
+      if (err instanceof NodeExecutionError) throw err;
+      const message = err instanceof Error ? err.message : String(err);
+      throw failWithTrace(message, itemJson, item, itemIndex, outputItems, turns);
     }
 
     if (finalText === null) {
-      throw new Error(`Agent did not produce a final answer within ${maxIterations} iterations`);
+      throw failWithTrace(
+        `Agent did not produce a final answer within ${maxIterations} iterations`,
+        itemJson,
+        item,
+        itemIndex,
+        outputItems,
+        turns,
+      );
     }
 
     if (memoryHandle) {
@@ -450,6 +525,7 @@ export const langchainAgentExecutor: NodeExecutor = async (ctx, node) => {
     const json: Record<string, unknown> = {
       ...itemJson,
       output,
+      agentTrace: capTrace({ turns }),
     };
     if (returnIntermediateSteps) {
       json.intermediateSteps = intermediateSteps;

@@ -78,6 +78,21 @@ export interface ExecutionContext {
 
   /** Jail root for filesystem / git tools (harness hosts). */
   fsRoot?: string;
+
+  /**
+   * Mid-node progress (Agent turns / current tool). JSON-safe only.
+   * The runner persists this onto `runData[node]` while status is `running`.
+   */
+  reportProgress?(update: {
+    progress?: {
+      iteration: number;
+      maxIterations?: number;
+      tool?: string;
+      stepCount: number;
+      lastObservation?: string;
+    };
+    trace?: { turns: Array<Record<string, unknown>> };
+  }): void | Promise<void>;
 }
 
 /**
@@ -112,4 +127,5 @@ export interface CreateContextOptions {
   /** Custom variables for `$vars` in expressions. */
   vars?: Record<string, unknown>;
   fsRoot?: string;
+  reportProgress?: ExecutionContext["reportProgress"];
 }

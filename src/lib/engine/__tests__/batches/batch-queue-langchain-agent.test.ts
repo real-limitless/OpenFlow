@@ -277,6 +277,9 @@ describe("batch-queue langchainAgent — @n8n/n8n-nodes-langchain.agent", () => 
 
     expect(out[0][0].json.output).toBeDefined();
     expect(out[0][0].json.intermediateSteps).toBeUndefined();
+    expect(out[0][0].json.agentTrace).toMatchObject({
+      turns: [{ iteration: 0, toolCalls: [], observations: [] }],
+    });
   });
 
   it("fallback model wiring: uses fallback when primary fails", async () => {
@@ -399,6 +402,16 @@ describe("batch-queue langchainAgent — @n8n/n8n-nodes-langchain.agent", () => 
         observation: "4",
       },
     ]);
+    expect(out[0][0].json.agentTrace).toMatchObject({
+      turns: [
+        {
+          iteration: 0,
+          toolCalls: [{ name: "calc", args: { expr: "2+2" } }],
+          observations: [{ tool: "calc", content: "4" }],
+        },
+        { iteration: 1, assistantText: "4", toolCalls: [], observations: [] },
+      ],
+    });
     expect(callCount).toBe(2);
   });
 
@@ -669,18 +682,14 @@ describe("batch-queue langchainAgent — @n8n/n8n-nodes-langchain.agent", () => 
   it("throws when tool connections produce no valid handles", async () => {
     const modelHandle = makeModelHandle();
     await expect(
-      runAgent(
-        { promptType: "define", text: "Hi", options: {} },
-        [{}],
-        {
-          modelHandle,
-          connections: makeClusterConnections("Agent", { toolNames: ["Broken"] }),
-          subNodeOutputs: {
-            Model: [{ json: modelHandle as unknown as Record<string, unknown> }],
-            Broken: [{ json: { type: "not-a-tool" } }],
-          },
+      runAgent({ promptType: "define", text: "Hi", options: {} }, [{}], {
+        modelHandle,
+        connections: makeClusterConnections("Agent", { toolNames: ["Broken"] }),
+        subNodeOutputs: {
+          Model: [{ json: modelHandle as unknown as Record<string, unknown> }],
+          Broken: [{ json: { type: "not-a-tool" } }],
         },
-      ),
+      }),
     ).rejects.toThrow(/no valid tool handles/i);
   });
 

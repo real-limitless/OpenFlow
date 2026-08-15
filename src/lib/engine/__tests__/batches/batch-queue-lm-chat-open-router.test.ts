@@ -235,6 +235,7 @@ describe("batch-queue lmChatOpenRouter — @n8n/n8n-nodes-langchain.lmChatOpenRo
     expect(result.toolCalls).toEqual([
       { id: "call_1", name: "read_file", args: { path: "README.md" } },
     ]);
+    expect(result.reasoning).toBeUndefined();
     expect(captured[0].body).toMatchObject({
       tool_choice: "auto",
       tools: [
@@ -299,6 +300,35 @@ describe("batch-queue lmChatOpenRouter — @n8n/n8n-nodes-langchain.lmChatOpenRo
       content: "# OpenFlow",
       tool_call_id: "call_1",
     });
+  });
+
+  it("parses reasoning_content onto the handle result", async () => {
+    setOpenRouterHttpClient(async () => ({
+      status: 200,
+      headers: {},
+      body: {
+        choices: [
+          {
+            message: {
+              content: "The capital is Paris.",
+              reasoning_content: "User asked for the capital of France.",
+            },
+          },
+        ],
+        model: "nvidia/nemotron",
+        usage: { prompt_tokens: 8, completion_tokens: 4, total_tokens: 12 },
+      },
+    }));
+
+    const handle = getHandle(
+      await runModel({
+        model: { __rl: true, mode: "list", value: "nvidia/nemotron" },
+        options: {},
+      }),
+    );
+    const result = await handle.invoke([{ role: "user", content: "capital of France?" }]);
+    expect(result.text).toBe("The capital is Paris.");
+    expect(result.reasoning).toBe("User asked for the capital of France.");
   });
 
   it("maps responseFormat json to response_format json_object", async () => {

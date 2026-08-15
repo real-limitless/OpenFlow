@@ -1,5 +1,7 @@
 import type { IWorkflow, INodeExecutionData } from "../workflow/types";
 import type { ExecutionPlan, ExecutionRunData, NodeExecutor } from "./types";
+import { NodeExecutionError } from "./agent-trace";
+import type { AgentTrace } from "./agent-trace";
 import type { CredentialResolver } from "./credentials";
 import type { DataTableAccess } from "@/lib/data-tables/access";
 import {
@@ -68,7 +70,7 @@ export interface RunOptions {
   nodeExecutors: Record<string, NodeExecutor>;
   pinData?: Record<string, INodeExecutionData[]>;
   credentialResolver?: CredentialResolver;
-  /** Called when node status changes (pending → running → success/error). */
+  /** Called when node status changes or a node reports mid-run progress. */
   onProgress?: (runData: ExecutionRunData) => void | Promise<void>;
   /**
    * Nested workflows available to Execute Workflow, keyed by id and/or name.
@@ -384,6 +386,13 @@ export async function executeWorkflow(options: RunOptions): Promise<RunResult> {
           dataTables: options.dataTables,
           vars: options.vars,
           fsRoot: options.fsRoot,
+          reportProgress: async (update) => {
+            const entry = runData[nodeName];
+            if (!entry || entry.status !== "running") return;
+            if (update.progress) entry.progress = update.progress;
+            if (update.trace) entry.trace = update.trace as AgentTrace;
+            await emitProgress();
+          },
         });
 
         outputs = await executor(ctx, resolvedNode);
@@ -398,12 +407,19 @@ export async function executeWorkflow(options: RunOptions): Promise<RunResult> {
     }
 
     if (lastError) {
+      if (lastError instanceof NodeExecutionError) {
+        if (lastError.trace) runData[nodeName].trace = lastError.trace;
+        if (lastError.items) runData[nodeName].items = lastError.items;
+      }
       if (nodeContinueOnFail || node.onError === "continueErrorOutput") {
         runData[nodeName].status = "error";
         runData[nodeName].error = lastError.message;
         // continueOnFail / continueRegularOutput: still emit items on main so
         // downstream nodes run (n8n passes prior input through on failure).
-        if (nodeContinueOnFail || node.alwaysOutputData) {
+        if (lastError instanceof NodeExecutionError && lastError.items) {
+          outputs = lastError.items;
+          nodeOutputs.set(nodeName, outputs);
+        } else if (nodeContinueOnFail || node.alwaysOutputData) {
           const inputItems = lookupInputItems(nodeName, 0);
           outputs = inputItems.length > 0 ? [inputItems] : [[{ json: {} }]];
           nodeOutputs.set(nodeName, outputs);

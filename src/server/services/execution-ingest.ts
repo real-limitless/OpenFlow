@@ -3,7 +3,11 @@ import { redactRunData } from "../../lib/engine/redact-run-data";
 import { hasScope } from "../oauth/scopes";
 import { assertAgentWorkflowAccess, type WorkflowPolicy } from "./agent-policy";
 import { loadWorkflowIfAllowed } from "./workflow-access";
-import { notifyExecutionFinished, notifyExecutionStarted } from "./workflow-events";
+import {
+  notifyExecutionFinished,
+  notifyExecutionProgress,
+  notifyExecutionStarted,
+} from "./workflow-events";
 
 export const MAX_RUN_DATA_BYTES = 2 * 1024 * 1024;
 
@@ -144,6 +148,8 @@ export async function createRuntimeExecution(workflowId: string, body: IngestBod
   notifyExecutionStarted(workflowId, row.id, "runtime");
   if (parsed.status === "success" || parsed.status === "error") {
     notifyExecutionFinished(workflowId, row.id, parsed.status, "runtime");
+  } else {
+    notifyExecutionProgress(row.id, body.runData ?? {});
   }
   return { ok: true as const, row };
 }
@@ -180,6 +186,8 @@ export async function updateRuntimeExecution(
   });
   if (parsed.status === "success" || parsed.status === "error") {
     notifyExecutionFinished(row.workflowId, row.id, parsed.status, "runtime");
+  } else {
+    notifyExecutionProgress(row.id, body.runData ?? {});
   }
   return { ok: true as const, row };
 }

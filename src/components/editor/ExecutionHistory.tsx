@@ -26,7 +26,10 @@ function modeLabel(mode: string): string {
 interface ExecutionHistoryProps {
   workflowId: string;
   refreshKey?: number;
-  onSelectExecution: (runData: Record<string, unknown>) => void;
+  onSelectExecution: (
+    runData: Record<string, unknown>,
+    meta?: { id: string; status: string },
+  ) => void;
 }
 
 export function ExecutionHistory({
@@ -115,16 +118,16 @@ export function ExecutionHistory({
         runData = exec.runData as Record<string, unknown>;
       }
 
-      if (Object.keys(runData).length === 0) {
-        if (exec.status === "running") {
-          toast.message("Execution still running");
-        } else {
-          toast.message("No run data for this execution");
-        }
+      if (
+        Object.keys(runData).length === 0 &&
+        exec.status !== "running" &&
+        exec.status !== "waiting"
+      ) {
+        toast.message("No run data for this execution");
         return;
       }
 
-      onSelectExecution(runData);
+      onSelectExecution(runData, { id: execId, status: String(exec.status ?? "") });
     } catch (err) {
       console.error("Failed to load execution", err);
       toast.error("Could not load execution");
