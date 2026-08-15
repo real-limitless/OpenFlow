@@ -13,6 +13,16 @@ interface Execution {
   finishedAt: string | null;
 }
 
+type ModeFilter = "all" | "manual" | "runtime";
+
+function modeLabel(mode: string): string {
+  if (mode === "runtime") return "Runtime";
+  if (mode === "manual") return "Manual";
+  if (mode === "webhook") return "Webhook";
+  if (mode === "trigger") return "Trigger";
+  return mode;
+}
+
 interface ExecutionHistoryProps {
   workflowId: string;
   refreshKey?: number;
@@ -28,27 +38,31 @@ export function ExecutionHistory({
   const [loading, setLoading] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [loadingId, setLoadingId] = useState<string | null>(null);
+  const [modeFilter, setModeFilter] = useState<ModeFilter>("all");
 
-  const fetchHistory = useCallback(async (opts?: { silent?: boolean }) => {
-    const silent = opts?.silent === true;
-    if (!silent) setLoading(true);
-    try {
-      const res = await fetch(`/api/v1/workflows/${workflowId}/executions`);
-      if (!res.ok) {
-        if (res.status !== 404) {
-          console.error("Failed to load executions", res.status);
+  const fetchHistory = useCallback(
+    async (opts?: { silent?: boolean }) => {
+      const silent = opts?.silent === true;
+      if (!silent) setLoading(true);
+      try {
+        const res = await fetch(`/api/v1/workflows/${workflowId}/executions`);
+        if (!res.ok) {
+          if (res.status !== 404) {
+            console.error("Failed to load executions", res.status);
+          }
+          setExecutions([]);
+          return;
         }
-        setExecutions([]);
-        return;
+        const data = (await res.json()) as Execution[];
+        setExecutions(Array.isArray(data) ? data : []);
+      } catch (err) {
+        console.error("Failed to load executions", err);
+      } finally {
+        if (!silent) setLoading(false);
       }
-      const data = (await res.json()) as Execution[];
-      setExecutions(Array.isArray(data) ? data : []);
-    } catch (err) {
-      console.error("Failed to load executions", err);
-    } finally {
-      if (!silent) setLoading(false);
-    }
-  }, [workflowId]);
+    },
+    [workflowId],
+  );
 
   useEffect(() => {
     void fetchHistory();
@@ -129,6 +143,11 @@ export function ExecutionHistory({
     return d.toLocaleDateString();
   };
 
+  const visible = executions.filter((e) => {
+    if (modeFilter === "all") return true;
+    return e.mode === modeFilter;
+  });
+
   const formatDuration = (start: string, end: string | null) => {
     if (!end) return "—";
     const ms = new Date(end).getTime() - new Date(start).getTime();
@@ -151,14 +170,31 @@ export function ExecutionHistory({
           <RefreshCw className={cn("size-3", loading && "animate-spin")} />
         </Button>
       </div>
+      <div className="flex shrink-0 gap-1 border-b border-border px-2 py-1.5">
+        {(["all", "manual", "runtime"] as const).map((f) => (
+          <button
+            key={f}
+            type="button"
+            onClick={() => setModeFilter(f)}
+            className={cn(
+              "rounded px-1.5 py-0.5 text-[10px] uppercase tracking-wide",
+              modeFilter === f
+                ? "bg-accent text-foreground"
+                : "text-muted-foreground hover:text-foreground",
+            )}
+          >
+            {f === "all" ? "All" : f === "runtime" ? "Runtime" : "Manual"}
+          </button>
+        ))}
+      </div>
       <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
         <div className="space-y-1 p-2">
-          {executions.length === 0 && (
+          {visible.length === 0 && (
             <div className="p-4 text-center text-xs text-muted-foreground">
               {loading ? "Loading…" : "No executions yet"}
             </div>
           )}
-          {executions.map((exec) => (
+          {visible.map((exec) => (
             <button
               key={exec.id}
               type="button"
@@ -185,7 +221,7 @@ export function ExecutionHistory({
               >
                 {exec.status}
               </Badge>
-              <span className="shrink-0 text-muted-foreground">{exec.mode}</span>
+              <span className="shrink-0 text-muted-foreground">{modeLabel(exec.mode)}</span>
               <span className="ml-auto truncate text-muted-foreground">
                 {formatTime(exec.startedAt)}
               </span>

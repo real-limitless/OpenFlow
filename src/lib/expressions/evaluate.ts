@@ -18,7 +18,11 @@ export interface ExpressionContext {
   /** When set, only these env var names are exposed to expressions. */
   envAllowlist?: string[];
   /** Execution metadata; defaults to a preview placeholder when omitted. */
-  execution?: { id: string; mode: "manual" | "webhook" | "trigger"; resumeUrl?: string };
+  execution?: {
+    id: string;
+    mode: "manual" | "webhook" | "trigger" | "runtime";
+    resumeUrl?: string;
+  };
 }
 
 export interface EvalResult {
@@ -221,7 +225,7 @@ export const EXPRESSION_HELPERS: Array<{ label: string; detail: string }> = [
   { label: "$now.plus(1, 'day')", detail: "Shift the current timestamp" },
   { label: "$today", detail: "Today at midnight" },
   { label: "$execution.id", detail: "Current execution id" },
-  { label: "$execution.mode", detail: "Execution mode: manual | webhook | trigger" },
+  { label: "$execution.mode", detail: "Execution mode: manual | webhook | trigger | runtime" },
   { label: "$execution.resumeUrl", detail: "Webhook resume URL (Wait node)" },
   { label: "$workflow.id", detail: "Current workflow id" },
   { label: "$vars", detail: "Instance variables" },

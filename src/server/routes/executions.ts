@@ -1,8 +1,77 @@
 import type { Hono } from "hono";
 import { prisma } from "../db";
 import type { AppEnv } from "../middleware/auth";
+import {
+  authorizeIngestWorkflow,
+  createRuntimeExecution,
+  requireIngestAuth,
+  updateRuntimeExecution,
+  type IngestAuth,
+  type IngestBody,
+} from "../services/execution-ingest";
+
+function ingestAuthFrom(c: { get: (k: string) => unknown }): IngestAuth {
+  return {
+    userId: c.get("userId") as string | undefined,
+    authKind: c.get("authKind") as string | undefined,
+    scopes: c.get("scopes") as string[] | undefined,
+    workflowPolicy: c.get("workflowPolicy") as IngestAuth["workflowPolicy"],
+  };
+}
 
 export default function executionsRoute(app: Hono<AppEnv>) {
+  app.post("/api/v1/workflows/:id/executions", async (c) => {
+    const { id } = c.req.param();
+    const auth = ingestAuthFrom(c);
+    const denied = await authorizeIngestWorkflow(id, auth);
+    if (denied) return c.json({ error: denied.error }, denied.status);
+    let body: IngestBody;
+    try {
+      body = (await c.req.json()) as IngestBody;
+    } catch {
+      return c.json({ error: "Invalid JSON body" }, 400);
+    }
+    const result = await createRuntimeExecution(id, body);
+    if (!result.ok) return c.json({ error: result.failure.error }, result.failure.status);
+    return c.json(
+      {
+        id: result.row.id,
+        workflowId: result.row.workflowId,
+        status: result.row.status,
+        mode: result.row.mode,
+      },
+      201,
+    );
+  });
+
+  app.patch("/api/v1/executions/:id", async (c) => {
+    const auth = ingestAuthFrom(c);
+    const denied = requireIngestAuth(auth);
+    if (denied) return c.json({ error: denied.error }, denied.status);
+    const executionId = c.req.param("id");
+    let body: IngestBody;
+    try {
+      body = (await c.req.json()) as IngestBody;
+    } catch {
+      return c.json({ error: "Invalid JSON body" }, 400);
+    }
+    const existing = await prisma.execution.findFirst({
+      where: { id: executionId, mode: "runtime" },
+      select: { workflowId: true },
+    });
+    if (!existing) return c.json({ error: "Execution not found" }, 404);
+    const wfDenied = await authorizeIngestWorkflow(existing.workflowId, auth);
+    if (wfDenied) return c.json({ error: wfDenied.error }, wfDenied.status);
+    const result = await updateRuntimeExecution(executionId, auth.userId!, body);
+    if (!result.ok) return c.json({ error: result.failure.error }, result.failure.status);
+    return c.json({
+      id: result.row.id,
+      workflowId: result.row.workflowId,
+      status: result.row.status,
+      mode: result.row.mode,
+    });
+  });
+
   app.get("/api/v1/executions", async (c) => {
     const userId = c.get("userId");
     const page = parseInt(c.req.query("page") ?? "1");
