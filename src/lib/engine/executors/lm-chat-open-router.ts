@@ -1,10 +1,21 @@
 import type { NodeExecutor, INodeExecutionData, ExecutionContext } from "@/sdk";
 import { requireCredential } from "@/sdk";
 import { sdkHttpRequest, type SdkHttpRequestOptions, type SdkHttpResponse } from "@/sdk";
+import { STREAM_FIRST_CHUNK_MS, STREAM_GAP_MS } from "../llm-silence";
+import {
+  consumeOpenRouterSse,
+  isStreamRejected,
+  iterateByteStream,
+  iterateSseText,
+  looksLikeChatCompletion,
+  looksLikeSse,
+  OpenRouterStreamSilentError,
+  type OpenRouterStreamDelta,
+} from "./openrouter-sse";
 
 const DEFAULT_BASE_URL = "https://openrouter.ai/api/v1";
-const DEFAULT_TIMEOUT = 120000;
-const DEFAULT_MAX_RETRIES = 2;
+const DEFAULT_TIMEOUT = 900000;
+const DEFAULT_MAX_RETRIES = 4;
 
 export interface OpenRouterChatMessage {
   role: "system" | "user" | "assistant" | "tool";
@@ -39,6 +50,10 @@ export interface OpenRouterCompletionResult {
   reasoning?: string;
 }
 
+export type OpenRouterInvokeOptions = {
+  onDelta?: (delta: OpenRouterStreamDelta) => void;
+};
+
 export interface OpenRouterModelHandle {
   type: "@n8n/n8n-nodes-langchain.lmChatOpenRouter";
   model: string;
@@ -47,6 +62,7 @@ export interface OpenRouterModelHandle {
   invoke(
     messages: OpenRouterChatMessage[],
     tools?: OpenRouterAgentToolDef[] | unknown[],
+    opts?: OpenRouterInvokeOptions,
   ): Promise<OpenRouterCompletionResult>;
 }
 
@@ -257,6 +273,102 @@ function isRetryable(status: number): boolean {
   return status === 429 || status >= 500;
 }
 
+function streamEnabled(options: Record<string, unknown>): boolean {
+  return options.stream !== false;
+}
+
+function streamTimeouts(options: Record<string, unknown>): {
+  firstChunkMs: number;
+  gapMs: number;
+} {
+  return {
+    firstChunkMs:
+      typeof options.streamFirstChunkMs === "number" && options.streamFirstChunkMs > 0
+        ? options.streamFirstChunkMs
+        : STREAM_FIRST_CHUNK_MS,
+    gapMs:
+      typeof options.streamGapMs === "number" && options.streamGapMs > 0
+        ? options.streamGapMs
+        : STREAM_GAP_MS,
+  };
+}
+
+async function postJson(
+  url: string,
+  headers: Record<string, string>,
+  body: Record<string, unknown>,
+  timeoutMs: number,
+): Promise<SdkHttpResponse> {
+  const http = httpOverride ?? sdkHttpRequest;
+  return http({ method: "POST", url, headers, body, timeoutMs });
+}
+
+async function invokeViaNativeStream(
+  url: string,
+  headers: Record<string, string>,
+  body: Record<string, unknown>,
+  timeoutMs: number,
+  onDelta: OpenRouterInvokeOptions["onDelta"],
+  firstChunkMs: number,
+  gapMs: number,
+): Promise<
+  | { ok: true; result: OpenRouterCompletionResult }
+  | { ok: false; status: number; body: unknown; retryNonStream: boolean }
+> {
+  const controller = new AbortController();
+  const hardTimer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const res = await fetch(url, {
+      method: "POST",
+      headers: { ...headers, accept: "text/event-stream, application/json" },
+      body: JSON.stringify({
+        ...body,
+        stream: true,
+        stream_options: { include_usage: true },
+      }),
+      signal: controller.signal,
+    });
+    const ct = res.headers.get("content-type") ?? "";
+    if (!res.ok) {
+      const text = await res.text();
+      let parsed: unknown = text;
+      try {
+        parsed = text ? JSON.parse(text) : null;
+      } catch {
+        /* keep text */
+      }
+      return {
+        ok: false,
+        status: res.status,
+        body: parsed,
+        retryNonStream: isStreamRejected(res.status, parsed),
+      };
+    }
+    if (ct.includes("application/json") && !ct.includes("event-stream")) {
+      const json = await res.json();
+      if (looksLikeChatCompletion(json)) {
+        return { ok: true, result: parseChatCompletionsResponse(json) };
+      }
+      return { ok: false, status: res.status, body: json, retryNonStream: true };
+    }
+    if (!res.body) {
+      return { ok: false, status: res.status, body: "empty body", retryNonStream: true };
+    }
+    const result = await consumeOpenRouterSse(iterateByteStream(res.body.getReader()), {
+      firstChunkMs,
+      gapMs,
+      onDelta,
+    });
+    return { ok: true, result };
+  } catch (err) {
+    if (err instanceof OpenRouterStreamSilentError) throw err;
+    const message = err instanceof Error ? err.message : String(err);
+    throw new Error(`OpenRouter request failed: ${message}`);
+  } finally {
+    clearTimeout(hardTimer);
+  }
+}
+
 async function invokeModel(
   handle: {
     model: string;
@@ -266,12 +378,11 @@ async function invokeModel(
   },
   messages: OpenRouterChatMessage[],
   tools?: unknown[],
+  invokeOpts?: OpenRouterInvokeOptions,
 ): Promise<OpenRouterCompletionResult> {
-  const http = httpOverride ?? sdkHttpRequest;
   const timeout = (handle.options.timeout as number) ?? DEFAULT_TIMEOUT;
   const maxRetries = (handle.options.maxRetries as number) ?? DEFAULT_MAX_RETRIES;
   const headers = buildHeaders(handle.apiKey);
-
   const url = `${handle.baseUrl}/chat/completions`;
   const body = buildChatCompletionsBody(
     handle.model,
@@ -279,33 +390,111 @@ async function invokeModel(
     handle.options,
     normalizeAgentToolDefs(tools),
   );
+  const wantStream = streamEnabled(handle.options);
+  const { firstChunkMs, gapMs } = streamTimeouts(handle.options);
 
   let lastError: Error | null = null;
+  let triedNonStream = !wantStream;
 
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
-    let res: SdkHttpResponse;
     try {
-      res = await http({ method: "POST", url, headers, body, timeoutMs: timeout });
+      if (wantStream && httpOverride) {
+        const res = await postJson(
+          url,
+          headers,
+          { ...body, stream: true, stream_options: { include_usage: true } },
+          timeout,
+        );
+        if (res.status >= 200 && res.status < 300) {
+          if (looksLikeChatCompletion(res.body)) {
+            return parseChatCompletionsResponse(res.body);
+          }
+          if (looksLikeSse(res.body)) {
+            return await consumeOpenRouterSse(iterateSseText(res.body), {
+              firstChunkMs,
+              gapMs,
+              onDelta: invokeOpts?.onDelta,
+            });
+          }
+        }
+        if (isStreamRejected(res.status, res.body) && !triedNonStream) {
+          triedNonStream = true;
+          const fallback = await postJson(url, headers, body, timeout);
+          if (fallback.status >= 200 && fallback.status < 300) {
+            return parseChatCompletionsResponse(fallback.body);
+          }
+          lastError = classifyError(fallback.status, fallback.body);
+          if (isRetryable(fallback.status) && attempt < maxRetries) {
+            await sleep(backoffMs(attempt));
+            continue;
+          }
+          throw lastError;
+        }
+        lastError = classifyError(res.status, res.body);
+        if (isRetryable(res.status) && attempt < maxRetries) {
+          await sleep(backoffMs(attempt));
+          continue;
+        }
+        throw lastError;
+      }
+
+      if (wantStream && !httpOverride) {
+        const streamed = await invokeViaNativeStream(
+          url,
+          headers,
+          body,
+          timeout,
+          invokeOpts?.onDelta,
+          firstChunkMs,
+          gapMs,
+        );
+        if (streamed.ok) return streamed.result;
+        if (streamed.retryNonStream && !triedNonStream) {
+          triedNonStream = true;
+          const fallback = await postJson(url, headers, body, timeout);
+          if (fallback.status >= 200 && fallback.status < 300) {
+            return parseChatCompletionsResponse(fallback.body);
+          }
+          lastError = classifyError(fallback.status, fallback.body);
+          if (isRetryable(fallback.status) && attempt < maxRetries) {
+            await sleep(backoffMs(attempt));
+            continue;
+          }
+          throw lastError;
+        }
+        lastError = classifyError(streamed.status, streamed.body);
+        if (isRetryable(streamed.status) && attempt < maxRetries) {
+          await sleep(backoffMs(attempt));
+          continue;
+        }
+        throw lastError;
+      }
+
+      const res = await postJson(url, headers, body, timeout);
+      if (res.status >= 200 && res.status < 300) {
+        return parseChatCompletionsResponse(res.body);
+      }
+      lastError = classifyError(res.status, res.body);
+      if (isRetryable(res.status) && attempt < maxRetries) {
+        await sleep(backoffMs(attempt));
+        continue;
+      }
+      throw lastError;
     } catch (err) {
+      if (err instanceof OpenRouterStreamSilentError) throw err;
       lastError = err instanceof Error ? err : new Error(String(err));
+      if (lastError.message.startsWith("OpenRouter API error")) throw lastError;
+      if (lastError.message.startsWith("OpenRouter rate limit")) throw lastError;
+      if (lastError.message.startsWith("OpenRouter insufficient")) throw lastError;
+      if (lastError.message.startsWith("OpenRouter authentication")) throw lastError;
       if (attempt < maxRetries) {
         await sleep(backoffMs(attempt));
         continue;
       }
-      throw new Error(`OpenRouter request failed: ${lastError.message}`);
+      throw lastError.message.startsWith("OpenRouter request failed")
+        ? lastError
+        : new Error(`OpenRouter request failed: ${lastError.message}`);
     }
-
-    if (res.status >= 200 && res.status < 300) {
-      return parseChatCompletionsResponse(res.body);
-    }
-
-    lastError = classifyError(res.status, res.body);
-
-    if (isRetryable(res.status) && attempt < maxRetries) {
-      await sleep(backoffMs(attempt));
-      continue;
-    }
-    throw lastError;
   }
 
   throw lastError ?? new Error("OpenRouter request failed after retries");
@@ -338,8 +527,9 @@ export const lmChatOpenRouterExecutor: NodeExecutor = async (ctx) => {
     invoke(
       messages: OpenRouterChatMessage[],
       tools?: OpenRouterAgentToolDef[] | unknown[],
+      opts?: OpenRouterInvokeOptions,
     ): Promise<OpenRouterCompletionResult> {
-      return invokeModel({ model, options, baseUrl, apiKey }, messages, tools);
+      return invokeModel({ model, options, baseUrl, apiKey }, messages, tools, opts);
     },
   };
 

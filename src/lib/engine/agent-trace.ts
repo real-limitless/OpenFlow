@@ -1,9 +1,16 @@
 import type { INodeExecutionData } from "../workflow/types";
 
+export type AgentSpanStatus = "running" | "success" | "error";
+export type AgentTurnPhase = "llm" | "tools" | "final";
+
 export type AgentTraceToolCall = {
   id?: string;
   name: string;
   args: Record<string, unknown>;
+  startedAt?: string;
+  finishedAt?: string;
+  durationMs?: number;
+  status?: AgentSpanStatus;
 };
 
 export type AgentTraceObservation = {
@@ -18,6 +25,14 @@ export type AgentTraceTurn = {
   toolCalls: AgentTraceToolCall[];
   observations: AgentTraceObservation[];
   usage?: { promptTokens: number; completionTokens: number; totalTokens?: number };
+  startedAt?: string;
+  llmFinishedAt?: string;
+  finishedAt?: string;
+  durationMs?: number;
+  status?: AgentSpanStatus;
+  phase?: AgentTurnPhase;
+  streaming?: boolean;
+  lastTokenAt?: string;
 };
 
 export type AgentTrace = {
@@ -30,7 +45,59 @@ export type ExecutionNodeProgress = {
   tool?: string;
   stepCount: number;
   lastObservation?: string;
+  phase?: AgentTurnPhase | "tool";
+  updatedAt?: string;
+  streaming?: boolean;
+  lastTokenAt?: string;
+  chars?: number;
 };
+
+export const DELTA_THROTTLE_MS = 300;
+export const DELTA_THROTTLE_CHARS = 80;
+
+export function createDeltaThrottle(
+  flush: () => void | Promise<void>,
+  opts?: { ms?: number; chars?: number },
+): { push: (totalChars: number) => void; flush: () => Promise<void> } {
+  const ms = opts?.ms ?? DELTA_THROTTLE_MS;
+  const chars = opts?.chars ?? DELTA_THROTTLE_CHARS;
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  let lastFlushedChars = 0;
+  let queuedChars = 0;
+  let pending: Promise<void> = Promise.resolve();
+
+  const runFlush = () => {
+    if (timer) {
+      clearTimeout(timer);
+      timer = undefined;
+    }
+    lastFlushedChars = queuedChars;
+    pending = pending.then(() => Promise.resolve(flush())).catch(() => undefined);
+    return pending;
+  };
+
+  return {
+    push(totalChars: number) {
+      queuedChars = totalChars;
+      if (totalChars - lastFlushedChars >= chars) {
+        void runFlush();
+        return;
+      }
+      if (!timer) {
+        timer = setTimeout(() => {
+          void runFlush();
+        }, ms);
+      }
+    },
+    async flush() {
+      if (timer || queuedChars !== lastFlushedChars) {
+        await runFlush();
+        return;
+      }
+      await pending;
+    },
+  };
+}
 
 export const TRACE_TEXT_CAP = 4000;
 export const PROGRESS_TEXT_CAP = 2000;
@@ -47,6 +114,7 @@ export function capTrace(trace: AgentTrace): AgentTrace {
       ...turn,
       assistantText: capText(turn.assistantText),
       reasoning: capText(turn.reasoning),
+      toolCalls: turn.toolCalls.map((call) => ({ ...call })),
       observations: turn.observations.map((obs) => ({
         tool: obs.tool,
         content: capText(obs.content) ?? "",
@@ -71,6 +139,36 @@ export function usageFromResult(result: { usage?: unknown }): AgentTraceTurn["us
 
 export function isAgentTrace(value: unknown): value is AgentTrace {
   return !!value && typeof value === "object" && Array.isArray((value as AgentTrace).turns);
+}
+
+export function nowIso(): string {
+  return new Date().toISOString();
+}
+
+export function spanMs(start?: string, end?: string): number | undefined {
+  if (!start || !end) return undefined;
+  const a = Date.parse(start);
+  const b = Date.parse(end);
+  if (!Number.isFinite(a) || !Number.isFinite(b)) return undefined;
+  return Math.max(0, b - a);
+}
+
+export function closeOpenSpans(turns: AgentTraceTurn[], status: AgentSpanStatus = "error"): void {
+  const end = nowIso();
+  for (const turn of turns) {
+    if (turn.status === "running") {
+      turn.status = status;
+      turn.finishedAt = turn.finishedAt ?? end;
+      turn.durationMs = spanMs(turn.startedAt, turn.finishedAt);
+    }
+    for (const call of turn.toolCalls) {
+      if (call.status === "running") {
+        call.status = status;
+        call.finishedAt = call.finishedAt ?? end;
+        call.durationMs = spanMs(call.startedAt, call.finishedAt);
+      }
+    }
+  }
 }
 
 export class NodeExecutionError extends Error {

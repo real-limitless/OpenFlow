@@ -72,4 +72,6 @@ const reported = await reportRuntimeExecution({
 
 POST `{ status: "running", runData }` at start, then PATCH snapshots via `reportRuntimeExecution({ executionId, result: { status: "running", runData } })`. Terminal POST/PATCH still uses `success` / `error`.
 
+OpenRouter Agent turns stream tokens into `runData[node].trace` / `progress` (throttled). If the model sends no tokens for 60s, or goes silent for 45s after a token, the Agent errors and keeps partial text. Opening History / `/executions/:id` fails a leftover `running` row when `phase` is still `llm` and `lastTokenAt` is stale (host crash). Tool phases are not failed this way.
+
 After `src/lib/runtime/create-runtime.ts` is on this branch, wire `createRuntime({ report: { url, token, workflowId } })` to this helper (POST on start / first snapshot, PATCH on later `onProgress` and finish).

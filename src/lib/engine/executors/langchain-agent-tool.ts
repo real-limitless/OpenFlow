@@ -1,7 +1,9 @@
 import type { NodeExecutor, INodeExecutionData, ExecutionContext, IWorkflow } from "@/sdk";
 import {
   capTrace,
+  createDeltaThrottle,
   NodeExecutionError,
+  nowIso,
   usageFromResult,
   type AgentTrace,
   type AgentTraceTurn,
@@ -30,10 +32,18 @@ interface ModelInvokeResult {
   [key: string]: unknown;
 }
 
+type ModelInvokeOpts = {
+  onDelta?: (delta: { text: string; reasoning?: string }) => void;
+};
+
 interface ModelHandle {
   type?: string;
   model?: string;
-  invoke(messages: ChatMessage[], tools?: unknown[]): Promise<ModelInvokeResult>;
+  invoke(
+    messages: ChatMessage[],
+    tools?: unknown[],
+    opts?: ModelInvokeOpts,
+  ): Promise<ModelInvokeResult>;
 }
 
 interface ToolHandle {
@@ -279,33 +289,61 @@ async function runNestedAgent(
 
   try {
     for (let iteration = 0; iteration < maxIterations; iteration++) {
+      const turn: AgentTraceTurn = {
+        iteration,
+        toolCalls: [],
+        observations: [],
+        startedAt: nowIso(),
+        status: "running",
+        phase: "llm",
+      };
+      turns.push(turn);
+      const throttle = createDeltaThrottle(async () => {
+        await ctx.reportProgress?.({
+          progress: {
+            iteration,
+            maxIterations,
+            stepCount: turn.observations.length,
+            phase: "llm",
+            streaming: true,
+            lastTokenAt: turn.lastTokenAt,
+            chars: (turn.assistantText?.length ?? 0) + (turn.reasoning?.length ?? 0),
+            updatedAt: nowIso(),
+          },
+          trace: capTrace({ turns }),
+        });
+      });
+      const onDelta = (delta: { text: string; reasoning?: string }) => {
+        if (delta.text) turn.assistantText = delta.text;
+        if (delta.reasoning) turn.reasoning = delta.reasoning;
+        turn.streaming = true;
+        turn.lastTokenAt = nowIso();
+        throttle.push((turn.assistantText?.length ?? 0) + (turn.reasoning?.length ?? 0));
+      };
       let result: ModelInvokeResult;
       try {
-        result = await primaryModel.invoke(messages, toolDefs);
+        result = await primaryModel.invoke(messages, toolDefs, { onDelta });
       } catch (err) {
         if (needsFallback && fallbackModel) {
-          result = await fallbackModel.invoke(messages, toolDefs);
+          result = await fallbackModel.invoke(messages, toolDefs, { onDelta });
         } else {
           throw err;
         }
       }
+      await throttle.flush();
+      turn.streaming = false;
 
       const toolCalls = Array.isArray(result.toolCalls) ? result.toolCalls : [];
       const usage = usageFromResult(result);
       const reasoning = typeof result.reasoning === "string" ? result.reasoning : undefined;
-      const turn: AgentTraceTurn = {
-        iteration,
-        ...(result.text ? { assistantText: String(result.text) } : {}),
-        ...(reasoning ? { reasoning } : {}),
-        toolCalls: toolCalls.map((call) => ({
-          id: call.id,
-          name: call.name,
-          args: call.args ?? {},
-        })),
-        observations: [],
-        ...(usage ? { usage } : {}),
-      };
-      turns.push(turn);
+      if (result.text) turn.assistantText = String(result.text);
+      if (reasoning) turn.reasoning = reasoning;
+      if (usage) turn.usage = usage;
+      turn.toolCalls = toolCalls.map((call) => ({
+        id: call.id,
+        name: call.name,
+        args: call.args ?? {},
+      }));
 
       if (toolCalls.length > 0) {
         messages.push({
@@ -340,9 +378,13 @@ async function runNestedAgent(
           });
           turn.observations.push({ tool: call.name, content: observation });
         }
+        turn.phase = "tools";
+        turn.status = "success";
         continue;
       }
 
+      turn.phase = "final";
+      turn.status = "success";
       finalText = result.text ?? "";
       break;
     }

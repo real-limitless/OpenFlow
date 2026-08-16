@@ -461,6 +461,60 @@ describe("batch-queue lmChatOpenRouter — @n8n/n8n-nodes-langchain.lmChatOpenRo
     expect(calls).toBe(3);
   });
 
+  it("parses SSE body from the http override and calls onDelta", async () => {
+    setOpenRouterHttpClient(async () => ({
+      status: 200,
+      headers: {},
+      body: [
+        'data: {"choices":[{"delta":{"content":"Hi"}}]}\n\n',
+        'data: {"choices":[{"delta":{"reasoning":"r"}}]}\n\n',
+        "data: [DONE]\n\n",
+      ].join(""),
+    }));
+    const handle = getHandle(
+      await runModel({
+        model: { __rl: true, mode: "list", value: "openai/gpt-4o" },
+        options: {},
+      }),
+    );
+    const texts: string[] = [];
+    const result = await handle.invoke([{ role: "user", content: "hi" }], undefined, {
+      onDelta: (d) => texts.push(d.text),
+    });
+    expect(result.text).toBe("Hi");
+    expect(result.reasoning).toBe("r");
+    expect(texts[0]).toBe("Hi");
+  });
+
+  it("falls back to non-stream when the provider rejects stream", async () => {
+    let calls = 0;
+    setOpenRouterHttpClient(async (opts) => {
+      calls++;
+      const streamed = Boolean((opts.body as { stream?: boolean })?.stream);
+      if (streamed) {
+        return { status: 400, headers: {}, body: { error: { message: "stream not supported" } } };
+      }
+      return {
+        status: 200,
+        headers: {},
+        body: {
+          choices: [{ message: { content: "fallback" } }],
+          model: "openai/gpt-4o",
+          usage: { prompt_tokens: 1, completion_tokens: 1, total_tokens: 2 },
+        },
+      };
+    });
+    const handle = getHandle(
+      await runModel({
+        model: { __rl: true, mode: "list", value: "openai/gpt-4o" },
+        options: { maxRetries: 0 },
+      }),
+    );
+    const result = await handle.invoke([{ role: "user", content: "hi" }]);
+    expect(result.text).toBe("fallback");
+    expect(calls).toBe(2);
+  });
+
   it("resolves the executor under the canonical type string", () => {
     const canonical = getExecutor(TYPE);
     expect(canonical).toBeDefined();

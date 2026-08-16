@@ -10,6 +10,7 @@ import {
   type IngestBody,
 } from "../services/execution-ingest";
 import { subscribeExecutionProgress } from "../services/workflow-events";
+import { failStaleLlmIfNeeded, failStaleLlmList } from "../services/stale-llm-execution";
 
 function ingestAuthFrom(c: { get: (k: string) => unknown }): IngestAuth {
   return {
@@ -100,7 +101,7 @@ export default function executionsRoute(app: Hono<AppEnv>) {
     ]);
 
     return c.json({
-      executions: list,
+      executions: await failStaleLlmList(list),
       pagination: { page, limit, total, pages: Math.ceil(total / limit) },
     });
   });
@@ -169,25 +170,27 @@ export default function executionsRoute(app: Hono<AppEnv>) {
               return;
             }
 
+            const live = await failStaleLlmIfNeeded(execution);
+
             let runData: unknown = {};
             try {
-              runData = JSON.parse(execution.runData || "{}");
+              runData = JSON.parse(live.runData || "{}");
             } catch {
               runData = {};
             }
 
             sendEvent({
               type: "status",
-              status: execution.status,
-              startedAt: execution.startedAt?.toISOString(),
-              finishedAt: execution.finishedAt?.toISOString(),
+              status: live.status,
+              startedAt: live.startedAt?.toISOString(),
+              finishedAt: live.finishedAt?.toISOString(),
               runData,
             });
 
-            if (execution.status === "success" || execution.status === "error") {
+            if (live.status === "success" || live.status === "error") {
               sendEvent({
                 type: "complete",
-                status: execution.status,
+                status: live.status,
                 data: runData,
               });
               close();
@@ -240,6 +243,6 @@ export default function executionsRoute(app: Hono<AppEnv>) {
       return c.json({ error: "Execution not found" }, 404);
     }
 
-    return c.json(execution);
+    return c.json(await failStaleLlmIfNeeded(execution));
   });
 }

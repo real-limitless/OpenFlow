@@ -2,8 +2,12 @@ import type { NodeExecutor, INodeExecutionData, ExecutionContext, IWorkflow } fr
 import {
   capText,
   capTrace,
+  closeOpenSpans,
+  createDeltaThrottle,
   NodeExecutionError,
+  nowIso,
   PROGRESS_TEXT_CAP,
+  spanMs,
   usageFromResult,
   type AgentTraceTurn,
 } from "../agent-trace";
@@ -31,10 +35,24 @@ interface ModelInvokeResult {
   [key: string]: unknown;
 }
 
+type ModelDelta = {
+  text: string;
+  reasoning?: string;
+  toolCalls?: ToolCall[];
+};
+
+type ModelInvokeOpts = {
+  onDelta?: (delta: ModelDelta) => void;
+};
+
 interface ModelHandle {
   type?: string;
   model?: string;
-  invoke(messages: ChatMessage[], tools?: unknown[]): Promise<ModelInvokeResult>;
+  invoke(
+    messages: ChatMessage[],
+    tools?: unknown[],
+    opts?: ModelInvokeOpts,
+  ): Promise<ModelInvokeResult>;
 }
 
 interface ToolHandle {
@@ -274,12 +292,13 @@ async function invokeWithFallback(
   needsFallback: boolean,
   messages: ChatMessage[],
   toolDefs: unknown[],
+  opts?: ModelInvokeOpts,
 ): Promise<ModelInvokeResult> {
   try {
-    return await primary.invoke(messages, toolDefs);
+    return await primary.invoke(messages, toolDefs, opts);
   } catch (err) {
     if (needsFallback && fallback) {
-      return await fallback.invoke(messages, toolDefs);
+      return await fallback.invoke(messages, toolDefs, opts);
     }
     throw err;
   }
@@ -398,16 +417,31 @@ export const langchainAgentExecutor: NodeExecutor = async (ctx, node) => {
     }> = [];
     const turns: AgentTraceTurn[] = [];
 
-    const publishProgress = async (iteration: number, tool?: string, lastObservation?: string) => {
+    const publishProgress = async (
+      iteration: number,
+      extra?: {
+        tool?: string;
+        lastObservation?: string;
+        phase?: AgentTraceTurn["phase"] | "tool";
+        streaming?: boolean;
+        lastTokenAt?: string;
+        chars?: number;
+      },
+    ) => {
       await ctx.reportProgress?.({
         progress: {
           iteration,
           maxIterations,
-          ...(tool ? { tool } : {}),
+          ...(extra?.tool ? { tool: extra.tool } : {}),
           stepCount: intermediateSteps.length,
-          ...(lastObservation
-            ? { lastObservation: capText(lastObservation, PROGRESS_TEXT_CAP) }
+          ...(extra?.lastObservation
+            ? { lastObservation: capText(extra.lastObservation, PROGRESS_TEXT_CAP) }
             : {}),
+          ...(extra?.phase ? { phase: extra.phase } : {}),
+          ...(extra?.streaming ? { streaming: true } : {}),
+          ...(extra?.lastTokenAt ? { lastTokenAt: extra.lastTokenAt } : {}),
+          ...(extra?.chars != null ? { chars: extra.chars } : {}),
+          updatedAt: nowIso(),
         },
         trace: capTrace({ turns }),
       });
@@ -417,33 +451,61 @@ export const langchainAgentExecutor: NodeExecutor = async (ctx, node) => {
 
     try {
       for (let iteration = 0; iteration < maxIterations; iteration++) {
-        await publishProgress(iteration);
+        const turn: AgentTraceTurn = {
+          iteration,
+          toolCalls: [],
+          observations: [],
+          startedAt: nowIso(),
+          status: "running",
+          phase: "llm",
+        };
+        turns.push(turn);
+        await publishProgress(iteration, { phase: "llm" });
+
+        const throttle = createDeltaThrottle(async () => {
+          const chars = (turn.assistantText?.length ?? 0) + (turn.reasoning?.length ?? 0);
+          await publishProgress(iteration, {
+            phase: "llm",
+            streaming: true,
+            lastTokenAt: turn.lastTokenAt,
+            chars,
+          });
+        });
         const result = await invokeWithFallback(
           primaryModel,
           fallbackModel,
           needsFallback,
           messages,
           toolDefs,
+          {
+            onDelta: (delta) => {
+              if (delta.text) turn.assistantText = delta.text;
+              if (delta.reasoning) turn.reasoning = delta.reasoning;
+              turn.streaming = true;
+              turn.lastTokenAt = nowIso();
+              throttle.push((turn.assistantText?.length ?? 0) + (turn.reasoning?.length ?? 0));
+            },
+          },
         );
+        await throttle.flush();
+        turn.streaming = false;
 
         const toolCalls = Array.isArray(result.toolCalls) ? result.toolCalls : [];
         const usage = usageFromResult(result);
         const reasoning = typeof result.reasoning === "string" ? result.reasoning : undefined;
-        const turn: AgentTraceTurn = {
-          iteration,
-          ...(result.text ? { assistantText: String(result.text) } : {}),
-          ...(reasoning ? { reasoning } : {}),
-          toolCalls: toolCalls.map((call) => ({
-            id: call.id,
-            name: call.name,
-            args: call.args ?? {},
-          })),
-          observations: [],
-          ...(usage ? { usage } : {}),
-        };
-        turns.push(turn);
+        turn.llmFinishedAt = nowIso();
+        if (result.text) turn.assistantText = String(result.text);
+        if (reasoning) turn.reasoning = reasoning;
+        if (usage) turn.usage = usage;
+        turn.toolCalls = toolCalls.map((call) => ({
+          id: call.id,
+          name: call.name,
+          args: call.args ?? {},
+          status: "running" as const,
+        }));
 
         if (toolCalls.length > 0) {
+          turn.phase = "tools";
           messages.push({
             role: "assistant",
             content: result.text ?? "",
@@ -456,18 +518,33 @@ export const langchainAgentExecutor: NodeExecutor = async (ctx, node) => {
               },
             })),
           });
+          await publishProgress(iteration, { phase: "tools", tool: toolCalls[0]?.name });
           for (let i = 0; i < toolCalls.length; i++) {
             const call = toolCalls[i];
+            const recorded = turn.toolCalls[i];
+            if (recorded) {
+              recorded.startedAt = nowIso();
+              recorded.status = "running";
+            }
+            await publishProgress(iteration, { phase: "tool", tool: call.name });
             const tool = toolHandles.find((t) => t.name === call.name);
             let observation = "";
+            let toolStatus: "success" | "error" = "success";
             if (!tool) {
               observation = `Tool not found: ${call.name}. Available: ${toolHandles.map((t) => t.name).join(", ") || "(none)"}`;
+              toolStatus = "error";
             } else if (typeof tool.invoke === "function") {
               try {
                 observation = observationFromToolResult(await tool.invoke(call.args ?? {}));
               } catch (err) {
                 observation = err instanceof Error ? err.message : String(err);
+                toolStatus = "error";
               }
+            }
+            if (recorded) {
+              recorded.finishedAt = nowIso();
+              recorded.durationMs = spanMs(recorded.startedAt, recorded.finishedAt);
+              recorded.status = toolStatus;
             }
             messages.push({
               role: "tool",
@@ -479,22 +556,35 @@ export const langchainAgentExecutor: NodeExecutor = async (ctx, node) => {
               observation,
             });
             turn.observations.push({ tool: call.name, content: observation });
-            await publishProgress(iteration, call.name, observation);
+            await publishProgress(iteration, {
+              phase: "tool",
+              tool: call.name,
+              lastObservation: observation,
+            });
           }
+          turn.status = "success";
+          turn.finishedAt = nowIso();
+          turn.durationMs = spanMs(turn.startedAt, turn.finishedAt);
           continue;
         }
 
+        turn.phase = "final";
+        turn.status = "success";
+        turn.finishedAt = nowIso();
+        turn.durationMs = spanMs(turn.startedAt, turn.finishedAt);
         finalText = result.text ?? "";
-        await publishProgress(iteration);
+        await publishProgress(iteration, { phase: "final" });
         break;
       }
     } catch (err) {
+      closeOpenSpans(turns, "error");
       if (err instanceof NodeExecutionError) throw err;
       const message = err instanceof Error ? err.message : String(err);
       throw failWithTrace(message, itemJson, item, itemIndex, outputItems, turns);
     }
 
     if (finalText === null) {
+      closeOpenSpans(turns, "error");
       throw failWithTrace(
         `Agent did not produce a final answer within ${maxIterations} iterations`,
         itemJson,

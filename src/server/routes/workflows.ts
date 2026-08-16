@@ -24,6 +24,7 @@ import {
 } from "../services/shares";
 import { environmentIdFromRequest } from "../services/environments";
 import { notifyExecutionStarted } from "../services/workflow-events";
+import { failStaleLlmList } from "../services/stale-llm-execution";
 
 function minShareForRole(minRole: ProjectRole): SharePermission {
   return minRole === "viewer" ? "view" : "edit";
@@ -583,11 +584,13 @@ export default function workflowsRoute(app: Hono<AppEnv>) {
     const result = await loadWorkflowIfAllowed(id, userId, "viewer");
     if ("error" in result) return c.json({ error: "Not found" }, 404);
 
-    const executions = await prisma.execution.findMany({
-      where: { workflowId: id },
-      orderBy: { startedAt: "desc" },
-      take: 50,
-    });
+    const executions = await failStaleLlmList(
+      await prisma.execution.findMany({
+        where: { workflowId: id },
+        orderBy: { startedAt: "desc" },
+        take: 50,
+      }),
+    );
 
     return c.json(
       executions.map((e) => ({
