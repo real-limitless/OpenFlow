@@ -1,0 +1,31 @@
+#!/usr/bin/env bash
+# Strip Cursor attribution that Cloud Agent hooks may append to commit messages.
+set -euo pipefail
+
+msg="${1:-}"
+if [ -z "${msg}" ] || [ ! -f "${msg}" ]; then
+  exit 0
+fi
+
+tmp="$(mktemp)"
+trap 'rm -f "${tmp}"' EXIT
+
+# Drop Co-authored-by Cursor, Made with Cursor, and cursoragent@cursor.com lines.
+# grep exits 1 when every line is filtered; that is success here.
+grep -viE \
+  -e '^[[:space:]]*Co-authored-by:[[:space:]]*Cursor([[:space:]].*|<|$)' \
+  -e 'Made with Cursor' \
+  -e 'cursoragent@cursor\.com' \
+  "${msg}" >"${tmp}" || true
+
+# Remove trailing blank lines left after trailer deletion.
+awk '
+  { lines[NR] = $0 }
+  END {
+    end = NR
+    while (end > 0 && lines[end] ~ /^[[:space:]]*$/) end--
+    for (i = 1; i <= end; i++) print lines[i]
+  }
+' "${tmp}" >"${msg}"
+
+exit 0
