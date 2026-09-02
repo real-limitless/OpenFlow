@@ -187,12 +187,14 @@ describe("filesystem tool jail", () => {
     const n = node({ name: "FS", type: "n8n-nodes-base.filesystemTool" });
     const ctx = makeCtx(n, [], { fsRoot: root });
     const [out] = await filesystemToolExecutor(ctx, n);
-    const handle = out[0].json as {
-      invoke: (a: Record<string, unknown>) => Promise<{ content: string }>;
+    const bundle = out[0].json as {
+      tools: Array<{ name: string }>;
+      invoke: (name: string, args: Record<string, unknown>) => Promise<{ content: string }>;
     };
-    const ok = await handle.invoke({ operation: "read", path: "ok.txt" });
+    expect(bundle.tools.map((t) => t.name)).toContain("read_file");
+    const ok = await bundle.invoke("read_file", { path: "ok.txt" });
     expect(ok.content).toBe("hello");
-    await expect(handle.invoke({ operation: "read", path: "../secret" })).rejects.toThrow(
+    await expect(bundle.invoke("read_file", { path: "../secret" })).rejects.toThrow(
       /escapes fsRoot/,
     );
   });

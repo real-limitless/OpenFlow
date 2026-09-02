@@ -7,7 +7,7 @@ import {
   isCanvasInspectType,
   STICKY_NOTE_TYPE,
 } from "../nodes/registry";
-import { resolveInputs, resolveOutputs } from "../nodes/types";
+import { isAiToolSubnode, resolveInputs, resolveOutputs } from "../nodes/types";
 import {
   channelEdgeColor,
   countIncomingByChannel,
@@ -113,12 +113,14 @@ export function toFlowEdges(workflow: IWorkflow): Edge[] {
       outputs?.forEach((targets, outputIndex) => {
         targets?.forEach((t) => {
           if (!t || !known.has(t.node)) return;
+          const targetChannel = t.type ?? "main";
+          const targetIndex = targetChannel === "ai_tool" ? 0 : (t.index ?? 0);
           edges.push({
             id: edgeId(sourceName, channel, outputIndex, t.node, t.index ?? 0),
             source: sourceName,
             target: t.node,
             sourceHandle: `${channel}-${outputIndex}`,
-            targetHandle: `${t.type ?? "main"}-${t.index ?? 0}`,
+            targetHandle: `${targetChannel}-${targetIndex}`,
             type: "openflow",
             data: { channel, color: channelEdgeColor(channel) },
             style: isAiChannel(channel)
@@ -213,7 +215,11 @@ export function handlesFor(node: INode, connections?: IConnections | null) {
   const description = getNodeType(node.type);
   const params = node.parameters ?? {};
   let inputs = resolveInputs(description, params);
-  const outputs = resolveOutputs(description, params);
+  let outputs = resolveOutputs(description, params);
+  if (isAiToolSubnode(description) && !outputs.includes("ai_tool")) {
+    outputs = ["ai_tool"];
+    if (inputs.length === 1 && inputs[0] === "main") inputs = [];
+  }
 
   const hasAi = inputs.some(isAiChannel) || outputs.some(isAiChannel);
   if (hasAi) {

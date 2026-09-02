@@ -184,11 +184,19 @@ export default function apiKeysRoute(app: Hono<AppEnv>) {
       grants?: GrantInput[];
     }>();
 
-    const data: Record<string, unknown> = {};
+    const data: {
+      name?: string;
+      scopes?: string;
+      restrictWorkflows?: boolean;
+      canCreateWorkflows?: boolean;
+      expiresAt?: Date | null;
+    } = {};
     if (typeof body.name === "string" && body.name.trim()) data.name = body.name.trim();
     if (body.scopes !== undefined) data.scopes = JSON.stringify(parseScopesBody(body.scopes));
-    if (typeof body.restrictWorkflows === "boolean") data.restrictWorkflows = body.restrictWorkflows;
-    if (typeof body.canCreateWorkflows === "boolean") data.canCreateWorkflows = body.canCreateWorkflows;
+    if (typeof body.restrictWorkflows === "boolean")
+      data.restrictWorkflows = body.restrictWorkflows;
+    if (typeof body.canCreateWorkflows === "boolean")
+      data.canCreateWorkflows = body.canCreateWorkflows;
     if (body.expiresAt === null) data.expiresAt = null;
     else if (typeof body.expiresAt === "string") {
       const d = new Date(body.expiresAt);
@@ -196,30 +204,37 @@ export default function apiKeysRoute(app: Hono<AppEnv>) {
       data.expiresAt = d;
     }
 
+    let grants: ReturnType<typeof normalizeGrantInputs> | undefined;
     if (body.grants !== undefined) {
-      const grants = normalizeGrantInputs(body.grants);
+      grants = normalizeGrantInputs(body.grants);
       for (const g of grants) {
         const ok = await loadWorkflowIfAllowed(g.workflowId, userId, "viewer");
         if ("error" in ok) {
           return c.json({ error: `No access to workflow ${g.workflowId}` }, 400);
         }
       }
-      await prisma.apiKeyWorkflowGrant.deleteMany({ where: { apiKeyId: id } });
-      if (grants.length > 0) {
-        await prisma.apiKeyWorkflowGrant.createMany({
-          data: grants.map((g) => ({
-            apiKeyId: id,
-            workflowId: g.workflowId,
-            canRead: g.canRead,
-            canWrite: g.canWrite,
-            canExecute: g.canExecute,
-            expiresAt: g.expiresAt,
-          })),
-        });
-      }
     }
 
-    await prisma.apiKey.update({ where: { id }, data });
+    await prisma.$transaction(async (tx) => {
+      if (grants !== undefined) {
+        await tx.apiKeyWorkflowGrant.deleteMany({ where: { apiKeyId: id } });
+        if (grants.length > 0) {
+          await tx.apiKeyWorkflowGrant.createMany({
+            data: grants.map((g) => ({
+              apiKeyId: id,
+              workflowId: g.workflowId,
+              canRead: g.canRead,
+              canWrite: g.canWrite,
+              canExecute: g.canExecute,
+              expiresAt: g.expiresAt,
+            })),
+          });
+        }
+      }
+      if (Object.keys(data).length > 0) {
+        await tx.apiKey.update({ where: { id }, data });
+      }
+    });
     const k = await prisma.apiKey.findUnique({ where: { id }, include: { grants: true } });
     return c.json({
       id: k!.id,

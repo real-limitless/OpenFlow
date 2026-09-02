@@ -121,11 +121,9 @@ describe("batch-queue lmChatOpenRouter — @n8n/n8n-nodes-langchain.lmChatOpenRo
 
   it("throws when apiKey is empty", async () => {
     await expect(
-      runModel(
-        { model: { __rl: true, mode: "list", value: "openai/gpt-4o" }, options: {} },
-        [{}],
-        { openRouterApi: { apiKey: "" } },
-      ),
+      runModel({ model: { __rl: true, mode: "list", value: "openai/gpt-4o" }, options: {} }, [{}], {
+        openRouterApi: { apiKey: "" },
+      }),
     ).rejects.toThrow(/missing apiKey/);
   });
 
@@ -185,6 +183,152 @@ describe("batch-queue lmChatOpenRouter — @n8n/n8n-nodes-langchain.lmChatOpenRo
       temperature: 0,
       max_tokens: 1024,
     });
+    expect((captured[0].body as Record<string, unknown>).tools).toBeUndefined();
+  });
+
+  it("sends tools and parses tool_calls for the Agent loop", async () => {
+    const captured: Array<{ body: unknown }> = [];
+    setOpenRouterHttpClient(async (opts) => {
+      captured.push({ body: opts.body });
+      return {
+        status: 200,
+        headers: {},
+        body: {
+          choices: [
+            {
+              message: {
+                content: null,
+                tool_calls: [
+                  {
+                    id: "call_1",
+                    type: "function",
+                    function: { name: "read_file", arguments: '{"path":"README.md"}' },
+                  },
+                ],
+              },
+            },
+          ],
+          model: "openai/gpt-4o",
+          usage: { prompt_tokens: 10, completion_tokens: 8, total_tokens: 18 },
+        },
+      };
+    });
+
+    const handle = getHandle(
+      await runModel({
+        model: { __rl: true, mode: "list", value: "openai/gpt-4o" },
+        options: {},
+      }),
+    );
+    const result = await handle.invoke(
+      [{ role: "user", content: "read the readme" }],
+      [
+        {
+          name: "read_file",
+          description: "Read a file",
+          schema: { type: "object", properties: { path: { type: "string" } } },
+        },
+      ],
+    );
+
+    expect(result.text).toBe("");
+    expect(result.toolCalls).toEqual([
+      { id: "call_1", name: "read_file", args: { path: "README.md" } },
+    ]);
+    expect(result.reasoning).toBeUndefined();
+    expect(captured[0].body).toMatchObject({
+      tool_choice: "auto",
+      tools: [
+        {
+          type: "function",
+          function: { name: "read_file", description: "Read a file" },
+        },
+      ],
+    });
+  });
+
+  it("round-trips assistant tool_calls and role:tool on the next turn", async () => {
+    const captured: Array<{ body: unknown }> = [];
+    setOpenRouterHttpClient(async (opts) => {
+      captured.push({ body: opts.body });
+      return {
+        status: 200,
+        headers: {},
+        body: {
+          choices: [{ message: { content: "README is a guide." } }],
+          model: "openai/gpt-4o",
+          usage: { prompt_tokens: 20, completion_tokens: 6, total_tokens: 26 },
+        },
+      };
+    });
+
+    const handle = getHandle(
+      await runModel({
+        model: { __rl: true, mode: "list", value: "openai/gpt-4o" },
+        options: {},
+      }),
+    );
+    const result = await handle.invoke(
+      [
+        { role: "user", content: "read the readme" },
+        {
+          role: "assistant",
+          content: "",
+          tool_calls: [
+            {
+              id: "call_1",
+              type: "function",
+              function: { name: "read_file", arguments: '{"path":"README.md"}' },
+            },
+          ],
+        },
+        { role: "tool", content: "# OpenFlow", tool_call_id: "call_1" },
+      ],
+      [{ name: "read_file" }],
+    );
+
+    expect(result.text).toBe("README is a guide.");
+    expect(result.toolCalls).toBeUndefined();
+    const messages = (captured[0].body as { messages: Record<string, unknown>[] }).messages;
+    expect(messages[1]).toMatchObject({
+      role: "assistant",
+      content: null,
+      tool_calls: [{ id: "call_1", type: "function" }],
+    });
+    expect(messages[2]).toMatchObject({
+      role: "tool",
+      content: "# OpenFlow",
+      tool_call_id: "call_1",
+    });
+  });
+
+  it("parses reasoning_content onto the handle result", async () => {
+    setOpenRouterHttpClient(async () => ({
+      status: 200,
+      headers: {},
+      body: {
+        choices: [
+          {
+            message: {
+              content: "The capital is Paris.",
+              reasoning_content: "User asked for the capital of France.",
+            },
+          },
+        ],
+        model: "nvidia/nemotron",
+        usage: { prompt_tokens: 8, completion_tokens: 4, total_tokens: 12 },
+      },
+    }));
+
+    const handle = getHandle(
+      await runModel({
+        model: { __rl: true, mode: "list", value: "nvidia/nemotron" },
+        options: {},
+      }),
+    );
+    const result = await handle.invoke([{ role: "user", content: "capital of France?" }]);
+    expect(result.text).toBe("The capital is Paris.");
+    expect(result.reasoning).toBe("User asked for the capital of France.");
   });
 
   it("maps responseFormat json to response_format json_object", async () => {
@@ -315,6 +459,60 @@ describe("batch-queue lmChatOpenRouter — @n8n/n8n-nodes-langchain.lmChatOpenRo
     const result = await handle.invoke([{ role: "user", content: "hi" }]);
     expect(result.text).toBe("ok");
     expect(calls).toBe(3);
+  });
+
+  it("parses SSE body from the http override and calls onDelta", async () => {
+    setOpenRouterHttpClient(async () => ({
+      status: 200,
+      headers: {},
+      body: [
+        'data: {"choices":[{"delta":{"content":"Hi"}}]}\n\n',
+        'data: {"choices":[{"delta":{"reasoning":"r"}}]}\n\n',
+        "data: [DONE]\n\n",
+      ].join(""),
+    }));
+    const handle = getHandle(
+      await runModel({
+        model: { __rl: true, mode: "list", value: "openai/gpt-4o" },
+        options: {},
+      }),
+    );
+    const texts: string[] = [];
+    const result = await handle.invoke([{ role: "user", content: "hi" }], undefined, {
+      onDelta: (d) => texts.push(d.text),
+    });
+    expect(result.text).toBe("Hi");
+    expect(result.reasoning).toBe("r");
+    expect(texts[0]).toBe("Hi");
+  });
+
+  it("falls back to non-stream when the provider rejects stream", async () => {
+    let calls = 0;
+    setOpenRouterHttpClient(async (opts) => {
+      calls++;
+      const streamed = Boolean((opts.body as { stream?: boolean })?.stream);
+      if (streamed) {
+        return { status: 400, headers: {}, body: { error: { message: "stream not supported" } } };
+      }
+      return {
+        status: 200,
+        headers: {},
+        body: {
+          choices: [{ message: { content: "fallback" } }],
+          model: "openai/gpt-4o",
+          usage: { prompt_tokens: 1, completion_tokens: 1, total_tokens: 2 },
+        },
+      };
+    });
+    const handle = getHandle(
+      await runModel({
+        model: { __rl: true, mode: "list", value: "openai/gpt-4o" },
+        options: { maxRetries: 0 },
+      }),
+    );
+    const result = await handle.invoke([{ role: "user", content: "hi" }]);
+    expect(result.text).toBe("fallback");
+    expect(calls).toBe(2);
   });
 
   it("resolves the executor under the canonical type string", () => {

@@ -275,6 +275,9 @@ describe("batch-queue langchainAgent — @n8n/n8n-nodes-langchain.agent", () => 
 
     expect(out[0][0].json.output).toBeDefined();
     expect(out[0][0].json.intermediateSteps).toBeUndefined();
+    expect(out[0][0].json.agentTrace).toMatchObject({
+      turns: [{ iteration: 0, toolCalls: [], observations: [] }],
+    });
   });
 
   it("fallback model wiring: uses fallback when primary fails", async () => {
@@ -397,6 +400,16 @@ describe("batch-queue langchainAgent — @n8n/n8n-nodes-langchain.agent", () => 
         observation: "4",
       },
     ]);
+    expect(out[0][0].json.agentTrace).toMatchObject({
+      turns: [
+        {
+          iteration: 0,
+          toolCalls: [{ name: "calc", args: { expr: "2+2" } }],
+          observations: [{ tool: "calc", content: "4" }],
+        },
+        { iteration: 1, assistantText: "4", toolCalls: [], observations: [] },
+      ],
+    });
     expect(callCount).toBe(2);
   });
 
@@ -667,19 +680,65 @@ describe("batch-queue langchainAgent — @n8n/n8n-nodes-langchain.agent", () => 
   it("throws when tool connections produce no valid handles", async () => {
     const modelHandle = makeModelHandle();
     await expect(
-      runAgent(
-        { promptType: "define", text: "Hi", options: {} },
-        [{}],
-        {
-          modelHandle,
-          connections: makeClusterConnections("Agent", { toolNames: ["Broken"] }),
-          subNodeOutputs: {
-            Model: [{ json: modelHandle as unknown as Record<string, unknown> }],
-            Broken: [{ json: { type: "not-a-tool" } }],
-          },
+      runAgent({ promptType: "define", text: "Hi", options: {} }, [{}], {
+        modelHandle,
+        connections: makeClusterConnections("Agent", { toolNames: ["Broken"] }),
+        subNodeOutputs: {
+          Model: [{ json: modelHandle as unknown as Record<string, unknown> }],
+          Broken: [{ json: { type: "not-a-tool" } }],
         },
-      ),
+      }),
     ).rejects.toThrow(/no valid tool handles/i);
+  });
+
+  it("onDelta updates the turn and throttles reportProgress", async () => {
+    const progress: unknown[] = [];
+    const modelHandle = makeModelHandle({
+      invoke: async (_messages, _tools, opts?: { onDelta?: (d: { text: string }) => void }) => {
+        for (let i = 1; i <= 10; i++) opts?.onDelta?.({ text: "x".repeat(i) });
+        return {
+          text: "xxxxxxxxxx",
+          model: "gpt-4.1-mini",
+          usage: { promptTokens: 1, completionTokens: 1, totalTokens: 2 },
+        };
+      },
+    });
+    const node = makeNode({
+      name: "Agent",
+      type: TYPE,
+      parameters: { promptType: "define", text: "Hi", options: {} },
+    });
+    const items = toItems([{}]);
+    const connections = makeClusterConnections("Agent");
+    const ctx = createExecutionContext({
+      node,
+      workflow: {
+        id: "wf",
+        name: "Test",
+        active: false,
+        nodes: [node],
+        connections,
+        settings: {},
+      },
+      getNodeInputItems: (name: string) => {
+        if (name === node.name) return items;
+        if (name === "Model") return [{ json: modelHandle as unknown as Record<string, unknown> }];
+        return [{ json: { name: "stub", description: "stub" } }];
+      },
+      continueOnFail: false,
+      reportProgress: async (update) => {
+        progress.push(update);
+      },
+    });
+    const executor = getExecutor(TYPE)!;
+    const out = await executor(ctx, node);
+    expect(out[0][0].json.output).toBe("xxxxxxxxxx");
+    expect(progress.length).toBeGreaterThanOrEqual(2);
+    expect(progress.length).toBeLessThan(10);
+    const streamed = progress.filter(
+      (p) => (p as { progress?: { streaming?: boolean } }).progress?.streaming,
+    );
+    expect(streamed.length).toBeGreaterThanOrEqual(1);
   });
 
   it("memory appendTurn is called after final answer", async () => {

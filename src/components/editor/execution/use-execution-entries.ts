@@ -49,6 +49,8 @@ export function buildExecutionEntries(
       finishedAt: data.finishedAt,
       durationMs: durationMs(data.startedAt, data.finishedAt, data.status),
       items: data.items,
+      progress: data.progress,
+      trace: data.trace,
     } satisfies ExecutionEntry;
   });
 

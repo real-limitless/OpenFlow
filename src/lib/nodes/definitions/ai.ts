@@ -5995,6 +5995,13 @@ export const gitTool: INodeTypeDescription = {
       type: "string",
       default: "Clone a git repository, show a file, or list recent commits",
     },
+    {
+      displayName: "Workspace root",
+      name: "fsRoot",
+      type: "string",
+      default: "",
+      description: "Jail for clone/show paths. Empty uses OPENFLOW_FS_ROOT or createRuntime({ fsRoot }).",
+    },
   ],
 };
 
@@ -6015,7 +6022,14 @@ export const filesystemTool: INodeTypeDescription = {
       displayName: "Description",
       name: "description",
       type: "string",
-      default: "Read, glob, or grep files in the project workspace",
+      default: "Read, list, or grep files in the project workspace",
+    },
+    {
+      displayName: "Workspace root",
+      name: "fsRoot",
+      type: "string",
+      default: "",
+      description: "Jail for file access. Empty uses OPENFLOW_FS_ROOT or createRuntime({ fsRoot }).",
     },
   ],
 };

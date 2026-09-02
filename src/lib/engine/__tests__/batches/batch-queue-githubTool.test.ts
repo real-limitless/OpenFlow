@@ -17,9 +17,20 @@ function mockGithubResponse(data: unknown) {
     status: 200,
     statusText: "OK",
     ok: true,
-    headers: { get() { return "application/json"; }, entries() { return new Map(); } },
-    async json() { return JSON.parse(body); },
-    async text() { return body; },
+    headers: {
+      get() {
+        return "application/json";
+      },
+      entries() {
+        return new Map();
+      },
+    },
+    async json() {
+      return JSON.parse(body);
+    },
+    async text() {
+      return body;
+    },
   };
 }
 
@@ -29,9 +40,20 @@ function mockGithubError(status: number, message: string) {
     status,
     statusText: "Error",
     ok: false,
-    headers: { get() { return "application/json"; }, entries() { return new Map(); } },
-    async json() { return JSON.parse(body); },
-    async text() { return body; },
+    headers: {
+      get() {
+        return "application/json";
+      },
+      entries() {
+        return new Map();
+      },
+    },
+    async json() {
+      return JSON.parse(body);
+    },
+    async text() {
+      return body;
+    },
   };
 }
 
@@ -305,5 +327,19 @@ describe("batch-queue githubTool — n8n-nodes-base.githubTool", () => {
       expect(out[0][0].json.error).toMatchObject({ message: "Not Found" });
       expect(out[0][1].json).toMatchObject({ tag_name: "v1.0" });
     });
+  });
+
+  it("emits a github handle when there are no main items", async () => {
+    defaultResponse = mockGithubResponse({ name: "widget", full_name: "acme/widget" });
+    const out = await run({ resource: "repository", operation: "get" }, []);
+    const handle = out[0][0].json as {
+      name: string;
+      invoke: (args: Record<string, unknown>) => Promise<string>;
+    };
+    expect(handle.name).toBe("github");
+    const body = await handle.invoke({ owner: "acme", repo: "widget" });
+    expect(calls[0].method).toBe("GET");
+    expect(calls[0].url).toContain("/repos/acme/widget");
+    expect(body).toContain("acme/widget");
   });
 });

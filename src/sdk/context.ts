@@ -56,6 +56,7 @@ export function createExecutionContext(options: CreateContextOptions): Execution
     vars: options.vars,
     allowUrl: options.allowUrl,
     fsRoot: options.fsRoot,
+    reportProgress: options.reportProgress,
   };
 
   return ctx;

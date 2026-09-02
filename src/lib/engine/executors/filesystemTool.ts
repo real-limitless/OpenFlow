@@ -1,9 +1,9 @@
 import { readdir, readFile, stat } from "node:fs/promises";
 import { join, relative } from "node:path";
 import type { NodeExecutor } from "@/sdk";
-import { emitToolHandle, requireFsRoot, resolveJailPath } from "../tool-handle";
+import { emitMcpBundle, requireFsRoot, resolveJailPath } from "../tool-handle";
 
-const TYPE = "n8n-nodes-base.filesystemTool";
+const TYPE = "openflow-node-base.filesystemTool";
 
 async function walkFiles(root: string, max = 500): Promise<string[]> {
   const out: string[] = [];
@@ -25,53 +25,58 @@ async function walkFiles(root: string, max = 500): Promise<string[]> {
   return out;
 }
 
-function globToRegExp(pattern: string): RegExp {
-  const escaped = pattern
-    .replace(/[.+^${}()|[\]\\]/g, "\\$&")
-    .replace(/\*\*/g, "::DS::")
-    .replace(/\*/g, "[^/]*")
-    .replace(/::DS::/g, ".*");
-  return new RegExp(`^${escaped}$`);
-}
-
 export const filesystemToolExecutor: NodeExecutor = async (ctx) => {
-  return emitToolHandle(ctx, {
+  return emitMcpBundle(ctx, {
     type: TYPE,
-    name: String(ctx.getParam("toolName", "filesystem")),
-    description: String(
-      ctx.getParam("description", "Read, glob, or grep files in the project workspace"),
-    ),
-    schema: {
-      type: "object",
-      properties: {
-        operation: { type: "string", description: "read | glob | grep" },
-        path: { type: "string", description: "File or directory relative to fsRoot" },
-        pattern: { type: "string", description: "Glob or grep pattern" },
+    tools: [
+      {
+        name: "read_file",
+        description: "Read a UTF-8 file under the workspace root",
+        inputSchema: {
+          type: "object",
+          properties: { path: { type: "string", description: "Path relative to fsRoot" } },
+          required: ["path"],
+        },
       },
-      required: ["operation"],
-    },
-    async invoke(args) {
+      {
+        name: "list_directory",
+        description: "List files under a directory (recursive, skips node_modules/.git)",
+        inputSchema: {
+          type: "object",
+          properties: { path: { type: "string", description: "Directory relative to fsRoot" } },
+        },
+      },
+      {
+        name: "search_files",
+        description: "Grep file contents under a path",
+        inputSchema: {
+          type: "object",
+          properties: {
+            path: { type: "string" },
+            pattern: { type: "string", description: "JavaScript regex" },
+          },
+          required: ["pattern"],
+        },
+      },
+    ],
+    async invoke(toolName, args) {
       const fsRoot = requireFsRoot(ctx);
-      const operation = String(args.operation ?? "read");
       const rel = String(args.path ?? ".");
       const target = resolveJailPath(fsRoot, rel);
-      if (operation === "read") {
+      if (toolName === "read_file") {
         const info = await stat(target);
-        if (!info.isFile()) throw new Error("read requires a file path");
+        if (!info.isFile()) throw new Error("read_file requires a file path");
         return { content: await readFile(target, "utf8") };
       }
-      if (operation === "glob") {
-        const pattern = String(args.pattern ?? "**/*");
-        const re = globToRegExp(pattern);
+      if (toolName === "list_directory") {
         const files = await walkFiles(target);
-        const hits = files
-          .map((f) => relative(fsRoot, f).replaceAll("\\", "/"))
-          .filter((p) => re.test(p) || re.test(p.split("/").pop() ?? p));
-        return { content: JSON.stringify(hits) };
+        return {
+          content: JSON.stringify(files.map((f) => relative(fsRoot, f).replaceAll("\\", "/"))),
+        };
       }
-      if (operation === "grep") {
+      if (toolName === "search_files") {
         const pattern = String(args.pattern ?? "");
-        if (!pattern) throw new Error("pattern is required for grep");
+        if (!pattern) throw new Error("pattern is required");
         const re = new RegExp(pattern, "i");
         const files = await walkFiles(target);
         const matches: Array<{ path: string; line: number; text: string }> = [];
@@ -82,21 +87,22 @@ export const filesystemToolExecutor: NodeExecutor = async (ctx) => {
           } catch {
             continue;
           }
-          const lines = text.split(/\r?\n/);
-          lines.forEach((line, i) => {
-            if (re.test(line) && matches.length < 100) {
+          const lines = text.split("\n");
+          for (let i = 0; i < lines.length; i++) {
+            if (re.test(lines[i]!)) {
               matches.push({
                 path: relative(fsRoot, file).replaceAll("\\", "/"),
                 line: i + 1,
-                text: line.slice(0, 240),
+                text: lines[i]!.slice(0, 240),
               });
+              if (matches.length >= 80) break;
             }
-          });
-          if (matches.length >= 100) break;
+          }
+          if (matches.length >= 80) break;
         }
         return { content: JSON.stringify(matches) };
       }
-      throw new Error(`Filesystem tool: unsupported operation "${operation}"`);
+      throw new Error(`Filesystem tool: unknown tool "${toolName}"`);
     },
   });
 };

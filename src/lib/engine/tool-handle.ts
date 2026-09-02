@@ -10,6 +10,12 @@ export interface ToolHandle {
   invoke(args: Record<string, unknown>): Promise<unknown> | unknown;
 }
 
+export interface McpToolDescriptor {
+  name: string;
+  description?: string;
+  inputSchema?: Record<string, unknown>;
+}
+
 export function mergeToolArgs(
   params: Record<string, unknown>,
   args: Record<string, unknown>,
@@ -47,6 +53,32 @@ export function emitToolHandle(ctx: ExecutionContext, handle: ToolHandle): INode
   return [[{ json: handle as unknown as Record<string, unknown>, pairedItem }]];
 }
 
+/** MCP-shaped bundle so the agent expands every tool (must not set top-level `name`). */
+export function emitMcpBundle(
+  ctx: ExecutionContext,
+  bundle: {
+    type?: string;
+    tools: McpToolDescriptor[];
+    invoke: (toolName: string, args: Record<string, unknown>) => Promise<unknown> | unknown;
+  },
+): INodeExecutionData[][] {
+  const items = ctx.getInputItems(0);
+  const pairedItem =
+    items.length > 0 ? (items[0].pairedItem ?? { item: 0, input: 0 }) : { item: 0, input: 0 };
+  return [
+    [
+      {
+        json: {
+          type: bundle.type ?? "openflow-node-langchain.mcpClientTool",
+          tools: bundle.tools,
+          invoke: bundle.invoke,
+        } as unknown as Record<string, unknown>,
+        pairedItem,
+      },
+    ],
+  ];
+}
+
 export function isClusterToolActivation(ctx: ExecutionContext): boolean {
   return ctx.getInputItems(0).length === 0;
 }
@@ -62,11 +94,13 @@ export function resolveJailPath(fsRoot: string, requested: string): string {
 }
 
 export function requireFsRoot(ctx: ExecutionContext): string {
-  const root = ctx.fsRoot?.trim();
-  if (!root) {
-    throw new Error("Filesystem/Git tool requires createRuntime({ fsRoot })");
-  }
-  return root;
+  const fromParam = String(ctx.getParam("fsRoot", "") ?? "").trim();
+  if (fromParam) return resolve(fromParam);
+  const fromCtx = ctx.fsRoot?.trim();
+  if (fromCtx) return resolve(fromCtx);
+  const env = process.env.OPENFLOW_FS_ROOT?.trim();
+  if (env) return resolve(env);
+  throw new Error("Filesystem/Git tool requires createRuntime({ fsRoot })");
 }
 
 export function asHandleExecutor(

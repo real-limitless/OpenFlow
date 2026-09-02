@@ -1,5 +1,5 @@
 import type { NodeExecutor } from "@/sdk";
-import { assertAllowUrl, emitToolHandle, mergeToolArgs } from "../tool-handle";
+import { assertAllowUrl, emitMcpBundle, mergeToolArgs } from "../tool-handle";
 
 const SEARCH_PROVIDERS: Record<string, string> = {
   google: "https://www.googleapis.com/customsearch/v1",
@@ -7,28 +7,30 @@ const SEARCH_PROVIDERS: Record<string, string> = {
   duckduckgo: "https://api.duckduckgo.com",
 };
 
-const TYPE = "n8n-nodes-base.webSearchTool";
+const TYPE = "openflow-node-base.webSearchTool";
 
 export const webSearchToolExecutor: NodeExecutor = async (ctx) => {
-  return emitToolHandle(ctx, {
+  return emitMcpBundle(ctx, {
     type: TYPE,
-    name: String(ctx.getParam("toolName", "web_search")),
-    description: String(
-      ctx.getParam("description", "Search the web and return titles, URLs, and snippets"),
-    ),
-    schema: {
-      type: "object",
-      properties: {
-        query: { type: "string", description: "Search query" },
-        resultLimit: { type: "number" },
-        searchEngine: { type: "string" },
+    tools: [
+      {
+        name: "web_search",
+        description: "Search the web and return titles, URLs, and snippets",
+        inputSchema: {
+          type: "object",
+          properties: {
+            query: { type: "string" },
+            resultLimit: { type: "number" },
+            searchEngine: { type: "string", description: "duckduckgo | google | bing | custom" },
+          },
+          required: ["query"],
+        },
       },
-      required: ["query"],
-    },
-    async invoke(args) {
+    ],
+    async invoke(_toolName, args) {
       const merged = mergeToolArgs(ctx.getParams(), args);
       const query = String(merged.query ?? "");
-      if (!query) throw new Error("Query parameter is required");
+      if (!query) throw new Error("query is required");
       const resultLimit = Number(merged.resultLimit ?? ctx.getParam("resultLimit", 5)) || 5;
       const searchEngine = String(
         merged.searchEngine ?? ctx.getParam("searchEngine", "duckduckgo"),
@@ -68,7 +70,7 @@ export const webSearchToolExecutor: NodeExecutor = async (ctx) => {
         return {
           title: String(r.title ?? r.Text ?? r.name ?? ""),
           url: String(r.link ?? r.FirstURL ?? r.url ?? ""),
-          snippet: String(r.snippet ?? r.Text ?? r.snippet ?? ""),
+          snippet: String(r.snippet ?? r.Text ?? ""),
         };
       });
       return { content: JSON.stringify(results) };

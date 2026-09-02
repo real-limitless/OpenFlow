@@ -1,4 +1,4 @@
-import type { ExecutionRunData } from "@/lib/engine/types";
+import type { AgentTrace, ExecutionNodeProgress, ExecutionRunData } from "@/lib/engine/types";
 import type { INodeExecutionData } from "@/lib/workflow/types";
 
 export type ExecutionStatus = ExecutionRunData[string]["status"];
@@ -14,6 +14,8 @@ export type ExecutionEntry = {
   finishedAt?: string;
   durationMs?: number;
   items?: INodeExecutionData[][];
+  progress?: ExecutionNodeProgress;
+  trace?: AgentTrace;
 };
 
 export const EXECUTION_LAYOUT_STORAGE_KEY = "openflow.editor.executionLayout.v1";

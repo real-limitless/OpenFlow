@@ -308,11 +308,13 @@ model Execution {
   id         String    @id @default(cuid())
   workflowId String
   status     String    @default("running") // running | success | error | waiting
-  mode       String                         // manual | webhook | trigger
+  mode       String                         // manual | webhook | trigger | runtime
   startedAt  DateTime  @default(now())
   finishedAt DateTime?
   runData    String    @default("{}")       // JSON: node-level results keyed by node name
   error      String?                        // JSON error payload
+  /// Host ingest metadata: { host, stageId, projectId, fingerprint }
+  meta       String?
 
   workflow   Workflow  @relation(fields: [workflowId], references: [id], onDelete: Cascade)
 

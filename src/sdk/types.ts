@@ -2,6 +2,7 @@ import type { INode, INodeExecutionData, IWorkflow } from "@/lib/workflow/types"
 import type { INodeTypeDescription } from "@/lib/nodes/types";
 import type { CredentialData } from "@/lib/engine/credentials";
 import type { DataTableAccess } from "@/lib/data-tables/access";
+import type { ExecutionNodeProgress } from "@/lib/engine/agent-trace";
 
 /** Single item flowing between nodes (re-export for SDK consumers). */
 export type Item = INodeExecutionData;
@@ -82,8 +83,17 @@ export interface ExecutionContext {
    */
   allowUrl?: (url: string) => boolean;
 
-  /** Jail root for filesystem / git tool paths. */
+  /** Jail root for filesystem / git tools (harness hosts). */
   fsRoot?: string;
+
+  /**
+   * Mid-node progress (Agent turns / current tool). JSON-safe only.
+   * The runner persists this onto `runData[node]` while status is `running`.
+   */
+  reportProgress?(update: {
+    progress?: ExecutionNodeProgress;
+    trace?: { turns: Array<Record<string, unknown>> };
+  }): void | Promise<void>;
 }
 
 /**
@@ -128,4 +138,5 @@ export interface CreateContextOptions {
   allowUrl?: (url: string) => boolean;
   /** Jail root for filesystem / git tool paths. */
   fsRoot?: string;
+  reportProgress?: ExecutionContext["reportProgress"];
 }

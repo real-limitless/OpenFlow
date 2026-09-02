@@ -96,6 +96,19 @@ export async function authMiddleware(c: Context<AppEnv>, next: Next) {
   }
 
   if (config.auth.disabled) {
+    const xApiKey = c.req.header("X-API-Key");
+    const rawKey = xApiKey
+      ? xApiKey.startsWith("Bearer ")
+        ? xApiKey.slice(7)
+        : xApiKey
+      : extractBearer(c.req.header("Authorization"));
+    if (rawKey?.startsWith("of_")) {
+      const keyed = await resolveApiKeyAuth(rawKey);
+      if (keyed) {
+        applyAgent(c, keyed);
+        return next();
+      }
+    }
     await ensureUser(LOCAL_USER_ID);
     applyAgent(c, {
       userId: LOCAL_USER_ID,

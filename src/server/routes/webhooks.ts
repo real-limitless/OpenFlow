@@ -2,19 +2,21 @@ import type { Hono } from "hono";
 import { prisma } from "../db";
 import type { AppEnv } from "../middleware/auth";
 import type { IWorkflow } from "../../lib/workflow/types";
+import type { ExecutionRunData } from "../../lib/engine/types";
 import { executeWorkflow } from "../../lib/engine/runner";
 import { getExecutorMap } from "../../lib/engine";
-import { getWebhookResponse, clearWebhookResponse } from "../../lib/engine/executors/respond-to-webhook";
+import {
+  getWebhookResponse,
+  clearWebhookResponse,
+} from "../../lib/engine/executors/respond-to-webhook";
 import { credentialResolverForProject } from "../credentials";
 import { dataTableAccessForProject } from "../services/data-tables-access";
 import { enqueueOrRun } from "../execute";
 import { resolveSubWorkflowFromDb } from "../workflow-loader";
 import { loadVarsMap } from "../services/variables";
 import { getDefaultEnvironment } from "../services/environments";
-import {
-  notifyExecutionFinished,
-  notifyExecutionStarted,
-} from "../services/workflow-events";
+import { notifyExecutionFinished, notifyExecutionStarted } from "../services/workflow-events";
+import { persistExecutionProgress } from "../services/persist-execution-progress";
 
 export default function webhooksRoute(app: Hono<AppEnv>) {
   // Public webhook endpoint — no auth required
@@ -27,7 +29,11 @@ export default function webhooksRoute(app: Hono<AppEnv>) {
       include: { workflow: true },
     });
 
-    if (!webhookRoute || !webhookRoute.active || (webhookRoute.method !== "*" && webhookRoute.method !== method)) {
+    if (
+      !webhookRoute ||
+      !webhookRoute.active ||
+      (webhookRoute.method !== "*" && webhookRoute.method !== method)
+    ) {
       return c.json({ error: "Webhook not found" }, 404);
     }
 
@@ -66,21 +72,19 @@ export default function webhooksRoute(app: Hono<AppEnv>) {
     const isRespondType = (t: string) =>
       t === "openflow-node-base.respondToWebhook" || t === "n8n-nodes-base.respondToWebhook";
 
-    const webhookNodeName = definition.nodes.find(
-      (n: { type: string }) => isWebhookType(n.type),
+    const webhookNodeName = definition.nodes.find((n: { type: string }) =>
+      isWebhookType(n.type),
     )?.name;
 
     // Determine if workflow uses "Respond to Webhook" node
-    const hasRespondNode = definition.nodes.some(
-      (n: { type: string }) => isRespondType(n.type),
-    );
+    const hasRespondNode = definition.nodes.some((n: { type: string }) => isRespondType(n.type));
 
     // Check the webhook trigger's responseMode setting
-    const webhookNode = definition.nodes.find(
-      (n: { type: string }) => isWebhookType(n.type),
-    );
-    const responseMode = (webhookNode?.parameters as Record<string, unknown>)?.responseMode as string | undefined;
-    const shouldWait = hasRespondNode || responseMode === "lastNode" || responseMode === "responseNode";
+    const webhookNode = definition.nodes.find((n: { type: string }) => isWebhookType(n.type));
+    const responseMode = (webhookNode?.parameters as Record<string, unknown>)?.responseMode as
+      string | undefined;
+    const shouldWait =
+      hasRespondNode || responseMode === "lastNode" || responseMode === "responseNode";
 
     const ownerId = workflow.userId;
     const projectId = workflow.projectId;
@@ -92,13 +96,14 @@ export default function webhooksRoute(app: Hono<AppEnv>) {
     const runOptions = {
       workflow: { ...definition, __executionId: execution.id },
       nodeExecutors: getExecutorMap(),
-      pinData: webhookNodeName
-        ? { [webhookNodeName]: [{ json: requestData }] }
-        : undefined,
+      pinData: webhookNodeName ? { [webhookNodeName]: [{ json: requestData }] } : undefined,
       credentialResolver: credentialResolverForProject(projectId, ownerId),
       dataTables: dataTableAccessForProject(projectId),
       vars,
       resolveSubWorkflow: resolveSubWorkflowFromDb,
+      onProgress: async (partial: ExecutionRunData) => {
+        await persistExecutionProgress(execution.id, partial);
+      },
     };
 
     const updateExecution = async (result: { success: boolean; runData: unknown }) => {
@@ -140,7 +145,11 @@ export default function webhooksRoute(app: Hono<AppEnv>) {
       );
 
       return c.json(
-        { success: true, executionId: execution.id, message: "Webhook received, execution started" },
+        {
+          success: true,
+          executionId: execution.id,
+          message: "Webhook received, execution started",
+        },
         202,
       );
     }

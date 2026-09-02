@@ -1,9 +1,9 @@
 import { readFile } from "node:fs/promises";
 import type { NodeExecutor } from "@/sdk";
-import { assertAllowUrl, emitToolHandle, requireFsRoot, resolveJailPath } from "../tool-handle";
+import { assertAllowUrl, emitMcpBundle, requireFsRoot, resolveJailPath } from "../tool-handle";
 import { createGitClient } from "./git";
 
-const TYPE = "n8n-nodes-base.gitTool";
+const TYPE = "openflow-node-base.gitTool";
 
 async function getClient(ctx: Parameters<NodeExecutor>[0]) {
   const credentials =
@@ -13,35 +13,53 @@ async function getClient(ctx: Parameters<NodeExecutor>[0]) {
 }
 
 export const gitToolExecutor: NodeExecutor = async (ctx) => {
-  return emitToolHandle(ctx, {
+  return emitMcpBundle(ctx, {
     type: TYPE,
-    name: String(ctx.getParam("toolName", "git")),
-    description: String(
-      ctx.getParam("description", "Clone a git repository, show a file, or list recent commits"),
-    ),
-    schema: {
-      type: "object",
-      properties: {
-        operation: {
-          type: "string",
-          description: "clone | showFile | log",
+    tools: [
+      {
+        name: "git_clone",
+        description: "Clone a git repository into a path under the workspace root",
+        inputSchema: {
+          type: "object",
+          properties: {
+            repository: { type: "string", description: "Remote URL" },
+            path: { type: "string", description: "Destination relative to fsRoot" },
+            branch: { type: "string" },
+          },
+          required: ["repository"],
         },
-        repository: { type: "string", description: "Remote URL (clone)" },
-        path: { type: "string", description: "Local path under fsRoot" },
-        filePath: { type: "string", description: "File to read (showFile)" },
-        branch: { type: "string" },
-        maxCommits: { type: "number" },
       },
-      required: ["operation"],
-    },
-    async invoke(args) {
+      {
+        name: "git_show",
+        description: "Read a file from a cloned repo (working tree)",
+        inputSchema: {
+          type: "object",
+          properties: {
+            path: { type: "string", description: "Repo directory relative to fsRoot" },
+            filePath: { type: "string", description: "File inside the repo" },
+          },
+          required: ["filePath"],
+        },
+      },
+      {
+        name: "git_log",
+        description: "List recent commits in a local repo",
+        inputSchema: {
+          type: "object",
+          properties: {
+            path: { type: "string" },
+            maxCommits: { type: "number" },
+          },
+        },
+      },
+    ],
+    async invoke(toolName, args) {
       const fsRoot = requireFsRoot(ctx);
-      const operation = String(args.operation ?? "clone");
       const rel = String(args.path ?? "repo");
       const dest = resolveJailPath(fsRoot, rel);
-      if (operation === "clone") {
+      if (toolName === "git_clone") {
         const repository = String(args.repository ?? "");
-        if (!repository) throw new Error("repository is required for clone");
+        if (!repository) throw new Error("repository is required");
         assertAllowUrl(ctx, repository);
         const client = await getClient(ctx);
         try {
@@ -53,14 +71,13 @@ export const gitToolExecutor: NodeExecutor = async (ctx) => {
         }
         return { content: JSON.stringify({ cloned: dest, repository }) };
       }
-      if (operation === "showFile") {
+      if (toolName === "git_show") {
         const filePath = String(args.filePath ?? "");
-        if (!filePath) throw new Error("filePath is required for showFile");
+        if (!filePath) throw new Error("filePath is required");
         const abs = resolveJailPath(dest, filePath);
-        const data = await readFile(abs, "utf8");
-        return { content: data };
+        return { content: await readFile(abs, "utf8") };
       }
-      if (operation === "log") {
+      if (toolName === "git_log") {
         const client = await getClient(ctx);
         try {
           const entries = await client.log(dest, Number(args.maxCommits ?? 20) || 20);
@@ -69,7 +86,7 @@ export const gitToolExecutor: NodeExecutor = async (ctx) => {
           await client.close().catch(() => {});
         }
       }
-      throw new Error(`Git tool: unsupported operation "${operation}"`);
+      throw new Error(`Git tool: unknown tool "${toolName}"`);
     },
   });
 };

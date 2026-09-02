@@ -71,7 +71,12 @@ beforeEach(() => {
         signal: init?.signal,
         redirect: init?.redirect,
       });
-      return mockResponse({ userId: 1, id: 1, title: "delectus aut autem", completed: false }) as Response;
+      return mockResponse({
+        userId: 1,
+        id: 1,
+        title: "delectus aut autem",
+        completed: false,
+      }) as Response;
     },
   );
 });
@@ -286,10 +291,7 @@ describe("httpRequestTool", () => {
   });
 
   it("optimizeResponse html strips tags and truncates", async () => {
-    const longHtml =
-      "<html><body><h1>Title</h1><p>" +
-      "A".repeat(600) +
-      "</p></body></html>";
+    const longHtml = "<html><body><h1>Title</h1><p>" + "A".repeat(600) + "</p></body></html>";
 
     vi.spyOn(globalThis, "fetch").mockImplementation(async () => {
       return mockResponse(longHtml, { contentType: "text/html" }) as Response;
@@ -314,5 +316,17 @@ describe("httpRequestTool", () => {
     expect(text.length).toBeLessThanOrEqual(500);
     expect(text).not.toContain("<html>");
     expect(text).not.toContain("<h1>");
+  });
+
+  it("emits an http_request handle when there are no main items", async () => {
+    const [out] = await runHttpRequestTool({ method: "GET" }, []);
+    const handle = out[0].json as {
+      name: string;
+      invoke: (args: Record<string, unknown>) => Promise<string>;
+    };
+    expect(handle.name).toBe("http_request");
+    const body = await handle.invoke({ url: "https://example.com/ping" });
+    expect(fetchCalls[0].url).toBe("https://example.com/ping");
+    expect(body).toContain("delectus");
   });
 });

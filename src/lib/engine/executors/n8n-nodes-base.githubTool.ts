@@ -1,6 +1,7 @@
 import type { NodeExecutor, INodeExecutionData } from "@/sdk";
 import { ensureItems } from "@/sdk";
 import { evaluateExpression } from "../../expressions/evaluate";
+import { assertAllowUrl, emitToolHandle } from "../tool-handle";
 
 function resolveValue(raw: unknown, itemJson: Record<string, unknown>): unknown {
   if (typeof raw !== "string") return raw;
@@ -732,8 +733,9 @@ async function runOperation(
 }
 
 export const githubToolExecutor: NodeExecutor = async (ctx, node) => {
-  if (ctx.getInputItems(0).length === 0) {
-    const handle = {
+  const rawItems = ctx.getInputItems(0);
+  if (rawItems.length === 0) {
+    return emitToolHandle(ctx, {
       type: "n8n-nodes-base.githubTool",
       name: String(ctx.getParam("toolName", "github")),
       description: String(
@@ -756,9 +758,7 @@ export const githubToolExecutor: NodeExecutor = async (ctx, node) => {
       async invoke(args: Record<string, unknown>) {
         const merged = { ...node.parameters, ...args };
         const { baseUrl, token } = await getCredential(ctx);
-        if (ctx.allowUrl && !ctx.allowUrl(baseUrl)) {
-          throw new Error(`HTTP Request blocked by allowUrl policy: ${baseUrl}`);
-        }
+        assertAllowUrl(ctx, baseUrl);
         const resource = String(merged.resource ?? "file");
         const operation = String(merged.operation ?? "get");
         const results = await runOperation(
@@ -771,11 +771,10 @@ export const githubToolExecutor: NodeExecutor = async (ctx, node) => {
         );
         return { content: JSON.stringify(results) };
       },
-    };
-    return [[{ json: handle as unknown as Record<string, unknown>, pairedItem: { item: 0, input: 0 } }]];
+    });
   }
 
-  const items = ensureItems(ctx.getInputItems(0));
+  const items = ensureItems(rawItems);
   const out: INodeExecutionData[] = [];
   const resource = String(node.parameters.resource ?? "issue");
   const operation = String(node.parameters.operation ?? "get");

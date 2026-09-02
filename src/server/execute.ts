@@ -3,19 +3,14 @@ import { executionQueue } from "./queue";
 import { executeWorkflow } from "../lib/engine/runner";
 import { getExecutorMap } from "../lib/engine";
 import { credentialResolverForProject, credentialResolverForUser } from "./credentials";
-import {
-  dataTableAccessForProject,
-  dataTableAccessForUser,
-} from "./services/data-tables-access";
-import {
-  definitionFromRow,
-  resolveSubWorkflowFromDb,
-} from "./workflow-loader";
+import { dataTableAccessForProject, dataTableAccessForUser } from "./services/data-tables-access";
+import { definitionFromRow, resolveSubWorkflowFromDb } from "./workflow-loader";
 import { LOCAL_USER_ID } from "./services/users";
 import { loadVarsMap } from "./services/variables";
 import { getDefaultEnvironment, resolveEnvironment } from "./services/environments";
 import { log } from "./log";
 import { notifyExecutionFinished } from "./services/workflow-events";
+import { persistExecutionProgress } from "./services/persist-execution-progress";
 import type { IWorkflow, INodeExecutionData } from "../lib/workflow/types";
 
 let redisAvailable: boolean | null = null;
@@ -141,10 +136,7 @@ export async function enqueueOrRun(
     stopBeforeDestination: stopBefore,
     resolveSubWorkflow: resolveSubWorkflowFromDb,
     onProgress: async (partial) => {
-      await prisma.execution.update({
-        where: { id: executionId },
-        data: { runData: JSON.stringify(partial) },
-      });
+      await persistExecutionProgress(executionId, partial);
     },
   })
     .then(async (result) => {

@@ -5,16 +5,14 @@ import { connection } from "./queue";
 import { getExecutorMap } from "../lib/engine";
 import { executeWorkflow } from "../lib/engine/runner";
 import { credentialResolverForProject, credentialResolverForUser } from "./credentials";
-import {
-  dataTableAccessForProject,
-  dataTableAccessForUser,
-} from "./services/data-tables-access";
+import { dataTableAccessForProject, dataTableAccessForUser } from "./services/data-tables-access";
 import { resolveSubWorkflowFromDb } from "./workflow-loader";
 import { loadVarsMap } from "./services/variables";
 import { getDefaultEnvironment } from "./services/environments";
 import { initBinaryStorage } from "./binary-init";
 import { initLogStreaming, log } from "./log";
 import { notifyExecutionFinished } from "./services/workflow-events";
+import { persistExecutionProgress } from "./services/persist-execution-progress";
 import type { ExecutionJobData } from "./queue";
 import type { INodeExecutionData, IWorkflow } from "../lib/workflow/types";
 
@@ -117,10 +115,7 @@ export function startWorker(concurrency = 5): Worker<ExecutionJobData> {
         stopBeforeDestination: jobStopBefore !== false,
         resolveSubWorkflow: resolveSubWorkflowFromDb,
         onProgress: async (partial) => {
-          await prisma.execution.update({
-            where: { id: executionId },
-            data: { runData: JSON.stringify(partial) },
-          });
+          await persistExecutionProgress(executionId, partial);
         },
       });
 
@@ -183,8 +178,7 @@ const isMain =
   entry.endsWith("/worker.ts") ||
   entry.endsWith("/worker.js") ||
   entry.endsWith("/worker.mjs") ||
-  (typeof process.argv[1] === "string" &&
-    import.meta.url === pathToFileURL(process.argv[1]).href);
+  (typeof process.argv[1] === "string" && import.meta.url === pathToFileURL(process.argv[1]).href);
 
 if (isMain || process.env.RUN_AS_WORKER === "true") {
   startWorker();

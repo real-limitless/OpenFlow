@@ -30,7 +30,7 @@ export function EditorDockHost({
   isExecuting: boolean;
   onExecutePrevious?: (nodeName: string) => void;
   onAddNode: (type: string, init?: AddNodeInit) => void;
-  onSelectExecution: (runData: ExecutionRunData) => void;
+  onSelectExecution: (runData: ExecutionRunData, meta?: { id: string; status: string }) => void;
   dockApiRef: React.MutableRefObject<DockviewApi | null>;
 }) {
   const selected = useWorkflowStore((s) => s.selectedNode);

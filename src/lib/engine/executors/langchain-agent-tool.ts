@@ -1,4 +1,13 @@
 import type { NodeExecutor, INodeExecutionData, ExecutionContext, IWorkflow } from "@/sdk";
+import {
+  capTrace,
+  createDeltaThrottle,
+  NodeExecutionError,
+  nowIso,
+  usageFromResult,
+  type AgentTrace,
+  type AgentTraceTurn,
+} from "../agent-trace";
 
 interface ChatMessage {
   role: "system" | "user" | "assistant" | "tool";
@@ -23,10 +32,18 @@ interface ModelInvokeResult {
   [key: string]: unknown;
 }
 
+type ModelInvokeOpts = {
+  onDelta?: (delta: { text: string; reasoning?: string }) => void;
+};
+
 interface ModelHandle {
   type?: string;
   model?: string;
-  invoke(messages: ChatMessage[], tools?: unknown[]): Promise<ModelInvokeResult>;
+  invoke(
+    messages: ChatMessage[],
+    tools?: unknown[],
+    opts?: ModelInvokeOpts,
+  ): Promise<ModelInvokeResult>;
 }
 
 interface ToolHandle {
@@ -65,6 +82,7 @@ export interface AgentToolHandle {
   name: string;
   description: string;
   invoke(args: Record<string, unknown>): Promise<string>;
+  agentTrace?: AgentTrace;
 }
 
 function findConnectedSubNodes(
@@ -147,9 +165,13 @@ function getToolHandles(ctx: ExecutionContext, names: string[]): ToolHandle[] {
               if (result == null) return "";
               if (typeof result === "string") return result;
               const r = result as { content?: unknown; isError?: boolean };
-              if (typeof r.content === "string") return r.isError ? `Error: ${r.content}` : r.content;
-              try { return JSON.stringify(result); }
-              catch { return String(result); }
+              if (typeof r.content === "string")
+                return r.isError ? `Error: ${r.content}` : r.content;
+              try {
+                return JSON.stringify(result);
+              } catch {
+                return String(result);
+              }
             },
           });
         }
@@ -179,7 +201,7 @@ function toolCallId(call: ToolCall, index: number): string {
 async function runNestedAgent(
   ctx: ExecutionContext,
   nodeName: string,
-): Promise<string> {
+): Promise<{ output: string; trace: AgentTrace }> {
   const workflow = ctx.getWorkflow();
   const subs = findConnectedSubNodes(workflow.connections, nodeName);
 
@@ -201,9 +223,8 @@ async function runNestedAgent(
   const hasOutputParser = ctx.getParam<boolean>("hasOutputParser", false);
   const options = ctx.getParam<Record<string, unknown>>("options", {}) ?? {};
   const maxIterationsRaw = options.maxIterations;
-  const maxIterations = typeof maxIterationsRaw === "number" && maxIterationsRaw > 0
-    ? maxIterationsRaw
-    : 10;
+  const maxIterations =
+    typeof maxIterationsRaw === "number" && maxIterationsRaw > 0 ? maxIterationsRaw : 10;
 
   const toolHandles = getToolHandles(
     ctx,
@@ -226,17 +247,19 @@ async function runNestedAgent(
   const itemJson = firstItem?.json ?? {};
 
   const text = ctx.getParam<unknown>("text", "");
-  const prompt = text != null
-    ? String(ctx.evaluate(typeof text === "string" ? text : String(text), itemJson) ?? "")
-    : "";
+  const prompt =
+    text != null
+      ? String(ctx.evaluate(typeof text === "string" ? text : String(text), itemJson) ?? "")
+      : "";
   if (!prompt) {
     throw new Error("No prompt specified");
   }
 
   const systemMessageRaw = options.systemMessage;
-  const systemMessage = systemMessageRaw != null && typeof systemMessageRaw === "string"
-    ? String(ctx.evaluate(systemMessageRaw, itemJson) ?? "")
-    : undefined;
+  const systemMessage =
+    systemMessageRaw != null && typeof systemMessageRaw === "string"
+      ? String(ctx.evaluate(systemMessageRaw, itemJson) ?? "")
+      : undefined;
 
   const messages: ChatMessage[] = [];
   if (systemMessage) {
@@ -262,59 +285,123 @@ async function runNestedAgent(
   messages.push({ role: "user", content: prompt });
 
   let finalText: string | null = null;
+  const turns: AgentTraceTurn[] = [];
 
-  for (let iteration = 0; iteration < maxIterations; iteration++) {
-    let result: ModelInvokeResult;
-    try {
-      result = await primaryModel.invoke(messages, toolDefs);
-    } catch (err) {
-      if (needsFallback && fallbackModel) {
-        result = await fallbackModel.invoke(messages, toolDefs);
-      } else {
-        throw err;
-      }
-    }
-
-    const toolCalls = Array.isArray(result.toolCalls) ? result.toolCalls : [];
-    if (toolCalls.length > 0) {
-      messages.push({
-        role: "assistant",
-        content: result.text ?? "",
-        tool_calls: toolCalls.map((call, i) => ({
-          id: toolCallId(call, i),
-          type: "function" as const,
-          function: {
-            name: call.name,
-            arguments: JSON.stringify(call.args ?? {}),
+  try {
+    for (let iteration = 0; iteration < maxIterations; iteration++) {
+      const turn: AgentTraceTurn = {
+        iteration,
+        toolCalls: [],
+        observations: [],
+        startedAt: nowIso(),
+        status: "running",
+        phase: "llm",
+      };
+      turns.push(turn);
+      const throttle = createDeltaThrottle(async () => {
+        await ctx.reportProgress?.({
+          progress: {
+            iteration,
+            maxIterations,
+            stepCount: turn.observations.length,
+            phase: "llm",
+            streaming: true,
+            lastTokenAt: turn.lastTokenAt,
+            chars: (turn.assistantText?.length ?? 0) + (turn.reasoning?.length ?? 0),
+            updatedAt: nowIso(),
           },
-        })),
-      });
-      for (let i = 0; i < toolCalls.length; i++) {
-        const call = toolCalls[i];
-        const tool = toolHandles.find((t) => t.name === call.name);
-        if (!tool) {
-          throw new Error(`Tool not found: ${call.name}`);
-        }
-        let observation = "";
-        if (typeof tool.invoke === "function") {
-          const obs = await tool.invoke(call.args ?? {});
-          observation = typeof obs === "string" ? obs : String(obs ?? "");
-        }
-        messages.push({
-          role: "tool",
-          content: observation,
-          tool_call_id: toolCallId(call, i),
+          trace: capTrace({ turns }),
         });
+      });
+      const onDelta = (delta: { text: string; reasoning?: string }) => {
+        if (delta.text) turn.assistantText = delta.text;
+        if (delta.reasoning) turn.reasoning = delta.reasoning;
+        turn.streaming = true;
+        turn.lastTokenAt = nowIso();
+        throttle.push((turn.assistantText?.length ?? 0) + (turn.reasoning?.length ?? 0));
+      };
+      let result: ModelInvokeResult;
+      try {
+        result = await primaryModel.invoke(messages, toolDefs, { onDelta });
+      } catch (err) {
+        if (needsFallback && fallbackModel) {
+          result = await fallbackModel.invoke(messages, toolDefs, { onDelta });
+        } else {
+          throw err;
+        }
       }
-      continue;
-    }
+      await throttle.flush();
+      turn.streaming = false;
 
-    finalText = result.text ?? "";
-    break;
+      const toolCalls = Array.isArray(result.toolCalls) ? result.toolCalls : [];
+      const usage = usageFromResult(result);
+      const reasoning = typeof result.reasoning === "string" ? result.reasoning : undefined;
+      if (result.text) turn.assistantText = String(result.text);
+      if (reasoning) turn.reasoning = reasoning;
+      if (usage) turn.usage = usage;
+      turn.toolCalls = toolCalls.map((call) => ({
+        id: call.id,
+        name: call.name,
+        args: call.args ?? {},
+      }));
+
+      if (toolCalls.length > 0) {
+        messages.push({
+          role: "assistant",
+          content: result.text ?? "",
+          tool_calls: toolCalls.map((call, i) => ({
+            id: toolCallId(call, i),
+            type: "function" as const,
+            function: {
+              name: call.name,
+              arguments: JSON.stringify(call.args ?? {}),
+            },
+          })),
+        });
+        for (let i = 0; i < toolCalls.length; i++) {
+          const call = toolCalls[i];
+          const tool = toolHandles.find((t) => t.name === call.name);
+          if (!tool) {
+            throw new NodeExecutionError(`Tool not found: ${call.name}`, {
+              trace: capTrace({ turns }),
+            });
+          }
+          let observation = "";
+          if (typeof tool.invoke === "function") {
+            const obs = await tool.invoke(call.args ?? {});
+            observation = typeof obs === "string" ? obs : String(obs ?? "");
+          }
+          messages.push({
+            role: "tool",
+            content: observation,
+            tool_call_id: toolCallId(call, i),
+          });
+          turn.observations.push({ tool: call.name, content: observation });
+        }
+        turn.phase = "tools";
+        turn.status = "success";
+        continue;
+      }
+
+      turn.phase = "final";
+      turn.status = "success";
+      finalText = result.text ?? "";
+      break;
+    }
+  } catch (err) {
+    if (err instanceof NodeExecutionError) {
+      if (!err.trace) err.trace = capTrace({ turns });
+      throw err;
+    }
+    const message = err instanceof Error ? err.message : String(err);
+    throw new NodeExecutionError(message, { trace: capTrace({ turns }) });
   }
 
   if (finalText === null) {
-    throw new Error(`Agent did not produce a final answer within ${maxIterations} iterations`);
+    throw new NodeExecutionError(
+      `Agent did not produce a final answer within ${maxIterations} iterations`,
+      { trace: capTrace({ turns }) },
+    );
   }
 
   if (memoryHandle) {
@@ -334,19 +421,34 @@ async function runNestedAgent(
     output = await parserHandle.parse(finalText);
   }
 
-  return typeof output === "string" ? output : JSON.stringify(output);
+  return {
+    output: typeof output === "string" ? output : JSON.stringify(output),
+    trace: capTrace({ turns }),
+  };
 }
 
 export const langchainAgentToolExecutor: NodeExecutor = async (ctx) => {
   const node = ctx.getNode();
-  const toolDescription = ctx.getParam<string>("toolDescription", "AI Agent that can call other tools");
+  const toolDescription = ctx.getParam<string>(
+    "toolDescription",
+    "AI Agent that can call other tools",
+  );
 
   const handle: AgentToolHandle = {
     type: "@n8n/n8n-nodes-langchain.agentTool",
     name: node.name,
     description: toolDescription,
     async invoke(_args: Record<string, unknown>): Promise<string> {
-      return runNestedAgent(ctx, node.name);
+      try {
+        const result = await runNestedAgent(ctx, node.name);
+        handle.agentTrace = result.trace;
+        return result.output;
+      } catch (err) {
+        if (err instanceof NodeExecutionError && err.trace) {
+          handle.agentTrace = err.trace;
+        }
+        throw err;
+      }
     },
   };
 

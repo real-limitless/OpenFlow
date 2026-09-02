@@ -10,11 +10,7 @@ import { dataTableAccessForProject } from "../services/data-tables-access";
 import { resolveSubWorkflowFromDb } from "../workflow-loader";
 import { loadVarsMap } from "../services/variables";
 import { getDefaultEnvironment } from "../services/environments";
-import {
-  formNodeParams,
-  isFormTriggerNode,
-  resolveFormPath,
-} from "../forms/register";
+import { formNodeParams, isFormTriggerNode, resolveFormPath } from "../forms/register";
 import {
   escapeHtml,
   renderErrorPage,
@@ -26,10 +22,8 @@ import { signFormCsrf, verifyFormCsrf } from "../forms/csrf";
 import type { ExecutionRunData } from "../../lib/engine/types";
 import { typesEqual } from "../../lib/nodes/type-ids";
 import { evaluateExpression, isExpression } from "../../lib/expressions/evaluate";
-import {
-  notifyExecutionFinished,
-  notifyExecutionStarted,
-} from "../services/workflow-events";
+import { notifyExecutionFinished, notifyExecutionStarted } from "../services/workflow-events";
+import { persistExecutionProgress } from "../services/persist-execution-progress";
 
 function definitionFromWorkflow(workflow: {
   id: string;
@@ -145,9 +139,11 @@ function buildWorkflowFinishThanks(
   runData: ExecutionRunData,
 ): { title: string; bodyHtml: string } {
   const json = extractTerminalJson(definition, runData) ?? {};
-  const fc = (json.formCompletion ?? null) as
-    | { title?: string; message?: string; pageTitle?: string }
-    | null;
+  const fc = (json.formCompletion ?? null) as {
+    title?: string;
+    message?: string;
+    pageTitle?: string;
+  } | null;
 
   // Prefer executor-resolved formCompletion; fall back to completion node params + expressions
   let title = String(fc?.title ?? "").trim();
@@ -208,10 +204,7 @@ export default function formsRoute(app: Hono<AppEnv>) {
 
   app.post("/form/:path", async (c) => {
     const path = c.req.param("path");
-    const embed =
-      c.req.query("embed") === "1" ||
-      c.req.query("embed") === "true" ||
-      false;
+    const embed = c.req.query("embed") === "1" || c.req.query("embed") === "true" || false;
     const ctx = await loadFormContext(path);
     if (!ctx) {
       return c.html(renderErrorPage("This form is not available.", embed), 404);
@@ -335,14 +328,14 @@ export default function formsRoute(app: Hono<AppEnv>) {
         } as IWorkflow & { __executionId: string },
         nodeExecutors: getExecutorMap(),
         pinData,
-        credentialResolver: credentialResolverForProject(
-          workflowRow.projectId,
-          workflowRow.userId,
-        ),
+        credentialResolver: credentialResolverForProject(workflowRow.projectId, workflowRow.userId),
         dataTables: dataTableAccessForProject(workflowRow.projectId),
         vars,
         startNode: ctx.node.name,
         resolveSubWorkflow: resolveSubWorkflowFromDb,
+        onProgress: async (partial) => {
+          await persistExecutionProgress(execution.id, partial);
+        },
       });
 
       const status = runResult.success ? "success" : "error";

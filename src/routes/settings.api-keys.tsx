@@ -34,6 +34,155 @@ type KeyRow = {
 };
 
 type WfOption = { id: string; name: string };
+type WfPerm = { w: boolean; x: boolean };
+
+function grantsToSelected(grants: Grant[]): Record<string, WfPerm> {
+  return Object.fromEntries(grants.map((g) => [g.workflowId, { w: g.canWrite, x: g.canExecute }]));
+}
+
+function selectedToGrants(selected: Record<string, WfPerm>) {
+  return Object.entries(selected).map(([workflowId, p]) => ({
+    workflowId,
+    canRead: true,
+    canWrite: p.w,
+    canExecute: p.x,
+  }));
+}
+
+function WorkflowGrantPicker({
+  workflows,
+  selected,
+  onChange,
+}: {
+  workflows: WfOption[];
+  selected: Record<string, WfPerm>;
+  onChange: (next: Record<string, WfPerm>) => void;
+}) {
+  const extra = Object.keys(selected)
+    .filter((id) => !workflows.some((w) => w.id === id))
+    .map((id) => ({ id, name: id }));
+  const rows = extra.length ? [...workflows, ...extra] : workflows;
+  return (
+    <div className="max-h-48 space-y-1 overflow-y-auto rounded-md border border-border p-2">
+      {rows.length === 0 && <p className="text-[12px] text-muted-foreground">No workflows yet.</p>}
+      {rows.map((w) => {
+        const on = selected[w.id];
+        return (
+          <div
+            key={w.id}
+            className="flex flex-wrap items-center gap-2 border-b border-border/50 py-1 text-[12px] last:border-0"
+          >
+            <input
+              type="checkbox"
+              checked={Boolean(on)}
+              onChange={(e) => {
+                const next = { ...selected };
+                if (e.target.checked) next[w.id] = { w: true, x: true };
+                else delete next[w.id];
+                onChange(next);
+              }}
+            />
+            <span className="min-w-0 flex-1 truncate">{w.name}</span>
+            {on && (
+              <>
+                <label className="flex items-center gap-1">
+                  <input
+                    type="checkbox"
+                    checked={on.w}
+                    onChange={(e) =>
+                      onChange({ ...selected, [w.id]: { ...on, w: e.target.checked } })
+                    }
+                  />
+                  edit
+                </label>
+                <label className="flex items-center gap-1">
+                  <input
+                    type="checkbox"
+                    checked={on.x}
+                    onChange={(e) =>
+                      onChange({ ...selected, [w.id]: { ...on, x: e.target.checked } })
+                    }
+                  />
+                  run
+                </label>
+              </>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function KeyGrantsEditor({
+  keyRow,
+  workflows,
+  onSaved,
+}: {
+  keyRow: KeyRow;
+  workflows: WfOption[];
+  onSaved: () => Promise<void>;
+}) {
+  const [restrict, setRestrict] = useState(keyRow.restrictWorkflows);
+  const [canCreate, setCanCreate] = useState(keyRow.canCreateWorkflows);
+  const [selected, setSelected] = useState<Record<string, WfPerm>>(() =>
+    grantsToSelected(keyRow.grants),
+  );
+  const [saving, setSaving] = useState(false);
+
+  const save = async () => {
+    setSaving(true);
+    try {
+      const res = await apiFetch(`/api/v1/api-keys/${keyRow.id}`, {
+        method: "PATCH",
+        body: JSON.stringify({
+          restrictWorkflows: restrict,
+          canCreateWorkflows: canCreate,
+          grants: restrict ? selectedToGrants(selected) : [],
+        }),
+      });
+      if (!res.ok) {
+        const b = (await res.json().catch(() => ({}))) as { error?: string };
+        toast.error(b.error ?? "Update failed");
+        return;
+      }
+      toast.success("Grants updated");
+      await onSaved();
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="mt-2 space-y-3 rounded bg-muted/40 p-2 text-[12px]">
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <Label>Restrict to selected workflows</Label>
+          <p className="text-[11px] text-muted-foreground">
+            Off = all your workflows. On = only the grants below.
+          </p>
+        </div>
+        <Switch checked={restrict} onCheckedChange={setRestrict} />
+      </div>
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <Label>Allow create workflow</Label>
+          <p className="text-[11px] text-muted-foreground">Only when restricted.</p>
+        </div>
+        <Switch checked={canCreate} onCheckedChange={setCanCreate} disabled={!restrict} />
+      </div>
+      {restrict && (
+        <div className="space-y-1">
+          <Label className="text-[12px]">Workflow grants</Label>
+          <WorkflowGrantPicker workflows={workflows} selected={selected} onChange={setSelected} />
+        </div>
+      )}
+      <Button size="sm" onClick={() => void save()} disabled={saving}>
+        {saving ? "Saving…" : "Save grants"}
+      </Button>
+    </div>
+  );
+}
 
 const CLASSIC_SCOPES = ["openflow:read", "openflow:write", "openflow:execute"] as const;
 const OPT_IN_SCOPES = [
@@ -81,12 +230,6 @@ function ApiKeysPage() {
 
   const create = async () => {
     if (!name.trim()) return;
-    const grants = Object.entries(selectedWf).map(([workflowId, p]) => ({
-      workflowId,
-      canRead: true,
-      canWrite: p.w,
-      canExecute: p.x,
-    }));
     const res = await apiFetch("/api/v1/api-keys", {
       method: "POST",
       body: JSON.stringify({
@@ -95,7 +238,7 @@ function ApiKeysPage() {
         restrictWorkflows: restrict,
         canCreateWorkflows: canCreate,
         expiresAt: expiresAt ? new Date(expiresAt).toISOString() : null,
-        grants: restrict ? grants : [],
+        grants: restrict ? selectedToGrants(selectedWf) : [],
       }),
     });
     if (!res.ok) {
@@ -231,64 +374,11 @@ function ApiKeysPage() {
         {restrict && (
           <div className="space-y-2">
             <Label className="text-[12px]">Workflow grants</Label>
-            <div className="max-h-48 space-y-1 overflow-y-auto rounded-md border border-border p-2">
-              {workflows.length === 0 && (
-                <p className="text-[12px] text-muted-foreground">No workflows yet.</p>
-              )}
-              {workflows.map((w) => {
-                const on = selectedWf[w.id];
-                return (
-                  <div
-                    key={w.id}
-                    className="flex flex-wrap items-center gap-2 text-[12px] py-1 border-b border-border/50 last:border-0"
-                  >
-                    <input
-                      type="checkbox"
-                      checked={Boolean(on)}
-                      onChange={(e) => {
-                        setSelectedWf((prev) => {
-                          const next = { ...prev };
-                          if (e.target.checked) next[w.id] = { w: true, x: true };
-                          else delete next[w.id];
-                          return next;
-                        });
-                      }}
-                    />
-                    <span className="min-w-0 flex-1 truncate">{w.name}</span>
-                    {on && (
-                      <>
-                        <label className="flex items-center gap-1">
-                          <input
-                            type="checkbox"
-                            checked={on.w}
-                            onChange={(e) =>
-                              setSelectedWf((p) => ({
-                                ...p,
-                                [w.id]: { ...p[w.id], w: e.target.checked },
-                              }))
-                            }
-                          />
-                          edit
-                        </label>
-                        <label className="flex items-center gap-1">
-                          <input
-                            type="checkbox"
-                            checked={on.x}
-                            onChange={(e) =>
-                              setSelectedWf((p) => ({
-                                ...p,
-                                [w.id]: { ...p[w.id], x: e.target.checked },
-                              }))
-                            }
-                          />
-                          run
-                        </label>
-                      </>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
+            <WorkflowGrantPicker
+              workflows={workflows}
+              selected={selectedWf}
+              onChange={setSelectedWf}
+            />
           </div>
         )}
 
@@ -296,9 +386,7 @@ function ApiKeysPage() {
       </div>
 
       <ul className="mt-6 divide-y divide-border rounded-md border border-border">
-        {list === null && (
-          <li className="px-4 py-6 text-center text-muted-foreground">Loading…</li>
-        )}
+        {list === null && <li className="px-4 py-6 text-center text-muted-foreground">Loading…</li>}
         {list?.length === 0 && (
           <li className="px-4 py-6 text-center text-muted-foreground">No API keys yet.</li>
         )}
@@ -332,21 +420,12 @@ function ApiKeysPage() {
               </div>
             </div>
             {expanded === k.id && (
-              <ul className="mt-2 space-y-1 rounded bg-muted/40 p-2 text-[11px]">
-                {!k.restrictWorkflows && <li>Full access — not restricted</li>}
-                {k.restrictWorkflows && k.grants.length === 0 && (
-                  <li className="text-amber-700 dark:text-amber-400">
-                    No grants — this key cannot open any workflow
-                  </li>
-                )}
-                {k.grants.map((g) => (
-                  <li key={g.workflowId}>
-                    <code>{g.workflowId}</code> — r{g.canWrite ? "w" : ""}
-                    {g.canExecute ? "x" : ""}
-                    {g.expiresAt ? ` · until ${new Date(g.expiresAt).toLocaleString()}` : ""}
-                  </li>
-                ))}
-              </ul>
+              <KeyGrantsEditor
+                key={`${k.id}:${k.grants.map((g) => g.workflowId).join(",")}:${k.restrictWorkflows}`}
+                keyRow={k}
+                workflows={workflows}
+                onSaved={refresh}
+              />
             )}
           </li>
         ))}

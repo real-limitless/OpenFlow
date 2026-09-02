@@ -2040,6 +2040,21 @@ export const BUILTIN_EXECUTOR_MODULES: Array<{
     exportName: "githubToolExecutor",
   },
   {
+    type: "openflow-node-base.webSearchTool",
+    modulePath: "./executors/webSearchTool",
+    exportName: "webSearchToolExecutor",
+  },
+  {
+    type: "openflow-node-base.gitTool",
+    modulePath: "./executors/gitTool",
+    exportName: "gitToolExecutor",
+  },
+  {
+    type: "openflow-node-base.filesystemTool",
+    modulePath: "./executors/filesystemTool",
+    exportName: "filesystemToolExecutor",
+  },
+  {
     type: "openflow-node-base.webflowTrigger",
     modulePath: "./executors/n8n-nodes-base.webflowTrigger",
     exportName: "webflowTriggerExecutor",

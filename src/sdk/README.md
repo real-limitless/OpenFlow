@@ -31,6 +31,8 @@ Register executors via `definitionToExecutor` or keep using
 | `continueOnFail()` | Error policy |
 | `getCredential(name)` | Resolved credential payload |
 | `evaluate(expr, json?)` | Expression preview/eval helper |
+| `reportProgress?(update)` | Mid-node progress / Agent trace (optional) |
+| `fsRoot?` | Jail root for filesystem / git tools |
 
 ## Per-execution custom data
 

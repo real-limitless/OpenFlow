@@ -1,8 +1,79 @@
 import type { Hono } from "hono";
 import { prisma } from "../db";
 import type { AppEnv } from "../middleware/auth";
+import {
+  authorizeIngestWorkflow,
+  createRuntimeExecution,
+  requireIngestAuth,
+  updateRuntimeExecution,
+  type IngestAuth,
+  type IngestBody,
+} from "../services/execution-ingest";
+import { subscribeExecutionProgress } from "../services/workflow-events";
+import { failStaleLlmIfNeeded, failStaleLlmList } from "../services/stale-llm-execution";
+
+function ingestAuthFrom(c: { get: (k: string) => unknown }): IngestAuth {
+  return {
+    userId: c.get("userId") as string | undefined,
+    authKind: c.get("authKind") as string | undefined,
+    scopes: c.get("scopes") as string[] | undefined,
+    workflowPolicy: c.get("workflowPolicy") as IngestAuth["workflowPolicy"],
+  };
+}
 
 export default function executionsRoute(app: Hono<AppEnv>) {
+  app.post("/api/v1/workflows/:id/executions", async (c) => {
+    const { id } = c.req.param();
+    const auth = ingestAuthFrom(c);
+    const denied = await authorizeIngestWorkflow(id, auth);
+    if (denied) return c.json({ error: denied.error }, denied.status);
+    let body: IngestBody;
+    try {
+      body = (await c.req.json()) as IngestBody;
+    } catch {
+      return c.json({ error: "Invalid JSON body" }, 400);
+    }
+    const result = await createRuntimeExecution(id, body);
+    if (!result.ok) return c.json({ error: result.failure.error }, result.failure.status);
+    return c.json(
+      {
+        id: result.row.id,
+        workflowId: result.row.workflowId,
+        status: result.row.status,
+        mode: result.row.mode,
+      },
+      201,
+    );
+  });
+
+  app.patch("/api/v1/executions/:id", async (c) => {
+    const auth = ingestAuthFrom(c);
+    const denied = requireIngestAuth(auth);
+    if (denied) return c.json({ error: denied.error }, denied.status);
+    const executionId = c.req.param("id");
+    let body: IngestBody;
+    try {
+      body = (await c.req.json()) as IngestBody;
+    } catch {
+      return c.json({ error: "Invalid JSON body" }, 400);
+    }
+    const existing = await prisma.execution.findFirst({
+      where: { id: executionId, mode: "runtime" },
+      select: { workflowId: true },
+    });
+    if (!existing) return c.json({ error: "Execution not found" }, 404);
+    const wfDenied = await authorizeIngestWorkflow(existing.workflowId, auth);
+    if (wfDenied) return c.json({ error: wfDenied.error }, wfDenied.status);
+    const result = await updateRuntimeExecution(executionId, auth.userId!, body);
+    if (!result.ok) return c.json({ error: result.failure.error }, result.failure.status);
+    return c.json({
+      id: result.row.id,
+      workflowId: result.row.workflowId,
+      status: result.row.status,
+      mode: result.row.mode,
+    });
+  });
+
   app.get("/api/v1/executions", async (c) => {
     const userId = c.get("userId");
     const page = parseInt(c.req.query("page") ?? "1");
@@ -30,7 +101,7 @@ export default function executionsRoute(app: Hono<AppEnv>) {
     ]);
 
     return c.json({
-      executions: list,
+      executions: await failStaleLlmList(list),
       pagination: { page, limit, total, pages: Math.ceil(total / limit) },
     });
   });
@@ -43,15 +114,16 @@ export default function executionsRoute(app: Hono<AppEnv>) {
     const stream = new ReadableStream({
       start(controller) {
         const encoder = new TextEncoder();
-        let pollCount = 0;
         let closed = false;
+        let inFlight = false;
         let timer: ReturnType<typeof setTimeout> | undefined;
-        const maxPolls = 600;
+        const progressSub = { off: () => {} };
 
         const close = () => {
           if (closed) return;
           closed = true;
           if (timer) clearTimeout(timer);
+          progressSub.off();
           try {
             controller.close();
           } catch {
@@ -76,15 +148,10 @@ export default function executionsRoute(app: Hono<AppEnv>) {
             close();
             return;
           }
+          if (inFlight) return;
+          inFlight = true;
 
           try {
-            pollCount++;
-            if (pollCount > maxPolls) {
-              sendEvent({ type: "timeout" });
-              close();
-              return;
-            }
-
             const execution = await prisma.execution.findFirst({
               where: {
                 id: executionId,
@@ -103,39 +170,47 @@ export default function executionsRoute(app: Hono<AppEnv>) {
               return;
             }
 
+            const live = await failStaleLlmIfNeeded(execution);
+
             let runData: unknown = {};
             try {
-              runData = JSON.parse(execution.runData || "{}");
+              runData = JSON.parse(live.runData || "{}");
             } catch {
               runData = {};
             }
 
             sendEvent({
               type: "status",
-              status: execution.status,
-              startedAt: execution.startedAt?.toISOString(),
-              finishedAt: execution.finishedAt?.toISOString(),
+              status: live.status,
+              startedAt: live.startedAt?.toISOString(),
+              finishedAt: live.finishedAt?.toISOString(),
               runData,
             });
 
-            if (execution.status === "success" || execution.status === "error") {
+            if (live.status === "success" || live.status === "error") {
               sendEvent({
                 type: "complete",
-                status: execution.status,
+                status: live.status,
                 data: runData,
               });
               close();
               return;
             }
 
-            timer = setTimeout(poll, 250);
+            timer = setTimeout(() => void poll(), 250);
           } catch {
             sendEvent({ type: "error", message: "Polling error" });
             close();
+          } finally {
+            inFlight = false;
           }
         };
 
-        poll();
+        progressSub.off = subscribeExecutionProgress(executionId, () => {
+          if (timer) clearTimeout(timer);
+          void poll();
+        });
+        void poll();
       },
       cancel() {
         /* client disconnected */
@@ -161,12 +236,13 @@ export default function executionsRoute(app: Hono<AppEnv>) {
         id: executionId,
         workflow: { project: { members: { some: { userId } } } },
       },
+      include: { workflow: { select: { id: true, name: true } } },
     });
 
     if (!execution) {
       return c.json({ error: "Execution not found" }, 404);
     }
 
-    return c.json(execution);
+    return c.json(await failStaleLlmIfNeeded(execution));
   });
 }
