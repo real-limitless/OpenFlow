@@ -2,6 +2,7 @@ import type { INode, INodeExecutionData, IWorkflow } from "@/lib/workflow/types"
 import type { INodeTypeDescription } from "@/lib/nodes/types";
 import type { CredentialData } from "@/lib/engine/credentials";
 import type { DataTableAccess } from "@/lib/data-tables/access";
+import type { ExecutionNodeProgress } from "@/lib/engine/agent-trace";
 
 /** Single item flowing between nodes (re-export for SDK consumers). */
 export type Item = INodeExecutionData;
@@ -90,13 +91,7 @@ export interface ExecutionContext {
    * The runner persists this onto `runData[node]` while status is `running`.
    */
   reportProgress?(update: {
-    progress?: {
-      iteration: number;
-      maxIterations?: number;
-      tool?: string;
-      stepCount: number;
-      lastObservation?: string;
-    };
+    progress?: ExecutionNodeProgress;
     trace?: { turns: Array<Record<string, unknown>> };
   }): void | Promise<void>;
 }

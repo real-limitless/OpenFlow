@@ -123,7 +123,10 @@ export function capTrace(trace: AgentTrace): AgentTrace {
   };
 }
 
-export function usageFromResult(result: { usage?: unknown }): AgentTraceTurn["usage"] | undefined {
+export function usageFromResult(result: {
+  usage?: unknown;
+  [key: string]: unknown;
+}): AgentTraceTurn["usage"] | undefined {
   const u = result.usage;
   if (!u || typeof u !== "object") return undefined;
   const uu = u as { promptTokens?: unknown; completionTokens?: unknown; totalTokens?: unknown };

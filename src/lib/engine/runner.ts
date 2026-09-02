@@ -114,8 +114,6 @@ export interface RunOptions {
   destinationNode?: string | null;
   /** When true (default), destination itself is not executed. */
   stopBeforeDestination?: boolean;
-  /** Jail root for filesystem / git agent tools. */
-  fsRoot?: string;
 }
 
 export interface RunResult {
