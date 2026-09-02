@@ -18,6 +18,7 @@ const TRIGGER_TYPES = new Set(
     "n8n-nodes-base.activationTrigger",
     "n8n-nodes-base.n8nTrigger",
     "@n8n/n8n-nodes-langchain.chatTrigger",
+    "@n8n/n8n-nodes-langchain.manualChatTrigger",
     "@n8n/n8n-nodes-langchain.mcpTrigger",
   ].map(toCanonicalType),
 );

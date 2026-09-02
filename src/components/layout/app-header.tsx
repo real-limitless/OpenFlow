@@ -176,6 +176,9 @@ export function AppHeader({ compact, actions, hideNav }: Props) {
           <Link to="/" className={navCls("/")}>
             Workflows
           </Link>
+          <Link to="/chats" className={navCls("/chats")}>
+            Chat
+          </Link>
           <Link to="/templates" search={{}} className={navCls("/templates")}>
             Templates
           </Link>
@@ -294,6 +297,11 @@ function ScopeDropdown({
 export function AppNavIcons() {
   return (
     <div className="flex flex-wrap gap-1">
+      <Button variant="ghost" size="sm" className="h-8 text-[12px]" asChild>
+        <Link to="/chats">
+          Chat
+        </Link>
+      </Button>
       <Button variant="ghost" size="sm" className="h-8 text-[12px]" asChild>
         <Link to="/templates" search={{}}>
           Templates

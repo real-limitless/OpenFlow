@@ -25,6 +25,8 @@ import type { ExpressionContext } from "@/lib/expressions/evaluate";
 import type { ExecutionRunData } from "@/lib/engine/types";
 import { CredentialPicker } from "@/components/credentials";
 import { FormTriggerUrls } from "./FormTriggerUrls";
+import { ChatTriggerUrls } from "./ChatTriggerUrls";
+import { isChatTriggerNode } from "@/lib/chat/path";
 import { isFormTriggerNode } from "@/lib/forms/path";
 import { apiFetch } from "@/lib/auth/client";
 import { getSelectedEnvironmentId } from "@/lib/environments/client";
@@ -266,6 +268,7 @@ export function PropertiesPanel({
               ) : (
                 <>
                   {isFormTriggerNode(node) && <FormTriggerUrls node={node} />}
+                  {isChatTriggerNode(node) && <ChatTriggerUrls node={node} />}
                   {(description.properties ?? [])
                     .filter((prop) => {
                       if (!shouldDisplay(prop, parameters)) return false;

@@ -2,6 +2,7 @@ import { createContext, useContext, type ReactNode } from "react";
 import type { DockviewApi } from "dockview";
 import type { ExecutionRunData } from "@/lib/engine/types";
 import type { AddNodeInit } from "@/lib/workflow/add-node";
+import type { INodeExecutionData } from "@/lib/workflow/types";
 
 export type EditorDockContextValue = {
   workflowId: string;
@@ -9,6 +10,10 @@ export type EditorDockContextValue = {
   historyKey: number;
   isExecuting: boolean;
   onExecutePrevious?: (nodeName: string) => void;
+  onExecute?: (
+    startNode?: string,
+    opts?: { pinData?: Record<string, INodeExecutionData[]> },
+  ) => Promise<ExecutionRunData | null | void>;
   onAddNode: (type: string, init?: AddNodeInit) => void;
   onSelectExecution: (runData: ExecutionRunData, meta?: { id: string; status: string }) => void;
   /** Live dockview API after ready (for View menu / focus). */

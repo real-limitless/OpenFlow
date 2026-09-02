@@ -37,6 +37,14 @@ export function applyDefaultDockLayout(api: DockviewApi): void {
   });
 
   api.addPanel({
+    id: "chat",
+    component: "chat",
+    title: EDITOR_PANEL_BY_ID.chat.title,
+    position: { referencePanel: "properties", direction: "within" },
+    inactive: true,
+  });
+
+  api.addPanel({
     id: "execution",
     component: "execution",
     title: EDITOR_PANEL_BY_ID.execution.title,
@@ -91,7 +99,7 @@ export function ensurePanel(
     position: reference
       ? {
           referencePanel: reference,
-          direction: opts?.direction ?? (id === "nodes" ? "left" : id === "properties" || id === "assistant" ? "right" : "below"),
+          direction: opts?.direction ?? (id === "nodes" ? "left" : id === "properties" || id === "assistant" || id === "chat" ? "right" : "below"),
         }
       : undefined,
   });

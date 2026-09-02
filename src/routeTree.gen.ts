@@ -18,6 +18,8 @@ import { Route as RegisterRouteImport } from './routes/register'
 import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as SetupRouteImport } from './routes/setup'
 import { Route as SharedRouteImport } from './routes/shared'
+import { Route as ChatsRouteImport } from './routes/chats'
+import { Route as ChatsWorkflowIdRouteImport } from './routes/chats_.$workflowId'
 import { Route as TemplatesRouteImport } from './routes/templates'
 import { Route as VariablesRouteImport } from './routes/variables'
 import { Route as DataTablesIdRouteImport } from './routes/data-tables_.$id'
@@ -77,6 +79,16 @@ const SetupRoute = SetupRouteImport.update({
 const SharedRoute = SharedRouteImport.update({
   id: '/shared',
   path: '/shared',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ChatsRoute = ChatsRouteImport.update({
+  id: '/chats',
+  path: '/chats',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ChatsWorkflowIdRoute = ChatsWorkflowIdRouteImport.update({
+  id: '/chats_/$workflowId',
+  path: '/chats/$workflowId',
   getParentRoute: () => rootRouteImport,
 } as any)
 const TemplatesRoute = TemplatesRouteImport.update({
@@ -165,6 +177,8 @@ export interface FileRoutesByFullPath {
   '/settings': typeof SettingsRouteWithChildren
   '/setup': typeof SetupRoute
   '/shared': typeof SharedRoute
+  '/chats': typeof ChatsRoute
+  '/chats/$workflowId': typeof ChatsWorkflowIdRoute
   '/templates': typeof TemplatesRoute
   '/variables': typeof VariablesRoute
   '/data-tables/$id': typeof DataTablesIdRoute
@@ -191,6 +205,8 @@ export interface FileRoutesByTo {
   '/settings': typeof SettingsRouteWithChildren
   '/setup': typeof SetupRoute
   '/shared': typeof SharedRoute
+  '/chats': typeof ChatsRoute
+  '/chats/$workflowId': typeof ChatsWorkflowIdRoute
   '/templates': typeof TemplatesRoute
   '/variables': typeof VariablesRoute
   '/data-tables/$id': typeof DataTablesIdRoute
@@ -218,6 +234,8 @@ export interface FileRoutesById {
   '/settings': typeof SettingsRouteWithChildren
   '/setup': typeof SetupRoute
   '/shared': typeof SharedRoute
+  '/chats': typeof ChatsRoute
+  '/chats_/$workflowId': typeof ChatsWorkflowIdRoute
   '/templates': typeof TemplatesRoute
   '/variables': typeof VariablesRoute
   '/data-tables_/$id': typeof DataTablesIdRoute
@@ -246,6 +264,8 @@ export interface FileRouteTypes {
     | '/settings'
     | '/setup'
     | '/shared'
+    | '/chats'
+    | '/chats/$workflowId'
     | '/templates'
     | '/variables'
     | '/data-tables/$id'
@@ -272,6 +292,8 @@ export interface FileRouteTypes {
     | '/settings'
     | '/setup'
     | '/shared'
+    | '/chats'
+    | '/chats/$workflowId'
     | '/templates'
     | '/variables'
     | '/data-tables/$id'
@@ -298,6 +320,8 @@ export interface FileRouteTypes {
     | '/settings'
     | '/setup'
     | '/shared'
+    | '/chats'
+    | '/chats_/$workflowId'
     | '/templates'
     | '/variables'
     | '/data-tables_/$id'
@@ -325,6 +349,8 @@ export interface RootRouteChildren {
   SettingsRoute: typeof SettingsRouteWithChildren
   SetupRoute: typeof SetupRoute
   SharedRoute: typeof SharedRoute
+  ChatsRoute: typeof ChatsRoute
+  ChatsWorkflowIdRoute: typeof ChatsWorkflowIdRoute
   TemplatesRoute: typeof TemplatesRoute
   VariablesRoute: typeof VariablesRoute
   DataTablesIdRoute: typeof DataTablesIdRoute
@@ -397,6 +423,20 @@ declare module '@tanstack/react-router' {
       path: '/shared'
       fullPath: '/shared'
       preLoaderRoute: typeof SharedRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/chats': {
+      id: '/chats'
+      path: '/chats'
+      fullPath: '/chats'
+      preLoaderRoute: typeof ChatsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/chats_/$workflowId': {
+      id: '/chats_/$workflowId'
+      path: '/chats/$workflowId'
+      fullPath: '/chats/$workflowId'
+      preLoaderRoute: typeof ChatsWorkflowIdRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/templates': {
@@ -553,6 +593,8 @@ const rootRouteChildren: RootRouteChildren = {
   SettingsRoute: SettingsRouteWithChildren,
   SetupRoute: SetupRoute,
   SharedRoute: SharedRoute,
+  ChatsRoute: ChatsRoute,
+  ChatsWorkflowIdRoute: ChatsWorkflowIdRoute,
   TemplatesRoute: TemplatesRoute,
   VariablesRoute: VariablesRoute,
   DataTablesIdRoute: DataTablesIdRoute,

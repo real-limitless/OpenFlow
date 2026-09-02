@@ -392,6 +392,12 @@ export default function workflowsRoute(app: Hono<AppEnv>) {
           });
         }
       }
+
+      const { syncChatRoutes } = await import("../chat/register");
+      const chatSync = await syncChatRoutes(workflowId, nodes, true);
+      if (chatSync.error) {
+        return c.json({ error: chatSync.error }, chatSync.status ?? 409);
+      }
     } else {
       await prisma.webhookRoute.updateMany({
         where: { workflowId },
@@ -405,6 +411,8 @@ export default function workflowsRoute(app: Hono<AppEnv>) {
         where: { workflowId },
         data: { active: false },
       });
+      const { syncChatRoutes } = await import("../chat/register");
+      await syncChatRoutes(workflowId, nodes, false);
     }
 
     const updated = await prisma.workflow.update({

@@ -8,8 +8,9 @@ import { useWorkflowStore } from "@/store/workflow-store";
 import { EditorTopBar } from "@/components/editor/EditorTopBar";
 import { EditorDockHost } from "@/components/editor/dock/EditorDockHost";
 import { ExecuteTriggerButton } from "@/components/editor/ExecuteTriggerButton";
+import { openEditorPanel } from "@/components/editor/dock/EditorDockHost";
 import type { ExecutionRunData } from "@/lib/engine/types";
-import type { IWorkflow } from "@/lib/workflow/types";
+import type { INodeExecutionData, IWorkflow } from "@/lib/workflow/types";
 import { openExecutionStream } from "@/lib/editor/execution-stream";
 import {
   consumeOnboardingBanner,
@@ -75,7 +76,13 @@ function EditorPage() {
     setShowOnboardingBanner(false);
   };
 
-  const handleExecute = async (startNode?: string, opts?: { executePreviousOf?: string }) => {
+  const handleExecute = async (
+    startNode?: string,
+    opts?: {
+      executePreviousOf?: string;
+      pinData?: Record<string, INodeExecutionData[]>;
+    },
+  ): Promise<ExecutionRunData | null> => {
     setIsExecuting(true);
     setRunData(null);
     bumpHistory();
@@ -89,7 +96,7 @@ function EditorPage() {
           description: err instanceof Error ? err.message : undefined,
         });
         setIsExecuting(false);
-        return;
+        return null;
       }
       const latest = useWorkflowStore.getState().workflow;
       const execId = latest.id || id;
@@ -104,45 +111,52 @@ function EditorPage() {
           environmentId: getSelectedEnvironmentId() ?? undefined,
           startNode: startNode || undefined,
           executePreviousOf: opts?.executePreviousOf || undefined,
+          pinData: opts?.pinData,
         }),
       });
       if (!res.ok) throw new Error("Failed to start execution");
       const { executionId } = await res.json();
       bumpHistory();
       eventSourceRef.current?.close();
-      eventSourceRef.current = openExecutionStream(executionId, {
-        onStatus: (payload) => {
-          if (payload.runData) setRunData(payload.runData);
-          if (payload.status === "running") bumpHistory();
-        },
-        onComplete: (payload) => {
-          if (payload.data) setRunData(payload.data);
-          if (payload.status === "error") {
-            toast.error("Execution failed", {
-              description: "One or more nodes errored. See Execution data for details.",
-            });
-          } else {
-            markFirstRunSuccess();
-          }
-          setIsExecuting(false);
-          bumpHistory();
-        },
-        onTimeout: () => {
-          toast.error("Execution timed out");
-          setIsExecuting(false);
-          bumpHistory();
-        },
-        onError: (message) => {
-          toast.error("Execution failed", { description: message });
-          setIsExecuting(false);
-          bumpHistory();
-        },
+      return await new Promise<ExecutionRunData | null>((resolve) => {
+        eventSourceRef.current = openExecutionStream(executionId, {
+          onStatus: (payload) => {
+            if (payload.runData) setRunData(payload.runData);
+            if (payload.status === "running") bumpHistory();
+          },
+          onComplete: (payload) => {
+            if (payload.data) setRunData(payload.data);
+            if (payload.status === "error") {
+              toast.error("Execution failed", {
+                description: "One or more nodes errored. See Execution data for details.",
+              });
+            } else {
+              markFirstRunSuccess();
+            }
+            setIsExecuting(false);
+            bumpHistory();
+            resolve(payload.data ?? null);
+          },
+          onTimeout: () => {
+            toast.error("Execution timed out");
+            setIsExecuting(false);
+            bumpHistory();
+            resolve(null);
+          },
+          onError: (message) => {
+            toast.error("Execution failed", { description: message });
+            setIsExecuting(false);
+            bumpHistory();
+            resolve(null);
+          },
+        });
       });
     } catch (err) {
       console.error("Execute failed:", err);
       toast.error("Execution failed");
       setIsExecuting(false);
       bumpHistory();
+      return null;
     }
   };
 
@@ -238,6 +252,7 @@ function EditorPage() {
             workflow={workflow}
             isExecuting={isExecuting}
             onExecute={(startNode) => void handleExecute(startNode)}
+            onOpenChat={() => openEditorPanel(dockApiRef.current, "chat")}
           />
         }
       />
@@ -266,6 +281,7 @@ function EditorPage() {
             onExecutePrevious={(nodeName) =>
               void handleExecute(undefined, { executePreviousOf: nodeName })
             }
+            onExecute={handleExecute}
             onAddNode={(type, init) =>
               addNode(
                 type,

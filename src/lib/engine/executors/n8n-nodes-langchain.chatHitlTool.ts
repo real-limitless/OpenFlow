@@ -1,5 +1,6 @@
 import type { NodeExecutor, ExecutionContext, INodeExecutionData } from "@/sdk";
 import type { IWorkflow, INode } from "@/lib/workflow/types";
+import { typesEqual } from "@/lib/nodes/type-ids";
 
 interface WaitResumePayload {
   chatInput?: string;
@@ -10,9 +11,7 @@ interface WaitResumePayload {
 }
 
 function findChatTrigger(workflow: IWorkflow): INode | undefined {
-  return workflow.nodes?.find(
-    (n) => n.type === "@n8n/n8n-nodes-langchain.chatTrigger",
-  );
+  return workflow.nodes?.find((n) => typesEqual(n.type, "openflow-node-langchain.chatTrigger"));
 }
 
 function throwConfigError(message: string): never {
@@ -34,8 +33,7 @@ function validateChatTriggerMode(workflow: IWorkflow): void {
       `Chat HITL Tool requires the Chat Trigger's Response Mode to be 'Using Response Nodes'. Found: '${responseMode}'.`,
     );
   }
-  const embedOptions = triggerParams.embedOptions as Record<string, unknown> | undefined;
-  const mode = embedOptions?.mode as string | undefined;
+  const mode = triggerParams.mode as string | undefined;
   if (mode === "embedded") {
     throwConfigError(
       "Chat HITL Tool only works with Hosted Chat mode, but the Chat Trigger is in Embedded mode.",

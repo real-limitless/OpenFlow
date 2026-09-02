@@ -1002,6 +1002,13 @@ export const chatTrigger: INodeTypeDescription = {
           default: "*",
         },
         {
+          displayName: "Chat Path",
+          name: "chatPath",
+          type: "string",
+          default: "",
+          description: "Public URL slug at /chat/:path. Defaults to the node id.",
+        },
+        {
           displayName: "Input Placeholder",
           name: "inputPlaceholder",
           type: "string",
