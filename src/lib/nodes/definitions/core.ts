@@ -484,8 +484,8 @@ export const executeCommandTool: INodeTypeDescription = {
   description:
     "Host shell command (stdout/stderr/exitCode). Ranked as last-resort vs domain nodes (git, github, httpRequest, emailSend). Prefer Node Catalog / domain tools first; use shell when no catalog node fits or the user asks for OS commands.",
   defaults: { name: "Execute Command Tool" },
-  inputs: ["main"],
-  outputs: ["main"],
+  inputs: [],
+  outputs: ["ai_tool"],
   icon: "Terminal",
   sources: [
     "https://docs.n8n.io/integrations/builtin/core-nodes/n8n-nodes-base.executecommand/",

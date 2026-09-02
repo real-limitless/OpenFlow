@@ -1,7 +1,7 @@
 import type { NodeExecutor, INodeExecutionData } from "@/sdk";
 import { ensureItems } from "@/sdk";
 import { evaluateExpression } from "../../expressions/evaluate";
-import { emitToolHandle } from "../tool-handle";
+import { assertAllowUrl, emitToolHandle } from "../tool-handle";
 
 function resolveValue(raw: unknown, itemJson: Record<string, unknown>): unknown {
   if (typeof raw !== "string") return raw;
@@ -737,36 +737,43 @@ export const githubToolExecutor: NodeExecutor = async (ctx, node) => {
   if (rawItems.length === 0) {
     return emitToolHandle(ctx, {
       type: "n8n-nodes-base.githubTool",
-      name: "github",
+      name: String(ctx.getParam("toolName", "github")),
       description: String(
-        ctx.getParam("description", "Read GitHub repo metadata, trees, and file contents") ??
-          "Read GitHub repo metadata, trees, and file contents",
+        ctx.getParam(
+          "description",
+          "GitHub API: get/list files, repos, issues, and contents. Pass resource, operation, owner, repository, filePath.",
+        ),
       ),
       schema: {
         type: "object",
         properties: {
+          resource: { type: "string" },
+          operation: { type: "string" },
           owner: { type: "string" },
-          repo: { type: "string" },
-          path: { type: "string", description: "File or directory path" },
-          ref: { type: "string", description: "Branch, tag, or commit" },
+          repository: { type: "string" },
+          filePath: { type: "string" },
+          branch: { type: "string" },
         },
-        required: ["owner", "repo"],
       },
-      async invoke(args) {
+      async invoke(args: Record<string, unknown>) {
+        const merged = { ...node.parameters, ...args };
         const { baseUrl, token } = await getCredential(ctx);
-        const own = String(args.owner ?? "");
-        const rep = String(args.repo ?? "");
-        const path = String(args.path ?? "");
-        const ref = String(args.ref ?? "");
-        const apiPath = path
-          ? `repos/${own}/${rep}/contents/${path.replace(/^\/+/, "")}`
-          : `repos/${own}/${rep}`;
-        const params = ref ? { ref } : undefined;
-        const parsed = await githubRequest(baseUrl, "GET", apiPath, undefined, params, token);
-        return JSON.stringify(parsed).slice(0, 8000);
+        assertAllowUrl(ctx, baseUrl);
+        const resource = String(merged.resource ?? "file");
+        const operation = String(merged.operation ?? "get");
+        const results = await runOperation(
+          { parameters: merged },
+          resource,
+          operation,
+          args,
+          baseUrl,
+          token,
+        );
+        return { content: JSON.stringify(results) };
       },
     });
   }
+
   const items = ensureItems(rawItems);
   const out: INodeExecutionData[] = [];
   const resource = String(node.parameters.resource ?? "issue");
@@ -779,6 +786,9 @@ export const githubToolExecutor: NodeExecutor = async (ctx, node) => {
     const pairedItem = item.pairedItem ?? { item: idx, input: 0 };
     try {
       const { baseUrl, token } = await getCredential(ctx);
+      if (ctx.allowUrl && !ctx.allowUrl(baseUrl)) {
+        throw new Error(`HTTP Request blocked by allowUrl policy: ${baseUrl}`);
+      }
       const results = await runOperation(node, resource, operation, itemJson, baseUrl, token);
       for (const r of results) {
         out.push({ json: r, pairedItem });

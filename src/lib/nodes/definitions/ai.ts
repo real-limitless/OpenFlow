@@ -5883,3 +5883,153 @@ export const googleFirebaseCloudFirestoreTool: INodeTypeDescription = {
     },
   ],
 };
+
+export const githubTool: INodeTypeDescription = {
+  name: "openflow-node-base.githubTool",
+  displayName: "GitHub Tool",
+  category: "AI Tool",
+  group: ["ai"],
+  version: 1,
+  description:
+    "GitHub API as an AI tool: get/list files, repos, issues, contents, and trees. Bind githubApi at runtime.",
+  defaults: { name: "GitHub Tool" },
+  inputs: [],
+  outputs: ["ai_tool"],
+  icon: "Github",
+  credentials: [{ name: "githubApi", required: true }],
+  sources: ["https://docs.n8n.io/integrations/builtin/app-nodes/n8n-nodes-base.github/"],
+  properties: [
+    {
+      displayName: "Description",
+      name: "description",
+      type: "string",
+      default: "Access GitHub files, repos, and issues",
+    },
+    {
+      displayName: "Resource",
+      name: "resource",
+      type: "options",
+      default: "file",
+      options: [
+        { name: "File", value: "file" },
+        { name: "Issue", value: "issue" },
+        { name: "Repository", value: "repository" },
+        { name: "Release", value: "release" },
+        { name: "Workflow", value: "workflow" },
+      ],
+    },
+    {
+      displayName: "Operation",
+      name: "operation",
+      type: "options",
+      default: "get",
+      options: [
+        { name: "Get", value: "get" },
+        { name: "List", value: "getAll" },
+        { name: "Create", value: "create" },
+        { name: "Edit", value: "edit" },
+        { name: "Get Issues", value: "getIssues" },
+        { name: "Get License", value: "getLicense" },
+        { name: "Dispatch", value: "dispatch" },
+      ],
+    },
+    { displayName: "Owner", name: "owner", type: "string", default: "" },
+    { displayName: "Repository", name: "repository", type: "string", default: "" },
+    { displayName: "File Path", name: "filePath", type: "string", default: "" },
+    { displayName: "Branch / Ref", name: "branch", type: "string", default: "" },
+  ],
+};
+
+export const webSearchTool: INodeTypeDescription = {
+  name: "openflow-node-base.webSearchTool",
+  displayName: "Web Search Tool",
+  category: "AI Tool",
+  group: ["ai"],
+  version: 1,
+  description: "Search the web (Google / Bing / DuckDuckGo / custom) as an AI agent tool.",
+  defaults: { name: "Web Search Tool" },
+  inputs: [],
+  outputs: ["ai_tool"],
+  icon: "Search",
+  sources: [],
+  properties: [
+    {
+      displayName: "Description",
+      name: "description",
+      type: "string",
+      default: "Search the web and return titles, URLs, and snippets",
+    },
+    {
+      displayName: "Search Engine",
+      name: "searchEngine",
+      type: "options",
+      default: "duckduckgo",
+      options: [
+        { name: "DuckDuckGo", value: "duckduckgo" },
+        { name: "Google", value: "google" },
+        { name: "Bing", value: "bing" },
+        { name: "Custom", value: "custom" },
+      ],
+    },
+    { displayName: "Custom Endpoint", name: "customEndpoint", type: "string", default: "" },
+    { displayName: "Result Limit", name: "resultLimit", type: "number", default: 5 },
+  ],
+};
+
+export const gitTool: INodeTypeDescription = {
+  name: "openflow-node-base.gitTool",
+  displayName: "Git Tool",
+  category: "AI Tool",
+  group: ["ai"],
+  version: 1,
+  description: "Clone a repo, show a file, or read log. Paths are jailed to fsRoot.",
+  defaults: { name: "Git Tool" },
+  inputs: [],
+  outputs: ["ai_tool"],
+  icon: "GitBranch",
+  sources: [],
+  properties: [
+    {
+      displayName: "Description",
+      name: "description",
+      type: "string",
+      default: "Clone a git repository, show a file, or list recent commits",
+    },
+    {
+      displayName: "Workspace root",
+      name: "fsRoot",
+      type: "string",
+      default: "",
+      description: "Jail for clone/show paths. Empty uses OPENFLOW_FS_ROOT or createRuntime({ fsRoot }).",
+    },
+  ],
+};
+
+export const filesystemTool: INodeTypeDescription = {
+  name: "openflow-node-base.filesystemTool",
+  displayName: "Filesystem Tool",
+  category: "AI Tool",
+  group: ["ai"],
+  version: 1,
+  description: "Read, glob, and grep files under a host-provided fsRoot jail.",
+  defaults: { name: "Filesystem Tool" },
+  inputs: [],
+  outputs: ["ai_tool"],
+  icon: "Folder",
+  sources: [],
+  properties: [
+    {
+      displayName: "Description",
+      name: "description",
+      type: "string",
+      default: "Read, list, or grep files in the project workspace",
+    },
+    {
+      displayName: "Workspace root",
+      name: "fsRoot",
+      type: "string",
+      default: "",
+      description: "Jail for file access. Empty uses OPENFLOW_FS_ROOT or createRuntime({ fsRoot }).",
+    },
+  ],
+};

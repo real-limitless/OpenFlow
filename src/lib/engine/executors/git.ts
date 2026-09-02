@@ -69,6 +69,14 @@ const DEFAULT_FACTORY: GitClientFactory = async (credentials, options) => {
   return defaultGitClientFactory(credentials, options);
 };
 
+export async function createGitClient(
+  credentials: Record<string, unknown> | null,
+  options: Record<string, unknown>,
+): Promise<GitClient> {
+  const factory = clientFactory ?? DEFAULT_FACTORY;
+  return factory(credentials, options);
+}
+
 function resolveValue(raw: unknown, itemJson: Record<string, unknown>): unknown {
   if (typeof raw !== "string") return raw;
   if (raw.startsWith("=") || /\{\{[\s\S]*?\}\}/.test(raw)) {

@@ -1,7 +1,5 @@
 import type { NodeExecutor, INodeExecutionData } from "@/sdk";
 import { normalizeCodeResult, toExecutionData } from "./code-result";
-import { runPythonNative } from "./code-python-native";
-import { runPythonPyodide } from "./code-python-pyodide";
 
 interface IVMModule {
   Isolate: new () => IIsolate;
@@ -39,11 +37,13 @@ export const codeExecutor: NodeExecutor = async (ctx) => {
   const language = ctx.getParam<string>("language", "javaScript");
 
   if (language === "pythonNative") {
+    const { runPythonNative } = await import("./code-python-native");
     const code = ctx.getParam<string>("pythonCode", "") ?? "";
     return runPythonMode(code, mode, inputItems, runPythonNative);
   }
 
   if (language === "python") {
+    const { runPythonPyodide } = await import("./code-python-pyodide");
     const code = ctx.getParam<string>("pythonCode", "") ?? "";
     return runPythonMode(code, mode, inputItems, runPythonPyodide);
   }

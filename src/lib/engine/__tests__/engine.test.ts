@@ -1,5 +1,11 @@
 import { describe, it, expect } from "vitest";
-import { buildAdjacency, resolveStartNodes, topologicalSort } from "../graph";
+import {
+  buildAdjacency,
+  isTriggerNode,
+  resolveStartNodes,
+  setTriggerDescriptionLookup,
+  topologicalSort,
+} from "../graph";
 import { createExecutionPlan } from "../runner";
 import type { IWorkflow } from "../../workflow/types";
 
@@ -19,8 +25,22 @@ describe("Engine Graph", () => {
   it("builds adjacency from connections", () => {
     const workflow = makeWorkflow({
       nodes: [
-        { id: "1", name: "Start", type: "n8n-nodes-base.manualTrigger", typeVersion: 1, position: [0, 0], parameters: {} },
-        { id: "2", name: "Set", type: "n8n-nodes-base.set", typeVersion: 1, position: [200, 0], parameters: {} },
+        {
+          id: "1",
+          name: "Start",
+          type: "n8n-nodes-base.manualTrigger",
+          typeVersion: 1,
+          position: [0, 0],
+          parameters: {},
+        },
+        {
+          id: "2",
+          name: "Set",
+          type: "n8n-nodes-base.set",
+          typeVersion: 1,
+          position: [200, 0],
+          parameters: {},
+        },
       ],
       connections: {
         Start: { main: [[{ node: "Set", type: "main", index: 0 }]] },
@@ -55,8 +75,22 @@ describe("Engine Graph", () => {
   it("resolves trigger nodes as start nodes", () => {
     const workflow = makeWorkflow({
       nodes: [
-        { id: "1", name: "Manual Trigger", type: "n8n-nodes-base.manualTrigger", typeVersion: 1, position: [0, 0], parameters: {} },
-        { id: "2", name: "Set", type: "n8n-nodes-base.set", typeVersion: 1, position: [200, 0], parameters: {} },
+        {
+          id: "1",
+          name: "Manual Trigger",
+          type: "n8n-nodes-base.manualTrigger",
+          typeVersion: 1,
+          position: [0, 0],
+          parameters: {},
+        },
+        {
+          id: "2",
+          name: "Set",
+          type: "n8n-nodes-base.set",
+          typeVersion: 1,
+          position: [200, 0],
+          parameters: {},
+        },
       ],
       connections: {
         "Manual Trigger": { main: [[{ node: "Set", type: "main", index: 0 }]] },
@@ -70,7 +104,14 @@ describe("Engine Graph", () => {
   it("falls back to first node when no triggers", () => {
     const workflow = makeWorkflow({
       nodes: [
-        { id: "1", name: "Set", type: "n8n-nodes-base.set", typeVersion: 1, position: [0, 0], parameters: {} },
+        {
+          id: "1",
+          name: "Set",
+          type: "n8n-nodes-base.set",
+          typeVersion: 1,
+          position: [0, 0],
+          parameters: {},
+        },
       ],
     });
 
@@ -81,8 +122,23 @@ describe("Engine Graph", () => {
   it("skips disabled trigger nodes", () => {
     const workflow = makeWorkflow({
       nodes: [
-        { id: "1", name: "Trigger", type: "n8n-nodes-base.manualTrigger", typeVersion: 1, position: [0, 0], parameters: {}, disabled: true },
-        { id: "2", name: "Set", type: "n8n-nodes-base.set", typeVersion: 1, position: [200, 0], parameters: {} },
+        {
+          id: "1",
+          name: "Trigger",
+          type: "n8n-nodes-base.manualTrigger",
+          typeVersion: 1,
+          position: [0, 0],
+          parameters: {},
+          disabled: true,
+        },
+        {
+          id: "2",
+          name: "Set",
+          type: "n8n-nodes-base.set",
+          typeVersion: 1,
+          position: [200, 0],
+          parameters: {},
+        },
       ],
     });
 
@@ -100,10 +156,38 @@ describe("Engine Graph", () => {
     // "A Chat Model sub-node must be connected".
     const workflow = makeWorkflow({
       nodes: [
-        { id: "1", name: "Start", type: "n8n-nodes-base.manualTrigger", typeVersion: 1, position: [0, 0], parameters: {} },
-        { id: "2", name: "Agent", type: "@n8n/n8n-nodes-langchain.agent", typeVersion: 1, position: [200, 0], parameters: {} },
-        { id: "3", name: "Model", type: "@n8n/n8n-nodes-langchain.lmChatOpenAi", typeVersion: 1, position: [200, -100], parameters: {} },
-        { id: "4", name: "Orphan", type: "n8n-nodes-base.set", typeVersion: 1, position: [400, 200], parameters: {} },
+        {
+          id: "1",
+          name: "Start",
+          type: "n8n-nodes-base.manualTrigger",
+          typeVersion: 1,
+          position: [0, 0],
+          parameters: {},
+        },
+        {
+          id: "2",
+          name: "Agent",
+          type: "@n8n/n8n-nodes-langchain.agent",
+          typeVersion: 1,
+          position: [200, 0],
+          parameters: {},
+        },
+        {
+          id: "3",
+          name: "Model",
+          type: "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+          typeVersion: 1,
+          position: [200, -100],
+          parameters: {},
+        },
+        {
+          id: "4",
+          name: "Orphan",
+          type: "n8n-nodes-base.set",
+          typeVersion: 1,
+          position: [400, 200],
+          parameters: {},
+        },
       ],
       connections: {
         Start: { main: [[{ node: "Agent", type: "main", index: 0 }]] },
@@ -142,5 +226,37 @@ describe("Engine Graph", () => {
   it("topological sort handles empty graph", () => {
     const order = topologicalSort(new Map());
     expect(order).toEqual([]);
+  });
+
+  it("detects known trigger types without a description registry", () => {
+    const base = {
+      id: "1",
+      name: "N",
+      typeVersion: 1,
+      position: [0, 0] as [number, number],
+      parameters: {},
+    };
+    expect(isTriggerNode({ ...base, type: "n8n-nodes-base.manualTrigger" })).toBe(true);
+    expect(isTriggerNode({ ...base, type: "nodes-base.webhook" })).toBe(true);
+    expect(isTriggerNode({ ...base, type: "n8n-nodes-base.set" })).toBe(false);
+  });
+
+  it("uses an optional description lookup for unknown trigger types", () => {
+    const base = {
+      id: "1",
+      name: "N",
+      typeVersion: 1,
+      position: [0, 0] as [number, number],
+      parameters: {},
+    };
+    setTriggerDescriptionLookup((type) =>
+      type === "custom.trigger" ? { group: ["trigger"] } : null,
+    );
+    try {
+      expect(isTriggerNode({ ...base, type: "custom.trigger" })).toBe(true);
+      expect(isTriggerNode({ ...base, type: "custom.other" })).toBe(false);
+    } finally {
+      setTriggerDescriptionLookup(undefined);
+    }
   });
 });

@@ -5,8 +5,15 @@ import {
   registerAlias,
   registerDescription,
 } from "@/lib/engine/node-runtime";
+import { setTriggerDescriptionLookup } from "@/lib/engine/graph";
 import * as definitions from "./definitions";
-import { manualTrigger, formTrigger, googleSheetsTrigger, typeformTrigger, scheduleTrigger } from "./definitions/triggers";
+import {
+  manualTrigger,
+  formTrigger,
+  googleSheetsTrigger,
+  typeformTrigger,
+  scheduleTrigger,
+} from "./definitions/triggers";
 import {
   code,
   stickyNote,
@@ -24,7 +31,15 @@ import {
   discourse,
   mattermostTool,
 } from "./definitions/core";
-import { xml, xNode, openAiApp, iCal, iCalendar, googlePerspective, postHogTool } from "./definitions/transform";
+import {
+  xml,
+  xNode,
+  openAiApp,
+  iCal,
+  iCalendar,
+  googlePerspective,
+  postHogTool,
+} from "./definitions/transform";
 import { form } from "./definitions/helpers";
 import { deepLTool, driftTool, venafiTlsProtectCloudTool } from "./definitions/tools";
 import { dhlTool } from "./definitions/integration";
@@ -120,6 +135,8 @@ export function seedBuiltinDescriptions(): void {
 if (!descriptionsSeeded) {
   seedBuiltinDescriptions();
 }
+
+setTriggerDescriptionLookup((type) => getNodeType(type));
 
 /** @deprecated prefer registerDescription from node-runtime */
 const aliases: Record<string, string> = Object.fromEntries(ALIAS_PAIRS);

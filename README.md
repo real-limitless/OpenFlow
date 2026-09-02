@@ -123,6 +123,7 @@ Turns auth on by default, disables hot-reload, binds DB/Redis to localhost only.
 - **Credentials & secrets** — encrypted vault, environments, variables, secret providers
 - **Self-hosted stack** — Hono API, Prisma + Postgres, BullMQ + Redis workers
 - **Plugin SDK** — `defineNode` authoring surface for builtins and future plugins
+- **Lite runtime** — headless `createRuntime()` to run exported JSON in another Node process ([docs/runtime.md](docs/runtime.md))
 - **Templates** — marketplace browser with compatibility badges
 - **Ansible automation** — module gallery, hybrid Form|JSON args, playbooks, SSH/become credentials (see below)
 
@@ -176,6 +177,7 @@ Or step through setup interactively: **`npm run tui`**.
 | `npm run db:studio` | Prisma Studio |
 | `npm run screenshots` | Capture product / marketing PNGs (Playwright → live app) |
 | `npm run screenshots:ansible` | Ansible gallery/form/playbook/creds (Playwright → live app) |
+| `npm run build:runtime` | Bundle lite runtime (`openflow/runtime`) |
 
 Copy `.env.example` → `.env` if you skip `setup` (it generates `CREDENTIALS_KEY` for you).
 
@@ -249,6 +251,7 @@ scripts/
 docs/
   onboarding.md   # New developer guide
   install.md      # Install / production notes
+  runtime.md      # Lite headless embed runtime
   ansible.md      # Ansible node + dogfood
   clean-room.md   # Clean-room rules
   sdk/            # SDK overview + non-goals
@@ -289,6 +292,7 @@ See [docs/clean-room.md](docs/clean-room.md) and [docs/sdk/OVERVIEW.md](docs/sdk
 | [SECURITY.md](SECURITY.md) | Secrets & reporting |
 | [CONTRIBUTING.md](CONTRIBUTING.md) | How to contribute |
 | [docs/assistant.md](docs/assistant.md) | Editor AI assistant |
+| [docs/runtime.md](docs/runtime.md) | Lite headless embed runtime |
 | [docs/mcp.md](docs/mcp.md) | Remote MCP for third-party chatbots |
 | [docs/clean-room.md](docs/clean-room.md) | Spec → implement pipeline |
 | [ansible-flow-mcp](https://github.com/real-limitless/ansible-flow-mcp) | Standalone Ansible MCP server (dual-track) |

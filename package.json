@@ -24,7 +24,7 @@
     "setup": "bash scripts/setup.sh",
     "dev": "vite dev",
     "build": "npm run generate:executors && vite build",
-    "build:runtime": "node -e \"const fs=require('fs'); if(!fs.existsSync('dist/runtime/index.js')){console.error('dist/runtime/index.js missing — checkout feat/lite-runtime or DEVELOPMENT and rebuild'); process.exit(1)} console.log('ok', 'dist/runtime/index.js')\"",
+    "build:runtime": "node scripts/build-runtime.mjs",
     "build:dev": "vite build --mode development",
     "preview": "vite preview",
     "dev:api": "tsx watch src/server/api.ts",

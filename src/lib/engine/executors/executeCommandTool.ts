@@ -31,6 +31,38 @@ async function runCommand(cmd: string): Promise<CommandResult> {
 }
 
 export const executeCommandToolExecutor: NodeExecutor = async (ctx) => {
+  if (ctx.getInputItems(0).length === 0) {
+    const handle = {
+      type: "n8n-nodes-base.executeCommandTool",
+      name: String(ctx.getParam("toolName", "execute_command")),
+      description: String(
+        ctx.getParam("description", "Run a shell command and return stdout/stderr/exitCode"),
+      ),
+      schema: {
+        type: "object",
+        properties: {
+          command: { type: "string", description: "Shell command to execute" },
+        },
+        required: ["command"],
+      },
+      async invoke(args: Record<string, unknown>) {
+        const command = String(args.command ?? ctx.getParam("command", "") ?? "");
+        if (!command) throw new Error("Command parameter is required");
+        const result = await runCommand(command);
+        return {
+          content: JSON.stringify({
+            exitCode: result.exitCode,
+            stdout: result.stdout,
+            stderr: result.stderr,
+          }),
+        };
+      },
+    };
+    return [
+      [{ json: handle as unknown as Record<string, unknown>, pairedItem: { item: 0, input: 0 } }],
+    ];
+  }
+
   const inputItems = ctx.getInputItems(0);
   const executeOnce = ctx.getParam<boolean>("executeOnce", false);
   const commandTemplate = ctx.getParam<string>("command", "");
@@ -46,11 +78,12 @@ export const executeCommandToolExecutor: NodeExecutor = async (ctx) => {
 
   if (executeOnce) {
     const evaluated =
-      (ctx.evaluate(commandTemplate, inputItems[0].json) as string) ??
-      commandTemplate;
+      (ctx.evaluate(commandTemplate, inputItems[0].json) as string) ?? commandTemplate;
     try {
       const result = await runCommand(evaluated);
-      return [[{ json: { exitCode: result.exitCode, stdout: result.stdout, stderr: result.stderr } }]];
+      return [
+        [{ json: { exitCode: result.exitCode, stdout: result.stdout, stderr: result.stderr } }],
+      ];
     } catch (err) {
       if (contOnFail) {
         return [[{ json: { error: (err as Error).message } }]];
@@ -61,9 +94,7 @@ export const executeCommandToolExecutor: NodeExecutor = async (ctx) => {
 
   const results = await Promise.all(
     inputItems.map(async (item, idx) => {
-      const cmd =
-        (ctx.evaluate(commandTemplate, item.json) as string) ??
-        commandTemplate;
+      const cmd = (ctx.evaluate(commandTemplate, item.json) as string) ?? commandTemplate;
       try {
         const result = await runCommand(cmd);
         return withPairedItem(
@@ -72,10 +103,7 @@ export const executeCommandToolExecutor: NodeExecutor = async (ctx) => {
         );
       } catch (err) {
         if (contOnFail) {
-          return withPairedItem(
-            { json: { error: (err as Error).message } },
-            idx,
-          );
+          return withPairedItem({ json: { error: (err as Error).message } }, idx);
         }
         throw err;
       }

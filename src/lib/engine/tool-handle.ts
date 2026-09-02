@@ -23,6 +23,29 @@ export function mergeToolArgs(
   return { ...params, ...args };
 }
 
+export function stringifyToolResult(result: unknown): string {
+  if (result == null) return "";
+  if (typeof result === "string") return result;
+  if (typeof result === "object") {
+    const r = result as { content?: unknown; isError?: boolean };
+    if (typeof r.content === "string") {
+      return r.isError ? `Error: ${r.content}` : r.content;
+    }
+    try {
+      return JSON.stringify(result);
+    } catch {
+      return String(result);
+    }
+  }
+  return String(result);
+}
+
+export function assertAllowUrl(ctx: ExecutionContext, url: string): void {
+  if (ctx.allowUrl && !ctx.allowUrl(url)) {
+    throw new Error(`HTTP Request blocked by allowUrl policy: ${url}`);
+  }
+}
+
 export function emitToolHandle(ctx: ExecutionContext, handle: ToolHandle): INodeExecutionData[][] {
   const items = ctx.getInputItems(0);
   const pairedItem =
@@ -56,6 +79,10 @@ export function emitMcpBundle(
   ];
 }
 
+export function isClusterToolActivation(ctx: ExecutionContext): boolean {
+  return ctx.getInputItems(0).length === 0;
+}
+
 export function resolveJailPath(fsRoot: string, requested: string): string {
   const root = resolve(fsRoot);
   const target = resolve(root, requested);
@@ -73,7 +100,7 @@ export function requireFsRoot(ctx: ExecutionContext): string {
   if (fromCtx) return resolve(fromCtx);
   const env = process.env.OPENFLOW_FS_ROOT?.trim();
   if (env) return resolve(env);
-  return process.cwd();
+  throw new Error("Filesystem/Git tool requires createRuntime({ fsRoot })");
 }
 
 export function asHandleExecutor(

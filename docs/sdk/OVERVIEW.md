@@ -52,12 +52,17 @@ export default defineNode({
 for human porters. **New code and AI agents should prefer the native API.**
 Aliases are incomplete by design and are not a third-party compatibility layer.
 
+`CreateContextOptions` may include `env` / `envAllowlist` (for `$env`) and
+`allowUrl` (HTTP policy). The product runner defaults `$env` to `process.env`.
+The lite runtime (`src/lib/runtime`) defaults `$env` to `{}`.
+
 ## What the SDK is not
 
 See [`NON_GOALS.md`](./NON_GOALS.md).
 
 ## Related
 
+- [`docs/runtime.md`](../runtime.md) — lite headless embed runtime
 - [`docs/clean-room.md`](../clean-room.md) — process rules
 - [`docs/specs/README.md`](../specs/README.md) — per-node behavioral specs
 - [`docs/prompts/`](../prompts/) — spec / implement agent prompts

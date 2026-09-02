@@ -1,5 +1,5 @@
 import type { NodeExecutor } from "@/sdk";
-import { emitMcpBundle, mergeToolArgs } from "../tool-handle";
+import { assertAllowUrl, emitMcpBundle, mergeToolArgs } from "../tool-handle";
 
 const SEARCH_PROVIDERS: Record<string, string> = {
   google: "https://www.googleapis.com/customsearch/v1",
@@ -48,6 +48,7 @@ export const webSearchToolExecutor: NodeExecutor = async (ctx) => {
         if (searchEngine === "duckduckgo") params.set("format", "json");
       }
       const fullUrl = `${searchUrl}?${params.toString()}`;
+      assertAllowUrl(ctx, fullUrl);
       const res = await fetch(fullUrl, {
         headers: { Accept: "application/json" },
         signal: AbortSignal.timeout(10000),

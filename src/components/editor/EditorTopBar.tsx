@@ -35,6 +35,7 @@ import {
   collectWorkflowCredentials,
   fetchLocalCredentials,
 } from "@/lib/workflow/credentials-inventory";
+import { serializeForRuntime } from "@/lib/runtime/serialize";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
@@ -121,6 +122,31 @@ export function EditorTopBar({
     toast.success(mode === "n8n" ? "Exported n8n-compatible JSON" : "Workflow exported");
   };
 
+  const handleExportRuntime = () => {
+    const report = serializeForRuntime(workflow, "harness");
+    const blob = new Blob([serializeWorkflow(report.workflow)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    const base = workflow.name.replace(/[^a-z0-9-_ ]/gi, "").trim() || "workflow";
+    a.download = `${base}.runtime.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+    if (report.unsupportedNodes.length > 0) {
+      toast.warning(`Runtime export: ${report.unsupportedNodes.length} unsupported node(s)`, {
+        description: report.unsupportedNodes.map((n) => n.name).join(", "),
+      });
+      return;
+    }
+    if (report.requiredCredentials.length > 0) {
+      toast.success(
+        `Exported for runtime (${report.requiredCredentials.length} credential slot(s) to bind)`,
+      );
+      return;
+    }
+    toast.success("Exported for runtime");
+  };
+
   const handleReportIssue = async () => {
     try {
       toast.message("Preparing debug bundle…");
@@ -142,7 +168,10 @@ export function EditorTopBar({
       toast.success(`Downloaded ${bundleName} — attach it on GitHub`);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Could not prepare report");
-      window.open(openGeneralIssueUrl({ workflowId: workflow.id, workflowName: workflow.name }), "_blank");
+      window.open(
+        openGeneralIssueUrl({ workflowId: workflow.id, workflowName: workflow.name }),
+        "_blank",
+      );
     }
   };
 
@@ -205,6 +234,9 @@ export function EditorTopBar({
       </DropdownMenuItem>
       <DropdownMenuItem onClick={() => handleExport("n8n")}>
         <Download className="mr-2 size-4" /> Export (n8n-compatible)
+      </DropdownMenuItem>
+      <DropdownMenuItem onClick={handleExportRuntime}>
+        <Download className="mr-2 size-4" /> Export for runtime…
       </DropdownMenuItem>
       <DropdownMenuSeparator />
       <DropdownMenuItem onClick={() => setReportOpen(true)}>

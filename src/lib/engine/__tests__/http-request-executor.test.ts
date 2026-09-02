@@ -134,6 +134,30 @@ describe("http-request executor — n8n-nodes-base.httpRequest", () => {
     expect(getExecutor(TYPE)).toBeDefined();
   });
 
+  it("honors allowUrl and does not fetch when denied", async () => {
+    const node = makeNode({
+      name: "N",
+      type: TYPE,
+      parameters: { method: "GET", url: "https://example.com/x" },
+    });
+    const ctx = createExecutionContext({
+      node,
+      workflow: {
+        id: "wf",
+        name: "Test",
+        active: false,
+        nodes: [node],
+        connections: {},
+        settings: {},
+      },
+      getNodeInputItems: () => [{ json: {} }],
+      continueOnFail: false,
+      allowUrl: () => false,
+    });
+    await expect(getExecutor(TYPE)!(ctx, node)).rejects.toThrow(/allowUrl policy/);
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
   it("GET parses JSON body into item json", async () => {
     installFetch(mockResponse({ hello: "world" }));
     const out = await run({ method: "GET", url: "https://example.com/get" });
@@ -179,6 +203,38 @@ describe("http-request executor — n8n-nodes-base.httpRequest", () => {
     expect(calls[0].method).toBe("POST");
     expect(calls[0].body).toBe(JSON.stringify({ a: 1 }));
     expect(calls[0].headers["Content-Type"]).toBe("application/json");
+  });
+
+  it("POSTs incoming $json.body when jsonBody is empty", async () => {
+    await run(
+      {
+        method: "POST",
+        url: "https://example.com/post",
+        sendBody: true,
+        contentType: "json",
+        jsonBody: {},
+      },
+      [{ body: { model: "grok", messages: [{ role: "user", content: "hi" }] } }],
+    );
+
+    expect(calls[0].body).toBe(
+      JSON.stringify({ model: "grok", messages: [{ role: "user", content: "hi" }] }),
+    );
+  });
+
+  it("evaluates jsonBody expressions against the incoming item", async () => {
+    await run(
+      {
+        method: "POST",
+        url: "https://example.com/post",
+        sendBody: true,
+        contentType: "json",
+        jsonBody: "={{ $json.body }}",
+      },
+      [{ body: { n: 2 } }],
+    );
+
+    expect(calls[0].body).toBe(JSON.stringify({ n: 2 }));
   });
 
   it("POSTs form-urlencoded body from bodyParameters", async () => {

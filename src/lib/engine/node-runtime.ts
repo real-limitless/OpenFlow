@@ -2565,6 +2565,21 @@ export const BUILTIN_EXECUTOR_MODULES: Array<{
     exportName: "webSearchExecutor",
   },
   {
+    type: "openflow-node-base.webSearchTool",
+    modulePath: "./executors/webSearchTool",
+    exportName: "webSearchToolExecutor",
+  },
+  {
+    type: "openflow-node-base.gitTool",
+    modulePath: "./executors/gitTool",
+    exportName: "gitToolExecutor",
+  },
+  {
+    type: "openflow-node-base.filesystemTool",
+    modulePath: "./executors/filesystemTool",
+    exportName: "filesystemToolExecutor",
+  },
+  {
     type: "openflow-node-base.webflowTool",
     modulePath: "./executors/n8n-nodes-base.webflowTool",
     exportName: "webflowToolExecutor",

@@ -1,7 +1,7 @@
 import { readFile } from "node:fs/promises";
 import type { NodeExecutor } from "@/sdk";
-import { emitMcpBundle, requireFsRoot, resolveJailPath } from "../tool-handle";
-import { defaultGitClientFactory } from "./git-transport";
+import { assertAllowUrl, emitMcpBundle, requireFsRoot, resolveJailPath } from "../tool-handle";
+import { createGitClient } from "./git";
 
 const TYPE = "openflow-node-base.gitTool";
 
@@ -9,7 +9,7 @@ async function getClient(ctx: Parameters<NodeExecutor>[0]) {
   const credentials =
     (await ctx.getCredential("gitPassword").catch(() => null)) ??
     (await ctx.getCredential("sshPrivateKey").catch(() => null));
-  return defaultGitClientFactory(credentials, { timeout: 30000 });
+  return createGitClient(credentials, { timeout: 30000 });
 }
 
 export const gitToolExecutor: NodeExecutor = async (ctx) => {
@@ -60,6 +60,7 @@ export const gitToolExecutor: NodeExecutor = async (ctx) => {
       if (toolName === "git_clone") {
         const repository = String(args.repository ?? "");
         if (!repository) throw new Error("repository is required");
+        assertAllowUrl(ctx, repository);
         const client = await getClient(ctx);
         try {
           await client.clone(repository, dest, {

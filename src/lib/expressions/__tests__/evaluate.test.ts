@@ -90,4 +90,14 @@ describe("isExpression", () => {
     expect(isExpression(123)).toBe(false);
     expect(isExpression(null)).toBe(false);
   });
+
+  it("exposes $env keys and honors envAllowlist", () => {
+    const ctx: ExpressionContext = {
+      json: {},
+      env: { VISIBLE: "yes", SECRET: "nope" },
+      envAllowlist: ["VISIBLE"],
+    };
+    expect(evaluateExpression("={{ $env.VISIBLE }}", ctx).value).toBe("yes");
+    expect(evaluateExpression("={{ $env.SECRET }}", ctx).value).toBeUndefined();
+  });
 });

@@ -34,7 +34,10 @@ export function createExecutionContext(options: CreateContextOptions): Execution
     evaluate(expression: string, itemJson: Record<string, unknown> = {}) {
       return evaluateOnItem(expression, itemJson, {
         nodeData,
-        env: typeof process !== "undefined" ? (process.env as Record<string, string>) : undefined,
+        env:
+          options.env ??
+          (typeof process !== "undefined" ? (process.env as Record<string, string>) : undefined),
+        envAllowlist: options.envAllowlist,
         vars: options.vars,
       });
     },
@@ -51,6 +54,7 @@ export function createExecutionContext(options: CreateContextOptions): Execution
     },
     dataTables: options.dataTables,
     vars: options.vars,
+    allowUrl: options.allowUrl,
     fsRoot: options.fsRoot,
     reportProgress: options.reportProgress,
   };

@@ -90,6 +90,19 @@ export interface RunOptions {
   /** Instance + project custom variables exposed as `$vars`. */
   vars?: Record<string, unknown>;
   /**
+   * Env map for `$env`. When omitted, falls back to `process.env` (product host).
+   * Lite runtime should pass an explicit map (empty object to expose nothing).
+   */
+  env?: Record<string, string>;
+  /** When set, only these `$env` keys are visible. */
+  envAllowlist?: string[];
+  /**
+   * Optional URL policy forwarded to HTTP-capable nodes via the execution context.
+   */
+  allowUrl?: (url: string) => boolean;
+  /** Jail root for filesystem / git tool paths. */
+  fsRoot?: string;
+  /**
    * Optional start node (usually a trigger name). When set, only that node and
    * its downstream graph run — like n8n’s “execute this trigger”.
    */
@@ -119,7 +132,11 @@ function resolveParameters(
   params: Record<string, unknown>,
   nodeOutputs: Map<string, INodeExecutionData[][]>,
   _nodeName: string,
-  vars?: Record<string, unknown>,
+  extras?: {
+    vars?: Record<string, unknown>;
+    env?: Record<string, string>;
+    envAllowlist?: string[];
+  },
 ): Record<string, unknown> {
   const nodeData: Record<string, INodeExecutionData[]> = {};
   for (const [name, outputs] of nodeOutputs) {
@@ -138,8 +155,9 @@ function resolveParameters(
       const result = evaluateExpression(value, {
         json: {},
         nodeData,
-        env: process.env as Record<string, string>,
-        vars: vars ?? {},
+        env: extras?.env ?? (process.env as Record<string, string>),
+        envAllowlist: extras?.envAllowlist,
+        vars: extras?.vars ?? {},
       });
       resolved[key] = result.ok ? result.value : value;
     } else {
@@ -170,6 +188,8 @@ function collectTerminalItems(
 
 export async function executeWorkflow(options: RunOptions): Promise<RunResult> {
   const { workflow, nodeExecutors, pinData, onProgress } = options;
+  const resolvedEnv =
+    options.env ?? (typeof process !== "undefined" ? (process.env as Record<string, string>) : {});
   const depth = options._depth ?? 0;
   const maxDepth = options.maxSubWorkflowDepth ?? 5;
   const plan = createExecutionPlan(
@@ -292,7 +312,11 @@ export async function executeWorkflow(options: RunOptions): Promise<RunResult> {
       try {
         const resolvedNode = {
           ...node,
-          parameters: resolveParameters(node.parameters, nodeOutputs, nodeName, options.vars),
+          parameters: resolveParameters(node.parameters, nodeOutputs, nodeName, {
+            vars: options.vars,
+            env: resolvedEnv,
+            envAllowlist: options.envAllowlist,
+          }),
         };
 
         const runSubWorkflow = async (subOpts: {
@@ -351,6 +375,10 @@ export async function executeWorkflow(options: RunOptions): Promise<RunResult> {
             _depth: depth + 1,
             dataTables: options.dataTables,
             vars: options.vars,
+            env: resolvedEnv,
+            envAllowlist: options.envAllowlist,
+            allowUrl: options.allowUrl,
+            fsRoot: options.fsRoot,
           });
 
           if (!childResult.success) {
@@ -377,7 +405,7 @@ export async function executeWorkflow(options: RunOptions): Promise<RunResult> {
             ? async (name: string) => {
                 const ref = node.credentials?.[name];
                 if (!ref) return null;
-                return options.credentialResolver!(ref);
+                return options.credentialResolver!({ ...ref, type: name });
               }
             : undefined,
           nodeData,
@@ -385,6 +413,9 @@ export async function executeWorkflow(options: RunOptions): Promise<RunResult> {
           customData,
           dataTables: options.dataTables,
           vars: options.vars,
+          env: resolvedEnv,
+          envAllowlist: options.envAllowlist,
+          allowUrl: options.allowUrl,
           fsRoot: options.fsRoot,
           reportProgress: async (update) => {
             const entry = runData[nodeName];

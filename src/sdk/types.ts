@@ -76,6 +76,12 @@ export interface ExecutionContext {
   /** Custom variables for `$vars` in expressions. */
   vars?: Record<string, unknown>;
 
+  /**
+   * Optional URL policy for HTTP-capable nodes.
+   * When set, a false return blocks the request.
+   */
+  allowUrl?: (url: string) => boolean;
+
   /** Jail root for filesystem / git tools (harness hosts). */
   fsRoot?: string;
 
@@ -126,6 +132,16 @@ export interface CreateContextOptions {
   dataTables?: DataTableAccess;
   /** Custom variables for `$vars` in expressions. */
   vars?: Record<string, unknown>;
+  /** Env map for `$env`. When omitted, the host may fall back to `process.env`. */
+  env?: Record<string, string>;
+  /** When set, only these `$env` keys are visible. */
+  envAllowlist?: string[];
+  /**
+   * Optional URL policy for HTTP-capable nodes.
+   * When set, a false return blocks the request.
+   */
+  allowUrl?: (url: string) => boolean;
+  /** Jail root for filesystem / git tool paths. */
   fsRoot?: string;
   reportProgress?: ExecutionContext["reportProgress"];
 }
