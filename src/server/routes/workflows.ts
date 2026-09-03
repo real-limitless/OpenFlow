@@ -285,6 +285,12 @@ export default function workflowsRoute(app: Hono<AppEnv>) {
           },
         });
 
+    // Keep public Chat URLs in sync when the graph changes while already active.
+    if (row.active) {
+      const { syncChatRoutes } = await import("../chat/register");
+      await syncChatRoutes(row.id, wf.nodes, true);
+    }
+
     return c.json(deserializeJsonFields(row as unknown as Record<string, unknown>));
   });
 

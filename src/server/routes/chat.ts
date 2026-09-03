@@ -41,16 +41,16 @@ export default function chatRoute(app: Hono<AppEnv>) {
     const auth = await authorizeChatRequest(c, ctx.node, ctx.params.authentication, ctx.workflowRow);
     if (!auth.ok) return c.json({ error: auth.message }, auth.status);
 
-    if (ctx.params.mode === "embedded" && c.req.query("embed") !== "1") {
+    if (c.req.query("format") === "json") {
       return c.json({
         path,
-        mode: "embedded",
+        mode: ctx.params.mode,
         postUrl: `/chat/${path}`,
         fields: ["chatInput", "sessionId", "action", "metadata"],
       });
     }
 
-    const embed = c.req.query("embed") === "1";
+    const embed = c.req.query("embed") === "1" || ctx.params.mode === "embedded";
     c.header("Content-Security-Policy", "frame-ancestors *");
     return c.html(
       renderHostedChatPage({

@@ -1,4 +1,5 @@
 import { describe, it, expect } from "vitest";
+import { isApiPath } from "../../../server/api-prefixes";
 import {
   chatTriggerParams,
   isAnyChatTriggerNode,
@@ -34,6 +35,15 @@ describe("chat path helpers", () => {
       resolveChatPath(node({ parameters: { options: { chatPath: "Support Bot!" } } })),
     ).toBe("support-bot");
     expect(resolveChatPath(node({ id: "AbC 99", parameters: {} }))).toBe("abc-99");
+  });
+
+  it("routes /chat through the Hono API (not the SPA 404)", () => {
+    expect(isApiPath("/chat/node-mtkzmyi8-2")).toBe(true);
+    expect(isApiPath("/chat")).toBe(true);
+    expect(isApiPath("/form/demo")).toBe(true);
+    expect(isApiPath("/api/v1/workflows")).toBe(true);
+    expect(isApiPath("/chats")).toBe(false);
+    expect(isApiPath("/chats/wf-1")).toBe(false);
   });
 
   it("reads public and hub flags", () => {
