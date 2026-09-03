@@ -31,6 +31,7 @@ const EXEMPT_PATHS = [
   "/api/v1/setup",
   "/webhook",
   "/form",
+  "/chat",
   "/.well-known",
   "/authorize",
   "/register",

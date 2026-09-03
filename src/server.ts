@@ -4,6 +4,7 @@ import { consumeLastCapturedError } from "./lib/error-capture";
 import { renderErrorPage } from "./lib/error-page";
 import { validateConfig } from "./config";
 import app from "./server/api";
+import { isApiPath } from "./server/api-prefixes";
 
 validateConfig();
 
@@ -48,23 +49,11 @@ function isH3SwallowedErrorBody(body: string): boolean {
   }
 }
 
-const API_PREFIXES = [
-  "/api/",
-  "/health",
-  "/webhook",
-  "/form",
-  "/mcp",
-  "/.well-known",
-  "/authorize",
-  "/register",
-  "/token",
-];
-
 export default {
   async fetch(request: Request, env: unknown, ctx: unknown) {
     try {
       const url = new URL(request.url);
-      if (API_PREFIXES.some((p) => url.pathname === p || url.pathname.startsWith(p))) {
+      if (isApiPath(url.pathname)) {
         return app.fetch(request, env as never, ctx as never);
       }
 

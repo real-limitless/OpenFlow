@@ -13,6 +13,7 @@ import { EDITOR_PANEL_BY_ID, type EditorPanelId } from "./panel-registry";
 import { dockComponents } from "./dock-panels";
 import { DockTab } from "./DockTab";
 import type { AddNodeInit } from "@/lib/workflow/add-node";
+import type { INodeExecutionData } from "@/lib/workflow/types";
 
 export function EditorDockHost({
   workflowId,
@@ -20,6 +21,7 @@ export function EditorDockHost({
   historyKey,
   isExecuting,
   onExecutePrevious,
+  onExecute,
   onAddNode,
   onSelectExecution,
   dockApiRef,
@@ -29,6 +31,10 @@ export function EditorDockHost({
   historyKey: number;
   isExecuting: boolean;
   onExecutePrevious?: (nodeName: string) => void;
+  onExecute?: (
+    startNode?: string,
+    opts?: { pinData?: Record<string, INodeExecutionData[]> },
+  ) => Promise<ExecutionRunData | null | void>;
   onAddNode: (type: string, init?: AddNodeInit) => void;
   onSelectExecution: (runData: ExecutionRunData, meta?: { id: string; status: string }) => void;
   dockApiRef: React.MutableRefObject<DockviewApi | null>;
@@ -46,6 +52,7 @@ export function EditorDockHost({
       historyKey,
       isExecuting,
       onExecutePrevious,
+      onExecute,
       onAddNode,
       onSelectExecution,
       dockApiRef,
@@ -56,6 +63,7 @@ export function EditorDockHost({
       historyKey,
       isExecuting,
       onExecutePrevious,
+      onExecute,
       onAddNode,
       onSelectExecution,
       dockApiRef,

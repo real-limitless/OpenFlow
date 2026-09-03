@@ -279,6 +279,7 @@ model Workflow {
   webhookRoutes WebhookRoute[]
   scheduledTriggers ScheduledTrigger[]
   formRoutes FormRoute[]
+  chatRoutes ChatRoute[]
 
   @@index([userId])
   @@index([projectId])
@@ -300,6 +301,28 @@ model FormRoute {
   @@index([workflowId])
   @@index([path])
   @@map("form_routes")
+}
+
+// ─── Chat Trigger public / hub routes ───────────────────
+
+model ChatRoute {
+  id                   String  @id @default(cuid())
+  /// URL slug only (served at /chat/:path)
+  path                 String  @unique
+  workflowId           String
+  nodeId               String
+  active               Boolean @default(true)
+  public               Boolean @default(false)
+  makeAvailableInChat  Boolean @default(false)
+  agentName            String  @default("")
+  agentDescription     String  @default("")
+
+  workflow Workflow @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+
+  @@index([workflowId])
+  @@index([path])
+  @@index([makeAvailableInChat, active])
+  @@map("chat_routes")
 }
 
 // ─── Executions ─────────────────────────────────────────

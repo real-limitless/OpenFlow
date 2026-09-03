@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as ChatsRouteImport } from './routes/chats'
 import { Route as CredentialsRouteImport } from './routes/credentials'
 import { Route as DataTablesRouteImport } from './routes/data-tables'
 import { Route as LoginRouteImport } from './routes/login'
@@ -20,23 +21,29 @@ import { Route as SetupRouteImport } from './routes/setup'
 import { Route as SharedRouteImport } from './routes/shared'
 import { Route as TemplatesRouteImport } from './routes/templates'
 import { Route as VariablesRouteImport } from './routes/variables'
+import { Route as ChatsWorkflowIdRouteImport } from './routes/chats_.$workflowId'
 import { Route as DataTablesIdRouteImport } from './routes/data-tables_.$id'
 import { Route as DocsCompatibilityRouteImport } from './routes/docs.compatibility'
+import { Route as ExecutionsIdRouteImport } from './routes/executions.$id'
 import { Route as ProjectsIdRouteImport } from './routes/projects.$id'
 import { Route as SettingsApiKeysRouteImport } from './routes/settings.api-keys'
 import { Route as SettingsCodeRouteImport } from './routes/settings.code'
-import { Route as SettingsMcpRouteImport } from './routes/settings.mcp'
 import { Route as SettingsEnvironmentsRouteImport } from './routes/settings.environments'
 import { Route as SettingsLogsRouteImport } from './routes/settings.logs'
+import { Route as SettingsMcpRouteImport } from './routes/settings.mcp'
 import { Route as SettingsSecretProvidersRouteImport } from './routes/settings.secret-providers'
 import { Route as SettingsTemplatesRouteImport } from './routes/settings.templates'
 import { Route as TemplatesIdRouteImport } from './routes/templates_.$id'
 import { Route as WorkflowIdRouteImport } from './routes/workflow.$id'
-import { Route as ExecutionsIdRouteImport } from './routes/executions.$id'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ChatsRoute = ChatsRouteImport.update({
+  id: '/chats',
+  path: '/chats',
   getParentRoute: () => rootRouteImport,
 } as any)
 const CredentialsRoute = CredentialsRouteImport.update({
@@ -89,6 +96,11 @@ const VariablesRoute = VariablesRouteImport.update({
   path: '/variables',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ChatsWorkflowIdRoute = ChatsWorkflowIdRouteImport.update({
+  id: '/chats_/$workflowId',
+  path: '/chats/$workflowId',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const DataTablesIdRoute = DataTablesIdRouteImport.update({
   id: '/data-tables_/$id',
   path: '/data-tables/$id',
@@ -97,6 +109,11 @@ const DataTablesIdRoute = DataTablesIdRouteImport.update({
 const DocsCompatibilityRoute = DocsCompatibilityRouteImport.update({
   id: '/docs/compatibility',
   path: '/docs/compatibility',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ExecutionsIdRoute = ExecutionsIdRouteImport.update({
+  id: '/executions/$id',
+  path: '/executions/$id',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ProjectsIdRoute = ProjectsIdRouteImport.update({
@@ -114,11 +131,6 @@ const SettingsCodeRoute = SettingsCodeRouteImport.update({
   path: '/code',
   getParentRoute: () => SettingsRoute,
 } as any)
-const SettingsMcpRoute = SettingsMcpRouteImport.update({
-  id: '/mcp',
-  path: '/mcp',
-  getParentRoute: () => SettingsRoute,
-} as any)
 const SettingsEnvironmentsRoute = SettingsEnvironmentsRouteImport.update({
   id: '/environments',
   path: '/environments',
@@ -127,6 +139,11 @@ const SettingsEnvironmentsRoute = SettingsEnvironmentsRouteImport.update({
 const SettingsLogsRoute = SettingsLogsRouteImport.update({
   id: '/logs',
   path: '/logs',
+  getParentRoute: () => SettingsRoute,
+} as any)
+const SettingsMcpRoute = SettingsMcpRouteImport.update({
+  id: '/mcp',
+  path: '/mcp',
   getParentRoute: () => SettingsRoute,
 } as any)
 const SettingsSecretProvidersRoute = SettingsSecretProvidersRouteImport.update({
@@ -149,14 +166,10 @@ const WorkflowIdRoute = WorkflowIdRouteImport.update({
   path: '/workflow/$id',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ExecutionsIdRoute = ExecutionsIdRouteImport.update({
-  id: '/executions/$id',
-  path: '/executions/$id',
-  getParentRoute: () => rootRouteImport,
-} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/chats': typeof ChatsRoute
   '/credentials': typeof CredentialsRoute
   '/data-tables': typeof DataTablesRoute
   '/login': typeof LoginRoute
@@ -167,22 +180,24 @@ export interface FileRoutesByFullPath {
   '/shared': typeof SharedRoute
   '/templates': typeof TemplatesRoute
   '/variables': typeof VariablesRoute
+  '/chats/$workflowId': typeof ChatsWorkflowIdRoute
   '/data-tables/$id': typeof DataTablesIdRoute
   '/docs/compatibility': typeof DocsCompatibilityRoute
+  '/executions/$id': typeof ExecutionsIdRoute
   '/projects/$id': typeof ProjectsIdRoute
   '/settings/api-keys': typeof SettingsApiKeysRoute
   '/settings/code': typeof SettingsCodeRoute
-  '/settings/mcp': typeof SettingsMcpRoute
   '/settings/environments': typeof SettingsEnvironmentsRoute
   '/settings/logs': typeof SettingsLogsRoute
+  '/settings/mcp': typeof SettingsMcpRoute
   '/settings/secret-providers': typeof SettingsSecretProvidersRoute
   '/settings/templates': typeof SettingsTemplatesRoute
   '/templates/$id': typeof TemplatesIdRoute
   '/workflow/$id': typeof WorkflowIdRoute
-  '/executions/$id': typeof ExecutionsIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/chats': typeof ChatsRoute
   '/credentials': typeof CredentialsRoute
   '/data-tables': typeof DataTablesRoute
   '/login': typeof LoginRoute
@@ -193,23 +208,25 @@ export interface FileRoutesByTo {
   '/shared': typeof SharedRoute
   '/templates': typeof TemplatesRoute
   '/variables': typeof VariablesRoute
+  '/chats/$workflowId': typeof ChatsWorkflowIdRoute
   '/data-tables/$id': typeof DataTablesIdRoute
   '/docs/compatibility': typeof DocsCompatibilityRoute
+  '/executions/$id': typeof ExecutionsIdRoute
   '/projects/$id': typeof ProjectsIdRoute
   '/settings/api-keys': typeof SettingsApiKeysRoute
   '/settings/code': typeof SettingsCodeRoute
-  '/settings/mcp': typeof SettingsMcpRoute
   '/settings/environments': typeof SettingsEnvironmentsRoute
   '/settings/logs': typeof SettingsLogsRoute
+  '/settings/mcp': typeof SettingsMcpRoute
   '/settings/secret-providers': typeof SettingsSecretProvidersRoute
   '/settings/templates': typeof SettingsTemplatesRoute
   '/templates/$id': typeof TemplatesIdRoute
   '/workflow/$id': typeof WorkflowIdRoute
-  '/executions/$id': typeof ExecutionsIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/chats': typeof ChatsRoute
   '/credentials': typeof CredentialsRoute
   '/data-tables': typeof DataTablesRoute
   '/login': typeof LoginRoute
@@ -220,24 +237,26 @@ export interface FileRoutesById {
   '/shared': typeof SharedRoute
   '/templates': typeof TemplatesRoute
   '/variables': typeof VariablesRoute
+  '/chats_/$workflowId': typeof ChatsWorkflowIdRoute
   '/data-tables_/$id': typeof DataTablesIdRoute
   '/docs/compatibility': typeof DocsCompatibilityRoute
+  '/executions/$id': typeof ExecutionsIdRoute
   '/projects/$id': typeof ProjectsIdRoute
   '/settings/api-keys': typeof SettingsApiKeysRoute
   '/settings/code': typeof SettingsCodeRoute
-  '/settings/mcp': typeof SettingsMcpRoute
   '/settings/environments': typeof SettingsEnvironmentsRoute
   '/settings/logs': typeof SettingsLogsRoute
+  '/settings/mcp': typeof SettingsMcpRoute
   '/settings/secret-providers': typeof SettingsSecretProvidersRoute
   '/settings/templates': typeof SettingsTemplatesRoute
   '/templates_/$id': typeof TemplatesIdRoute
   '/workflow/$id': typeof WorkflowIdRoute
-  '/executions/$id': typeof ExecutionsIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/chats'
     | '/credentials'
     | '/data-tables'
     | '/login'
@@ -248,22 +267,24 @@ export interface FileRouteTypes {
     | '/shared'
     | '/templates'
     | '/variables'
+    | '/chats/$workflowId'
     | '/data-tables/$id'
     | '/docs/compatibility'
+    | '/executions/$id'
     | '/projects/$id'
     | '/settings/api-keys'
     | '/settings/code'
-    | '/settings/mcp'
     | '/settings/environments'
     | '/settings/logs'
+    | '/settings/mcp'
     | '/settings/secret-providers'
     | '/settings/templates'
     | '/templates/$id'
     | '/workflow/$id'
-    | '/executions/$id'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/chats'
     | '/credentials'
     | '/data-tables'
     | '/login'
@@ -274,22 +295,24 @@ export interface FileRouteTypes {
     | '/shared'
     | '/templates'
     | '/variables'
+    | '/chats/$workflowId'
     | '/data-tables/$id'
     | '/docs/compatibility'
+    | '/executions/$id'
     | '/projects/$id'
     | '/settings/api-keys'
     | '/settings/code'
-    | '/settings/mcp'
     | '/settings/environments'
     | '/settings/logs'
+    | '/settings/mcp'
     | '/settings/secret-providers'
     | '/settings/templates'
     | '/templates/$id'
     | '/workflow/$id'
-    | '/executions/$id'
   id:
     | '__root__'
     | '/'
+    | '/chats'
     | '/credentials'
     | '/data-tables'
     | '/login'
@@ -300,23 +323,25 @@ export interface FileRouteTypes {
     | '/shared'
     | '/templates'
     | '/variables'
+    | '/chats_/$workflowId'
     | '/data-tables_/$id'
     | '/docs/compatibility'
+    | '/executions/$id'
     | '/projects/$id'
     | '/settings/api-keys'
     | '/settings/code'
-    | '/settings/mcp'
     | '/settings/environments'
     | '/settings/logs'
+    | '/settings/mcp'
     | '/settings/secret-providers'
     | '/settings/templates'
     | '/templates_/$id'
     | '/workflow/$id'
-    | '/executions/$id'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  ChatsRoute: typeof ChatsRoute
   CredentialsRoute: typeof CredentialsRoute
   DataTablesRoute: typeof DataTablesRoute
   LoginRoute: typeof LoginRoute
@@ -327,11 +352,12 @@ export interface RootRouteChildren {
   SharedRoute: typeof SharedRoute
   TemplatesRoute: typeof TemplatesRoute
   VariablesRoute: typeof VariablesRoute
+  ChatsWorkflowIdRoute: typeof ChatsWorkflowIdRoute
   DataTablesIdRoute: typeof DataTablesIdRoute
   DocsCompatibilityRoute: typeof DocsCompatibilityRoute
+  ExecutionsIdRoute: typeof ExecutionsIdRoute
   TemplatesIdRoute: typeof TemplatesIdRoute
   WorkflowIdRoute: typeof WorkflowIdRoute
-  ExecutionsIdRoute: typeof ExecutionsIdRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -341,6 +367,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/chats': {
+      id: '/chats'
+      path: '/chats'
+      fullPath: '/chats'
+      preLoaderRoute: typeof ChatsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/credentials': {
@@ -413,6 +446,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof VariablesRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/chats_/$workflowId': {
+      id: '/chats_/$workflowId'
+      path: '/chats/$workflowId'
+      fullPath: '/chats/$workflowId'
+      preLoaderRoute: typeof ChatsWorkflowIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/data-tables_/$id': {
       id: '/data-tables_/$id'
       path: '/data-tables/$id'
@@ -425,6 +465,13 @@ declare module '@tanstack/react-router' {
       path: '/docs/compatibility'
       fullPath: '/docs/compatibility'
       preLoaderRoute: typeof DocsCompatibilityRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/executions/$id': {
+      id: '/executions/$id'
+      path: '/executions/$id'
+      fullPath: '/executions/$id'
+      preLoaderRoute: typeof ExecutionsIdRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/projects/$id': {
@@ -448,13 +495,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SettingsCodeRouteImport
       parentRoute: typeof SettingsRoute
     }
-    '/settings/mcp': {
-      id: '/settings/mcp'
-      path: '/mcp'
-      fullPath: '/settings/mcp'
-      preLoaderRoute: typeof SettingsMcpRouteImport
-      parentRoute: typeof SettingsRoute
-    }
     '/settings/environments': {
       id: '/settings/environments'
       path: '/environments'
@@ -467,6 +507,13 @@ declare module '@tanstack/react-router' {
       path: '/logs'
       fullPath: '/settings/logs'
       preLoaderRoute: typeof SettingsLogsRouteImport
+      parentRoute: typeof SettingsRoute
+    }
+    '/settings/mcp': {
+      id: '/settings/mcp'
+      path: '/mcp'
+      fullPath: '/settings/mcp'
+      preLoaderRoute: typeof SettingsMcpRouteImport
       parentRoute: typeof SettingsRoute
     }
     '/settings/secret-providers': {
@@ -497,13 +544,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof WorkflowIdRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/executions/$id': {
-      id: '/executions/$id'
-      path: '/executions/$id'
-      fullPath: '/executions/$id'
-      preLoaderRoute: typeof ExecutionsIdRouteImport
-      parentRoute: typeof rootRouteImport
-    }
   }
 }
 
@@ -522,9 +562,9 @@ const ProjectsRouteWithChildren = ProjectsRoute._addFileChildren(
 interface SettingsRouteChildren {
   SettingsApiKeysRoute: typeof SettingsApiKeysRoute
   SettingsCodeRoute: typeof SettingsCodeRoute
-  SettingsMcpRoute: typeof SettingsMcpRoute
   SettingsEnvironmentsRoute: typeof SettingsEnvironmentsRoute
   SettingsLogsRoute: typeof SettingsLogsRoute
+  SettingsMcpRoute: typeof SettingsMcpRoute
   SettingsSecretProvidersRoute: typeof SettingsSecretProvidersRoute
   SettingsTemplatesRoute: typeof SettingsTemplatesRoute
 }
@@ -532,9 +572,9 @@ interface SettingsRouteChildren {
 const SettingsRouteChildren: SettingsRouteChildren = {
   SettingsApiKeysRoute: SettingsApiKeysRoute,
   SettingsCodeRoute: SettingsCodeRoute,
-  SettingsMcpRoute: SettingsMcpRoute,
   SettingsEnvironmentsRoute: SettingsEnvironmentsRoute,
   SettingsLogsRoute: SettingsLogsRoute,
+  SettingsMcpRoute: SettingsMcpRoute,
   SettingsSecretProvidersRoute: SettingsSecretProvidersRoute,
   SettingsTemplatesRoute: SettingsTemplatesRoute,
 }
@@ -545,6 +585,7 @@ const SettingsRouteWithChildren = SettingsRoute._addFileChildren(
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  ChatsRoute: ChatsRoute,
   CredentialsRoute: CredentialsRoute,
   DataTablesRoute: DataTablesRoute,
   LoginRoute: LoginRoute,
@@ -555,11 +596,12 @@ const rootRouteChildren: RootRouteChildren = {
   SharedRoute: SharedRoute,
   TemplatesRoute: TemplatesRoute,
   VariablesRoute: VariablesRoute,
+  ChatsWorkflowIdRoute: ChatsWorkflowIdRoute,
   DataTablesIdRoute: DataTablesIdRoute,
   DocsCompatibilityRoute: DocsCompatibilityRoute,
+  ExecutionsIdRoute: ExecutionsIdRoute,
   TemplatesIdRoute: TemplatesIdRoute,
   WorkflowIdRoute: WorkflowIdRoute,
-  ExecutionsIdRoute: ExecutionsIdRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

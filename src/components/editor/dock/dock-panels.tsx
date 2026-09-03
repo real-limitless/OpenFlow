@@ -6,6 +6,7 @@ import { DataTablesPanel } from "@/components/editor/DataTablesPanel";
 import { ExecutionHistory } from "@/components/editor/ExecutionHistory";
 import { PropertiesPanel } from "@/components/editor/PropertiesPanel";
 import { AssistantPanel } from "@/components/editor/AssistantPanel";
+import { WorkflowChatPanel } from "@/components/editor/WorkflowChatPanel";
 import type { ExecutionRunData } from "@/lib/engine/types";
 import { useEditorDock } from "./EditorDockContext";
 
@@ -87,6 +88,15 @@ export function DockAssistantPanel(_props: IDockviewPanelProps) {
   );
 }
 
+export function DockChatPanel(_props: IDockviewPanelProps) {
+  const { workflowId, isExecuting, onExecute } = useEditorDock();
+  return (
+    <PanelShell>
+      <WorkflowChatPanel workflowId={workflowId} isExecuting={isExecuting} onExecute={onExecute} />
+    </PanelShell>
+  );
+}
+
 export const dockComponents = {
   canvas: DockCanvasPanel,
   nodes: DockNodesPanel,
@@ -95,4 +105,5 @@ export const dockComponents = {
   history: DockHistoryPanel,
   properties: DockPropertiesPanel,
   assistant: DockAssistantPanel,
+  chat: DockChatPanel,
 };

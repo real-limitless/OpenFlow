@@ -9,6 +9,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { isAnyChatTriggerNode } from "@/lib/chat/path";
 import { listTriggerNodes } from "@/lib/engine/graph";
 import { getNodeType } from "@/lib/nodes/registry";
 import type { IWorkflow } from "@/lib/workflow/types";
@@ -22,10 +23,12 @@ export function ExecuteTriggerButton({
   workflow,
   isExecuting,
   onExecute,
+  onOpenChat,
 }: {
   workflow: IWorkflow;
   isExecuting: boolean;
   onExecute: (startNode?: string) => void;
+  onOpenChat?: () => void;
 }) {
   const triggers = useMemo(() => listTriggerNodes(workflow), [workflow]);
   const [selected, setSelected] = useState<string | null>(null);
@@ -72,7 +75,13 @@ export function ExecuteTriggerButton({
     : null;
 
   const run = (start?: string) => {
-    onExecute(start ?? activeName ?? undefined);
+    const name = start ?? activeName ?? undefined;
+    const node = name ? triggers.find((t) => t.name === name) : undefined;
+    if (node && isAnyChatTriggerNode(node) && onOpenChat) {
+      onOpenChat();
+      return;
+    }
+    onExecute(name);
   };
 
   if (triggers.length <= 1) {

@@ -5,7 +5,8 @@ export type EditorPanelId =
   | "tables"
   | "history"
   | "properties"
-  | "assistant";
+  | "assistant"
+  | "chat";
 
 export type EditorPanelMeta = {
   id: EditorPanelId;
@@ -65,6 +66,13 @@ export const EDITOR_PANELS: EditorPanelMeta[] = [
     id: "assistant",
     component: "assistant",
     title: "Assistant",
+    closable: true,
+    viewMenu: true,
+  },
+  {
+    id: "chat",
+    component: "chat",
+    title: "Chat",
     closable: true,
     viewMenu: true,
   },
