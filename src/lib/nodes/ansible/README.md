@@ -17,4 +17,4 @@ Sync from sibling MCP repo:
 npm run ansible:sync-catalog
 ```
 
-Source of truth: https://github.com/real-limitless/ansible-flow-mcp/tree/main/catalog
+OpenFlow reads ansible-flow-mcp's gallery (`catalog/` on DEVELOPMENT). Sync copies it here. Do not treat this tree as a second catalog.
