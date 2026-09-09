@@ -1,8 +1,8 @@
 # OpenFlow
 
-**Self-hosted workflow automation you own** — an independent open-source engine oriented toward **publicly documented, n8n-compatible workflow definitions**, built with a deliberate **clean-room** process so implementation is original project code, not a copy of third-party engine source.
+**Self-hosted workflow automation you own**: an independent open-source engine oriented toward **publicly documented, n8n-compatible workflow definitions**, built with a deliberate **clean-room** process so implementation is original project code, not a copy of third-party engine source.
 
-This branch (`CORE`) is a **readme consensus**: why the project exists, how it was made, license and legal notes, and product screenshots. It is **documentation only** — not the application source tree.
+This branch (`CORE`) is the public front door: why it exists, how it was made, license, and screenshots. Docs only. The app lives on the product branches.
 
 | Doc | Purpose |
 | --- | --- |
@@ -49,9 +49,9 @@ More captions: [docs/screenshots/README.md](docs/screenshots/README.md).
 
 OpenFlow started from a simple need: **workflow automation you can run on your own infrastructure**, under a permissive license, without treating another product’s private source tree as a starting point.
 
-Early choices rejected a managed-cloud-only backend. Real workflow execution needs long-running workers, persistent state, and control over the runtime — so OpenFlow ships as a **self-hosted** stack you operate yourself.
+Early choices rejected a managed-cloud-only backend. Real workflow execution needs long-running workers, persistent state, and control over the runtime: so OpenFlow ships as a **self-hosted** stack you operate yourself.
 
-It also aims for **format interop** with publicly described, n8n-oriented workflow JSON (import / edit / export familiar shapes) while remaining an **independent** project. Mentions of n8n are for attribution and compatibility only — see [LEGAL.md](LEGAL.md).
+It also aims for **format interop** with publicly described, n8n-oriented workflow JSON (import / edit / export familiar shapes) while remaining an **independent** project. Mentions of n8n are for attribution and compatibility only: see [LEGAL.md](LEGAL.md).
 
 ---
 
@@ -67,13 +67,13 @@ OpenFlow grows node and engine coverage with a **clean-room factory**, assisted 
 ```text
 Public docs / public workflow JSON shapes
         │
-        ▼  AI (spec half — public docs only)
+        ▼  AI (spec half: public docs only)
   Behavioral SPEC files (per node / capability)
         │
         ▼  Multiple AI model iterations
   Refined, acceptance-oriented specs
         │
-        ▼  AI (implement half — specs + OpenFlow SDK only)
+        ▼  AI (implement half: specs + OpenFlow SDK only)
   OpenFlow implementation (product branches)
 ```
 
@@ -82,18 +82,18 @@ Public docs / public workflow JSON shapes
 | **Spec** | Public product docs (e.g. docs.n8n.io), public workflow exports, this project’s own docs | Third-party **source** repositories or package source |
 | **Implement** | Specs in this project, OpenFlow SDK, product-branch code | Third-party source as the implementer’s reference |
 
-On product branches, the living pipeline includes per-node specs, agent prompts, factory tooling, and the Plugin SDK. This `CORE` branch only **describes** that process. Clean-room practice is a development method — **not** a legal warranty (see [LEGAL.md](LEGAL.md)).
+On product branches, the living pipeline includes per-node specs, agent prompts, factory tooling, and the Plugin SDK. This `CORE` branch only **describes** that process. Clean-room practice is a development method: **not** a legal warranty (see [LEGAL.md](LEGAL.md)).
 
 ---
 
 ## What you get (product branches)
 
-- **Visual editor** — React Flow canvas, node palette, properties, execution history, optional AI assistant
-- **Workflow JSON interop** — import / edit / export familiar public-format workflows (independent runtime)
-- **Credentials & secrets** — encrypted vault, environments, variables, secret providers
-- **Self-hosted stack** — Hono API, Prisma + Postgres, BullMQ + Redis workers
-- **Plugin SDK** — `defineNode` authoring surface for builtins and future plugins
-- **Templates** — marketplace browser with compatibility-minded import paths
+- **Visual editor**. React Flow canvas, node palette, properties, execution history, optional AI assistant
+- **Workflow JSON interop**: import / edit / export familiar public-format workflows (independent runtime)
+- **Credentials & secrets**: encrypted vault, environments, variables, secret providers
+- **Self-hosted stack**. Hono API, Prisma + Postgres, BullMQ + Redis workers
+- **Plugin SDK**: `defineNode` authoring surface for builtins and future plugins
+- **Templates**: marketplace browser with compatibility-minded import paths
 
 **Stack:** TypeScript · React · TanStack Start · React Flow · Hono · Prisma · Postgres · BullMQ · Redis · Docker
 
@@ -130,14 +130,14 @@ Full steps, ports, production overlay, and one-line install: **[INSTALLATION.md]
 ```sh
 git clone https://github.com/real-limitless/OpenFlow.git
 cd OpenFlow
-git checkout DEVELOPMENT   # full product — run via containers only
+git checkout DEVELOPMENT   # full product: run via containers only
 ```
 
 If you only see markdown and no `docker-compose.yml`, you are still on `CORE`.
 
 ### Private work
 
-GitHub **cannot** hide individual branches on a public repository. For personal experiments or internal notes, use a **private fork** or **private sibling repository** — never push secrets or internal-only docs to this public remote.
+GitHub **cannot** hide individual branches on a public repository. For personal experiments or internal notes, use a **private fork** or **private sibling repository**: never push secrets or internal-only docs to this public remote.
 
 ---
 
@@ -145,7 +145,9 @@ GitHub **cannot** hide individual branches on a public repository. For personal 
 
 **Chen Chiu** · Creator · [@real-limitless](https://github.com/real-limitless)
 
-Independent open-source project under the real-limitless GitHub account — a self-hosted automation platform with a clean-room node factory so ownership of the runtime and the process stays with the people running it.
+Independent open-source project under the real-limitless GitHub account: a self-hosted automation platform with a clean-room node factory so ownership of the runtime and the process stays with the people running it.
+
+Siblings: [ansible-flow-mcp](https://github.com/real-limitless/ansible-flow-mcp) (OpenFlow reads that gallery), [mcp-flow](https://github.com/real-limitless/mcp-flow), [CleanFlow](https://github.com/real-limitless/CleanFlow).
 
 ---
 
@@ -164,13 +166,13 @@ Independent open-source project under the real-limitless GitHub account — a se
 
 ## License
 
-Apache License, Version 2.0 — [LICENSE.md](LICENSE.md).  
-Attribution & trademarks — [LEGAL.md](LEGAL.md).
+Apache License, Version 2.0: [LICENSE.md](LICENSE.md).  
+Attribution & trademarks: [LEGAL.md](LEGAL.md).
 
 ---
 
 ## Next steps
 
 1. Read [LEGAL.md](LEGAL.md) (independence and n8n attribution).
-2. Follow [INSTALLATION.md](INSTALLATION.md) — product branch + Compose/Podman.
+2. Follow [INSTALLATION.md](INSTALLATION.md): product branch + Compose/Podman.
 3. On the product branch, run the container stack (optional host TUI only orchestrates containers).
