@@ -2,99 +2,99 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <title>Flow — openflow</title>
+    <title>Run — OpenFlow</title>
     <link rel="stylesheet" href="../assets/styles.css" />
   </head>
   <body class="frame-body">
-    <div class="canvas" id="frame">
-      <header class="topbar">
+    <div class="canvas of-app" id="frame">
+      <header class="of-bar">
         <div class="brand">
           <div class="brand-mark" aria-hidden="true"></div>
           <div class="brand-name">open<span>-flow</span></div>
         </div>
-        <div class="meta-pills">
-          <span class="pill accent">MCP Flow</span>
-          <span class="pill on">Generate</span>
+        <div class="of-name">Daily API digest</div>
+        <div class="of-tools">
+          <span>saved</span>
+          <span>Tidy</span>
+          <span>Credentials</span>
+          <span>Development</span>
+          <span class="go">Execute</span>
         </div>
       </header>
-
-      <div class="main" style="margin-top: 8px">
-        <p class="eyebrow">Tool graph</p>
-        <h2 class="section-title" style="margin-bottom: 10px">
-          Generate drives the canvas and the roster.
-        </h2>
-        <p class="lede" style="margin-bottom: 20px; max-width: 56ch">
-          React Flow schematic: ingest, MCP servers, agents, wiki out. Inspector edits tools. First
-          slice is a scripted job — replace the store, do not wrap it, when OpenCode is wired.
-        </p>
-
-        <div class="topo">
-          <div class="topo-row">
-            <div class="topo-chip">owner/repo</div>
-            <div class="topo-chip">wiki sources</div>
-            <div class="topo-chip">Ask index</div>
+      <div class="of-body">
+        <aside class="of-pal">
+          <div class="h">Search nodes</div>
+          <div class="s">Triggers</div>
+          <div class="item"><b>Schedule Trigger</b><i>Cron / interval</i></div>
+          <div class="item"><b>Chat Trigger</b><i>Incoming messages</i></div>
+          <div class="item"><b>MCP Server Trigger</b><i>Expose as MCP</i></div>
+          <div class="s">Actions</div>
+          <div class="item"><b>HTTP Request</b><i>Call any API</i></div>
+          <div class="item"><b>IF</b><i>Branch true / false</i></div>
+        </aside>
+        <div class="of-stage">
+          <svg class="of-wire" viewBox="0 0 900 520" width="900" height="520" aria-hidden="true">
+            <path d="M 208 118 C 260 118, 260 118, 300 118" fill="none" stroke="#84cc16" stroke-width="2" />
+            <path d="M 488 118 C 540 118, 540 118, 590 118" fill="none" stroke="#38bdf8" stroke-width="2" />
+            <path d="M 778 100 C 820 100, 820 48, 860 48" fill="none" stroke="#fb923c" stroke-width="2" />
+            <path d="M 778 136 C 820 136, 820 220, 860 220" fill="none" stroke="#fb923c" stroke-width="2" />
+          </svg>
+          <div class="of-node trigger" style="left: 36px; top: 80px">
+            <div class="k">Trigger</div>
+            <div class="n">Schedule Trigger</div>
+            <div class="st ok">success · 0.2s</div>
+            <span class="of-dot out"></span>
           </div>
-          <div class="topo-line"></div>
-          <div class="topo-hub">
-            <div class="name">Wiki-Flow · Generate</div>
-            <div class="sub">Roster seats · MCP nodes · wiki pages</div>
+          <div class="of-node action" style="left: 300px; top: 80px">
+            <div class="k">Action</div>
+            <div class="n">HTTP Request</div>
+            <div class="st ok">success · 1.1s</div>
+            <span class="of-dot in"></span>
+            <span class="of-dot out"></span>
           </div>
-          <div class="topo-fork"></div>
-          <div class="topo-spokes">
-            <div class="topo-spoke">
-              <div class="n">Remote MCP</div>
-              <div class="r">catalog · install</div>
-            </div>
-            <div class="topo-spoke">
-              <div class="n">Agent seats</div>
-              <div class="r">OpenCode later</div>
-            </div>
-            <div class="topo-spoke">
-              <div class="n">Wiki out</div>
-              <div class="r">wiki/** only</div>
-            </div>
+          <div class="of-node logic" style="left: 590px; top: 80px">
+            <div class="k">Flow</div>
+            <div class="n">IF</div>
+            <div class="st run">running</div>
+            <span class="of-dot in"></span>
+            <span class="of-dot out"></span>
+          </div>
+          <div class="of-node transform" style="left: 860px; top: 16px">
+            <div class="k">True</div>
+            <div class="n">Edit Fields</div>
+            <div class="st skip">pending</div>
+            <span class="of-dot in"></span>
+          </div>
+          <div class="of-node action" style="left: 860px; top: 188px">
+            <div class="k">False</div>
+            <div class="n">No Operation</div>
+            <div class="st skip">pending</div>
+            <span class="of-dot in"></span>
           </div>
         </div>
-
-        <div class="panel" style="margin-top: 22px; padding: 0">
-          <table class="data-table">
-            <thead>
-              <tr>
-                <th>Node</th>
-                <th>Kind</th>
-                <th>Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td class="slug">ingest</td>
-                <td>source</td>
-                <td><span class="badge on">ready</span></td>
-              </tr>
-              <tr>
-                <td class="slug">deepwiki-read</td>
-                <td>mcp</td>
-                <td><span class="badge place">running</span></td>
-              </tr>
-              <tr>
-                <td class="slug">architect</td>
-                <td>agent</td>
-                <td><span class="badge on">live</span></td>
-              </tr>
-              <tr>
-                <td class="slug">wiki-write</td>
-                <td>sink</td>
-                <td><span class="badge seal">wiki/**</span></td>
-              </tr>
-            </tbody>
-          </table>
+        <aside class="of-side">
+          <div class="tabs"><span>Properties</span><span class="on">Assistant</span></div>
+          <div class="body">
+            Run this workflow with natural language. Last job: Schedule → HTTP Request succeeded. IF is evaluating the payload.
+          </div>
+        </aside>
+      </div>
+      <div class="of-dock">
+        <div class="col">
+          <div class="h">Execution data</div>
+          <div class="of-run">
+            <span>HTTP Request · json</span>
+            <span class="ok">200 · 12 items</span>
+          </div>
+        </div>
+        <div class="col">
+          <div class="h">Execution history</div>
+          <div class="of-run">
+            <span>#1842 · now</span>
+            <span class="ok">running</span>
+          </div>
         </div>
       </div>
-
-      <footer class="frame-foot">
-        <span>Campaign · Flow</span>
-        <span>/w/acme/ledger · drag nodes · Run flow</span>
-      </footer>
     </div>
   </body>
 </html>

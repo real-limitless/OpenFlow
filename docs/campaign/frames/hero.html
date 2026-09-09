@@ -13,25 +13,45 @@
           <div class="brand-name">open<span>-flow</span></div>
         </div>
         <div class="meta-pills">
-          <span class="pill accent">Canvas rail</span>
+          <span class="pill accent">Canvas</span>
           <span class="pill on">Editor</span>
         </div>
       </header>
 
-      <div class="inv-rail" aria-label="Canvas rail">
-        <div class="inv-slot gw"><span class="role">Trigger</span><span class="host">node</span><span class="led"></span></div>
-        <div class="inv-slot ok"><span class="role">Logic</span><span class="host">node</span><span class="led"></span></div>
-        <div class="inv-slot ok"><span class="role">Action</span><span class="host">node</span><span class="led"></span></div>
-        <div class="inv-slot sealed"><span class="role">Gallery</span><span class="host">modules</span><span class="led"></span></div>
-        <div class="inv-slot empty"><span class="role">Run</span><span class="host">job</span><span class="led"></span></div>
-      </div>
-      <div class="main two-col" style="margin-top: 28px">
-        <div class="stack" style="gap: 22px; padding-top: 8px">
+      <div class="main two-col" style="margin-top: 36px">
+        <div class="stack" style="gap: 22px; padding-top: 28px">
           <div>
             <p class="eyebrow">OpenFlow · visual workflows</p>
             <h1 class="display">Draw the work.<br /><em>Run it on a canvas.</em></h1>
           </div>
-          <p class="lede">Lime accent on the family chassis. The editor keeps its canvas. Chrome wears the tokens.</p>
+          <p class="lede">
+            Trigger, logic, action. Palette on the left. Inspector on the right. Execute from the
+            same chrome.
+          </p>
+        </div>
+        <div class="mini-flow" aria-hidden="true">
+          <div class="mini-node trigger" style="left: 24px; top: 40px">
+            <div class="k">Trigger</div>
+            <div class="n">Schedule Trigger</div>
+            <div class="p">every 15m</div>
+          </div>
+          <div class="wire" style="left: 224px; top: 78px; width: 56px"></div>
+          <div class="mini-node action" style="left: 276px; top: 40px">
+            <div class="k">Action</div>
+            <div class="n">HTTP Request</div>
+            <div class="p">GET /digest</div>
+          </div>
+          <div class="wire" style="left: 224px; top: 220px; width: 56px"></div>
+          <div class="mini-node logic" style="left: 24px; top: 180px">
+            <div class="k">Logic</div>
+            <div class="n">IF</div>
+            <div class="p">status == 200</div>
+          </div>
+          <div class="mini-node action" style="left: 276px; top: 180px">
+            <div class="k">Action</div>
+            <div class="n">Edit Fields</div>
+            <div class="p">map items</div>
+          </div>
         </div>
       </div>
 

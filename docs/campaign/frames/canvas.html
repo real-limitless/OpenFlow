@@ -2,103 +2,16 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <title>Wiki — openflow</title>
+    <title>Canvas — OpenFlow</title>
     <link rel="stylesheet" href="../assets/styles.css" />
   </head>
   <body class="frame-body">
-    <div class="canvas" id="frame">
-      <header class="topbar">
-        <div class="brand">
-          <div class="brand-mark" aria-hidden="true"></div>
-          <div class="brand-name">open<span>-flow</span></div>
-        </div>
-        <div class="meta-pills">
-          <span class="pill accent">Wiki reader</span>
-          <span class="pill on">acme/ledger</span>
-        </div>
-      </header>
-
-      <div class="main two-col" style="margin-top: 16px">
-        <div>
-          <p class="eyebrow">Grounded documentation</p>
-          <h2 class="section-title" style="margin-bottom: 12px">
-            Tree, article, sources, Ask — one page.
-          </h2>
-          <p class="lede" style="margin-bottom: 18px">
-            Sample wiki for a fictional ledger. Mermaid in the article. Source chips open the
-            drawer. Ask answers only with citations.
-          </p>
-          <div class="panel" style="padding: 0">
-            <table class="data-table">
-              <thead>
-                <tr>
-                  <th>Page</th>
-                  <th>Agent</th>
-                  <th>Sources</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr>
-                  <td class="slug">architecture</td>
-                  <td>Architect</td>
-                  <td>src/ledger/posting.ts</td>
-                </tr>
-                <tr>
-                  <td class="slug">idempotency</td>
-                  <td>Researcher</td>
-                  <td>src/ledger/keys.ts</td>
-                </tr>
-                <tr>
-                  <td class="slug">posting-path</td>
-                  <td>Writer</td>
-                  <td>src/api/journal.ts</td>
-                </tr>
-                <tr>
-                  <td class="slug">glossary</td>
-                  <td>Editor</td>
-                  <td>docs/terms.md</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-        <div class="stack">
-          <div class="panel">
-            <div class="panel-head">
-              <span class="title">Ask · cited</span>
-              <span class="title" style="color: var(--phosphor)">local retrieval</span>
-            </div>
-            <div class="panel-body chat">
-              <div class="bubble user">Where are idempotency keys stored?</div>
-              <div class="bubble agent">
-                <span class="tool">wiki/idempotency.md → src/ledger/keys.ts</span>
-                Keys live in the Redis namespace <span class="ok">ledger:idem</span> keyed by
-                client token. Not in the journal row.
-              </div>
-            </div>
-          </div>
-          <div class="panel">
-            <div class="panel-head">
-              <span class="title">Article · Mermaid</span>
-              <span class="title">client render</span>
-            </div>
-            <div class="panel-body codeblock" style="white-space: pre-wrap">
-<span class="c">```mermaid</span>
-flowchart LR
-  API --&gt; Posting
-  Posting --&gt; Journal
-  Posting --&gt; IdemStore
-<span class="c">```</span>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <footer class="frame-foot">
-        <span>Campaign · Wiki</span>
-        <span>/w/acme/ledger/wiki · always cite source paths</span>
-      </footer>
+    <div class="canvas canvas-shot" id="frame">
+      <img
+        class="shot"
+        src="../assets/live-canvas.png"
+        alt="OpenFlow editor: node canvas, palette, assistant"
+      />
     </div>
   </body>
 </html>
