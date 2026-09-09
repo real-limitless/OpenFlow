@@ -1,8 +1,8 @@
-# OpenFlow — agent guide
+# OpenFlow: agent guide
 
 Self-hosted workflow automation engine with a visual editor and clean-room node runtime.
 
-**Type ids:** Canonical storage/UI uses `openflow-node-base.*` and `openflow-node-langchain.*`. Public wire strings (`n8n-nodes-base.*`, `@n8n/n8n-nodes-langchain.*`) remain **import/export aliases only** for JSON interop — not affiliation or package compatibility. See `src/lib/nodes/type-ids.ts`.
+**Type ids:** Canonical storage/UI uses `openflow-node-base.*` and `openflow-node-langchain.*`. Public wire strings (`n8n-nodes-base.*`, `@n8n/n8n-nodes-langchain.*`) remain **import/export aliases only** for JSON interop: not affiliation or package compatibility. See `src/lib/nodes/type-ids.ts`.
 
 ## Stack
 
@@ -18,12 +18,12 @@ Self-hosted workflow automation engine with a visual editor and clean-room node 
 
 ## Hard rules
 
-1. **Clean-room** — Do not read, clone, vendor, or depend on third-party workflow-engine **source** (GitHub trees, npm package sources, minified bundles). Permitted: public docs, public workflow JSON, observed public-instance behavior, third-party **service** API docs, and this repo (`docs/specs/**`, `src/sdk/**`).
-2. **No foreign node packages** — Never load or add `n8n-nodes-*` / `@n8n/*` runtime packages. Extensibility is OpenFlow plugins via `@/sdk` only.
-3. **SDK native API** — Author nodes with `defineNode` + `ExecutionContext` (`getInputItems`, `getParam`, `evaluate`, `getCredential`, …). Prefer native methods over `src/sdk/aliases.ts`. Do not expand aliases into a foreign helper catalog.
-4. **Spec is the contract (implement half)** — When implementing from `docs/specs/`, do not invent unspecified behavior; mark `partial` and note gaps. Do not re-fetch product docs during implement.
-5. **Secrets** — Never commit `.env`, keys, tokens, or credential payloads. See `SECURITY.md`. Run `bash scripts/check-no-secrets.sh` when relevant.
-6. **Scope** — No drive-by refactors outside the task touch-set. Do not claim “runs any n8n community node” or “n8n SDK compatible.”
+1. **Clean-room**. Do not read, clone, vendor, or depend on third-party workflow-engine **source** (GitHub trees, npm package sources, minified bundles). Permitted: public docs, public workflow JSON, observed public-instance behavior, third-party **service** API docs, and this repo (`docs/specs/**`, `src/sdk/**`).
+2. **No foreign node packages**. Never load or add `n8n-nodes-*` / `@n8n/*` runtime packages. Extensibility is OpenFlow plugins via `@/sdk` only.
+3. **SDK native API**. Author nodes with `defineNode` + `ExecutionContext` (`getInputItems`, `getParam`, `evaluate`, `getCredential`, …). Prefer native methods over `src/sdk/aliases.ts`. Do not expand aliases into a foreign helper catalog.
+4. **Spec is the contract (implement half)**. When implementing from `docs/specs/`, do not invent unspecified behavior; mark `partial` and note gaps. Do not re-fetch product docs during implement.
+5. **Secrets**. Never commit `.env`, keys, tokens, or credential payloads. See `SECURITY.md`. Run `bash scripts/check-no-secrets.sh` when relevant.
+6. **Scope**. No drive-by refactors outside the task touch-set. Do not claim “runs any n8n community node” or “n8n SDK compatible.”
 
 Full policy: `docs/clean-room.md`, `docs/sdk/NON_GOALS.md`, `docs/sdk/OVERVIEW.md`.
 
@@ -52,7 +52,7 @@ Right-rail / MCP assistant that **builds and runs workflows** via OpenFlow MCP t
 
 When changing assistant behavior, update **system-prompt.ts** and the OpenCode skill/prompts/AGENTS together so builtin and opencode backends stay aligned.
 
-**Operator manual:** `.opencode/assistant/AGENTS.md` — schema is pull-based (`get_node_type`); `add_node` is shell-only (always `update_node`); every runnable graph needs a trigger; DoD audit before execute.
+**Operator manual:** `.opencode/assistant/AGENTS.md`: schema is pull-based (`get_node_type`); `add_node` is shell-only (always `update_node`); every runnable graph needs a trigger; DoD audit before execute.
 
 Capability bar: multi-step graphs (git/HTTP/code/merge), AI clusters (`chainLlm` / `agent` + `lmChat*`), credential bind by id, `execute_workflow` + `get_execution` debug, and data-flow fixes (Merge when chain drops fields; Code has no `$('Node')`).
 
