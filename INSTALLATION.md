@@ -1,6 +1,8 @@
 # Installation
 
-This branch (`CORE`) is **documentation only**. There is no app and no Compose file here.
+Source: private kit TheFLOW. Family ritual: clone `DEVELOPMENT`, then Compose. This file adds OpenFlow ports and one-liners.
+
+This branch (`CORE`) is documentation only. There is no app and no Compose file here.
 
 To **install and run OpenFlow**, check out a **product branch**, then run the stack **only in containers** (Docker Compose, Podman Compose, or the one-line installer).
 
