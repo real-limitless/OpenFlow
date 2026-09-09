@@ -7,12 +7,13 @@
 
 /*
  * OpenFlow design system.
- * Dark-first technical canvas: deep slate surfaces, a signal-teal accent,
- * and IBM Plex typography. All colors are oklch semantic tokens.
+ * Dark-first technical canvas: deep slate surfaces, the family lime accent,
+ * Syne display and IBM Plex typography. All colors are oklch semantic tokens.
  */
 
 @theme inline {
   --font-sans: "IBM Plex Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Syne", "IBM Plex Sans", ui-sans-serif, system-ui, sans-serif;
   --font-mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, monospace;
 
   --radius-sm: calc(var(--radius) - 4px);
@@ -86,8 +87,8 @@
   --popover: oklch(0.235 0.017 258);
   --popover-foreground: oklch(0.95 0.008 250);
 
-  --primary: oklch(0.78 0.13 178);
-  --primary-foreground: oklch(0.18 0.02 200);
+  --primary: #84cc16;
+  --primary-foreground: #080b12;
   --secondary: oklch(0.29 0.018 258);
   --secondary-foreground: oklch(0.93 0.008 250);
   --muted: oklch(0.27 0.016 258);
@@ -99,9 +100,9 @@
 
   --border: oklch(0.32 0.018 258);
   --input: oklch(0.32 0.018 258);
-  --ring: oklch(0.78 0.13 178);
+  --ring: #84cc16;
 
-  --trigger: oklch(0.78 0.13 178);
+  --trigger: #84cc16;
   --logic: oklch(0.74 0.15 60);
   --action: oklch(0.7 0.12 265);
   --placeholder: oklch(0.62 0.02 258);
@@ -122,7 +123,7 @@
   --ai-channel-agent: oklch(0.7 0.16 300);
   --ai-channel-chain: oklch(0.7 0.14 310);
 
-  --chart-1: oklch(0.78 0.13 178);
+  --chart-1: #84cc16;
   --chart-2: oklch(0.74 0.15 60);
   --chart-3: oklch(0.7 0.12 265);
   --chart-4: oklch(0.76 0.16 155);
@@ -130,12 +131,12 @@
 
   --sidebar: oklch(0.205 0.015 258);
   --sidebar-foreground: oklch(0.93 0.008 250);
-  --sidebar-primary: oklch(0.78 0.13 178);
-  --sidebar-primary-foreground: oklch(0.18 0.02 200);
+  --sidebar-primary: #84cc16;
+  --sidebar-primary-foreground: #080b12;
   --sidebar-accent: oklch(0.28 0.018 258);
   --sidebar-accent-foreground: oklch(0.95 0.008 250);
   --sidebar-border: oklch(0.3 0.018 258);
-  --sidebar-ring: oklch(0.78 0.13 178);
+  --sidebar-ring: #84cc16;
 }
 
 @layer base {
