@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Flow — openflow</title>
+    <link rel="stylesheet" href="../assets/styles.css" />
+  </head>
+  <body class="frame-body">
+    <div class="canvas" id="frame">
+      <header class="topbar">
+        <div class="brand">
+          <div class="brand-mark" aria-hidden="true"></div>
+          <div class="brand-name">open<span>-flow</span></div>
+        </div>
+        <div class="meta-pills">
+          <span class="pill accent">MCP Flow</span>
+          <span class="pill on">Generate</span>
+        </div>
+      </header>
+
+      <div class="main" style="margin-top: 8px">
+        <p class="eyebrow">Tool graph</p>
+        <h2 class="section-title" style="margin-bottom: 10px">
+          Generate drives the canvas and the roster.
+        </h2>
+        <p class="lede" style="margin-bottom: 20px; max-width: 56ch">
+          React Flow schematic: ingest, MCP servers, agents, wiki out. Inspector edits tools. First
+          slice is a scripted job — replace the store, do not wrap it, when OpenCode is wired.
+        </p>
+
+        <div class="topo">
+          <div class="topo-row">
+            <div class="topo-chip">owner/repo</div>
+            <div class="topo-chip">wiki sources</div>
+            <div class="topo-chip">Ask index</div>
+          </div>
+          <div class="topo-line"></div>
+          <div class="topo-hub">
+            <div class="name">Wiki-Flow · Generate</div>
+            <div class="sub">Roster seats · MCP nodes · wiki pages</div>
+          </div>
+          <div class="topo-fork"></div>
+          <div class="topo-spokes">
+            <div class="topo-spoke">
+              <div class="n">Remote MCP</div>
+              <div class="r">catalog · install</div>
+            </div>
+            <div class="topo-spoke">
+              <div class="n">Agent seats</div>
+              <div class="r">OpenCode later</div>
+            </div>
+            <div class="topo-spoke">
+              <div class="n">Wiki out</div>
+              <div class="r">wiki/** only</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="panel" style="margin-top: 22px; padding: 0">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Node</th>
+                <th>Kind</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td class="slug">ingest</td>
+                <td>source</td>
+                <td><span class="badge on">ready</span></td>
+              </tr>
+              <tr>
+                <td class="slug">deepwiki-read</td>
+                <td>mcp</td>
+                <td><span class="badge place">running</span></td>
+              </tr>
+              <tr>
+                <td class="slug">architect</td>
+                <td>agent</td>
+                <td><span class="badge on">live</span></td>
+              </tr>
+              <tr>
+                <td class="slug">wiki-write</td>
+                <td>sink</td>
+                <td><span class="badge seal">wiki/**</span></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <footer class="frame-foot">
+        <span>Campaign · Flow</span>
+        <span>/w/acme/ledger · drag nodes · Run flow</span>
+      </footer>
+    </div>
+  </body>
+</html>
