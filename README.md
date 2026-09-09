@@ -7,6 +7,9 @@ This branch (`CORE`) is the public front door: why it exists, how it was made, l
 | Doc | Purpose |
 | --- | --- |
 | [INSTALLATION.md](INSTALLATION.md) | Check out a product branch and run OpenFlow **in containers** |
+| [BRANCHES.md](BRANCHES.md) | CORE, DEVELOPMENT, main |
+| [SPECIES.md](SPECIES.md) | Chrome tokens (canvas rail, lime) |
+| [VOICE.md](VOICE.md) | How this repo is written |
 | [LICENSE.md](LICENSE.md) | Apache License 2.0 |
 | [LEGAL.md](LEGAL.md) | Independence, trademarks, why “n8n” is mentioned |
 | [docs/screenshots/](docs/screenshots/) | Product captures used below |
@@ -163,6 +166,18 @@ Siblings: [ansible-flow-mcp](https://github.com/real-limitless/ansible-flow-mcp)
 | [Issues](https://github.com/real-limitless/OpenFlow/issues) | Bugs and discussion |
 
 ---
+
+## Family
+
+Written standard: private TheFLOW.
+
+- mcp-flow: MCP gateway and catalog
+- skill-flow: Agent Skills catalog and install
+- ansible-flow-mcp: Ansible for agents
+- wiki-flow: wiki workspace
+- roster-flow: org of OpenCode agents
+- CleanFlow: clean-room software dock (embeds this runtime)
+- ProjectEverflow: governance platform
 
 ## License
 
