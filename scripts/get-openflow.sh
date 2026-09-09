@@ -591,7 +591,7 @@ ensure_clone() {
   fi
   mkdir -p "$(dirname "$CLONE_DIR")"
   info "Cloning ${REPO_URL} → ${CLONE_DIR}"
-  git clone --depth 1 "$REPO_URL" "$CLONE_DIR"
+  git clone --depth 1 --branch DEVELOPMENT "$REPO_URL" "$CLONE_DIR"
   ok "Cloned"
 }
 

@@ -1,5 +1,7 @@
-# OpenFlow — local try-out stack
-#   docker compose up -d
+# OpenFlow — local try-out stack (family port 3000)
+#   git clone -b DEVELOPMENT …
+#   docker compose up -d --build
+#   bash scripts/doctor.sh
 #   open http://localhost:3000
 #
 # Toolbox (git/shell/RAG reindex) starts with the stack:
@@ -13,6 +15,8 @@ services:
   api:
     build: .
     image: openflow:local
+    ports:
+      - "${OPENFLOW_PORT:-3000}:3000"
     expose:
       - "3000"
     env_file:
