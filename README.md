@@ -14,7 +14,7 @@ Self-hosted workflow automation engine, compatible with n8n workflow definitions
 **Preferred onboarding:** clone the repo and run the interactive manager:
 
 ```sh
-git clone https://github.com/real-limitless/OpenFlow.git
+git clone -b DEVELOPMENT https://github.com/real-limitless/OpenFlow.git
 cd OpenFlow
 npm run tui
 ```
@@ -158,7 +158,7 @@ npx vitest run src/lib/engine/__tests__/ansible*.test.ts
 Requires **Node.js 22+** and Docker (for Postgres + Redis).
 
 ```sh
-git clone https://github.com/real-limitless/OpenFlow.git
+git clone -b DEVELOPMENT https://github.com/real-limitless/OpenFlow.git
 cd OpenFlow
 npm run setup          # .env, deps, db/redis, migrations
 npm run dev            # http://localhost:3000

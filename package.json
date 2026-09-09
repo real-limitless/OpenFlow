@@ -37,6 +37,7 @@
     "docker:up": "docker compose up -d",
     "docker:down": "docker compose down",
     "docker:logs": "docker compose logs -f --tail=100",
+    "doctor": "bash scripts/doctor.sh",
     "docker:prod": "docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d",
     "docker:toolbox": "docker compose up -d --build toolbox",
     "docker:toolbox:reindex": "docker compose exec toolbox catalog-reindex",
