@@ -7,7 +7,7 @@ Full Galaxy gallery + per-module schemas used by:
 - `GET /api/v1/ansible/modules/:fqcn/schema`
 - Editor Ansible palette (pull-based)
 
-**Source of truth:** [ansible-flow-mcp](https://github.com/real-limitless/ansible-flow-mcp) `catalog/`.
+OpenFlow reads ansible-flow-mcp's gallery. This tree is a copy for the editor palette, not a second catalog.
 
 ```bash
 # from OpenFlow repo (sibling checkout)
@@ -22,4 +22,4 @@ Env override at runtime: `OPENFLOW_ANSIBLE_CATALOG_DIR`.
 
 Fallback fixtures for tests (small set): `src/lib/nodes/ansible/fallback/`.
 
-**Note:** `rsync --delete` will remove this README if it is not in the MCP catalog — re-add after sync if needed, or exclude `README.md` in the sync script.
+**Note:** `rsync --delete` will remove this README if it is not in the ansible catalog. Re-add after sync if needed, or exclude `README.md` in the sync script.

@@ -30,6 +30,7 @@ import oauthRoute from "./routes/oauth";
 import mcpAccessRoute from "./routes/mcp-access";
 import catalogRoute from "./routes/catalog";
 import ansibleRoute from "./routes/ansible";
+import mcpGalleryRoute from "./routes/mcp-gallery";
 import { startWorker } from "./worker";
 import { seedBuiltinExecutors } from "../lib/engine";
 import { seedBuiltinDescriptions } from "../lib/nodes/registry";
@@ -73,6 +74,7 @@ assistantRoute(app);
 aiGenerateRoute(app);
 catalogRoute(app);
 ansibleRoute(app);
+mcpGalleryRoute(app);
 openflowMcpRoute(app);
 devRoute(app);
 
