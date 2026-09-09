@@ -9,7 +9,7 @@ Self-hosted workflow automation engine, compatible with n8n workflow definitions
 | **Try it** | Docker only | `docker compose up -d` → [http://localhost:3000](http://localhost:3000) |
 | **Develop** | Node.js 22+, Docker | `npm run tui` → **Install wizard**, or `npm run setup && npm run dev` |
 | **One-line install** | Docker | `curl -fsSL …/scripts/install.sh \| bash` (prebuilt GHCR image) |
-| **Production-ish** | Docker + strong secrets | Compose prod overlay — see [docs/install.md](docs/install.md) |
+| **Production-ish** | Docker + strong secrets | Compose prod overlay: see [docs/install.md](docs/install.md) |
 
 **Preferred onboarding:** clone the repo and run the interactive manager:
 
@@ -49,7 +49,7 @@ The **Install wizard** walks through path choice, prerequisites, `.env` / `CREDE
 | --- | --- | --- |
 | <img src="website/assets/screenshots/app-ansible-gallery.png" alt="Ansible module gallery in the palette" width="280" /> | <img src="website/assets/screenshots/app-ansible-module-form.png" alt="Ansible module form parameters" width="280" /> | <img src="website/assets/screenshots/app-ansible-playbook.png" alt="Ansible playbook resource" width="280" /> |
 
-| SSH / become credentials | Dual-track architecture |
+| SSH / become credentials | Shared gallery architecture |
 | --- | --- |
 | <img src="website/assets/screenshots/app-ansible-credentials.png" alt="Ansible SSH credential fields" width="420" /> | <img src="website/assets/screenshots/app-ansible-architecture.png" alt="OpenFlow and ansible-flow-mcp architecture" width="420" /> |
 
@@ -77,7 +77,7 @@ Open **http://localhost:3000**
 
 First boot builds the image, starts Postgres + Redis + API, runs migrations, and generates a credentials key if you did not set one.
 
-**First-run in the UI:** on the home page choose **Run sample workflow**, then **Execute** — the sample hits a public API and needs no credentials.
+**First-run in the UI:** on the home page choose **Run sample workflow**, then **Execute**: the sample hits a public API and needs no credentials.
 
 ```sh
 docker compose logs -f api   # logs
@@ -118,14 +118,14 @@ Turns auth on by default, disables hot-reload, binds DB/Redis to localhost only.
 
 ## What you get
 
-- **Visual editor** — React Flow canvas, node palette, properties, execution history, AI assistant
-- **Workflow JSON interop** — import / edit / export familiar public-format workflows (independent clean-room runtime)
-- **Credentials & secrets** — encrypted vault, environments, variables, secret providers
-- **Self-hosted stack** — Hono API, Prisma + Postgres, BullMQ + Redis workers
-- **Plugin SDK** — `defineNode` authoring surface for builtins and future plugins
-- **Lite runtime** — headless `createRuntime()` to run exported JSON in another Node process ([docs/runtime.md](docs/runtime.md))
-- **Templates** — marketplace browser with compatibility badges
-- **Ansible automation** — module gallery, hybrid Form|JSON args, playbooks, SSH/become credentials (see below)
+- **Visual editor**. React Flow canvas, node palette, properties, execution history, AI assistant
+- **Workflow JSON interop**: import / edit / export familiar public-format workflows (independent clean-room runtime)
+- **Credentials & secrets**: encrypted vault, environments, variables, secret providers
+- **Self-hosted stack**. Hono API, Prisma + Postgres, BullMQ + Redis workers
+- **Plugin SDK**: `defineNode` authoring surface for builtins and future plugins
+- **Lite runtime**: headless `createRuntime()` to run exported JSON in another Node process ([docs/runtime.md](docs/runtime.md))
+- **Templates**: marketplace browser with compatibility badges
+- **Ansible automation**: module gallery, hybrid Form|JSON args, playbooks, SSH/become credentials (see below)
 
 ## Ansible automation
 
@@ -133,7 +133,7 @@ Run **ad-hoc modules** or **playbooks** on the worker via `openflow-node-base.an
 
 | Capability | Detail |
 | --- | --- |
-| Gallery | Palette **Ansible** category — many cards, one runtime type |
+| Gallery | Palette **Ansible** category: many cards, one runtime type |
 | Module mode | FQCN + Form/JSON args; check mode; collection allowlist |
 | Playbook mode | Path-jailed `.yml` + extra vars, limit, tags |
 | Credentials | `ansibleSsh` (preferred) or SSH password/key + become |
@@ -149,7 +149,7 @@ npx vitest run src/lib/engine/__tests__/ansible*.test.ts
 ```
 
 **Docs:** [docs/ansible.md](docs/ansible.md)  
-**Side project (MCP for agents/IDEs):** [ansible-flow-mcp](https://github.com/real-limitless/ansible-flow-mcp) — same catalog/runner contract, stdio tools (`search_modules` → `run_module` / `run_playbook`).
+**MCP for agents and IDEs:** [ansible-flow-mcp](https://github.com/real-limitless/ansible-flow-mcp). OpenFlow reads that gallery. The MCP server is the stdio path (`search_modules` → `run_module` / `run_playbook`).
 
 ---
 
@@ -188,7 +188,7 @@ More detail: [docs/onboarding.md](docs/onboarding.md) · [docs/install.md](docs/
 ## First-run checklist
 
 1. App responds at [http://localhost:3000](http://localhost:3000) (`GET /health` should be OK).
-2. **Auth is off by default** (`AUTH_DISABLED=true`). Fine for local try-out — **not** for the public internet.
+2. **Auth is off by default** (`AUTH_DISABLED=true`). Fine for local try-out: **not** for the public internet.
 3. `CREDENTIALS_KEY` encrypts stored workflow credentials. Generated by `setup`, the TUI wizard, or the Docker entrypoint.
 4. Optional: set `OPENFLOW_ASSISTANT_API_KEY` in `.env` for the editor AI assistant ([docs/assistant.md](docs/assistant.md)).
 5. Optional Ansible: ensure worker has `ansible` + `ansible.posix` ([docs/ansible.md](docs/ansible.md)).
@@ -216,10 +216,10 @@ Deep install, S3/MinIO binary storage, logging, and production notes: [docs/inst
 ## Security basics
 
 - **Never commit `.env`** or real API keys. Only [`.env.example`](.env.example) is tracked.
-- Rotate any secret that may have leaked — see [SECURITY.md](SECURITY.md).
-- Local Compose uses Postgres password `openflow` — local-only, not for production.
+- Rotate any secret that may have leaked: see [SECURITY.md](SECURITY.md).
+- Local Compose uses Postgres password `openflow`: local-only, not for production.
 - Before publishing a branch: `bash scripts/check-no-secrets.sh`
-- Ansible free-form modules are denied by default; playbooks are path-jailed — see [docs/ansible.md](docs/ansible.md).
+- Ansible free-form modules are denied by default; playbooks are path-jailed: see [docs/ansible.md](docs/ansible.md).
 
 ---
 
@@ -236,7 +236,7 @@ Deep install, S3/MinIO binary storage, logging, and production notes: [docs/inst
 src/
   server/         # Hono API server (routes, middleware)
   lib/            # Shared logic (workflow engine, node definitions, expressions)
-  lib/nodes/ansible/  # Gallery + module schemas (dual-track catalog)
+  lib/nodes/ansible/  # Gallery + module schemas (paired catalog)
   sdk/            # OpenFlow Plugin SDK (node authoring surface)
   components/     # React UI components
 website/          # GitHub Pages marketing site + screenshots
@@ -295,4 +295,4 @@ See [docs/clean-room.md](docs/clean-room.md) and [docs/sdk/OVERVIEW.md](docs/sdk
 | [docs/runtime.md](docs/runtime.md) | Lite headless embed runtime |
 | [docs/mcp.md](docs/mcp.md) | Remote MCP for third-party chatbots |
 | [docs/clean-room.md](docs/clean-room.md) | Spec → implement pipeline |
-| [ansible-flow-mcp](https://github.com/real-limitless/ansible-flow-mcp) | Standalone Ansible MCP server (dual-track) |
+| [ansible-flow-mcp](https://github.com/real-limitless/ansible-flow-mcp) | Standalone Ansible MCP server (paired) |
