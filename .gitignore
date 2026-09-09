@@ -9,7 +9,12 @@ lerna-debug.log*
 
 # Dependencies & build
 node_modules
-dist
+# App/SSR build output. Keep dist/runtime committed so GitHub consumers
+# (CleanFlow) can import the `openflow/runtime` export without running
+# `npm run build:runtime` during their own postinstall.
+dist/*
+!dist/runtime/
+!dist/runtime/**
 dist-ssr
 .output
 .vinxi
