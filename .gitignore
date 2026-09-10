@@ -99,7 +99,17 @@ backups/
 # Tooling / agent local state
 graphify-out/
 .claude/
-.cursor/
+# .cursor: keep local editor state out, but track graphify + cloud-env files
+.cursor/*
+!.cursor/environment.json
+!.cursor/install.sh
+!.cursor/strip-cursor-attribution.sh
+!.cursor/rules/
+!.cursor/hooks/
+.cursor/rules/*
+!.cursor/rules/graphify.mdc
+.cursor/hooks/*
+!.cursor/hooks/commit-msg-strip-cursor-attribution
 .grok/
 # Local build / test scratch caches
 .tmp/
