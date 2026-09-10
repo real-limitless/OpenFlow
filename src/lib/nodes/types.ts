@@ -30,6 +30,21 @@ export interface IDisplayOptions {
   hide?: Record<string, Array<string | number | boolean>>;
 }
 
+/** Whether a property/credential should render given current parameter values. */
+export function matchesDisplayOptions(
+  opts: IDisplayOptions | undefined,
+  values: Record<string, unknown>,
+): boolean {
+  if (!opts) return true;
+  const matches = (rules: Record<string, Array<string | number | boolean>>) =>
+    Object.entries(rules).every(([key, allowed]) =>
+      allowed.some((v) => String(values[key]) === String(v)),
+    );
+  if (opts.show && !matches(opts.show)) return false;
+  if (opts.hide && matches(opts.hide)) return false;
+  return true;
+}
+
 export interface INodePropertyOption {
   name: string;
   value: string | number | boolean;
@@ -135,7 +150,7 @@ export interface INodeTypeDescription {
   /** Number of outputs is dynamic (e.g. Switch) — derived from parameters. */
   dynamicOutputs?: (parameters: Record<string, unknown>) => string[];
   dynamicInputs?: (parameters: Record<string, unknown>) => string[];
-  credentials?: Array<{ name: string; required?: boolean }>;
+  credentials?: Array<{ name: string; required?: boolean; displayOptions?: IDisplayOptions }>;
   properties: INodeProperties[];
   /** Lucide icon name used by the canvas + palette. */
   icon: string;

@@ -245,7 +245,11 @@ function CanvasInner({
           addNode(
             payload.type,
             { x: position.x - 110, y: position.y - 24 },
-            { name: payload.name, parameters: payload.parameters },
+            {
+              name: payload.name,
+              parameters: payload.parameters,
+              credentials: payload.credentials,
+            },
           );
         }}
         defaultEdgeOptions={{ type: "openflow" }}

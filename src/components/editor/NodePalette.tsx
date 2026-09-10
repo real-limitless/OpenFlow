@@ -12,6 +12,7 @@ import type { AddNodeInit } from "@/lib/workflow/add-node";
 import { encodeNodeDragPayload, OPENFLOW_NODE_MIME } from "@/lib/workflow/add-node";
 import { AnsiblePaletteSection } from "./AnsiblePaletteSection";
 import { McpGalleryPaletteSection } from "./McpGalleryPaletteSection";
+import { McpFlowBackendsPaletteSection } from "./McpFlowBackendsPaletteSection";
 
 interface Props {
   onAdd: (type: string, init?: AddNodeInit) => void;
@@ -279,6 +280,7 @@ export function NodePalette({ onAdd }: Props) {
 
         <div className="space-y-1 p-2">
           <AnsiblePaletteSection query={query} onAdd={onAdd} />
+          <McpFlowBackendsPaletteSection onAdd={onAdd} />
           <McpGalleryPaletteSection query={query} onAdd={onAdd} />
 
           {grouped.map((group) => {

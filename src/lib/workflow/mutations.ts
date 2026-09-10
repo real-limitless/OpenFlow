@@ -58,6 +58,9 @@ export function addNode(
     position: [Math.round(position.x), Math.round(position.y)],
     parameters,
   };
+  if (init.credentials && Object.keys(init.credentials).length > 0) {
+    node.credentials = init.credentials;
+  }
   return {
     workflow: { ...wf, nodes: [...wf.nodes, node] },
     result: { name, id: node.id },

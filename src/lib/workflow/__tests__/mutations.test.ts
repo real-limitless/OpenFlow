@@ -56,4 +56,22 @@ describe("workflow mutations", () => {
     expect(node.parameters.checkMode).toBe(true);
     expect(node.position).toEqual([10, 20]);
   });
+
+  it("addNode accepts initial credentials", () => {
+    let wf = EMPTY_WORKFLOW("wf4");
+    const a = m.addNode(
+      wf,
+      "openflow-node-langchain.mcpClientTool",
+      { x: 0, y: 0 },
+      {
+        name: "MCP Flow",
+        parameters: { source: "mcpFlow", backends: ["deepwiki"] },
+        credentials: { mcpFlowApi: { id: "cred-1", name: "mcp-flow" } },
+      },
+    );
+    wf = a.workflow;
+    const node = wf.nodes.find((n) => n.name === "MCP Flow")!;
+    expect(node.credentials?.mcpFlowApi).toEqual({ id: "cred-1", name: "mcp-flow" });
+    expect(node.parameters.source).toBe("mcpFlow");
+  });
 });

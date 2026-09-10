@@ -2,6 +2,7 @@ import type { INode, INodeCredentialRef, IWorkflow } from "./types";
 import type { CredentialMeta } from "../credentials/types";
 import { getCredentialTypeDef, humanizeType } from "../credentials/types";
 import { getNodeType } from "../nodes/registry";
+import { matchesDisplayOptions } from "../nodes/types";
 
 export type CredentialSlotStatus = "ok" | "missing" | "unmapped";
 
@@ -118,6 +119,7 @@ export function collectWorkflowCredentials(
 
     // Declared credential types on the node definition
     for (const d of declared) {
+      if (!matchesDisplayOptions(d.displayOptions, node.parameters ?? {})) continue;
       const ref = node.credentials?.[d.name];
       touch(d.name, node, ref, d.required !== false);
     }
@@ -133,7 +135,9 @@ export function collectWorkflowCredentials(
     const rank = (s: CredentialSlotStatus) => (s === "ok" ? 2 : s === "unmapped" ? 1 : 0);
     const dr = rank(a.status) - rank(b.status);
     if (dr !== 0) return dr;
-    return a.displayName.localeCompare(b.displayName) || a.suggestedName.localeCompare(b.suggestedName);
+    return (
+      a.displayName.localeCompare(b.displayName) || a.suggestedName.localeCompare(b.suggestedName)
+    );
   });
 
   const missingCount = slots.filter((s) => s.status !== "ok").length;

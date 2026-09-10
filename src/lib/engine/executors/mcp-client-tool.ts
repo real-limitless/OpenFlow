@@ -1,5 +1,7 @@
 import type { NodeExecutor, INodeExecutionData, ExecutionContext } from "@/sdk";
 import { sdkHttpRequest, type SdkHttpRequestOptions, type SdkHttpResponse } from "@/sdk";
+import { connectMcpFlow, type McpFlowSession } from "@/lib/nodes/mcp-flow/gateway";
+import { MCP_FLOW_API_CREDENTIAL } from "@/lib/nodes/mcp-flow/types";
 
 const DEFAULT_TIMEOUT = 60000;
 
@@ -55,10 +57,7 @@ function nextId(): number {
   return rpcId;
 }
 
-function resolveStringParam(
-  ctx: ExecutionContext,
-  name: string,
-): string {
+function resolveStringParam(ctx: ExecutionContext, name: string): string {
   const raw = ctx.getParam<unknown>(name);
   if (raw == null) return "";
   const str = String(raw);
@@ -310,6 +309,65 @@ async function listTools(
 }
 
 export const mcpClientToolExecutor: NodeExecutor = async (ctx) => {
+  const sourceRaw = ctx.getParam<unknown>("source", "endpoint");
+  const source = typeof sourceRaw === "string" ? sourceRaw : "endpoint";
+
+  const options = ctx.getParam<Record<string, unknown>>("options", {}) ?? {};
+  const timeoutMs = typeof options.timeout === "number" ? options.timeout : DEFAULT_TIMEOUT;
+
+  const includeRaw = ctx.getParam<unknown>("include", "all");
+  const include = typeof includeRaw === "string" ? includeRaw : "all";
+  const includeTools = (ctx.getParam<unknown[]>("includeTools", []) ?? []).map((t) => String(t));
+  const excludeTools = (ctx.getParam<unknown[]>("excludeTools", []) ?? []).map((t) => String(t));
+
+  if (source === "mcpFlow") {
+    const cred = await ctx.getCredential(MCP_FLOW_API_CREDENTIAL);
+    if (!cred) {
+      throw new Error(
+        `MCP Client Tool: credential "${MCP_FLOW_API_CREDENTIAL}" is required for mcp-flow`,
+      );
+    }
+    const url = String(cred.url ?? "");
+    const apiKey = String(cred.apiKey ?? "");
+    if (!url || !apiKey) {
+      throw new Error("MCP Client Tool: mcpFlowApi credential needs url and apiKey");
+    }
+
+    const project = resolveStringParam(ctx, "project");
+    const backends = (ctx.getParam<unknown[]>("backends", []) ?? []).map((t) => String(t));
+    const includeMeta = Boolean(ctx.getParam<unknown>("includeMetaTools", false));
+
+    const session: McpFlowSession = await connectMcpFlow({ url, apiKey, timeoutMs });
+    const discovered = await session.discoverTools({
+      project: project || undefined,
+      backends,
+      includeMetaTools: includeMeta,
+    });
+    const tools: McpToolDescriptor[] = discovered.map((t) => ({
+      name: t.name,
+      description: t.description,
+      inputSchema: t.inputSchema,
+    }));
+    const exposedTools = filterTools(tools, include, includeTools, excludeTools);
+
+    const handle: McpClientToolHandle = {
+      type: "@n8n/n8n-nodes-langchain.mcpClientTool",
+      endpoint: session.endpoint,
+      transport: "httpStreamable",
+      tools: exposedTools,
+      timeoutMs,
+      async invoke(toolName: string, args: Record<string, unknown>): Promise<McpToolCallResult> {
+        const result = await session.callTool(toolName, args);
+        return mapCallResult(result);
+      },
+    };
+
+    const items = ctx.getInputItems(0);
+    const pairedItem =
+      items.length > 0 ? (items[0].pairedItem ?? { item: 0, input: 0 }) : { item: 0, input: 0 };
+    return [[{ json: handle as unknown as Record<string, unknown>, pairedItem }]];
+  }
+
   const endpointUrl = resolveStringParam(ctx, "endpointUrl");
   const sseEndpoint = resolveStringParam(ctx, "sseEndpoint");
 
@@ -326,15 +384,7 @@ export const mcpClientToolExecutor: NodeExecutor = async (ctx) => {
 
   const authHeaders = await resolveAuthHeadersAsync(ctx, authentication);
 
-  const options = ctx.getParam<Record<string, unknown>>("options", {}) ?? {};
-  const timeoutMs = typeof options.timeout === "number" ? options.timeout : DEFAULT_TIMEOUT;
-
   const tools = await listTools(endpoint, transport, authHeaders, timeoutMs);
-
-  const includeRaw = ctx.getParam<unknown>("include", "all");
-  const include = typeof includeRaw === "string" ? includeRaw : "all";
-  const includeTools = (ctx.getParam<unknown[]>("includeTools", []) ?? []).map((t) => String(t));
-  const excludeTools = (ctx.getParam<unknown[]>("excludeTools", []) ?? []).map((t) => String(t));
 
   const exposedTools = filterTools(tools, include, includeTools, excludeTools);
 
