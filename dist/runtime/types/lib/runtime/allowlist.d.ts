@@ -1,0 +1,15 @@
+export declare const LITE_NODE_TYPES: readonly ["n8n-nodes-base.manualTrigger", "n8n-nodes-base.manualWorkflowTrigger", "n8n-nodes-base.start", "n8n-nodes-base.set", "n8n-nodes-base.if", "n8n-nodes-base.switch", "n8n-nodes-base.merge", "n8n-nodes-base.filter", "n8n-nodes-base.noOp", "n8n-nodes-base.httpRequest", "n8n-nodes-base.code", "n8n-nodes-base.function", "n8n-nodes-base.functionItem", "n8n-nodes-base.stickyNote"];
+export declare const HARNESS_EXTRA_TYPES: readonly ["@n8n/n8n-nodes-langchain.agent", "@n8n/n8n-nodes-langchain.lmChatOpenRouter", "n8n-nodes-base.httpRequestTool", "n8n-nodes-base.githubTool", "n8n-nodes-base.executeCommandTool", "n8n-nodes-base.webSearchTool", "n8n-nodes-base.gitTool", "n8n-nodes-base.filesystemTool"];
+export declare const HARNESS_NODE_TYPES: readonly ["n8n-nodes-base.manualTrigger", "n8n-nodes-base.manualWorkflowTrigger", "n8n-nodes-base.start", "n8n-nodes-base.set", "n8n-nodes-base.if", "n8n-nodes-base.switch", "n8n-nodes-base.merge", "n8n-nodes-base.filter", "n8n-nodes-base.noOp", "n8n-nodes-base.httpRequest", "n8n-nodes-base.code", "n8n-nodes-base.function", "n8n-nodes-base.functionItem", "n8n-nodes-base.stickyNote", "@n8n/n8n-nodes-langchain.agent", "@n8n/n8n-nodes-langchain.lmChatOpenRouter", "n8n-nodes-base.httpRequestTool", "n8n-nodes-base.githubTool", "n8n-nodes-base.executeCommandTool", "n8n-nodes-base.webSearchTool", "n8n-nodes-base.gitTool", "n8n-nodes-base.filesystemTool"];
+export declare const HARNESS_TOOL_TYPES: readonly ["n8n-nodes-base.httpRequestTool", "n8n-nodes-base.githubTool", "n8n-nodes-base.executeCommandTool", "n8n-nodes-base.webSearchTool", "n8n-nodes-base.gitTool", "n8n-nodes-base.filesystemTool"];
+export type LiteNodeType = (typeof LITE_NODE_TYPES)[number];
+export type RuntimePreset = "lite" | "harness";
+export declare function expandTypeAliases(type: string): string[];
+export declare function normalizeNodeType(type: string): string;
+export declare function isLiteNodeType(type: string): boolean;
+export declare function isHarnessNodeType(type: string): boolean;
+export declare function isHarnessToolType(type: string): boolean;
+export declare function allowlistForPreset(preset: RuntimePreset): readonly string[];
+export declare function isAllowedType(type: string, preset: RuntimePreset): boolean;
+export declare function toolPolicyKey(type: string): string;
+export declare const LITE_TRIGGER_TYPES: Set<string>;
