@@ -10,6 +10,7 @@ const LINKS = [
   { to: "/settings", label: "Overview", exact: true },
   { to: "/settings/api-keys", label: "API keys" },
   { to: "/settings/mcp", label: "MCP" },
+  { to: "/settings/mcp-flow", label: "mcp-flow" },
   { to: "/settings/environments", label: "Environments" },
   { to: "/settings/secret-providers", label: "Secret providers" },
   { to: "/settings/templates", label: "Templates" },
@@ -26,7 +27,7 @@ function SettingsLayout() {
       <h1 className="text-2xl font-semibold tracking-tight">Settings</h1>
       <nav className="mt-4 flex flex-wrap gap-2 border-b border-border pb-3">
         {LINKS.map((l) => {
-          const active = l.exact ? isIndex : pathname.startsWith(l.to);
+          const active = "exact" in l && l.exact ? isIndex : pathname.startsWith(l.to);
           return (
             <Link
               key={l.to}
@@ -42,9 +43,7 @@ function SettingsLayout() {
           );
         })}
       </nav>
-      <div className="mt-6">
-        {isIndex ? <SettingsOverview /> : <Outlet />}
-      </div>
+      <div className="mt-6">{isIndex ? <SettingsOverview /> : <Outlet />}</div>
     </PageShell>
   );
 }
@@ -65,6 +64,12 @@ function SettingsOverview() {
             MCP
           </Link>{" "}
           — remote MCP URL, OAuth, and enable toggle for third-party chatbots
+        </li>
+        <li>
+          <Link to="/settings/mcp-flow" className="text-primary hover:underline">
+            mcp-flow
+          </Link>{" "}
+          — connect an mcp-flow agent key and list gateway backends for AI Agent tools
         </li>
         <li>
           <Link to="/settings/environments" className="text-primary hover:underline">

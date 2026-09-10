@@ -215,6 +215,25 @@ const CATALOG: Record<string, CredentialTypeDef> = {
       { key: "headers", label: "Headers (JSON object)", type: "textarea" },
     ],
   },
+  mcpFlowApi: {
+    name: "mcpFlowApi",
+    displayName: "mcp-flow",
+    fields: [
+      {
+        key: "url",
+        label: "Gateway URL",
+        required: true,
+        placeholder: "http://127.0.0.1:8787",
+      },
+      {
+        key: "apiKey",
+        label: "Agent API key",
+        type: "password",
+        required: true,
+        placeholder: "mf_…",
+      },
+    ],
+  },
   telegramApi: {
     name: "telegramApi",
     displayName: "Telegram",

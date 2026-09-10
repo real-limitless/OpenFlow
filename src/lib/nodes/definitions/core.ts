@@ -10520,22 +10520,40 @@ export const mcpClientTool: INodeTypeDescription = {
   displayName: "MCP Client Tool",
   category: "Actions",
   group: ["input"],
-  version: 1.4,
+  version: 1.5,
   description:
-    "Connects to an MCP server, discovers its tools, and exposes selected tools to an AI Agent on the ai_tool channel.",
+    "Connects to an MCP server, discovers its tools, and exposes selected tools to an AI Agent on the ai_tool channel. Source mcp-flow uses a connected gateway catalog of backends.",
   defaults: { name: "MCP Client Tool" },
   inputs: [],
   outputs: ["ai_tool"],
   icon: "Robot",
-  credentials: [{ name: "httpHeaderAuth" }, { name: "httpBearerAuth" }],
+  credentials: [
+    { name: "httpHeaderAuth", required: false, displayOptions: { hide: { source: ["mcpFlow"] } } },
+    { name: "httpBearerAuth", required: false, displayOptions: { hide: { source: ["mcpFlow"] } } },
+    { name: "mcpFlowApi", required: true, displayOptions: { show: { source: ["mcpFlow"] } } },
+  ],
   sources: [MCP_CLIENT_TOOL_DOCS],
   properties: [
+    {
+      displayName: "Source",
+      name: "source",
+      type: "options",
+      default: "endpoint",
+      noDataExpression: true,
+      options: [
+        { name: "MCP endpoint", value: "endpoint" },
+        { name: "mcp-flow backends", value: "mcpFlow" },
+      ],
+      description:
+        "Direct MCP URL, or a connected mcp-flow gateway whose backends become the tool catalog",
+    },
     {
       displayName: "SSE Endpoint",
       name: "sseEndpoint",
       type: "string",
       default: "",
       placeholder: "https://host/mcp/sse",
+      displayOptions: { hide: { source: ["mcpFlow"] } },
     },
     {
       displayName: "MCP Endpoint URL",
@@ -10543,12 +10561,14 @@ export const mcpClientTool: INodeTypeDescription = {
       type: "string",
       default: "",
       placeholder: "https://host/mcp",
+      displayOptions: { hide: { source: ["mcpFlow"] } },
     },
     {
       displayName: "Server Transport",
       name: "serverTransport",
       type: "options",
       default: "",
+      displayOptions: { hide: { source: ["mcpFlow"] } },
       options: [
         { name: "SSE", value: "sse" },
         { name: "Streamable HTTP", value: "httpStreamable" },
@@ -10559,6 +10579,7 @@ export const mcpClientTool: INodeTypeDescription = {
       name: "authentication",
       type: "options",
       default: "none",
+      displayOptions: { hide: { source: ["mcpFlow"] } },
       options: [
         { name: "None", value: "none" },
         { name: "Bearer Auth", value: "bearerAuth" },
@@ -10566,6 +10587,33 @@ export const mcpClientTool: INodeTypeDescription = {
         { name: "Multiple Headers", value: "multipleHeadersAuth" },
         { name: "OAuth2", value: "oAuth2Api" },
       ],
+    },
+    {
+      displayName: "Project",
+      name: "project",
+      type: "options",
+      default: "",
+      typeOptions: { resource: "mcpFlowProjects" },
+      displayOptions: { show: { source: ["mcpFlow"] } },
+      description: "mcp-flow project (tool collection). Empty uses the key's active project.",
+    },
+    {
+      displayName: "Backends",
+      name: "backends",
+      type: "multiOptions",
+      default: [],
+      typeOptions: { resource: "mcpFlowBackends" },
+      displayOptions: { show: { source: ["mcpFlow"] } },
+      description:
+        "mcp-flow backends to expose to the agent. Leave empty to include every enabled backend.",
+    },
+    {
+      displayName: "Include mcp-flow meta tools",
+      name: "includeMetaTools",
+      type: "boolean",
+      default: false,
+      displayOptions: { show: { source: ["mcpFlow"] } },
+      description: "Also expose mf_status, mf_list_backends, mf_list_tools, and related meta tools",
     },
     {
       displayName: "Tools to Include",

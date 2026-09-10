@@ -31,6 +31,7 @@ import { Route as SettingsCodeRouteImport } from './routes/settings.code'
 import { Route as SettingsEnvironmentsRouteImport } from './routes/settings.environments'
 import { Route as SettingsLogsRouteImport } from './routes/settings.logs'
 import { Route as SettingsMcpRouteImport } from './routes/settings.mcp'
+import { Route as SettingsMcpFlowRouteImport } from './routes/settings.mcp-flow'
 import { Route as SettingsSecretProvidersRouteImport } from './routes/settings.secret-providers'
 import { Route as SettingsTemplatesRouteImport } from './routes/settings.templates'
 import { Route as TemplatesIdRouteImport } from './routes/templates_.$id'
@@ -146,6 +147,11 @@ const SettingsMcpRoute = SettingsMcpRouteImport.update({
   path: '/mcp',
   getParentRoute: () => SettingsRoute,
 } as any)
+const SettingsMcpFlowRoute = SettingsMcpFlowRouteImport.update({
+  id: '/mcp-flow',
+  path: '/mcp-flow',
+  getParentRoute: () => SettingsRoute,
+} as any)
 const SettingsSecretProvidersRoute = SettingsSecretProvidersRouteImport.update({
   id: '/secret-providers',
   path: '/secret-providers',
@@ -190,6 +196,7 @@ export interface FileRoutesByFullPath {
   '/settings/environments': typeof SettingsEnvironmentsRoute
   '/settings/logs': typeof SettingsLogsRoute
   '/settings/mcp': typeof SettingsMcpRoute
+  '/settings/mcp-flow': typeof SettingsMcpFlowRoute
   '/settings/secret-providers': typeof SettingsSecretProvidersRoute
   '/settings/templates': typeof SettingsTemplatesRoute
   '/templates/$id': typeof TemplatesIdRoute
@@ -218,6 +225,7 @@ export interface FileRoutesByTo {
   '/settings/environments': typeof SettingsEnvironmentsRoute
   '/settings/logs': typeof SettingsLogsRoute
   '/settings/mcp': typeof SettingsMcpRoute
+  '/settings/mcp-flow': typeof SettingsMcpFlowRoute
   '/settings/secret-providers': typeof SettingsSecretProvidersRoute
   '/settings/templates': typeof SettingsTemplatesRoute
   '/templates/$id': typeof TemplatesIdRoute
@@ -247,6 +255,7 @@ export interface FileRoutesById {
   '/settings/environments': typeof SettingsEnvironmentsRoute
   '/settings/logs': typeof SettingsLogsRoute
   '/settings/mcp': typeof SettingsMcpRoute
+  '/settings/mcp-flow': typeof SettingsMcpFlowRoute
   '/settings/secret-providers': typeof SettingsSecretProvidersRoute
   '/settings/templates': typeof SettingsTemplatesRoute
   '/templates_/$id': typeof TemplatesIdRoute
@@ -277,6 +286,7 @@ export interface FileRouteTypes {
     | '/settings/environments'
     | '/settings/logs'
     | '/settings/mcp'
+    | '/settings/mcp-flow'
     | '/settings/secret-providers'
     | '/settings/templates'
     | '/templates/$id'
@@ -305,6 +315,7 @@ export interface FileRouteTypes {
     | '/settings/environments'
     | '/settings/logs'
     | '/settings/mcp'
+    | '/settings/mcp-flow'
     | '/settings/secret-providers'
     | '/settings/templates'
     | '/templates/$id'
@@ -333,6 +344,7 @@ export interface FileRouteTypes {
     | '/settings/environments'
     | '/settings/logs'
     | '/settings/mcp'
+    | '/settings/mcp-flow'
     | '/settings/secret-providers'
     | '/settings/templates'
     | '/templates_/$id'
@@ -516,6 +528,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SettingsMcpRouteImport
       parentRoute: typeof SettingsRoute
     }
+    '/settings/mcp-flow': {
+      id: '/settings/mcp-flow'
+      path: '/mcp-flow'
+      fullPath: '/settings/mcp-flow'
+      preLoaderRoute: typeof SettingsMcpFlowRouteImport
+      parentRoute: typeof SettingsRoute
+    }
     '/settings/secret-providers': {
       id: '/settings/secret-providers'
       path: '/secret-providers'
@@ -565,6 +584,7 @@ interface SettingsRouteChildren {
   SettingsEnvironmentsRoute: typeof SettingsEnvironmentsRoute
   SettingsLogsRoute: typeof SettingsLogsRoute
   SettingsMcpRoute: typeof SettingsMcpRoute
+  SettingsMcpFlowRoute: typeof SettingsMcpFlowRoute
   SettingsSecretProvidersRoute: typeof SettingsSecretProvidersRoute
   SettingsTemplatesRoute: typeof SettingsTemplatesRoute
 }
@@ -575,6 +595,7 @@ const SettingsRouteChildren: SettingsRouteChildren = {
   SettingsEnvironmentsRoute: SettingsEnvironmentsRoute,
   SettingsLogsRoute: SettingsLogsRoute,
   SettingsMcpRoute: SettingsMcpRoute,
+  SettingsMcpFlowRoute: SettingsMcpFlowRoute,
   SettingsSecretProvidersRoute: SettingsSecretProvidersRoute,
   SettingsTemplatesRoute: SettingsTemplatesRoute,
 }

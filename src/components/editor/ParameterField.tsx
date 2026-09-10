@@ -15,6 +15,7 @@ import type {
   INodePropertyCollectionEntry,
   INodePropertyOption,
 } from "@/lib/nodes/types";
+import { matchesDisplayOptions } from "@/lib/nodes/types";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
@@ -34,19 +35,13 @@ import { ExpressionField } from "./ExpressionField";
 import type { ExpressionContext } from "@/lib/expressions/evaluate";
 import { cn } from "@/lib/utils";
 import { useWorkflowStore } from "@/store/workflow-store";
+import { fetchMcpFlowBackends, fetchMcpFlowProjects } from "@/lib/nodes/mcp-flow/client";
+import { MCP_FLOW_API_CREDENTIAL } from "@/lib/nodes/mcp-flow/types";
 
 type Values = Record<string, unknown>;
 
 export function shouldDisplay(prop: INodeProperties, values: Values): boolean {
-  const opts = prop.displayOptions;
-  if (!opts) return true;
-  const matches = (rules: Record<string, Array<string | number | boolean>>) =>
-    Object.entries(rules).every(([key, allowed]) =>
-      allowed.some((v) => String(values[key]) === String(v)),
-    );
-  if (opts.show && !matches(opts.show)) return false;
-  if (opts.hide && matches(opts.hide)) return false;
-  return true;
+  return matchesDisplayOptions(prop.displayOptions, values);
 }
 
 interface FieldProps {
@@ -63,7 +58,14 @@ function isOptionList(options: INodeProperties["options"]): options is INodeProp
   return Array.isArray(options) && options.length > 0 && "value" in options[0];
 }
 
-export function ParameterField({ prop, value, values, onChange, onValuesChange, context }: FieldProps) {
+export function ParameterField({
+  prop,
+  value,
+  values,
+  onChange,
+  onValuesChange,
+  context,
+}: FieldProps) {
   switch (prop.type) {
     // Carried on the node and exported, but never shown. Must be handled
     // explicitly: the `default` branch below renders unknown types as a text
@@ -118,6 +120,9 @@ export function ParameterField({ prop, value, values, onChange, onValuesChange, 
       );
 
     case "options":
+      if (prop.typeOptions?.resource === "mcpFlowProjects") {
+        return <McpFlowProjectsField prop={prop} value={value} onChange={onChange} />;
+      }
       return (
         <FieldShell prop={prop}>
           <Select
@@ -144,6 +149,11 @@ export function ParameterField({ prop, value, values, onChange, onValuesChange, 
       );
 
     case "multiOptions": {
+      if (prop.typeOptions?.resource === "mcpFlowBackends") {
+        return (
+          <McpFlowBackendsField prop={prop} value={value} values={values} onChange={onChange} />
+        );
+      }
       const selected = Array.isArray(value) ? (value as unknown[]).map(String) : [];
       return (
         <FieldShell prop={prop}>
@@ -659,10 +669,7 @@ function DataTableLocatorField({
     <FieldShell prop={prop}>
       <div className="flex flex-col gap-2">
         <div className="flex gap-2">
-          <Select
-            value={mode}
-            onValueChange={(m) => onChange({ mode: m, value: rl.value ?? "" })}
-          >
+          <Select value={mode} onValueChange={(m) => onChange({ mode: m, value: rl.value ?? "" })}>
             <SelectTrigger className="h-9 w-28 text-[13px]">
               <SelectValue />
             </SelectTrigger>
@@ -753,7 +760,9 @@ function WorkflowSelectField({
 
   const choices = workflows.filter((w) => w.id !== currentWorkflowId);
   const missingSelection =
-    selected && !choices.some((w) => w.id === selected) && !workflows.some((w) => w.id === selected);
+    selected &&
+    !choices.some((w) => w.id === selected) &&
+    !workflows.some((w) => w.id === selected);
 
   return (
     <FieldShell prop={prop}>
@@ -784,12 +793,161 @@ function WorkflowSelectField({
       )}
       {missingSelection && (
         <p className="text-[11px] text-[var(--warning)]">
-          Saved id <span className="font-mono">{selected}</span> was not found in the database.
-          Pick a workflow from the list.
+          Saved id <span className="font-mono">{selected}</span> was not found in the database. Pick
+          a workflow from the list.
         </p>
       )}
       {selected && !missingSelection && (
         <p className="font-mono text-[10px] text-muted-foreground">id: {selected}</p>
+      )}
+    </FieldShell>
+  );
+}
+
+function useMcpFlowCredentialId(): string | null {
+  const node = useWorkflowStore((s) => s.workflow.nodes.find((n) => n.name === s.selectedNode));
+  return node?.credentials?.[MCP_FLOW_API_CREDENTIAL]?.id ?? null;
+}
+
+function McpFlowProjectsField({
+  prop,
+  value,
+  onChange,
+}: {
+  prop: INodeProperties;
+  value: unknown;
+  onChange: (value: unknown) => void;
+}) {
+  const credentialId = useMcpFlowCredentialId();
+  const [items, setItems] = useState<Array<{ slug: string; title?: string }>>([]);
+  const [note, setNote] = useState("");
+
+  useEffect(() => {
+    if (!credentialId) {
+      setItems([]);
+      setNote("Bind an mcp-flow credential to load projects.");
+      return;
+    }
+    let cancelled = false;
+    void fetchMcpFlowProjects({ credentialId })
+      .then((data) => {
+        if (cancelled) return;
+        setItems(data.items ?? []);
+        setNote(data.items?.length ? "" : "No projects on this gateway.");
+      })
+      .catch((err: unknown) => {
+        if (cancelled) return;
+        setItems([]);
+        setNote(err instanceof Error ? err.message : "Could not load projects");
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [credentialId]);
+
+  return (
+    <FieldShell prop={prop}>
+      <Select
+        value={String(value ?? "") || "__default__"}
+        onValueChange={(v) => onChange(v === "__default__" ? "" : v)}
+      >
+        <SelectTrigger className="h-9 w-full text-[13px]">
+          <SelectValue placeholder="Active project (optional)" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="__default__">Active / default</SelectItem>
+          {items.map((p) => (
+            <SelectItem key={p.slug} value={p.slug}>
+              {p.title || p.slug}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+      {note && <p className="text-[11px] text-muted-foreground">{note}</p>}
+    </FieldShell>
+  );
+}
+
+function McpFlowBackendsField({
+  prop,
+  value,
+  values,
+  onChange,
+}: {
+  prop: INodeProperties;
+  value: unknown;
+  values: Values;
+  onChange: (value: unknown) => void;
+}) {
+  const credentialId = useMcpFlowCredentialId();
+  const project = String(values.project ?? "").trim();
+  const selected = Array.isArray(value) ? (value as unknown[]).map(String) : [];
+  const [items, setItems] = useState<
+    Array<{ slug: string; title: string; enabled?: boolean; transport?: string }>
+  >([]);
+  const [note, setNote] = useState("");
+
+  useEffect(() => {
+    if (!credentialId) {
+      setItems([]);
+      setNote("Bind an mcp-flow credential to load backends.");
+      return;
+    }
+    let cancelled = false;
+    void fetchMcpFlowBackends({ credentialId, project: project || undefined })
+      .then((data) => {
+        if (cancelled) return;
+        setItems(
+          (data.items ?? []).map((b) => ({
+            slug: b.slug,
+            title: b.title || b.slug,
+            enabled: b.enabled,
+            transport: b.transport,
+          })),
+        );
+        setNote(data.items?.length ? "" : "No backends in this project.");
+      })
+      .catch((err: unknown) => {
+        if (cancelled) return;
+        setItems([]);
+        setNote(err instanceof Error ? err.message : "Could not load backends");
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [credentialId, project]);
+
+  return (
+    <FieldShell prop={prop}>
+      <div className="space-y-1.5 rounded-md border border-border bg-background/40 p-2.5">
+        {items.map((o) => (
+          <label key={o.slug} className="flex items-center gap-2 text-[13px]">
+            <Checkbox
+              checked={selected.includes(o.slug)}
+              onCheckedChange={(checked) =>
+                onChange(checked ? [...selected, o.slug] : selected.filter((s) => s !== o.slug))
+              }
+            />
+            <span className="min-w-0 flex-1 truncate">{o.title}</span>
+            {o.transport && (
+              <span className="font-mono text-[10px] text-muted-foreground">{o.transport}</span>
+            )}
+            {o.enabled === false && (
+              <span className="text-[10px] text-muted-foreground">disabled</span>
+            )}
+          </label>
+        ))}
+        {items.length === 0 && (
+          <p className="text-[12px] text-muted-foreground">
+            {note || "Empty — leave unchecked to expose every enabled backend."}
+          </p>
+        )}
+      </div>
+      {note && items.length > 0 && <p className="text-[11px] text-muted-foreground">{note}</p>}
+      {items.length > 0 && selected.length === 0 && (
+        <p className="text-[11px] text-muted-foreground">
+          None selected — the agent gets tools from every enabled backend.
+        </p>
       )}
     </FieldShell>
   );

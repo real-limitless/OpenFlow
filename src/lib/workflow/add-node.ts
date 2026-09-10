@@ -1,16 +1,21 @@
 /** Shared init payload when placing a node from palette / drag / store. */
 
+import type { INodeCredentialRef } from "./types";
+
 export type AddNodeInit = {
   /** Preferred canvas display name */
   name?: string;
   /** Merged over description defaults */
   parameters?: Record<string, unknown>;
+  /** Optional credential bindings */
+  credentials?: Record<string, INodeCredentialRef>;
 };
 
 export type OpenFlowNodeDragPayload = {
   type: string;
   name?: string;
   parameters?: Record<string, unknown>;
+  credentials?: Record<string, INodeCredentialRef>;
 };
 
 export const OPENFLOW_NODE_MIME = "application/openflow-node";
@@ -36,6 +41,12 @@ export function decodeNodeDragPayload(raw: string): OpenFlowNodeDragPayload | nu
             !Array.isArray(parsed.parameters)
               ? parsed.parameters
               : undefined,
+          credentials:
+            parsed.credentials &&
+            typeof parsed.credentials === "object" &&
+            !Array.isArray(parsed.credentials)
+              ? parsed.credentials
+              : undefined,
         };
       }
     } catch {
@@ -52,5 +63,6 @@ export function normalizeAddNodeInit(init?: string | AddNodeInit): AddNodeInit {
   return {
     name: init.name,
     parameters: init.parameters,
+    credentials: init.credentials,
   };
 }

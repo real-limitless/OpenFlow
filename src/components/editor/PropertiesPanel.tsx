@@ -14,6 +14,7 @@ import {
 import { useWorkflowStore } from "@/store/workflow-store";
 import { getNodeType } from "@/lib/nodes/registry";
 import { ParameterField, shouldDisplay } from "./ParameterField";
+import { matchesDisplayOptions } from "@/lib/nodes/types";
 import { NodeIcon } from "./BaseNode";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -321,21 +322,23 @@ export function PropertiesPanel({
                 Secrets are stored encrypted on the server. Pick an existing credential or create
                 one. Changes save with the workflow.
               </p>
-              {(description.credentials ?? []).map((cred) => (
-                <CredentialPicker
-                  key={cred.name}
-                  credentialType={cred.name}
-                  required={cred.required !== false}
-                  value={node.credentials?.[cred.name]?.id ?? null}
-                  defaultName={node.credentials?.[cred.name]?.name}
-                  onChange={(selectedCred) => {
-                    const next = { ...(node.credentials ?? {}) };
-                    if (!selectedCred) delete next[cred.name];
-                    else next[cred.name] = { id: selectedCred.id, name: selectedCred.name };
-                    updateCredentials(node.name, Object.keys(next).length ? next : null);
-                  }}
-                />
-              ))}
+              {(description.credentials ?? [])
+                .filter((cred) => matchesDisplayOptions(cred.displayOptions, parameters))
+                .map((cred) => (
+                  <CredentialPicker
+                    key={cred.name}
+                    credentialType={cred.name}
+                    required={cred.required !== false}
+                    value={node.credentials?.[cred.name]?.id ?? null}
+                    defaultName={node.credentials?.[cred.name]?.name}
+                    onChange={(selectedCred) => {
+                      const next = { ...(node.credentials ?? {}) };
+                      if (!selectedCred) delete next[cred.name];
+                      else next[cred.name] = { id: selectedCred.id, name: selectedCred.name };
+                      updateCredentials(node.name, Object.keys(next).length ? next : null);
+                    }}
+                  />
+                ))}
               {Object.entries(node.credentials ?? {})
                 .filter(([type]) => !(description.credentials ?? []).some((c) => c.name === type))
                 .map(([type, ref]) => (

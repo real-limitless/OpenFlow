@@ -9,6 +9,7 @@ import {
   setMcpHttpClient,
   type McpClientToolHandle,
 } from "../../executors/mcp-client-tool";
+import { setMcpFlowGatewayHttpClient } from "@/lib/nodes/mcp-flow/gateway";
 
 seedBuiltinExecutors();
 seedBuiltinDescriptions();
@@ -84,7 +85,10 @@ function callResult(content: Array<{ type: string; text?: string }>, isError?: b
   return { content, isError };
 }
 
-afterEach(() => setMcpHttpClient(null));
+afterEach(() => {
+  setMcpHttpClient(null);
+  setMcpFlowGatewayHttpClient(null);
+});
 
 describe("batch-queue mcpClientTool — @n8n/n8n-nodes-langchain.mcpClientTool", () => {
   it("is registered as executor + description", () => {
@@ -353,5 +357,67 @@ describe("batch-queue mcpClientTool — @n8n/n8n-nodes-langchain.mcpClientTool",
   it("resolves the executor under the canonical type string", () => {
     const canonical = getExecutor(TYPE);
     expect(canonical).toBeDefined();
+  });
+
+  it("mcp-flow source exposes namespaced backend tools and invokes tools/call", async () => {
+    const calls: Array<{ method: string; name?: string }> = [];
+    setMcpFlowGatewayHttpClient(async (opts) => {
+      const body = opts.body as {
+        id?: number;
+        method: string;
+        params?: { name?: string; arguments?: Record<string, unknown> };
+      };
+      calls.push({ method: body.method, name: body.params?.name });
+      const id = body.id ?? 0;
+      if (body.method === "initialize") {
+        return rpcResponse(id, { protocolVersion: "2024-11-05" });
+      }
+      if (body.method === "tools/list") {
+        return rpcResponse(id, toolsListResult([{ name: "mf_status" }]));
+      }
+      if (body.method === "tools/call" && body.params?.name === "mf_list_tools") {
+        return rpcResponse(id, {
+          content: [
+            {
+              type: "text",
+              text: JSON.stringify({
+                tools: [{ name: "deepwiki__search", description: "Search", backend: "deepwiki" }],
+              }),
+            },
+          ],
+        });
+      }
+      if (body.method === "tools/call" && body.params?.name === "mf_list_backends") {
+        return rpcResponse(id, {
+          content: [
+            {
+              type: "text",
+              text: JSON.stringify({
+                backends: [{ slug: "deepwiki", title: "DeepWiki", enabled: true }],
+              }),
+            },
+          ],
+        });
+      }
+      if (body.method === "tools/call" && body.params?.name === "deepwiki__search") {
+        return rpcResponse(id, callResult([{ type: "text", text: "wiki hit" }]));
+      }
+      return rpcResponse(id, null);
+    });
+
+    const out = await runTool(
+      { source: "mcpFlow", backends: ["deepwiki"] },
+      [{}],
+      { mcpFlowApi: { url: "http://gw.test", apiKey: "mf_secret" } },
+    );
+    const handle = getHandle(out);
+    expect(handle.tools.map((t) => t.name)).toEqual(["deepwiki__search"]);
+    const result = await handle.invoke("deepwiki__search", { q: "n8n" });
+    expect(result.content).toBe("wiki hit");
+    expect(calls.some((c) => c.method === "tools/call" && c.name === "deepwiki__search")).toBe(true);
+  });
+
+  it("mcp-flow source requires mcpFlowApi credential", async () => {
+    await expect(runTool({ source: "mcpFlow" })).rejects.toThrow(/mcpFlowApi/);
   });
 });
