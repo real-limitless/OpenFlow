@@ -208,6 +208,7 @@ export async function enqueueOrRun(
           environmentId: envId,
           result,
         });
+        notifyExecutionFinished(workflowId, executionId, "waiting");
         return;
       }
       if (result.aborted === "cancelled") {

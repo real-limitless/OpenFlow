@@ -38,14 +38,18 @@ export function subscribeWorkflowEvents(workflowId: string, listener: Listener):
 
 export function emitWorkflowEvent(event: WorkflowEvent): void {
   const set = listeners.get(event.workflowId);
-  if (!set) return;
-  for (const listener of set) {
-    try {
-      listener(event);
-    } catch (err) {
-      console.error("[workflow-events] listener error", err);
+  if (set) {
+    for (const listener of set) {
+      try {
+        listener(event);
+      } catch (err) {
+        console.error("[workflow-events] listener error", err);
+      }
     }
   }
+  void import("./lifecycle-webhooks")
+    .then((m) => m.dispatchLifecycleEvent(event))
+    .catch(() => undefined);
 }
 
 /** Notify open editors that a new execution row exists. */
