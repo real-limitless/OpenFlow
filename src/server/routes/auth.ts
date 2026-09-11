@@ -14,6 +14,7 @@ import { ensureUser, ensureUserWithProject, LOCAL_USER_ID } from "../services/us
 import { countRealUsers } from "./setup";
 import { canPublicRegister, sessionCookieSecure } from "../../lib/auth/registration-policy";
 import { issueCsrfCookie } from "../middleware/csrf";
+import { consumeInviteToken } from "../services/invites";
 
 export { getSessionUserId } from "../services/sessions";
 
@@ -39,8 +40,8 @@ function isValidEmail(email: string): boolean {
 
 export default function authRoute(app: Hono<AppEnv>) {
   app.post("/api/v1/auth/register", async (c) => {
-    const body = await c.req.json<{ email?: string; password?: string }>();
-    const { email, password } = body ?? {};
+    const body = await c.req.json<{ email?: string; password?: string; inviteToken?: string }>();
+    const { email, password, inviteToken } = body ?? {};
 
     if (!email || !isValidEmail(email)) {
       return c.json({ error: "Invalid email format" }, 400);
@@ -50,22 +51,28 @@ export default function authRoute(app: Hono<AppEnv>) {
     }
 
     const realUsers = await countRealUsers();
+    let role: string = realUsers === 0 ? "owner" : "member";
     if (!canPublicRegister(realUsers > 0)) {
-      return c.json(
-        {
-          error: "Registration is invite-only after the owner account exists",
-          code: "invite_only",
-        },
-        403,
-      );
+      const consumed = await consumeInviteToken(inviteToken ?? "", email);
+      if (!consumed.ok) {
+        return c.json(
+          {
+            error: consumed.error || "Registration is invite-only after the owner account exists",
+            code: "invite_only",
+          },
+          403,
+        );
+      }
+      role = realUsers === 0 ? "owner" : consumed.role;
+    } else if (inviteToken) {
+      const consumed = await consumeInviteToken(inviteToken, email);
+      if (consumed.ok && realUsers > 0) role = consumed.role;
     }
 
     const existing = await prisma.user.findUnique({ where: { email } });
     if (existing) {
       return c.json({ error: "Email already registered" }, 409);
     }
-
-    const role = realUsers === 0 ? "owner" : "member";
 
     const passwordHash = await bcrypt.hash(password, 10);
     const user = await prisma.user.create({
@@ -92,6 +99,9 @@ export default function authRoute(app: Hono<AppEnv>) {
     const user = await prisma.user.findUnique({ where: { email } });
     if (!user || !user.passwordHash) {
       return c.json({ error: "Invalid credentials" }, 401);
+    }
+    if (user.role === "disabled") {
+      return c.json({ error: "Account disabled", code: "disabled" }, 403);
     }
 
     const valid = await bcrypt.compare(password, user.passwordHash);

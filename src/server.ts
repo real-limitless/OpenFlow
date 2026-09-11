@@ -53,7 +53,7 @@ export default {
   async fetch(request: Request, env: unknown, ctx: unknown) {
     try {
       const url = new URL(request.url);
-      if (isApiPath(url.pathname)) {
+      if (isApiPath(url.pathname, request.method)) {
         return app.fetch(request, env as never, ctx as never);
       }
 

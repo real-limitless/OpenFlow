@@ -44,6 +44,9 @@ describe("chat path helpers", () => {
     expect(isApiPath("/api/v1/workflows")).toBe(true);
     expect(isApiPath("/chats")).toBe(false);
     expect(isApiPath("/chats/wf-1")).toBe(false);
+    expect(isApiPath("/register")).toBe(false);
+    expect(isApiPath("/register", "GET")).toBe(false);
+    expect(isApiPath("/register", "POST")).toBe(true);
   });
 
   it("reads public and hub flags", () => {

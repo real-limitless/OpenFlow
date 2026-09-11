@@ -2,6 +2,7 @@ import type { Context, Next } from "hono";
 import { getCookie } from "hono/cookie";
 import { getSessionUserId } from "../services/sessions";
 import { ensureUser, LOCAL_USER_ID } from "../services/users";
+import { prisma } from "../db";
 import { config } from "../../config";
 import { ALL_MCP_SCOPES, HUMAN_MCP_SCOPES } from "../oauth/scopes";
 import { resolveAccessToken } from "../oauth/tokens";
@@ -178,6 +179,14 @@ export async function authMiddleware(c: Context<AppEnv>, next: Next) {
       return unauthorizedMcp(c);
     }
     return c.json({ error: "Authentication required" }, 401);
+  }
+
+  const sessionUser = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { role: true },
+  });
+  if (sessionUser?.role === "disabled") {
+    return c.json({ error: "Account disabled", code: "disabled" }, 403);
   }
 
   applyAgent(c, sessionAuth(userId));

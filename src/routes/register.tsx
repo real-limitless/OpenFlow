@@ -10,16 +10,23 @@ import { fetchSetupStatus, register } from "@/lib/auth/client";
 export const Route = createFileRoute("/register")({
   head: () => ({ meta: [{ title: "Register — OpenFlow" }] }),
   component: RegisterPage,
+  validateSearch: (s: Record<string, unknown>) => ({
+    invite: typeof s.invite === "string" ? s.invite : undefined,
+  }),
 });
 
 function RegisterPage() {
   const navigate = useNavigate();
+  const { invite } = Route.useSearch();
+  const navigateToHome = () => navigate({ to: "/" });
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
   const [inviteOnly, setInviteOnly] = useState(false);
   const [tryOut, setTryOut] = useState(false);
   const [checking, setChecking] = useState(true);
+  const hasInvite = Boolean(invite?.trim());
+  const formClosed = inviteOnly && !hasInvite;
 
   useEffect(() => {
     let cancelled = false;
@@ -36,12 +43,12 @@ function RegisterPage() {
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (inviteOnly) return;
+    if (formClosed) return;
     setBusy(true);
     try {
-      await register(email.trim(), password);
+      await register(email.trim(), password, invite?.trim());
       toast.success("Account created");
-      navigate({ to: "/" });
+      navigateToHome();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Registration failed");
     } finally {
@@ -65,10 +72,15 @@ function RegisterPage() {
             Try-out mode is on (AUTH_DISABLED). Accounts are not required.
           </p>
         )}
-        {inviteOnly ? (
+        {hasInvite ? (
           <p className="text-[13px] text-muted-foreground">
-            Public registration is closed. This instance is invite-only after the owner
-            exists. Sign in, or ask an owner to add you.
+            You have an invite link. Create your account with the invited email if the invite is
+            pinned to one address.
+          </p>
+        ) : inviteOnly ? (
+          <p className="text-[13px] text-muted-foreground">
+            Public registration is closed. This instance is invite-only after the owner exists.
+            Sign in, or ask an owner to send an invite link.
           </p>
         ) : (
           <p className="text-[13px] text-muted-foreground">
@@ -86,7 +98,7 @@ function RegisterPage() {
             type="email"
             autoComplete="email"
             required
-            disabled={inviteOnly}
+            disabled={formClosed}
             value={email}
             onChange={(e) => setEmail(e.target.value)}
           />
@@ -98,14 +110,14 @@ function RegisterPage() {
             type="password"
             autoComplete="new-password"
             required
-            disabled={inviteOnly}
+            disabled={formClosed}
             minLength={8}
             value={password}
             onChange={(e) => setPassword(e.target.value)}
           />
         </div>
-        <Button type="submit" className="w-full" disabled={busy || inviteOnly || checking}>
-          {inviteOnly ? "Registration closed" : busy ? "Creating…" : "Register"}
+        <Button type="submit" className="w-full" disabled={busy || formClosed || checking}>
+          {formClosed ? "Registration closed" : busy ? "Creating…" : "Register"}
         </Button>
         <p className="text-center text-[13px] text-muted-foreground">
           Already have an account?{" "}
