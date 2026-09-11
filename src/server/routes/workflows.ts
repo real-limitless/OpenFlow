@@ -25,6 +25,11 @@ import {
 import { environmentIdFromRequest } from "../services/environments";
 import { notifyExecutionStarted } from "../services/workflow-events";
 import { failStaleLlmList } from "../services/stale-llm-execution";
+import {
+  applyWorkflowOrganization,
+  folderFromMeta,
+  tagsFromExtra,
+} from "../services/workflow-organization";
 
 function minShareForRole(minRole: ProjectRole): SharePermission {
   return minRole === "viewer" ? "view" : "edit";
@@ -83,6 +88,8 @@ export default function workflowsRoute(app: Hono<AppEnv>) {
         active: true,
         nodes: true,
         settings: true,
+        extra: true,
+        meta: true,
         projectId: true,
         updatedAt: true,
       },
@@ -105,6 +112,8 @@ export default function workflowsRoute(app: Hono<AppEnv>) {
         shared: sharedSet.has(r.id) && !projectIds.includes(r.projectId),
         nodeCount: (JSON.parse(r.nodes) as unknown[]).length,
         updatedAt: r.updatedAt.toISOString(),
+        tags: tagsFromExtra(r.extra),
+        folder: folderFromMeta(r.meta) || null,
         settings: {
           executionTimeout: settings.executionTimeout,
           maxConcurrency: settings.maxConcurrency,
@@ -114,6 +123,44 @@ export default function workflowsRoute(app: Hono<AppEnv>) {
     });
 
     return c.json(list);
+  });
+
+  app.post("/api/v1/workflows/organization", async (c) => {
+    const userId = c.get("userId");
+    await ensureUser(userId);
+    const body = await c.req
+      .json<{ ids?: string[]; tags?: unknown; addTags?: unknown; folder?: unknown }>()
+      .catch(() => ({}));
+    const ids = Array.isArray(body.ids) ? body.ids.filter((id) => typeof id === "string") : [];
+    if (ids.length === 0) return c.json({ error: "ids required" }, 400);
+    const out: Array<{ id: string; tags: string[]; folder: string }> = [];
+    for (const id of ids) {
+      const result = await loadWorkflowIfAllowed(id, userId, "editor");
+      if ("error" in result) continue;
+      const next = await applyWorkflowOrganization(id, {
+        tags: body.tags,
+        addTags: body.addTags,
+        folder: body.folder,
+      });
+      out.push({ id, ...next });
+    }
+    return c.json({ updated: out });
+  });
+
+  app.patch("/api/v1/workflows/:id/organization", async (c) => {
+    const userId = c.get("userId");
+    const { id } = c.req.param();
+    const result = await loadWorkflowIfAllowed(id, userId, "editor");
+    if ("error" in result) return c.json({ error: result.error }, result.status);
+    const body = await c.req
+      .json<{ tags?: unknown; folder?: unknown; addTags?: unknown }>()
+      .catch(() => ({}));
+    const next = await applyWorkflowOrganization(id, {
+      tags: body.tags,
+      addTags: body.addTags,
+      folder: body.folder,
+    });
+    return c.json(next);
   });
 
   app.get("/api/v1/workflows/:id", async (c) => {
