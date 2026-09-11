@@ -27,6 +27,14 @@ export default function setupRoute(app: Hono<AppEnv>) {
     const hasUsers = realUsers > 0;
     const needsOwner = !authDisabled && !hasUsers;
     const inviteOnly = !authDisabled && !canPublicRegister(hasUsers);
+    let ssoEnabled = false;
+    try {
+      const { getOidcSettings } = await import("../services/oidc");
+      const { publicOidcStatus } = await import("../../lib/auth/oidc");
+      ssoEnabled = publicOidcStatus(await getOidcSettings()).enabled;
+    } catch {
+      ssoEnabled = false;
+    }
     return c.json({
       authDisabled,
       hasUsers,
@@ -34,6 +42,7 @@ export default function setupRoute(app: Hono<AppEnv>) {
       inviteOnly,
       registrationOpen: !authDisabled && canPublicRegister(hasUsers),
       tryOut: authDisabled,
+      ssoEnabled,
     });
   });
 }

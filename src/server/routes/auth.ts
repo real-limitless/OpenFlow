@@ -16,6 +16,24 @@ import { canPublicRegister, sessionCookieSecure } from "../../lib/auth/registrat
 import { issueCsrfCookie } from "../middleware/csrf";
 import { consumeInviteToken } from "../services/invites";
 import { recordAudit, requestIp } from "../services/audit";
+import { getOidcSettings, oidcFlowSecret } from "../services/oidc";
+import { publicOrigin } from "../oauth/public-url";
+import {
+  OIDC_PASSWORD_SENTINEL,
+  buildAuthorizationUrl,
+  decideOidcProvision,
+  defaultRedirectUri,
+  extractEmailFromClaims,
+  fetchOidcDiscovery,
+  exchangeAuthorizationCode,
+  isOidcPasswordHash,
+  newOidcFlow,
+  oidcReady,
+  parseOidcFlow,
+  publicOidcStatus,
+  signOidcFlow,
+  verifyOidcIdToken,
+} from "../../lib/auth/oidc";
 
 export { getSessionUserId } from "../services/sessions";
 
@@ -110,6 +128,9 @@ export default function authRoute(app: Hono<AppEnv>) {
     if (!user || !user.passwordHash) {
       return c.json({ error: "Invalid credentials" }, 401);
     }
+    if (isOidcPasswordHash(user.passwordHash)) {
+      return c.json({ error: "Use SSO to sign in", code: "oidc" }, 401);
+    }
     if (user.role === "disabled") {
       return c.json({ error: "Account disabled", code: "disabled" }, 403);
     }
@@ -164,5 +185,132 @@ export default function authRoute(app: Hono<AppEnv>) {
     }
 
     return c.json({ user, authDisabled: false, csrfToken: issueCsrfCookie(c) });
+  });
+
+  app.get("/api/v1/auth/oidc/status", async (c) => {
+    const settings = await getOidcSettings();
+    return c.json(publicOidcStatus(settings));
+  });
+
+  app.get("/api/v1/auth/oidc/start", async (c) => {
+    const settings = await getOidcSettings();
+    if (!oidcReady(settings)) {
+      return c.json({ error: "OIDC is not configured" }, 400);
+    }
+    try {
+      const origin = publicOrigin(c);
+      const redirectUri = settings.redirectUri || defaultRedirectUri(origin);
+      const discovery = await fetchOidcDiscovery(settings.issuer);
+      const flow = newOidcFlow(c.req.query("redirect"));
+      setCookie(c, "oidc_flow", signOidcFlow(flow, oidcFlowSecret()), {
+        httpOnly: true,
+        path: "/",
+        sameSite: "Lax",
+        maxAge: 600,
+        secure: sessionCookieSecure({
+          url: c.req.url,
+          forwardedProto: c.req.header("x-forwarded-proto"),
+        }),
+      });
+      return c.redirect(
+        buildAuthorizationUrl({
+          authorizationEndpoint: discovery.authorization_endpoint,
+          clientId: settings.clientId,
+          redirectUri,
+          state: flow.state,
+          nonce: flow.nonce,
+          challenge: flow.challenge,
+        }),
+      );
+    } catch (err) {
+      return c.json(
+        { error: err instanceof Error ? err.message : "OIDC start failed" },
+        502,
+      );
+    }
+  });
+
+  app.get("/api/v1/auth/oidc/callback", async (c) => {
+    const idpError = c.req.query("error");
+    if (idpError) {
+      return c.json({ error: idpError, description: c.req.query("error_description") ?? "" }, 400);
+    }
+    const code = c.req.query("code");
+    const state = c.req.query("state");
+    const flow = parseOidcFlow(getCookie(c, "oidc_flow"), oidcFlowSecret());
+    deleteCookie(c, "oidc_flow", { path: "/" });
+    if (!code || !flow || state !== flow.state) {
+      return c.json({ error: "Invalid OIDC state" }, 400);
+    }
+    const settings = await getOidcSettings();
+    if (!oidcReady(settings)) {
+      return c.json({ error: "OIDC is not configured" }, 400);
+    }
+    try {
+      const origin = publicOrigin(c);
+      const redirectUri = settings.redirectUri || defaultRedirectUri(origin);
+      const discovery = await fetchOidcDiscovery(settings.issuer);
+      const tokens = await exchangeAuthorizationCode({
+        tokenEndpoint: discovery.token_endpoint,
+        clientId: settings.clientId,
+        clientSecret: settings.clientSecret,
+        code,
+        redirectUri,
+        codeVerifier: flow.verifier,
+      });
+      const claims = await verifyOidcIdToken({
+        idToken: tokens.id_token,
+        issuer: settings.issuer,
+        clientId: settings.clientId,
+        nonce: flow.nonce,
+        jwksUri: discovery.jwks_uri,
+      });
+      const email = extractEmailFromClaims(claims);
+      if (!email) {
+        return c.json({ error: "OIDC token did not include an email claim" }, 400);
+      }
+      const existing = await prisma.user.findUnique({ where: { email } });
+      const realUsers = await countRealUsers();
+      const decision = decideOidcProvision({
+        existingRole: existing?.role ?? null,
+        realUserCount: realUsers,
+        jit: settings.jitProvisioning,
+        registrationOpen: canPublicRegister(realUsers > 0),
+      });
+      if (!decision.ok) {
+        return c.json({ error: decision.error, code: "oidc" }, decision.status);
+      }
+      let user = existing;
+      if (decision.action === "create") {
+        user = await prisma.user.create({
+          data: {
+            email,
+            passwordHash: OIDC_PASSWORD_SENTINEL,
+            role: decision.role,
+          },
+        });
+        await ensureUserWithProject(user.id);
+        void recordAudit({
+          actorId: user.id,
+          action: "user.register",
+          resource: "user",
+          resourceId: user.id,
+          detail: { email, role: user.role, method: "oidc" },
+          ip: requestIp(c),
+        });
+      }
+      if (!user) {
+        return c.json({ error: "OIDC login failed" }, 500);
+      }
+      const token = await createSession(user.id);
+      setSessionCookie(c, token);
+      issueCsrfCookie(c);
+      return c.redirect(flow.returnTo || "/");
+    } catch (err) {
+      return c.json(
+        { error: err instanceof Error ? err.message : "OIDC callback failed" },
+        502,
+      );
+    }
   });
 }

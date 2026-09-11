@@ -326,9 +326,9 @@ isolated-vm for Code node
 - [ ] **E9.2** Branch ↔ environment mapping
 - [ ] **E9.3** Diff/conflict UI; never commit secrets
 
-### Deferred — SSO
+### Deferred — SAML / LDAP
 
-- SAML / LDAP / OIDC login (after E0–E1)
+- OIDC login shipped (`/api/v1/auth/oidc/*`, Settings → SSO). SAML and LDAP remain deferred.
 
 ---
 
@@ -364,7 +364,7 @@ isolated-vm for Code node
 
 - Third-party editor/cloud platform deps or Worker-only runtime
 - Loading binary n8n community node packages
-- SSO / SAML / LDAP login (deferred; see Phase list)
+- SAML / LDAP login (OIDC is available; see Settings → SSO)
 - Claiming “n8n-compatible” as a trademark phrase in marketing
 - Vendoring third-party workflow runtimes (`n8n-workflow`, etc.)
 

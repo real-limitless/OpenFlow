@@ -28,6 +28,11 @@ services:
       REDIS_URL: redis://redis:6379
       # Labeled try-out: no login. Production overlay sets AUTH_DISABLED=false.
       AUTH_DISABLED: ${AUTH_DISABLED:-true}
+      # Optional OIDC (authorization-code + PKCE). Also configurable in Settings → SSO.
+      OPENFLOW_OIDC_ISSUER: ${OPENFLOW_OIDC_ISSUER:-}
+      OPENFLOW_OIDC_CLIENT_ID: ${OPENFLOW_OIDC_CLIENT_ID:-}
+      OPENFLOW_OIDC_CLIENT_SECRET: ${OPENFLOW_OIDC_CLIENT_SECRET:-}
+      OPENFLOW_OIDC_REDIRECT_URI: ${OPENFLOW_OIDC_REDIRECT_URI:-}
       CREDENTIALS_KEY: ${CREDENTIALS_KEY:-}
       # Fixed container paths (do not interpolate host .env — breaks the volume mounts)
       BINARY_STORAGE_DIR: /data/binary

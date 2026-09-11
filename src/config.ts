@@ -44,6 +44,10 @@ export const config = {
   redis: {
     url: process.env.REDIS_URL ?? "redis://localhost:6379",
   },
+  /**
+   * Cookie/session auth. OIDC env overlay: OPENFLOW_OIDC_ISSUER, OPENFLOW_OIDC_CLIENT_ID,
+   * OPENFLOW_OIDC_CLIENT_SECRET, OPENFLOW_OIDC_REDIRECT_URI, OPENFLOW_OIDC_ENABLED.
+   */
   auth: {
     get disabled() {
       return process.env.AUTH_DISABLED === "true" || process.env.AUTH_DISABLED === "1";
