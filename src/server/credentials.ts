@@ -3,11 +3,19 @@ import type { CredentialData } from "../lib/engine/credentials";
 import { bestSharePermission } from "./services/shares";
 import { loadCredentialSecret } from "./secrets";
 
-async function decryptCredentialRow(credential: {
-  dataEncrypted: string;
-  secretProviderId?: string | null;
-  externalRef?: string | null;
-}): Promise<CredentialData | null> {
+import { loadCredentialOverride } from "./services/credential-overrides";
+
+async function decryptCredentialRow(
+  credential: {
+    id: string;
+    dataEncrypted: string;
+    secretProviderId?: string | null;
+    externalRef?: string | null;
+  },
+  environmentId?: string,
+): Promise<CredentialData | null> {
+  const override = await loadCredentialOverride(credential.id, environmentId);
+  if (override) return override as CredentialData;
   const data = await loadCredentialSecret(credential);
   return data as CredentialData | null;
 }
@@ -22,10 +30,11 @@ export async function resolveCredential(
     id?: string | null;
     name: string;
   },
-  options?: { userId?: string; projectId?: string },
+  options?: { userId?: string; projectId?: string; environmentId?: string },
 ): Promise<CredentialData | null> {
   const userId = options?.userId;
   const projectId = options?.projectId;
+  const environmentId = options?.environmentId;
 
   if (ref.id) {
     const credential = await prisma.credential.findUnique({ where: { id: ref.id } });
@@ -61,7 +70,7 @@ export async function resolveCredential(
     };
 
     if (!(await allowed())) return null;
-    return decryptCredentialRow(credential);
+    return decryptCredentialRow(credential, environmentId);
   }
 
   if (!ref.name) return null;
@@ -71,7 +80,7 @@ export async function resolveCredential(
       where: { name: ref.name, projectId },
     });
     if (credential) {
-      return decryptCredentialRow(credential);
+      return decryptCredentialRow(credential, environmentId);
     }
   }
 
@@ -80,7 +89,7 @@ export async function resolveCredential(
       where: { name: ref.name, userId },
     });
     if (byUser) {
-      return decryptCredentialRow(byUser);
+      return decryptCredentialRow(byUser, environmentId);
     }
     const shares = await prisma.share.findMany({
       where: {
@@ -109,7 +118,7 @@ export async function resolveCredential(
         },
       });
       if (credential) {
-        return decryptCredentialRow(credential);
+        return decryptCredentialRow(credential, environmentId);
       }
     }
   }
@@ -118,12 +127,17 @@ export async function resolveCredential(
 }
 
 /** Bind a fixed owner for execution contexts (legacy / personal). */
-export function credentialResolverForUser(userId: string) {
-  return (ref: { id?: string | null; name: string }) => resolveCredential(ref, { userId });
+export function credentialResolverForUser(userId: string, environmentId?: string) {
+  return (ref: { id?: string | null; name: string }) =>
+    resolveCredential(ref, { userId, environmentId });
 }
 
 /** Resolve credentials within a project (preferred for executions). */
-export function credentialResolverForProject(projectId: string, userId?: string) {
+export function credentialResolverForProject(
+  projectId: string,
+  userId?: string,
+  environmentId?: string,
+) {
   return (ref: { id?: string | null; name: string }) =>
-    resolveCredential(ref, { projectId, userId });
+    resolveCredential(ref, { projectId, userId, environmentId });
 }

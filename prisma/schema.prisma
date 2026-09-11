@@ -167,6 +167,19 @@ model Environment {
   @@map("environments")
 }
 
+model CredentialEnvOverride {
+  id             String   @id @default(cuid())
+  credentialId   String
+  environmentId  String
+  dataEncrypted  String   @default("") @db.Text
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@unique([credentialId, environmentId])
+  @@index([environmentId])
+  @@map("credential_env_overrides")
+}
+
 // ─── Custom variables ($vars) ───────────────────────────
 
 model Variable {
