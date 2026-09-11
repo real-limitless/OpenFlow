@@ -19,6 +19,7 @@ import {
   type CompatLevel,
 } from "../services/template-compat";
 import { isCertifiedTemplate } from "../../lib/templates/certified";
+import { stripMarkdown } from "../../lib/templates/markdown";
 import { ensureCertifiedPack } from "../services/certified-templates";
 
 const LIST_SELECT = {
@@ -47,7 +48,7 @@ const LIST_SELECT = {
 
 function snippet(text: string | null | undefined, max = 160): string {
   if (!text) return "";
-  const flat = text.replace(/\s+/g, " ").trim();
+  const flat = stripMarkdown(text) || text.replace(/\s+/g, " ").trim();
   if (flat.length <= max) return flat;
   return flat.slice(0, max - 1) + "…";
 }
