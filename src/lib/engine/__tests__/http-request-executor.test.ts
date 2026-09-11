@@ -4,6 +4,10 @@ import type { INode, INodeExecutionData } from "@/lib/workflow/types";
 import { seedBuiltinExecutors } from "../executors";
 import { getExecutor, hasExecutor } from "../node-runtime";
 import { makeNode } from "./helpers";
+import {
+  getCircuitBreakerRegistry,
+  resetCircuitBreakerRegistryForTests,
+} from "@/lib/runtime/circuit-breaker";
 
 seedBuiltinExecutors();
 
@@ -124,6 +128,7 @@ async function run(
 }
 
 beforeEach(() => {
+  resetCircuitBreakerRegistryForTests();
   installFetch();
 });
 
@@ -376,5 +381,25 @@ describe("http-request executor — n8n-nodes-base.httpRequest", () => {
     await expect(run({ method: "GET", url: "https://example.com/get" })).rejects.toThrow(
       /HTTP Request failed: network down/,
     );
+  });
+
+  it("opens the host breaker after repeated 503s and fail-fasts", async () => {
+    getCircuitBreakerRegistry().setConfig({
+      enabled: true,
+      failureThreshold: 2,
+      cooldownMs: 60_000,
+      halfOpenMaxCalls: 1,
+      ignoreHosts: [],
+    });
+    installFetch(mockResponse("nope", { status: 503, contentType: "text/plain" }));
+    await expect(run({ method: "GET", url: "https://storm.example/x" })).rejects.toThrow(/HTTP 503/);
+    await expect(run({ method: "GET", url: "https://storm.example/x" })).rejects.toThrow(/HTTP 503/);
+    const before = calls.length;
+    await expect(run({ method: "GET", url: "https://storm.example/x" })).rejects.toThrow(
+      /Circuit breaker open for host:storm.example/,
+    );
+    expect(calls.length).toBe(before);
+    const open = getCircuitBreakerRegistry().list().find((b) => b.key === "host:storm.example");
+    expect(open?.state).toBe("open");
   });
 });

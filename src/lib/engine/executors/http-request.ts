@@ -135,7 +135,10 @@ async function executeWithUrl(
   method: string,
   headers: Record<string, string>,
   body: BodyInit | undefined,
-  node: { parameters: Record<string, unknown> },
+  node: {
+    parameters: Record<string, unknown>;
+    credentials?: Record<string, { id?: string | null } | undefined>;
+  },
   allowUrl?: (url: string) => boolean,
 ): Promise<import("../../workflow/types").INodeExecutionData[][]> {
   const options = (node.parameters.options as Record<string, unknown> | undefined) ?? {};
@@ -151,7 +154,14 @@ async function executeWithUrl(
     throw new Error(`HTTP Request blocked by allowUrl policy: ${url}`);
   }
 
+  const { breakerKeysForHttp, getCircuitBreakerRegistry, isTripStatus, CircuitOpenError } =
+    await import("../../runtime/circuit-breaker");
+  const breaker = getCircuitBreakerRegistry();
+  const breakerKeys = breakerKeysForHttp(url, node.credentials);
+  let countedFailure = false;
+
   try {
+    breaker.assertAllowed(breakerKeys);
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), timeout);
 
@@ -164,8 +174,16 @@ async function executeWithUrl(
     });
     clearTimeout(timer);
 
-    if (!response.ok && !neverError) {
-      throw new Error(`HTTP ${response.status} ${response.statusText ?? ""}`.trim());
+    if (!response.ok) {
+      if (isTripStatus(response.status)) {
+        breaker.recordFailure(breakerKeys, response.status);
+        countedFailure = true;
+      }
+      if (!neverError) {
+        throw new Error(`HTTP ${response.status} ${response.statusText ?? ""}`.trim());
+      }
+    } else {
+      breaker.recordSuccess(breakerKeys);
     }
 
     let responseData: unknown;
@@ -223,6 +241,17 @@ async function executeWithUrl(
       ],
     ];
   } catch (err) {
+    if (err instanceof CircuitOpenError) {
+      throw new Error(`HTTP Request failed: ${err.message}`);
+    }
+    if (!countedFailure) {
+      const msg = err instanceof Error ? err.message : String(err);
+      const statusMatch = /HTTP (\d{3})/.exec(msg);
+      const status = statusMatch ? Number(statusMatch[1]) : undefined;
+      if (status == null || isTripStatus(status)) {
+        breaker.recordFailure(breakerKeys, status);
+      }
+    }
     throw new Error(`HTTP Request failed: ${err instanceof Error ? err.message : String(err)}`);
   }
 }

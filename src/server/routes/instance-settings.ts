@@ -324,4 +324,61 @@ export default function instanceSettingsRoute(app: Hono<AppEnv>) {
     });
     return c.json(result);
   });
+
+  app.get("/api/v1/settings/circuit-breakers", async (c) => {
+    const userId = c.get("userId");
+    await ensureUser(userId);
+    const { ensureCircuitBreakerConfig } = await import("../services/circuit-breakers");
+    const { getCircuitBreakerRegistry } = await import("../../lib/runtime/circuit-breaker");
+    const config = await ensureCircuitBreakerConfig();
+    return c.json({
+      ...config,
+      breakers: getCircuitBreakerRegistry().list(),
+      note: "HTTP Request trips a breaker on 429/5xx per host and credential id. Open breakers fail fast until cooldown, then one half-open probe.",
+    });
+  });
+
+  app.put("/api/v1/settings/circuit-breakers", async (c) => {
+    const userId = c.get("userId");
+    await ensureUser(userId);
+    const gate = await requireInstanceAdmin(userId);
+    if (gate !== true) return c.json({ error: gate.error }, gate.status);
+    const body = await c.req.json<Record<string, unknown>>();
+    const { setCircuitBreakerConfig } = await import("../services/circuit-breakers");
+    const cfg = await setCircuitBreakerConfig(body);
+    await recordAudit({
+      actorId: userId,
+      action: "settings.circuitBreaker",
+      resource: "settings",
+      resourceId: "circuit-breakers",
+      detail: cfg,
+      ip: requestIp(c),
+    });
+    const { getCircuitBreakerRegistry } = await import("../../lib/runtime/circuit-breaker");
+    return c.json({ ...cfg, breakers: getCircuitBreakerRegistry().list() });
+  });
+
+  app.post("/api/v1/settings/circuit-breakers/reset", async (c) => {
+    const userId = c.get("userId");
+    await ensureUser(userId);
+    const gate = await requireInstanceAdmin(userId);
+    if (gate !== true) return c.json({ error: gate.error }, gate.status);
+    let key: string | undefined;
+    try {
+      const body = await c.req.json<{ key?: string }>();
+      key = typeof body.key === "string" ? body.key : undefined;
+    } catch {
+      key = undefined;
+    }
+    const { getCircuitBreakerRegistry } = await import("../../lib/runtime/circuit-breaker");
+    getCircuitBreakerRegistry().reset(key);
+    await recordAudit({
+      actorId: userId,
+      action: "settings.circuitBreaker",
+      resource: "settings",
+      resourceId: key ? `circuit-breakers.reset:${key}` : "circuit-breakers.reset",
+      ip: requestIp(c),
+    });
+    return c.json({ ok: true, breakers: getCircuitBreakerRegistry().list() });
+  });
 }
