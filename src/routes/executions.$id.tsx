@@ -190,6 +190,25 @@ function ExecutionDetailPage() {
               Cancel
             </button>
           )}
+          {row.status === "error" && (
+            <button
+              type="button"
+              className="rounded-md bg-primary px-3 py-1 text-xs font-medium text-primary-foreground"
+              onClick={() => {
+                void apiFetch(`/api/v1/executions/${row.id}/replay`, { method: "POST" }).then(async (res) => {
+                  if (!res.ok) return;
+                  const body = (await res.json()) as { executionId?: string };
+                  if (body.executionId) {
+                    window.location.href = `/executions/${body.executionId}`;
+                  } else {
+                    window.location.reload();
+                  }
+                });
+              }}
+            >
+              Replay from failed node
+            </button>
+          )}
         </div>
         <h1 className="font-mono text-sm text-muted-foreground">{row.id}</h1>
         {(meta.host || meta.stageId || meta.projectId || meta.fingerprint) && (

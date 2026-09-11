@@ -108,6 +108,7 @@ export default function workflowsRoute(app: Hono<AppEnv>) {
         settings: {
           executionTimeout: settings.executionTimeout,
           maxConcurrency: settings.maxConcurrency,
+          errorWorkflow: (settings as { errorWorkflow?: string }).errorWorkflow,
         },
       };
     });
@@ -312,7 +313,11 @@ export default function workflowsRoute(app: Hono<AppEnv>) {
     const { id } = c.req.param();
     const result = await loadWorkflowIfAllowed(id, userId, "editor");
     if ("error" in result) return c.json({ error: result.error }, result.status);
-    let body: { executionTimeout?: number | null; maxConcurrency?: number | null } = {};
+    let body: {
+      executionTimeout?: number | null;
+      maxConcurrency?: number | null;
+      errorWorkflow?: string | null;
+    } = {};
     try {
       body = (await c.req.json()) as typeof body;
     } catch {
@@ -334,6 +339,11 @@ export default function workflowsRoute(app: Hono<AppEnv>) {
       if (n == null || n === 0) delete settings.maxConcurrency;
       else if (typeof n === "number" && n > 0) settings.maxConcurrency = Math.floor(n);
     }
+    if ("errorWorkflow" in body) {
+      const id = typeof body.errorWorkflow === "string" ? body.errorWorkflow.trim() : "";
+      if (!id) delete settings.errorWorkflow;
+      else settings.errorWorkflow = id;
+    }
     const row = await prisma.workflow.update({
       where: { id },
       data: { settings: JSON.stringify(settings) },
@@ -343,6 +353,7 @@ export default function workflowsRoute(app: Hono<AppEnv>) {
       name: row.name,
       executionTimeout: settings.executionTimeout ?? null,
       maxConcurrency: settings.maxConcurrency ?? null,
+      errorWorkflow: settings.errorWorkflow ?? null,
     });
   });
 

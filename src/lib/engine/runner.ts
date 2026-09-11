@@ -122,6 +122,11 @@ export interface RunOptions {
   stopBeforeDestination?: boolean;
   /** Cooperative cancel / timeout. Return a reason to stop the run. */
   shouldAbort?: () => AbortReason | null | Promise<AbortReason | null>;
+  /**
+   * Items fed to {@link startNode} as main input so a replay can re-execute a
+   * failed node without re-running (or pinning) its ancestors.
+   */
+  startInputItems?: INodeExecutionData[];
 }
 
 export interface RunResult {
@@ -232,6 +237,15 @@ export async function executeWorkflow(options: RunOptions): Promise<RunResult> {
   const incoming = buildIncoming(workflow.connections);
 
   const lookupInputItems = (nodeName: string, inputIndex: number): INodeExecutionData[] => {
+    if (
+      options.startNode &&
+      nodeName === options.startNode &&
+      inputIndex === 0 &&
+      options.startInputItems &&
+      options.startInputItems.length > 0
+    ) {
+      return options.startInputItems;
+    }
     const edges = incoming.get(nodeName) ?? [];
     const items: INodeExecutionData[] = [];
     for (const e of edges) {
@@ -291,7 +305,9 @@ export async function executeWorkflow(options: RunOptions): Promise<RunResult> {
     // IF/Switch empty branches: do not run downstream nodes with no main items.
     // (Matches n8n — only the live branch executes.)
     const mainIncoming = (incoming.get(nodeName) ?? []).filter((e) => e.channel === "main");
-    if (mainIncoming.length > 0 && !isTriggerNode(node)) {
+    const hasStartInput =
+      Boolean(options.startNode && nodeName === options.startNode && options.startInputItems?.length);
+    if (mainIncoming.length > 0 && !isTriggerNode(node) && !hasStartInput) {
       const hasMainItems = mainIncoming.some((e) => {
         const outs = nodeOutputs.get(e.source);
         return (outs?.[e.sourceOutput]?.length ?? 0) > 0;
