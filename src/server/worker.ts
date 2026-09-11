@@ -98,16 +98,16 @@ export function startWorker(concurrency = 5): Worker<ExecutionJobData> {
         projectId = projectId || row?.projectId || "";
       }
 
-      const credentialResolver = projectId
-        ? credentialResolverForProject(projectId, ownerId)
-        : credentialResolverForUser(ownerId);
-      const dataTables = projectId
-        ? dataTableAccessForProject(projectId)
-        : dataTableAccessForUser(ownerId);
       let environmentId = jobEnvironmentId;
       if (!environmentId && projectId) {
         environmentId = (await getDefaultEnvironment(projectId))?.id;
       }
+      const credentialResolver = projectId
+        ? credentialResolverForProject(projectId, ownerId, environmentId)
+        : credentialResolverForUser(ownerId, environmentId);
+      const dataTables = projectId
+        ? dataTableAccessForProject(projectId)
+        : dataTableAccessForUser(ownerId);
       const vars = await loadVarsMap(projectId || null, environmentId ?? null);
 
       const tagged = { ...definition, __executionId: executionId } as typeof definition;

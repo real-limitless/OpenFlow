@@ -163,8 +163,8 @@ export async function enqueueOrRun(
   }
 
   const credentialResolver = scope.projectId
-    ? credentialResolverForProject(scope.projectId, scope.userId)
-    : credentialResolverForUser(scope.userId);
+    ? credentialResolverForProject(scope.projectId, scope.userId, envId)
+    : credentialResolverForUser(scope.userId, envId);
   const dataTables = scope.projectId
     ? dataTableAccessForProject(scope.projectId)
     : dataTableAccessForUser(scope.userId);

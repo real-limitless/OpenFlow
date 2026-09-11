@@ -177,7 +177,7 @@ export default function webhooksRoute(app: Hono<AppEnv>) {
       workflow: { ...definition, __executionId: execution.id },
       nodeExecutors: getExecutorMap(),
       pinData: webhookNodeName ? { [webhookNodeName]: [{ json: requestData }] } : undefined,
-      credentialResolver: credentialResolverForProject(projectId, ownerId),
+      credentialResolver: credentialResolverForProject(projectId, ownerId, environmentId),
       dataTables: dataTableAccessForProject(projectId),
       vars,
       resolveSubWorkflow: resolveSubWorkflowFromDb,

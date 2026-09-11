@@ -22,7 +22,10 @@ import {
   requireResourceAccess,
   type SharePermission,
 } from "../services/shares";
-import { environmentIdFromRequest } from "../services/environments";
+import { environmentIdFromRequest, resolveEnvironment } from "../services/environments";
+import { actorRole } from "../services/instance-admin";
+import { recordAudit, requestIp } from "../services/audit";
+import { canPromoteTo, mergeActivation } from "../../lib/workflow/promote";
 import { notifyExecutionStarted } from "../services/workflow-events";
 import { failStaleLlmList } from "../services/stale-llm-execution";
 import {
@@ -241,6 +244,43 @@ export default function workflowsRoute(app: Hono<AppEnv>) {
       folder: body.folder,
     });
     return c.json(next);
+  });
+
+  app.post("/api/v1/workflows/:id/promote", async (c) => {
+    const userId = c.get("userId");
+    const { id } = c.req.param();
+    const result = await loadWorkflowIfAllowed(id, userId, "editor");
+    if ("error" in result) return c.json({ error: result.error }, result.status);
+    const body = await c.req.json<{ toEnvironmentId?: string }>().catch(() => ({}));
+    const toId = body.toEnvironmentId?.trim();
+    if (!toId) return c.json({ error: "toEnvironmentId required" }, 400);
+    const env = await resolveEnvironment(result.row.projectId, toId);
+    if (!env) return c.json({ error: "Environment not found" }, 404);
+    const role = await actorRole(userId);
+    if (!canPromoteTo({ actorRole: role, toSlug: env.slug })) {
+      return c.json({ error: "Only instance admins can promote to production" }, 403);
+    }
+    const wf = deserializeJsonFields(result.row as unknown as Record<string, unknown>);
+    const meta = { ...(wf.meta ?? {}) };
+    meta.promotedTo = env.id;
+    meta.promotedToSlug = env.slug;
+    meta.promotedAt = new Date().toISOString();
+    meta.activeEnvironments = mergeActivation(meta.activeEnvironments, env.id);
+    const updated = await prisma.workflow.update({
+      where: { id },
+      data: { meta: JSON.stringify(meta) },
+    });
+    const saved = deserializeJsonFields(updated as unknown as Record<string, unknown>);
+    void snapshotWorkflowVersion({ workflowId: id, workflow: saved, createdBy: userId });
+    void recordAudit({
+      actorId: userId,
+      action: "workflow.promote",
+      resource: "workflow",
+      resourceId: id,
+      detail: { to: env.slug, environmentId: env.id },
+      ip: requestIp(c),
+    });
+    return c.json({ workflow: saved, environment: { id: env.id, slug: env.slug, name: env.name } });
   });
 
   app.get("/api/v1/workflows/:id", async (c) => {

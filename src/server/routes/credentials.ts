@@ -14,6 +14,11 @@ import { prisma } from "../db";
 import { requireResourceAccess } from "../services/shares";
 import { projectIdFromRequest } from "../services/projects";
 import { recordAudit, requestIp } from "../services/audit";
+import {
+  deleteCredentialOverride,
+  listCredentialOverrides,
+  upsertCredentialOverride,
+} from "../services/credential-overrides";
 
 export default function credentialsRoute(app: Hono<AppEnv>) {
   app.post("/api/v1/credentials", async (c) => {
@@ -127,7 +132,50 @@ export default function credentialsRoute(app: Hono<AppEnv>) {
       shared: access.via === "share",
       sharePermission: access.via === "share" ? access.permission : undefined,
       createdAt: credential.createdAt.toISOString(),
+      envOverrides: await listCredentialOverrides(credential.id),
     });
+  });
+
+  app.get("/api/v1/credentials/:id/env-overrides", async (c) => {
+    const userId = c.get("userId");
+    const { id } = c.req.param();
+    const credential = await prisma.credential.findUnique({ where: { id } });
+    if (!credential) return c.json({ error: "Not found" }, 404);
+    const access = await requireResourceAccess("credential", id, userId, "view", credential.projectId);
+    if (!access.ok) return c.json({ error: "Not found" }, 404);
+    return c.json({ overrides: await listCredentialOverrides(id) });
+  });
+
+  app.put("/api/v1/credentials/:id/env-overrides/:environmentId", async (c) => {
+    const userId = c.get("userId");
+    const { id, environmentId } = c.req.param();
+    const credential = await prisma.credential.findUnique({ where: { id } });
+    if (!credential) return c.json({ error: "Not found" }, 404);
+    const access = await requireResourceAccess("credential", id, userId, "edit", credential.projectId);
+    if (!access.ok) return c.json({ error: "Not found" }, 404);
+    const body = await c.req.json<{ data?: Record<string, unknown> }>().catch(() => ({}));
+    if (!body.data || typeof body.data !== "object") return c.json({ error: "data object required" }, 400);
+    await upsertCredentialOverride(id, environmentId, body.data);
+    void recordAudit({
+      actorId: userId,
+      action: "credential.env_override",
+      resource: "credential",
+      resourceId: id,
+      detail: { environmentId },
+      ip: requestIp(c),
+    });
+    return c.json({ ok: true, environmentId });
+  });
+
+  app.delete("/api/v1/credentials/:id/env-overrides/:environmentId", async (c) => {
+    const userId = c.get("userId");
+    const { id, environmentId } = c.req.param();
+    const credential = await prisma.credential.findUnique({ where: { id } });
+    if (!credential) return c.json({ error: "Not found" }, 404);
+    const access = await requireResourceAccess("credential", id, userId, "edit", credential.projectId);
+    if (!access.ok) return c.json({ error: "Not found" }, 404);
+    await deleteCredentialOverride(id, environmentId);
+    return c.json({ ok: true });
   });
 
   app.put("/api/v1/credentials/:id", async (c) => {
