@@ -27,7 +27,7 @@ export type AwsSmConfig = {
   accessKeyId?: string;
   secretAccessKey?: string;
   sessionToken?: string;
-  /** Optional custom endpoint (LocalStack) */
+  /** Optional custom endpoint (LocalStack). Still signed with SigV4. */
   endpoint?: string;
 };
 

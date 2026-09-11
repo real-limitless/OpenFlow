@@ -16,6 +16,8 @@ function redactConfig(type: string, config: Record<string, unknown>): Record<str
   if (type === "aws-sm") {
     if ("secretAccessKey" in out) out.secretAccessKey = "••••••••";
     if ("sessionToken" in out) out.sessionToken = "••••••••";
+    out.signing = "sigv4";
+    out.credentialSource = config.accessKeyId ? "static" : "default-chain";
   }
   return out;
 }
@@ -196,5 +198,26 @@ export default function secretProvidersRoute(app: Hono<AppEnv>) {
     await prisma.secretProvider.delete({ where: { id } });
     clearBackendCache();
     return c.body(null, 204);
+  });
+
+  app.post("/api/v1/secret-providers/:id/test", async (c) => {
+    const userId = c.get("userId");
+    const { id } = c.req.param();
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { role: true },
+    });
+    if (userId !== "local" && user?.role !== "owner" && user?.role !== "admin") {
+      return c.json({ error: "Only instance admins can manage secret providers" }, 403);
+    }
+    const existing = await prisma.secretProvider.findUnique({ where: { id } });
+    if (!existing) return c.json({ error: "Not found" }, 404);
+    if (existing.type !== "aws-sm") {
+      return c.json({ error: "Test is implemented for AWS Secrets Manager" }, 400);
+    }
+    const config = parseProviderConfig(existing.type, existing.configEncrypted);
+    const { probeAwsSm } = await import("../secrets/aws-sm");
+    const result = await probeAwsSm(config as { region: string });
+    return c.json(result, result.ok ? 200 : 502);
   });
 }
