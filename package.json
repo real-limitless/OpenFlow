@@ -51,7 +51,7 @@
     "typecheck:ci": "tsc --noEmit -p tsconfig.ci.json",
     "format": "prettier --write .",
     "test": "vitest run",
-    "test:ci": "vitest run src/server/__tests__/health-license.test.ts src/lib/engine/__tests__/executors.test.ts src/lib/nodes/__tests__/depth.test.ts src/server/services/__tests__/template-compat.test.ts src/lib/workflow/__tests__/import-compat.test.ts src/lib/auth/__tests__/registration-policy.test.ts",
+    "test:ci": "vitest run src/server/__tests__/health-license.test.ts src/lib/engine/__tests__/executors.test.ts src/lib/nodes/__tests__/depth.test.ts src/server/services/__tests__/template-compat.test.ts src/lib/workflow/__tests__/import-compat.test.ts src/lib/auth/__tests__/registration-policy.test.ts src/lib/security/__tests__/prod-secrets.test.ts",
     "test:batch": "bash scripts/factory/test-batch.sh",
     "test:dogfood": "vitest run src/lib/engine/__tests__/dogfood",
     "factory:batch": "bash scripts/factory/run_batch.sh",

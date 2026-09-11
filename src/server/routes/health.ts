@@ -53,6 +53,7 @@ export default function healthRoute(app: Hono<AppEnv>) {
         redis,
         auth: config.auth.disabled ? "disabled" : "enabled",
         worker: config.worker.enabled,
+        secrets: "ok",
         logStream: config.log.streamType,
       },
       ready ? 200 : 503,

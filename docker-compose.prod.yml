@@ -1,8 +1,10 @@
 # Production overlay — use with the base compose file:
 #   docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
 #
-# Before first start, set a strong CREDENTIALS_KEY in .env:
-#   node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
+# Before first start, set strong secrets in .env:
+#   CREDENTIALS_KEY=$(node -e "console.log(require('crypto').randomBytes(32).toString('hex'))")
+#   POSTGRES_PASSWORD=<non-default>
+#   DATABASE_URL=postgresql://openflow:${POSTGRES_PASSWORD}@db:5432/openflow
 #
 # Do not expose this stack on the public internet without TLS (Caddy/nginx/Traefik).
 
@@ -14,6 +16,8 @@ services:
       OPENFLOW_OPEN_REGISTER: "false"
       OPENFLOW_HOT_NODES: "false"
       NODE_ENV: production
+      DATABASE_URL: ${DATABASE_URL:?Set DATABASE_URL with a non-default password}
+      CREDENTIALS_KEY: ${CREDENTIALS_KEY:?Set CREDENTIALS_KEY}
       BINARY_STORAGE_DIR: /data/binary
       OPENFLOW_SECRETS_DIR: /data/secrets
     restart: unless-stopped
@@ -24,6 +28,8 @@ services:
   db:
     ports: !override
       - "127.0.0.1:15432:5432"
+    environment:
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD}
     restart: unless-stopped
 
   redis:
