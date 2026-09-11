@@ -38,8 +38,18 @@ export const executionQueue = new Queue<ExecutionJobData>("workflow-execution", 
 
 export const queueEvents = new QueueEvents("workflow-execution", { connection });
 
+export const scheduleQueue = new Queue<{ scheduleId: string }>("workflow-schedule", {
+  connection,
+  defaultJobOptions: {
+    attempts: 1,
+    removeOnComplete: 50,
+    removeOnFail: 50,
+  },
+});
+
 export async function closeQueue() {
   await executionQueue.close();
   await queueEvents.close();
+  await scheduleQueue.close();
   await connection.quit();
 }

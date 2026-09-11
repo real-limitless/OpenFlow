@@ -238,6 +238,7 @@ export default function instanceSettingsRoute(app: Hono<AppEnv>) {
         concurrency: config.worker.concurrency,
         queue: "workflow-execution",
         redis: process.env.REDIS_URL ? "configured" : "default",
+        schedulerBackend: (await import("../routes/schedules")).getSchedulerBackend(),
       },
     });
   });

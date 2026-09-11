@@ -1,92 +1,159 @@
 import type { Hono } from "hono";
+import { Worker } from "bullmq";
 import { prisma } from "../db";
 import type { AppEnv } from "../middleware/auth";
 import { enqueueOrRun } from "../execute";
 import { log } from "../log";
 import { notifyExecutionStarted } from "../services/workflow-events";
+import { connection, scheduleQueue } from "../queue";
+import { isFiveFieldCron } from "../../lib/runtime/cron";
 
-const scheduledJobs = new Map<string, NodeJS.Timeout>();
+const inProcessJobs = new Map<string, NodeJS.Timeout>();
+let scheduleWorker: Worker<{ scheduleId: string }> | null = null;
+let redisSchedules = true;
 
 function parseCronToMs(expr: string): number | null {
   const parts = expr.trim().split(/\s+/);
   if (parts.length !== 5) return null;
-
   const [minute, hour] = parts;
-
-  if (minute.startsWith("*/")) {
-    return parseInt(minute.slice(2)) * 60 * 1000;
-  }
-  if (minute === "0" && hour.startsWith("*/")) {
-    return parseInt(hour.slice(2)) * 60 * 60 * 1000;
-  }
-  if (minute === "0" && hour === "*") {
-    return 60 * 60 * 1000;
-  }
-  if (minute === "0" && hour !== "*") {
-    return 24 * 60 * 60 * 1000;
-  }
-
+  if (minute.startsWith("*/")) return parseInt(minute.slice(2), 10) * 60 * 1000;
+  if (minute === "0" && hour.startsWith("*/")) return parseInt(hour.slice(2), 10) * 60 * 60 * 1000;
+  if (minute === "0" && hour === "*") return 60 * 60 * 1000;
+  if (minute === "0" && hour !== "*") return 24 * 60 * 60 * 1000;
   return null;
 }
 
-async function startSchedule(schedule: { id: string; workflowId: string; cronExpr: string }) {
+async function fireSchedule(scheduleId: string): Promise<void> {
+  const schedule = await prisma.scheduledTrigger.findUnique({ where: { id: scheduleId } });
+  if (!schedule?.active) return;
+  const workflow = await prisma.workflow.findUnique({ where: { id: schedule.workflowId } });
+  if (!workflow?.active) return;
+
+  const execution = await prisma.execution.create({
+    data: {
+      workflowId: schedule.workflowId,
+      status: "running",
+      mode: "trigger",
+    },
+  });
+  notifyExecutionStarted(schedule.workflowId, execution.id, "trigger");
+  await enqueueOrRun(
+    schedule.workflowId,
+    execution.id,
+    "trigger",
+    undefined,
+    undefined,
+    workflow.userId,
+    workflow.projectId,
+  );
+  await prisma.scheduledTrigger.update({
+    where: { id: schedule.id },
+    data: { lastRunAt: new Date() },
+  });
+}
+
+async function startDurableSchedule(schedule: { id: string; cronExpr: string }) {
+  if (!isFiveFieldCron(schedule.cronExpr)) return;
+  await scheduleQueue.add(
+    "fire",
+    { scheduleId: schedule.id },
+    {
+      repeat: { pattern: schedule.cronExpr },
+      jobId: schedule.id,
+    },
+  );
+}
+
+async function stopDurableSchedule(scheduleId: string, cronExpr?: string) {
+  const jobs = await scheduleQueue.getRepeatableJobs();
+  for (const job of jobs) {
+    if (job.id === scheduleId || job.key.includes(scheduleId)) {
+      await scheduleQueue.removeRepeatableByKey(job.key);
+    }
+  }
+  if (cronExpr) {
+    await scheduleQueue.removeRepeatable("fire", { pattern: cronExpr }, scheduleId).catch(() => undefined);
+  }
+}
+
+function startInProcessSchedule(schedule: { id: string; workflowId: string; cronExpr: string }) {
   const intervalMs = parseCronToMs(schedule.cronExpr);
   if (!intervalMs) return;
-
-  const job = setInterval(async () => {
-    try {
-      const workflow = await prisma.workflow.findUnique({ where: { id: schedule.workflowId } });
-      if (!workflow || !workflow.active) return;
-
-      const execution = await prisma.execution.create({
-        data: {
-          workflowId: schedule.workflowId,
-          status: "running",
-          mode: "trigger",
-        },
-      });
-      notifyExecutionStarted(schedule.workflowId, execution.id, "trigger");
-
-      await enqueueOrRun(
-        schedule.workflowId,
-        execution.id,
-        "trigger",
-        undefined,
-        undefined,
-        workflow.userId,
-        workflow.projectId,
-      );
-
-      await prisma.scheduledTrigger.update({
-        where: { id: schedule.id },
-        data: { lastRunAt: new Date() },
-      });
-    } catch (err) {
+  const job = setInterval(() => {
+    void fireSchedule(schedule.id).catch((err) => {
       log.error("schedule execution failed", {
         component: "scheduler",
         workflowId: schedule.workflowId,
         error: err instanceof Error ? err.message : String(err),
       });
-    }
+    });
   }, intervalMs);
-
-  scheduledJobs.set(schedule.id, job);
+  inProcessJobs.set(schedule.id, job);
 }
 
-async function stopSchedule(scheduleId: string) {
-  const job = scheduledJobs.get(scheduleId);
+async function startSchedule(schedule: { id: string; workflowId: string; cronExpr: string }) {
+  if (redisSchedules) {
+    try {
+      await startDurableSchedule(schedule);
+      return;
+    } catch (err) {
+      log.error("durable schedule register failed; falling back to in-process", {
+        component: "scheduler",
+        error: err instanceof Error ? err.message : String(err),
+      });
+      redisSchedules = false;
+    }
+  }
+  startInProcessSchedule(schedule);
+}
+
+async function stopSchedule(scheduleId: string, cronExpr?: string) {
+  const job = inProcessJobs.get(scheduleId);
   if (job) {
     clearInterval(job);
-    scheduledJobs.delete(scheduleId);
+    inProcessJobs.delete(scheduleId);
+  }
+  if (redisSchedules) {
+    await stopDurableSchedule(scheduleId, cronExpr).catch(() => undefined);
   }
 }
 
+function ensureScheduleWorker() {
+  if (scheduleWorker) return;
+  scheduleWorker = new Worker<{ scheduleId: string }>(
+    "workflow-schedule",
+    async (job) => {
+      await fireSchedule(job.data.scheduleId);
+    },
+    { connection, concurrency: 1 },
+  );
+  scheduleWorker.on("error", (err) => {
+    log.error("schedule worker error", { component: "scheduler", error: err.message });
+  });
+}
+
+export function getSchedulerBackend(): "bullmq" | "in-process" {
+  return redisSchedules ? "bullmq" : "in-process";
+}
+
 export async function initializeSchedules() {
+  try {
+    await connection.ping();
+    redisSchedules = true;
+    ensureScheduleWorker();
+  } catch {
+    redisSchedules = false;
+  }
+
   const schedules = await prisma.scheduledTrigger.findMany({ where: { active: true } });
   for (const schedule of schedules) {
     await startSchedule(schedule);
   }
-  log.info("scheduler started", { component: "scheduler", count: schedules.length });
+  log.info("scheduler started", {
+    component: "scheduler",
+    count: schedules.length,
+    backend: redisSchedules ? "bullmq" : "in-process",
+  });
 }
 
 export default function schedulesRoute(app: Hono<AppEnv>) {
@@ -105,6 +172,9 @@ export default function schedulesRoute(app: Hono<AppEnv>) {
     if (!workflowId || !nodeId || !cronExpr) {
       return c.json({ error: "workflowId, nodeId, and cronExpr required" }, 400);
     }
+    if (!isFiveFieldCron(String(cronExpr))) {
+      return c.json({ error: "cronExpr must be a 5-field cron expression" }, 400);
+    }
 
     const owned = await prisma.workflow.findFirst({
       where: { id: workflowId, project: { members: { some: { userId } } } },
@@ -117,7 +187,7 @@ export default function schedulesRoute(app: Hono<AppEnv>) {
     });
 
     await startSchedule(schedule);
-    return c.json(schedule, 201);
+    return c.json({ ...schedule, backend: redisSchedules ? "bullmq" : "in-process" }, 201);
   });
 
   app.delete("/api/v1/schedules/:id", async (c) => {
@@ -127,7 +197,7 @@ export default function schedulesRoute(app: Hono<AppEnv>) {
       where: { id, workflow: { project: { members: { some: { userId } } } } },
     });
     if (!existing) return c.json({ error: "Not found" }, 404);
-    await stopSchedule(id);
+    await stopSchedule(id, existing.cronExpr);
     await prisma.scheduledTrigger.delete({ where: { id } });
     return c.json({ success: true });
   });
