@@ -24,6 +24,12 @@ import { ShareDialog } from "@/components/share/share-dialog";
 import { PageShell } from "@/components/layout/page-shell";
 import { WelcomePanel } from "@/components/onboarding/welcome-panel";
 import {
+  WorkflowOrganizationBar,
+  WorkflowOrgRow,
+  bulkOrganize,
+  useWorkflowOrganization,
+} from "@/components/workflows/folder-tag-bar";
+import {
   armOnboardingBanner,
   loadOnboardingState,
   patchOnboardingState,
@@ -155,6 +161,16 @@ function WorkflowList() {
   const empty = workflows !== null && workflows.length === 0;
   const showWelcome =
     workflows !== null && shouldShowOnboarding(onboarding, workflows.length);
+  const org = useWorkflowOrganization(workflows);
+
+  const toggleSelected = (id: string) => {
+    org.setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
 
   return (
     <PageShell>
@@ -269,6 +285,30 @@ function WorkflowList() {
           </span>
         </h2>
 
+        {workflows && workflows.length > 0 && (
+          <WorkflowOrganizationBar
+            folders={org.folders}
+            allTags={org.allTags}
+            filter={org.filter}
+            setFilter={org.setFilter}
+            views={org.views}
+            setViews={org.setViews}
+            selectedCount={org.selected.size}
+            onBulkFolder={(folder) => {
+              void bulkOrganize([...org.selected], { folder }).then(() => {
+                org.setSelected(new Set());
+                refresh();
+              });
+            }}
+            onBulkTag={(tag) => {
+              void bulkOrganize([...org.selected], { addTags: [tag] }).then(() => {
+                org.setSelected(new Set());
+                refresh();
+              });
+            }}
+          />
+        )}
+
         <div className="mt-3 divide-y divide-border overflow-hidden rounded-lg border border-border bg-card">
           {workflows === null && <p className="p-6 text-[13px] text-muted-foreground">Loading…</p>}
           {workflows?.length === 0 && !showWelcome && (
@@ -286,7 +326,7 @@ function WorkflowList() {
               </p>
             </div>
           )}
-          {workflows?.map((wf) => {
+          {org.visible.map((wf) => {
             const nodeCount =
               Array.isArray(wf.nodes) && wf.nodes.length > 0
                 ? wf.nodes.length
@@ -295,6 +335,12 @@ function WorkflowList() {
             const notReady = rows.filter((r) => r.status !== "ready").length;
             return (
               <div key={wf.id} className="flex items-center gap-3 px-4 py-3">
+                <WorkflowOrgRow
+                  workflow={wf}
+                  selected={org.selected.has(wf.id)}
+                  onToggle={() => toggleSelected(wf.id)}
+                  onChanged={refresh}
+                />
                 <Link
                   to="/workflow/$id"
                   params={{ id: wf.id }}

@@ -82,6 +82,11 @@ export const apiRepository: WorkflowRepository = {
       connections: (r.connections as IWorkflow["connections"]) ?? {},
       settings: r.settings ?? {},
       updatedAt: r.updatedAt,
+      tags: Array.isArray((r as { tags?: unknown }).tags) ? (r as { tags: string[] }).tags : [],
+      folder: typeof (r as { folder?: unknown }).folder === "string" ? (r as { folder: string }).folder : "",
+      meta: typeof (r as { folder?: unknown }).folder === "string" && (r as { folder: string }).folder
+        ? { folder: (r as { folder: string }).folder }
+        : r.meta,
       nodeCount: (r as { nodeCount?: number }).nodeCount,
     })) as IWorkflow[];
   },
