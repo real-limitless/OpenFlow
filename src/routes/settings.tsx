@@ -3,6 +3,7 @@ import { PageShell } from "@/components/layout/page-shell";
 import { RateLimitSettingsPanel } from "@/components/settings/rate-limit-settings-panel";
 import { SecurityHeadersPanel } from "@/components/settings/security-headers-panel";
 import { WorkerRuntimePanel } from "@/components/settings/worker-runtime-panel";
+import { WebhookSettingsPanel } from "@/components/settings/webhook-settings-panel";
 import { ExecutionGovernancePanel } from "@/components/settings/execution-governance-panel";
 
 export const Route = createFileRoute("/settings")({
