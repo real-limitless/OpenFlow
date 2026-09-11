@@ -9,8 +9,8 @@ services:
   api:
     build: .
     image: openflow:local
-    ports:
-      - "3000:3000"
+    expose:
+      - "3000"
     env_file:
       - path: .env
         required: false
@@ -62,8 +62,6 @@ services:
 
   db:
     image: postgres:16-alpine
-    ports:
-      - "15432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
     environment:
@@ -78,8 +76,6 @@ services:
 
   redis:
     image: redis:7-alpine
-    ports:
-      - "6379:6379"
     volumes:
       - redis-data:/data
     healthcheck:
