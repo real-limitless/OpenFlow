@@ -381,4 +381,61 @@ export default function instanceSettingsRoute(app: Hono<AppEnv>) {
     });
     return c.json({ ok: true, breakers: getCircuitBreakerRegistry().list() });
   });
+
+  app.get("/api/v1/settings/lifecycle-webhooks", async (c) => {
+    const userId = c.get("userId");
+    await ensureUser(userId);
+    const { getLifecycleSubscriptions, recentLifecycleDeliveries } = await import(
+      "../services/lifecycle-webhooks"
+    );
+    const { LIFECYCLE_EVENTS } = await import("../../lib/lifecycle/webhooks");
+    const subscriptions = (await getLifecycleSubscriptions()).map((s) => ({
+      ...s,
+      secret: s.secret ? "********" : "",
+      secretSet: Boolean(s.secret),
+    }));
+    return c.json({
+      events: LIFECYCLE_EVENTS,
+      subscriptions,
+      deliveries: recentLifecycleDeliveries(),
+      note: "Outbound POSTs are HMAC-SHA256 signed (X-OpenFlow-Signature over timestamp.body). Replay window is 5 minutes.",
+    });
+  });
+
+  app.put("/api/v1/settings/lifecycle-webhooks", async (c) => {
+    const userId = c.get("userId");
+    await ensureUser(userId);
+    const gate = await requireInstanceAdmin(userId);
+    if (gate !== true) return c.json({ error: gate.error }, gate.status);
+    const body = await c.req.json<{ subscriptions?: unknown[] }>();
+    const { getLifecycleSubscriptions, setLifecycleSubscriptions } = await import(
+      "../services/lifecycle-webhooks"
+    );
+    const prev = await getLifecycleSubscriptions();
+    const prevById = new Map(prev.map((s) => [s.id, s]));
+    const incoming = Array.isArray(body.subscriptions) ? body.subscriptions : [];
+    const merged = incoming.map((row) => {
+      const o = row && typeof row === "object" ? (row as Record<string, unknown>) : {};
+      const id = typeof o.id === "string" ? o.id : "";
+      const secretRaw = typeof o.secret === "string" ? o.secret : "";
+      const keep = secretRaw === "" || secretRaw === "********" ? prevById.get(id)?.secret ?? "" : secretRaw;
+      return { ...o, secret: keep };
+    });
+    const subscriptions = await setLifecycleSubscriptions(merged);
+    await recordAudit({
+      actorId: userId,
+      action: "settings.lifecycleWebhooks",
+      resource: "settings",
+      resourceId: "lifecycle-webhooks",
+      detail: { count: subscriptions.length },
+      ip: requestIp(c),
+    });
+    return c.json({
+      subscriptions: subscriptions.map((s) => ({
+        ...s,
+        secret: s.secret ? "********" : "",
+        secretSet: Boolean(s.secret),
+      })),
+    });
+  });
 }

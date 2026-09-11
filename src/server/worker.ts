@@ -179,6 +179,7 @@ export function startWorker(concurrency = 5): Worker<ExecutionJobData> {
           result,
         });
         recordExecution("waiting");
+        notifyExecutionFinished(workflowId, executionId, "waiting");
         wlog.info("execution waiting", { node: result.paused.nodeName, resume: result.paused.resume });
         return { success: true, paused: true };
       }
