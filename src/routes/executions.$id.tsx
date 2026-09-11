@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import type { ExecutionRunData } from "@/lib/engine/types";
 import { openExecutionStream } from "@/lib/editor/execution-stream";
 import { AgentTraceBlock, extractAgentView } from "@/components/editor/execution/AgentTraceView";
+import { buildExecutionEntries } from "@/components/editor/execution/use-execution-entries";
 import { apiFetch } from "@/lib/auth/client";
 
 export const Route = createFileRoute("/executions/$id")({
