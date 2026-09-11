@@ -4,7 +4,7 @@ import type { CompatLevel } from "@/lib/templates/client";
 const LABELS: Record<CompatLevel, string> = {
   ready: "Ready",
   partial: "Partial",
-  limited: "Limited",
+  limited: "Stub",
 };
 
 const STYLES: Record<CompatLevel, string> = {
@@ -27,7 +27,7 @@ export function CompatibilityBadge({
     <Badge
       variant="outline"
       className={`text-[10px] font-medium ${STYLES[level]} ${className}`}
-      title={`OpenFlow node compatibility: ${LABELS[level]}`}
+      title={`Executor depth: ${LABELS[level]}`}
     >
       {LABELS[level]}
     </Badge>

@@ -277,10 +277,10 @@ function TemplatesMarketplace() {
               })
             }
           >
-            <option value="any">Any compatibility</option>
+            <option value="any">Any depth</option>
             <option value="ready">Ready</option>
             <option value="partial">Partial</option>
-            <option value="limited">Limited</option>
+            <option value="limited">Stub</option>
           </select>
           {sources.length > 0 && (
             <select

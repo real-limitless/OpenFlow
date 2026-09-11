@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ChevronDown, ChevronRight } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { DepthBadge } from "@/components/nodes/depth-badge";
+import { nodeDepth } from "@/lib/nodes/depth";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { NodeIcon } from "./BaseNode";
 import { cn } from "@/lib/utils";
@@ -79,7 +81,7 @@ export function AnsiblePaletteSection({
   const q = query.trim();
   const isSearch = q.length > 0;
 
-  const [sectionOpen, setSectionOpen] = useState(true);
+  const [sectionOpen, setSectionOpen] = useState(false);
   const [collections, setCollections] = useState<AnsibleCollectionSummary[]>([]);
   const [totalModules, setTotalModules] = useState(0);
   const [collectionsLoading, setCollectionsLoading] = useState(false);
@@ -213,8 +215,9 @@ export function AnsiblePaletteSection({
           ) : (
             <ChevronRight className="size-3.5 shrink-0 text-muted-foreground" />
           )}
-          <span className="flex-1 font-mono text-[10px] uppercase tracking-[0.14em] text-muted-foreground">
+          <span className="flex flex-1 items-center gap-1.5 font-mono text-[10px] uppercase tracking-[0.14em] text-muted-foreground">
             Ansible
+            <DepthBadge depth={nodeDepth(ANSIBLE_NODE_TYPE)} />
           </span>
           <Badge variant="secondary" className="h-5 px-1.5 text-[10px] tabular-nums">
             {badge}

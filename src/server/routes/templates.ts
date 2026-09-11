@@ -97,7 +97,7 @@ function mapListItem(row: ListRow) {
     authorAvatar: row.authorAvatar,
     sourceUrl: row.sourceUrl,
     libraryUrl: row.libraryUrl,
-    readyToDemo: row.readyToDemo,
+    readyToDemo: row.readyToDemo && compatibility.level === "ready",
     publishedAt: row.publishedAt?.toISOString() ?? null,
     syncedAt: row.syncedAt.toISOString(),
     compatibility: {

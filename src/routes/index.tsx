@@ -274,7 +274,7 @@ function WorkflowList() {
                 ? wf.nodes.length
                 : Number((wf as { nodeCount?: number }).nodeCount ?? 0);
             const rows = Array.isArray(wf.nodes) && wf.nodes.length > 0 ? migrationReport(wf) : [];
-            const unsupported = rows.filter((r) => r.status === "placeholder").length;
+            const notReady = rows.filter((r) => r.status !== "ready").length;
             return (
               <div key={wf.id} className="flex items-center gap-3 px-4 py-3">
                 <Link
@@ -285,7 +285,7 @@ function WorkflowList() {
                   <p className="truncate text-[14px] font-medium">{wf.name}</p>
                   <p className="mt-0.5 font-mono text-[11px] text-muted-foreground">
                     {nodeCount} nodes
-                    {unsupported > 0 && ` · ${unsupported} unsupported`}
+                    {notReady > 0 && ` · ${notReady} not ready`}
                     {wf.updatedAt && ` · updated ${new Date(wf.updatedAt).toLocaleString()}`}
                   </p>
                 </Link>

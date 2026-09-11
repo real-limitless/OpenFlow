@@ -9,60 +9,35 @@ import {
 } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useWorkflowStore } from "@/store/workflow-store";
-import { getExecutorUnavailability, hasBuiltinExecutor } from "@/lib/engine/node-runtime";
+import { getExecutorUnavailability } from "@/lib/engine/node-runtime";
 import { getNodeType } from "@/lib/nodes/registry";
+import { DEPTH_LABEL, nodeDepth, type NodeDepth } from "@/lib/nodes/depth";
 import { cn } from "@/lib/utils";
-
-type RowStatus = "supported" | "needs-setup" | "partial" | "placeholder";
 
 interface MigrationRow {
   name: string;
   type: string;
-  status: RowStatus;
+  status: NodeDepth;
   displayName: string;
   reason?: string;
 }
 
-/**
- * A node is "supported" when a runtime executor is registered for its resolved
- * type. Definitions without inputs/outputs (e.g. sticky note) are canvas-only
- * and count as supported since they are never executed. A registered definition
- * with no executor is "partial"; an unknown type is a "placeholder".
- *
- * "needs-setup" is checked first and deliberately outranks a registered
- * executor: those nodes resolve to a real function that throws on first use
- * because no transport was wired in, so reporting them as supported would be a
- * promise the build cannot keep.
- */
-function rowStatus(type: string): RowStatus {
-  const desc = getNodeType(type);
-  if (getExecutorUnavailability(desc.name)) return "needs-setup";
-  if (hasBuiltinExecutor(desc.name)) return "supported";
-  if ((desc.inputs ?? []).length === 0 && (desc.outputs ?? []).length === 0) return "supported";
-  return desc.placeholder ? "placeholder" : "partial";
-}
-
 const STATUS_META: Record<
-  RowStatus,
+  NodeDepth,
   { label: string; icon: typeof CheckCircle2; className: string }
 > = {
-  supported: {
-    label: "Supported",
+  ready: {
+    label: DEPTH_LABEL.ready,
     icon: CheckCircle2,
     className: "bg-[var(--success)]/12 text-[var(--success)]",
   },
-  "needs-setup": {
-    label: "Needs setup",
-    icon: TriangleAlert,
-    className: "bg-[var(--warning)]/12 text-[var(--warning)]",
-  },
   partial: {
-    label: "Definition only",
+    label: DEPTH_LABEL.partial,
     icon: CircleDashed,
     className: "bg-[var(--warning)]/12 text-[var(--warning)]",
   },
-  placeholder: {
-    label: "Unknown",
+  stub: {
+    label: DEPTH_LABEL.stub,
     icon: TriangleAlert,
     className: "bg-[var(--warning)]/12 text-[var(--warning)]",
   },
@@ -83,21 +58,21 @@ export function MigrationReportDialog({
         return {
           name: node.name,
           type: node.type,
-          status: rowStatus(node.type),
+          status: nodeDepth(node.type),
           displayName: desc.displayName,
           reason: getExecutorUnavailability(desc.name)?.reason,
         };
       }),
     [workflow],
   );
-  const supported = rows.filter((r) => r.status === "supported").length;
+  const supported = rows.filter((r) => r.status === "ready").length;
   const total = rows.length;
   const pct = total ? Math.round((supported / total) * 100) : 100;
 
   const grouped = useMemo(() => {
-    const map = new Map<string, { type: string; count: number; status: RowStatus }>();
+    const map = new Map<string, { type: string; count: number; status: NodeDepth }>();
     for (const r of rows) {
-      if (r.status === "supported") continue;
+      if (r.status === "ready") continue;
       const existing = map.get(r.type);
       if (existing) existing.count += 1;
       else map.set(r.type, { type: r.type, count: 1, status: r.status });
@@ -111,8 +86,8 @@ export function MigrationReportDialog({
         <DialogHeader>
           <DialogTitle>Migration report</DialogTitle>
           <DialogDescription>
-            {supported} of {total} nodes ({pct}%) are implemented in this build. Unsupported nodes
-            keep their parameters and export unchanged.
+            {supported} of {total} nodes ({pct}%) are ready to run in this build. Partial and stub
+            nodes keep their parameters and export unchanged.
           </DialogDescription>
         </DialogHeader>
 
@@ -123,7 +98,7 @@ export function MigrationReportDialog({
         {grouped.length > 0 && (
           <div className="rounded-lg border border-border bg-muted/30 p-3">
             <p className="mb-2 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
-              Unsupported node types
+              Not-ready node types
             </p>
             <ul className="space-y-1">
               {grouped.map((g) => {

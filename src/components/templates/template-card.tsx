@@ -68,6 +68,14 @@ export function TemplateCard({ item }: { item: TemplateListItem }) {
             <Boxes className="size-3 opacity-70" />
             {item.nodeCount}
           </span>
+          <span className="tabular-nums">
+            {Math.round(item.compatibility.ratio * 100)}% ready
+          </span>
+          {item.readyToDemo ? (
+            <span className="rounded-full border border-emerald-500/30 bg-emerald-500/10 px-1.5 py-0.5 text-[10px] text-emerald-700 dark:text-emerald-400">
+              Ready to demo
+            </span>
+          ) : null}
           {item.sourceName ? (
             <span
               className="max-w-[9rem] truncate rounded-full border border-border/80 bg-background px-1.5 py-0.5 text-[10px] text-muted-foreground"
@@ -76,6 +84,8 @@ export function TemplateCard({ item }: { item: TemplateListItem }) {
               {item.sourceName}
             </span>
           ) : null}
+            Ready to demo
+          </span>
           {cats.map((c) => (
             <span
               key={c}

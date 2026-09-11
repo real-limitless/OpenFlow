@@ -13,6 +13,8 @@ import { encodeNodeDragPayload, OPENFLOW_NODE_MIME } from "@/lib/workflow/add-no
 import { AnsiblePaletteSection } from "./AnsiblePaletteSection";
 import { McpGalleryPaletteSection } from "./McpGalleryPaletteSection";
 import { McpFlowBackendsPaletteSection } from "./McpFlowBackendsPaletteSection";
+import { DepthBadge } from "@/components/nodes/depth-badge";
+import { nodeDepth } from "@/lib/nodes/depth";
 
 interface Props {
   onAdd: (type: string, init?: AddNodeInit) => void;
@@ -34,11 +36,12 @@ const accentText: Record<string, string> = {
 
 const DEFAULT_OPEN: Record<string, boolean> = {
   Triggers: true,
+  Core: true,
+  Flow: true,
   Actions: true,
-  Flow: false,
+  Canvas: true,
   Transform: false,
   Helpers: false,
-  Canvas: true,
   AI: false,
   "AI Tool": false,
   Communication: false,
@@ -54,7 +57,6 @@ const DEFAULT_OPEN: Record<string, boolean> = {
   Payments: false,
   Analytics: false,
   App: false,
-  Core: false,
   Utility: false,
   Miscellaneous: false,
 };
@@ -251,6 +253,7 @@ export function NodePalette({ onAdd }: Props) {
                       <span className="truncate text-[13px] font-medium text-foreground">
                         {it.displayName}
                       </span>
+                      <DepthBadge depth={nodeDepth(it.type)} />
                       {it.rankTier && (
                         <Badge
                           variant="outline"
@@ -279,10 +282,6 @@ export function NodePalette({ onAdd }: Props) {
         )}
 
         <div className="space-y-1 p-2">
-          <AnsiblePaletteSection query={query} onAdd={onAdd} />
-          <McpFlowBackendsPaletteSection onAdd={onAdd} />
-          <McpGalleryPaletteSection query={query} onAdd={onAdd} />
-
           {grouped.map((group) => {
             const isOpen = openCategories[group.category] ?? false;
             return (
@@ -337,8 +336,11 @@ export function NodePalette({ onAdd }: Props) {
                             <NodeIcon name={d.icon} className="size-4" />
                           </span>
                           <span className="min-w-0">
-                            <span className="block truncate text-[13px] font-medium text-foreground">
-                              {d.displayName}
+                            <span className="flex flex-wrap items-center gap-1.5">
+                              <span className="truncate text-[13px] font-medium text-foreground">
+                                {d.displayName}
+                              </span>
+                              <DepthBadge depth={nodeDepth(d.name)} />
                             </span>
                             <span className="block text-[11px] leading-snug text-muted-foreground">
                               {d.description}
@@ -352,17 +354,23 @@ export function NodePalette({ onAdd }: Props) {
               </Collapsible>
             );
           })}
+
+          <McpFlowBackendsPaletteSection onAdd={onAdd} />
+          <McpGalleryPaletteSection query={query} onAdd={onAdd} />
+          <AnsiblePaletteSection query={query} onAdd={onAdd} />
+
           {!grouped.length && isSearching && (
             <p className="px-2 py-4 text-sm text-muted-foreground">
-              No core nodes match “{query}” (check Ansible results above).
+              No core nodes match “{query}” (check Ansible results below).
             </p>
           )}
         </div>
       </div>
 
       <p className="border-t border-border p-3 text-[11px] leading-snug text-muted-foreground">
-        Drag onto the canvas, or click to place. Unsupported imported types keep their parameters as
-        placeholder nodes.
+        Drag onto the canvas, or click to place. Ready means a builtin executor can run. Partial
+        means a definition without a working run path. Stub types stay as non-executable
+        placeholders on import.
       </p>
     </aside>
   );
