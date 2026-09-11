@@ -345,8 +345,8 @@ export const code: INodeTypeDescription = {
       noDataExpression: true,
       options: [
         { name: "JavaScript", value: "javaScript" },
-        { name: "Python", value: "pythonNative" },
-        { name: "Python (legacy Pyodide)", value: "python" },
+        { name: "Python", value: "python" },
+        { name: "Python (legacy Pyodide)", value: "pythonPyodide" },
       ],
     },
     {
@@ -366,11 +366,11 @@ export const code: INodeTypeDescription = {
         'return [{"json": {"n": i["json"].get("x")}} for i in _items]',
       noDataExpression: true,
       typeOptions: { editor: "code", rows: 16 },
-      displayOptions: { show: { language: ["pythonNative", "python"] } },
+      displayOptions: { show: { language: ["python", "pythonNative", "pythonPyodide"] } },
     },
     {
       displayName:
-        "Code runs in a sandbox. Python (native) uses restricted host python3; legacy Python uses Pyodide. Network/imports disabled by default.",
+        "Code runs in a sandbox. Python uses a restricted python3 subprocess (os/subprocess denied). Legacy Pyodide is in-process WASM. Network/imports disabled by default.",
       name: "notice",
       type: "notice",
       default: "",

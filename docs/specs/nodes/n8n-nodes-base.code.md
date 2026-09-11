@@ -42,9 +42,9 @@ status: implemented
 | name | type | default | required | displayOptions | notes |
 |------|------|---------|----------|----------------|-------|
 | mode | options | `runOnceForAllItems` | no | — | **Run mode.** Enum: `runOnceForAllItems` (“Run Once for All Items”), `runOnceForEachItem` (“Run Once for Each Item”). `noDataExpression`. |
-| language | options (v2) / hidden (v1) | `javaScript` | no | v2: always shown; v1: hidden fixed `javaScript` | **Language.** v2 enum: `javaScript`, `pythonNative`. Legacy workflows may still store `python` (Pyodide) on the wire — UI for that path is deprecated (**documented**). `noDataExpression`. |
+| language | options (v2) / hidden (v1) | `javaScript` | no | v2: always shown; v1: hidden fixed `javaScript` | **Language.** v2 enum: `javaScript`, `python` (restricted host subprocess), `pythonNative` (same runner, import alias), `pythonPyodide` (legacy in-process WASM). `noDataExpression`. |
 | jsCode | string (code editor) | `""` | when language is JS | v1 always (by mode); v2 when `language=javaScript` (by mode) | JavaScript source. Editor language `javaScript`. `noDataExpression` (code is not a `{{ }}` expression field). |
-| pythonCode | string (code editor) | `""` | when language is Python | when `language` ∈ `python` \| `pythonNative` (by mode) | Python source. Editor language `python`. `noDataExpression`. |
+| pythonCode | string (code editor) | `""` | when language is Python | when `language` ∈ `python` \| `pythonNative` \| `pythonPyodide` | Python source. Editor language `python`. `noDataExpression`. |
 | notice | notice | `""` | no | by language | UI tips only (JS: `$` helpers / `console.log`; Python: `print` / limited helpers). Not runtime logic. |
 
 ### Mode × code field
@@ -54,7 +54,7 @@ Both `jsCode` and `pythonCode` appear twice in the published property list (all-
 ### Version notes
 
 - **typeVersion 1:** Language fixed to JavaScript (hidden). Only `mode` + `jsCode`.
-- **typeVersion 2 (default):** User picks `language`. JavaScript uses `jsCode`; Python uses `pythonCode` with value `pythonNative` for the current native runner. Legacy `language: "python"` means Pyodide (unsupported on product v2 per docs).
+- **typeVersion 2 (default):** User picks `language`. JavaScript uses `jsCode`; Python uses `pythonCode`. `python` and `pythonNative` share the restricted host `python3` subprocess. `pythonPyodide` is the leftover in-process WASM path.
 
 ## Runtime behavior
 
@@ -88,7 +88,7 @@ Consume the upstream `main` item list: `{ json, binary?, pairedItem? }[]`.
   - Self-host: optional allowlists via `NODE_FUNCTION_ALLOW_BUILTIN` / `NODE_FUNCTION_ALLOW_EXTERNAL` (**documented**).
 - OpenFlow default posture: **deny** network/fs and unlisted modules unless product config explicitly enables them (**inferred** safety mapping).
 
-#### Python native (`language=pythonNative`)
+#### Python native (`language=python` / `pythonNative`)
 
 - Native runner (task runners); stable on product v2 (**documented**).
 - Helpers limited to **`_items`** (all-items mode) and **`_item`** (each-item mode) — not the full `_` / `$` helper surface (**documented**).
@@ -97,7 +97,7 @@ Consume the upstream `main` item list: `{ json, binary?, pairedItem? }[]`.
 - `print()` for debug (**documented** notice text).
 - **OpenFlow:** restricted host `python3` subprocess (`code-python-native.ts`); no `__import__` / `open` / `exec` / `eval`; timeout + stdout cap.
 
-#### Python Pyodide legacy (`language=python`)
+#### Python Pyodide legacy (`language=pythonPyodide`)
 
 - WebAssembly CPython port; **legacy / removed on product v2** (**documented**).
 - Full `_variable` / `_method()` helper style analogous to JS `$` helpers when supported (**documented**).
@@ -337,5 +337,5 @@ If OpenFlow ships JS-only initially, skip with documented gap and still accept t
 - **Definition group:** `transform` / `core`
 - **Executor file:** `src/lib/engine/executors/code.ts` (+ `code-python-native.ts`, `code-python-pyodide.ts`, `code-result.ts`)
 - **Definition:** `src/lib/nodes/definitions/core.ts` (`n8n-nodes-base.code`)
-- **SDK:** `defineNode` + native `ExecutionContext` only; sandboxed JS (`isolated-vm`); `pythonNative` via host python3; `python` via Pyodide
+- **SDK:** `defineNode` + native `ExecutionContext` only; sandboxed JS (`isolated-vm`); `python` / `pythonNative` via restricted host python3 subprocess; leftover `pythonPyodide` in-process WASM
 - **Do not** load third-party node packages

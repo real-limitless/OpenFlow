@@ -75,10 +75,15 @@ function CodeSettingsPage() {
     <div>
       <h2 className="text-[15px] font-medium">Code node</h2>
       <p className="mt-1 text-[13px] text-muted-foreground">
-        Runtime options for the Code node. Python (native) runs in a restricted host interpreter;
-        dangerous modules (<code className="rounded bg-muted px-1">os</code>,{" "}
+        Runtime options for the Code node. Language{" "}
+        <code className="rounded bg-muted px-1">python</code> (and imported{" "}
+        <code className="rounded bg-muted px-1">pythonNative</code>) runs in a restricted{" "}
+        <code className="rounded bg-muted px-1">python3</code> subprocess — not host{" "}
+        <code className="rounded bg-muted px-1">eval</code>. Dangerous modules (
+        <code className="rounded bg-muted px-1">os</code>,{" "}
         <code className="rounded bg-muted px-1">subprocess</code>, …) stay blocked even if listed
-        here.
+        here. In-process Pyodide remains available as{" "}
+        <code className="rounded bg-muted px-1">pythonPyodide</code>.
       </p>
 
       <div className="mt-6 space-y-2">
