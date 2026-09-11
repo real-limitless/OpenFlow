@@ -534,8 +534,9 @@ async function uploadFile(
 
   if (binaryData && item.binary?.[binaryPropertyName]) {
     const binary = item.binary[binaryPropertyName];
+    const { binaryToBase64 } = await import("../binary-buffer");
     const fileData = {
-      data: String(binary.data ?? ""),
+      data: await binaryToBase64(binary),
       fileName: String(binary.fileName ?? binaryPropertyName),
       mimeType: String(binary.mimeType ?? "application/octet-stream"),
     };

@@ -128,10 +128,15 @@ describe("batch-queue extract-from-file — n8n-nodes-base.extractFromFile", () 
     ).rejects.toThrow(/binary property "data" is missing/);
   });
 
-  it("throws on unsupported spreadsheet operations", async () => {
-    await expect(
-      runNode(TYPE, { operation: "xlsx" }, [binItem("x", "application/octet-stream")]),
-    ).rejects.toThrow(/not yet implemented/);
+  it("extracts xlsx rows written by Convert to File", async () => {
+    const converted = await runNode("n8n-nodes-base.convertToFile", { operation: "xlsx" }, [
+      { a: 1, b: "two" },
+    ]);
+    const bin = converted[0][0].binary!.data;
+    const out = await runNode(TYPE, { operation: "xlsx" }, [
+      { json: {}, binary: { data: bin } },
+    ]);
+    expect(out[0].some((item) => item.json.a === 1 || item.json.a === "1")).toBe(true);
   });
 
   it("throws on unknown operation", async () => {

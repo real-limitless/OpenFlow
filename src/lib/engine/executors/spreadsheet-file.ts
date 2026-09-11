@@ -368,7 +368,7 @@ function toRtf(items: INodeExecutionData[], options: SpreadsheetFileOptions): st
   return parts.join("");
 }
 
-function parseXlsxBase64(
+export function parseXlsxBase64(
   base64: string,
   options: SpreadsheetFileOptions,
   fileFormat: string,
@@ -440,7 +440,7 @@ function applyRange(
   return raw;
 }
 
-function toXlsxBase64(
+export function toXlsxBase64(
   items: INodeExecutionData[],
   options: SpreadsheetFileOptions,
   fileFormat: string,

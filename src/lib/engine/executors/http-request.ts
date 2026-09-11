@@ -42,7 +42,7 @@ export const httpRequestExecutor: NodeExecutor = async (ctx, node) => {
     }
   }
 
-  let bodyInit: string | undefined;
+  let bodyInit: BodyInit | undefined;
   const isBodyAllowed = method !== "GET" && method !== "HEAD";
   if (node.parameters.sendBody && isBodyAllowed) {
     const contentType = (node.parameters.contentType as string) ?? "json";
@@ -61,6 +61,19 @@ export const httpRequestExecutor: NodeExecutor = async (ctx, node) => {
       );
       bodyInit = pairs.join("&");
       headers["Content-Type"] = headers["Content-Type"] ?? "application/x-www-form-urlencoded";
+    } else if (contentType === "binaryData" || contentType === "file") {
+      const prop = String(
+        node.parameters.inputDataFieldName ?? node.parameters.binaryPropertyName ?? "data",
+      );
+      const bin = inputItems[0]?.binary?.[prop];
+      if (!bin) {
+        throw new Error(`HTTP Request: binary property "${prop}" is missing`);
+      }
+      const { binaryToBuffer } = await import("../binary-buffer");
+      const buf = await binaryToBuffer(bin);
+      bodyInit = buf;
+      headers["Content-Type"] =
+        headers["Content-Type"] ?? bin.mimeType ?? "application/octet-stream";
     } else {
       const raw = node.parameters.jsonBody;
       bodyInit = typeof raw === "string" ? raw : JSON.stringify(raw);
@@ -121,7 +134,7 @@ async function executeWithUrl(
   url: string,
   method: string,
   headers: Record<string, string>,
-  body: string | undefined,
+  body: BodyInit | undefined,
   node: { parameters: Record<string, unknown> },
   allowUrl?: (url: string) => boolean,
 ): Promise<import("../../workflow/types").INodeExecutionData[][]> {
@@ -156,20 +169,31 @@ async function executeWithUrl(
     }
 
     let responseData: unknown;
+    let binary: Record<string, import("../../workflow/types").IBinaryData> | undefined;
+    const contentType = response.headers.get("content-type") ?? "";
     if (responseFormat === "json") {
       responseData = await response.json();
     } else if (responseFormat === "text") {
       responseData = await response.text();
-    } else if (responseFormat === "file") {
-      // TODO: binary file handling not implemented; return text for now
-      responseData = await response.text();
+    } else if (responseFormat === "file" || looksLikeBinaryContent(contentType, responseFormat)) {
+      const buf = Buffer.from(await response.arrayBuffer());
+      const fileName =
+        filenameFromDisposition(response.headers.get("content-disposition")) ?? "download";
+      const mime = contentType.split(";")[0]?.trim() || "application/octet-stream";
+      binary = {
+        data: {
+          data: buf.toString("base64"),
+          mimeType: mime,
+          fileName,
+          fileExtension: fileName.includes(".") ? fileName.split(".").pop() : undefined,
+          fileSize: buf.length,
+        },
+      };
+      responseData = { fileName, mimeType: mime, fileSize: buf.length };
+    } else if (contentType.includes("application/json")) {
+      responseData = await response.json();
     } else {
-      const contentType = response.headers.get("content-type") ?? "";
-      if (contentType.includes("application/json")) {
-        responseData = await response.json();
-      } else {
-        responseData = await response.text();
-      }
+      responseData = await response.text();
     }
 
     if (fullResponse) {
@@ -181,6 +205,7 @@ async function executeWithUrl(
               headers: Object.fromEntries(response.headers.entries()),
               body: responseData,
             },
+            ...(binary ? { binary } : {}),
           },
         ],
       ];
@@ -193,6 +218,7 @@ async function executeWithUrl(
             typeof responseData === "object" && responseData !== null
               ? (responseData as Record<string, unknown>)
               : { data: responseData },
+          ...(binary ? { binary } : {}),
         },
       ],
     ];
@@ -228,4 +254,35 @@ function safeParse(s: string): unknown {
   } catch {
     return s;
   }
+}
+
+function filenameFromDisposition(header: string | null): string | undefined {
+  if (!header) return undefined;
+  const star = header.match(/filename\*=UTF-8''([^;]+)/i);
+  if (star?.[1]) return decodeURIComponent(star[1]);
+  const quoted = header.match(/filename="([^"]+)"/i);
+  if (quoted?.[1]) return quoted[1];
+  const plain = header.match(/filename=([^;]+)/i);
+  return plain?.[1]?.trim().replace(/^"|"$/g, "");
+}
+
+function looksLikeBinaryContent(contentType: string, format: string): boolean {
+  if (format === "file") return true;
+  if (format !== "autodetect") return false;
+  const ct = contentType.toLowerCase();
+  if (!ct) return false;
+  if (ct.includes("json") || ct.startsWith("text/") || ct.includes("xml") || ct.includes("javascript")) {
+    return false;
+  }
+  return (
+    ct.includes("octet-stream") ||
+    ct.includes("image/") ||
+    ct.includes("audio/") ||
+    ct.includes("video/") ||
+    ct.includes("pdf") ||
+    ct.includes("zip") ||
+    ct.includes("excel") ||
+    ct.includes("spreadsheet") ||
+    ct.includes("msword")
+  );
 }

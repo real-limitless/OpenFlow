@@ -154,10 +154,11 @@ describe("batch-queue convert-to-file — n8n-nodes-base.convertToFile", () => {
     expect(out[0][0].binary!.data.fileExtension).toBe("ics");
   });
 
-  it("throws on unsupported spreadsheet operations", async () => {
-    await expect(
-      runNode(TYPE, { operation: "xlsx" }, [{ a: 1 }]),
-    ).rejects.toThrow(/not yet implemented/);
+  it("writes xlsx binary from json rows", async () => {
+    const out = await runNode(TYPE, { operation: "xlsx" }, [{ a: 1, b: "two" }]);
+    expect(out[0][0].binary!.data.fileExtension).toBe("xlsx");
+    expect(out[0][0].binary!.data.mimeType).toContain("spreadsheetml");
+    expect(out[0][0].binary!.data.data.length).toBeGreaterThan(20);
   });
 
   it("throws on unknown operation", async () => {
