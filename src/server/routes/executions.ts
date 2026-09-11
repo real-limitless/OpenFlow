@@ -155,6 +155,61 @@ export default function executionsRoute(app: Hono<AppEnv>) {
     });
   });
 
+  app.get("/api/v1/executions/inbox", async (c) => {
+    const userId = c.get("userId");
+    const projectIds = (
+      await prisma.projectMember.findMany({
+        where: { userId },
+        select: { projectId: true },
+      })
+    ).map((m) => m.projectId);
+    const list = await prisma.execution.findMany({
+      where: {
+        status: "waiting",
+        workflow: { projectId: { in: projectIds } },
+      },
+      orderBy: { startedAt: "desc" },
+      take: 50,
+      include: { workflow: { select: { id: true, name: true } } },
+    });
+    const items = list.map((row) => {
+      let wait: { nodeName?: string; resume?: string; resumeAt?: string | null } = {};
+      try {
+        wait = row.meta ? ((JSON.parse(row.meta) as { wait?: typeof wait }).wait ?? {}) : {};
+      } catch {
+        wait = {};
+      }
+      return {
+        id: row.id,
+        workflowId: row.workflowId,
+        workflowName: row.workflow.name,
+        startedAt: row.startedAt.toISOString(),
+        nodeName: wait.nodeName ?? null,
+        resume: wait.resume ?? null,
+        resumeAt: wait.resumeAt ?? null,
+      };
+    });
+    return c.json({ items });
+  });
+
+  app.post("/api/v1/executions/:id/approve", async (c) => {
+    const { id } = c.req.param();
+    const body = await c.req.json<{ comment?: string }>().catch(() => ({}));
+    const { resumeWaitingExecution } = await import("../services/durable-wait");
+    const ok = await resumeWaitingExecution(id, { decision: "approve", comment: body.comment });
+    if (!ok) return c.json({ error: "Execution is not waiting" }, 409);
+    return c.json({ ok: true, decision: "approve", executionId: id });
+  });
+
+  app.post("/api/v1/executions/:id/deny", async (c) => {
+    const { id } = c.req.param();
+    const body = await c.req.json<{ comment?: string }>().catch(() => ({}));
+    const { resumeWaitingExecution } = await import("../services/durable-wait");
+    const ok = await resumeWaitingExecution(id, { decision: "deny", comment: body.comment });
+    if (!ok) return c.json({ error: "Execution is not waiting" }, 409);
+    return c.json({ ok: true, decision: "deny", executionId: id });
+  });
+
   app.get("/api/v1/executions/:id/stream", async (c) => {
     const userId = c.get("userId");
     const executionId = c.req.param("id");
