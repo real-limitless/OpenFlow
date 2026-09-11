@@ -1,0 +1,16 @@
+OpenFlow {{ .Chart.AppVersion }}
+
+API:    {{ include "openflow.fullname" . }}-api  (OPENFLOW_ROLE={{ .Values.api.role }})
+Worker: {{ include "openflow.fullname" . }}-worker  (replicas={{ .Values.worker.replicaCount }}, concurrency={{ .Values.worker.concurrency }})
+
+1. Wait for the API:
+   kubectl rollout status deploy/{{ include "openflow.fullname" . }}-api
+
+2. Port-forward (if ingress is disabled):
+   kubectl port-forward svc/{{ include "openflow.fullname" . }}-api {{ .Values.api.service.port }}:{{ .Values.api.service.port }}
+
+3. Health:
+   curl -sS http://127.0.0.1:{{ .Values.api.service.port }}/health
+
+Replace placeholder secrets.credentialsKey and secrets.postgresPassword before production.
+Settings → Worker process shows OPENFLOW_ROLE and concurrency once the API is up.

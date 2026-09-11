@@ -1,0 +1,53 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "openflow.fullname" . }}-worker
+  labels:
+    {{- include "openflow.labels" . | nindent 4 }}
+    app.kubernetes.io/component: worker
+spec:
+  replicas: {{ .Values.worker.replicaCount }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/instance: {{ .Release.Name }}
+      app.kubernetes.io/component: worker
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/instance: {{ .Release.Name }}
+        app.kubernetes.io/component: worker
+    spec:
+      containers:
+        - name: worker
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          env:
+            - name: NODE_ENV
+              value: production
+            - name: AUTH_DISABLED
+              value: {{ .Values.secrets.authDisabled | quote }}
+            - name: OPENFLOW_ROLE
+              value: {{ .Values.worker.role | quote }}
+            - name: RUN_WORKER
+              value: {{ .Values.worker.runWorker | quote }}
+            - name: WORKER_CONCURRENCY
+              value: {{ .Values.worker.concurrency | quote }}
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "openflow.fullname" . }}
+                  key: DATABASE_URL
+            - name: REDIS_URL
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "openflow.fullname" . }}
+                  key: REDIS_URL
+            - name: CREDENTIALS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "openflow.fullname" . }}
+                  key: CREDENTIALS_KEY
+            {{- range .Values.extraEnv }}
+            - name: {{ .name }}
+              value: {{ .value | quote }}
+            {{- end }}
