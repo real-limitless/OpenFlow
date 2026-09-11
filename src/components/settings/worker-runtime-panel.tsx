@@ -8,6 +8,7 @@ type RuntimeInfo = {
   concurrency: number;
   queue: string;
   redis: string;
+  schedulerBackend?: string;
 };
 
 export function WorkerRuntimePanel() {
@@ -49,6 +50,7 @@ export function WorkerRuntimePanel() {
         <li>
           <span className="font-medium text-foreground">Scheduler:</span>{" "}
           {rt.scheduler ? "on" : "off"}
+          {rt.schedulerBackend ? ` (${rt.schedulerBackend})` : ""}
         </li>
         <li>
           <span className="font-medium text-foreground">Queue:</span> {rt.queue} ({rt.redis})
