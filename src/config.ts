@@ -211,6 +211,16 @@ export const config = {
       );
     },
   },
+  /** Prometheus scrape + optional OTLP HTTP traces. */
+  observability: {
+    get otelExporterOtlpEndpoint() {
+      return (
+        process.env.OTEL_EXPORTER_OTLP_ENDPOINT?.trim() ||
+        process.env.OPENFLOW_OTEL_EXPORTER_OTLP_ENDPOINT?.trim() ||
+        ""
+      );
+    },
+  },
   /** Workflow editor assistant (chat + OpenFlow MCP). */
   assistant: {
     get enabled() {

@@ -15,6 +15,11 @@ import { notifyExecutionFinished } from "./services/workflow-events";
 import { persistExecutionProgress } from "./services/persist-execution-progress";
 import { persistPausedExecution } from "./services/durable-wait";
 import {
+  observeHistogram,
+  recordExecution,
+  recordWorkerJob,
+} from "../lib/observability/metrics";
+import {
   abortReasonFor,
   discardQueuedJobs,
   finalizeIfActive,
@@ -140,6 +145,8 @@ export function startWorker(concurrency = 5): Worker<ExecutionJobData> {
         }, timeoutMs);
       }
 
+      recordExecution("started");
+      const execStarted = Date.now();
       const result = await executeWorkflow({
         workflow: tagged,
         nodeExecutors: getExecutorMap(),
@@ -160,6 +167,7 @@ export function startWorker(concurrency = 5): Worker<ExecutionJobData> {
         startInputItems: jobStartInputItems as INodeExecutionData[] | undefined,
       });
       if (timeoutHandle) clearTimeout(timeoutHandle);
+      observeHistogram("openflow_execution_duration_seconds", (Date.now() - execStarted) / 1000);
 
       if (result.paused) {
         await persistPausedExecution({
@@ -170,6 +178,7 @@ export function startWorker(concurrency = 5): Worker<ExecutionJobData> {
           environmentId,
           result,
         });
+        recordExecution("waiting");
         wlog.info("execution waiting", { node: result.paused.nodeName, resume: result.paused.resume });
         return { success: true, paused: true };
       }
@@ -182,6 +191,7 @@ export function startWorker(concurrency = 5): Worker<ExecutionJobData> {
         });
         await discardQueuedJobs(executionId);
         notifyExecutionFinished(workflowId, executionId, "cancelled");
+        recordExecution("canceled");
         wlog.info("execution cancelled");
         return { success: false, cancelled: true };
       }
@@ -195,6 +205,7 @@ export function startWorker(concurrency = 5): Worker<ExecutionJobData> {
         await discardQueuedJobs(executionId);
         notifyExecutionFinished(workflowId, executionId, "error");
         wlog.error("execution timed out");
+        recordExecution("failed");
         const { triggerErrorWorkflow } = await import("./services/error-replay");
         await triggerErrorWorkflow({
           sourceWorkflowId: workflowId,
@@ -214,8 +225,10 @@ export function startWorker(concurrency = 5): Worker<ExecutionJobData> {
       if (wrote) notifyExecutionFinished(workflowId, executionId, status);
 
       if (result.success) {
+        recordExecution("completed");
         wlog.info("execution succeeded");
       } else {
+        recordExecution("failed");
         const errNode = Object.entries(result.runData).find(([, v]) => v.status === "error");
         wlog.error("execution failed", {
           node: errNode?.[0],
@@ -239,10 +252,12 @@ export function startWorker(concurrency = 5): Worker<ExecutionJobData> {
   );
 
   worker.on("completed", (job) => {
+    recordWorkerJob("completed");
     log.debug("job completed", { component: "worker", jobId: job.id });
   });
 
   worker.on("failed", (job, err) => {
+    recordWorkerJob("failed");
     log.error("job failed", {
       component: "worker",
       jobId: job?.id,

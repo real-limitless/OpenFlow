@@ -28,6 +28,7 @@ export type AppEnv = {
 
 const EXEMPT_PATHS = [
   "/health",
+  "/metrics",
   "/api/v1/auth",
   "/api/v1/setup",
   "/webhook",

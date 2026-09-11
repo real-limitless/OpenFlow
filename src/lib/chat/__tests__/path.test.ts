@@ -47,6 +47,7 @@ describe("chat path helpers", () => {
     expect(isApiPath("/register")).toBe(false);
     expect(isApiPath("/register", "GET")).toBe(false);
     expect(isApiPath("/register", "POST")).toBe(true);
+    expect(isApiPath("/metrics")).toBe(true);
   });
 
   it("reads public and hub flags", () => {

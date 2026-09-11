@@ -21,7 +21,12 @@ function clientKey(c: Context<AppEnv>): string {
 
 export async function rateLimitMiddleware(c: Context<AppEnv>, next: Next) {
   const path = c.req.path;
-  if (c.req.method === "OPTIONS" || path === "/health" || path.startsWith("/health/")) {
+  if (
+    c.req.method === "OPTIONS" ||
+    path === "/health" ||
+    path.startsWith("/health/") ||
+    path === "/metrics"
+  ) {
     return next();
   }
   const bucket = rateLimitBucketForPath(path);

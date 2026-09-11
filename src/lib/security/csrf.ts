@@ -6,6 +6,7 @@ export const CSRF_HEADER = "x-csrf-token";
 
 const EXEMPT_PREFIXES = [
   "/health",
+  "/metrics",
   "/webhook",
   "/form",
   "/chat",

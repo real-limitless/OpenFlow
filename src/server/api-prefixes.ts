@@ -2,6 +2,7 @@
 export const API_PREFIXES = [
   "/api/",
   "/health",
+  "/metrics",
   "/webhook",
   "/form",
   "/chat",

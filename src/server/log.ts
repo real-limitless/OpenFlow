@@ -1,3 +1,5 @@
+import { getRequestContext } from "../lib/observability/request-context";
+
 export type LogLevel = "debug" | "info" | "warn" | "error";
 
 export type LogFields = Record<string, unknown>;
@@ -87,11 +89,13 @@ function writeStdout(record: LogRecord): void {
 function emit(level: LogLevel, msg: string, fields?: LogFields): void {
   if (LEVEL_RANK[level] < LEVEL_RANK[minLevel]) return;
 
+  const ctx = getRequestContext();
   const record: LogRecord = {
     ts: new Date().toISOString(),
     level,
     msg,
     service,
+    ...(ctx ? { requestId: ctx.requestId, traceId: ctx.traceId } : {}),
     ...fields,
   };
 
