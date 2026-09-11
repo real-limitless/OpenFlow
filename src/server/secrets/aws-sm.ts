@@ -1,3 +1,5 @@
+import { resolveAwsCredentials } from "../../lib/aws/credentials";
+import { signAwsV4 } from "../../lib/aws/sigv4";
 import type { AwsSmConfig, SecretBackend, SecretPayload } from "./types";
 
 export type AwsSmFetch = (
@@ -6,14 +8,8 @@ export type AwsSmFetch = (
 ) => Promise<Response>;
 
 /**
- * AWS Secrets Manager backend via the service JSON API.
- * Uses a pluggable fetch so tests can inject a mock; production uses global fetch
- * with static credentials when provided (no SDK required).
- *
- * Note: full SigV4 is not implemented here — when access keys are set we send
- * them as a simple custom header mode only if `endpoint` is a local mock
- * (LocalStack-style). For real AWS, set OPENFLOW_AWS_SM_FETCH via factory or
- * use Vault. Production AWS should use IAM roles + a proper SDK adapter later.
+ * AWS Secrets Manager JSON API with SigV4.
+ * Static keys on the provider, env keys, ECS task role, or IRSA web identity.
  */
 export function createAwsSmBackend(
   config: AwsSmConfig,
@@ -25,26 +21,28 @@ export function createAwsSmBackend(
     `https://secretsmanager.${region}.amazonaws.com`;
 
   async function call(action: string, body: Record<string, unknown>): Promise<unknown> {
-    const res = await fetchImpl(endpoint, {
+    const payload = JSON.stringify(body);
+    const credentials = await resolveAwsCredentials(config);
+    const signed = signAwsV4({
       method: "POST",
+      url: endpoint,
       headers: {
-        "Content-Type": "application/x-amz-json-1.1",
-        "X-Amz-Target": `secretsmanager.${action}`,
-        ...(config.accessKeyId
-          ? {
-              "X-OpenFlow-Aws-Access-Key": config.accessKeyId,
-              "X-OpenFlow-Aws-Secret-Key": config.secretAccessKey ?? "",
-              ...(config.sessionToken
-                ? { "X-OpenFlow-Aws-Session-Token": config.sessionToken }
-                : {}),
-            }
-          : {}),
+        "content-type": "application/x-amz-json-1.1",
+        "x-amz-target": `secretsmanager.${action}`,
       },
-      body: JSON.stringify(body),
+      body: payload,
+      region,
+      service: "secretsmanager",
+      credentials,
+    });
+    const res = await fetchImpl(signed.url, {
+      method: "POST",
+      headers: signed.headers,
+      body: payload,
     });
     if (!res.ok) {
       const text = await res.text();
-      if (res.status === 400 && text.includes("ResourceNotFoundException")) return null;
+      if (res.status === 400 && /ResourceNotFoundException/i.test(text)) return null;
       throw new Error(`AWS SM ${action} failed: ${res.status} ${text}`);
     }
     return res.json();
@@ -82,4 +80,51 @@ export function createAwsSmBackend(
       });
     },
   };
+}
+
+export async function probeAwsSm(
+  config: AwsSmConfig,
+  fetchImpl: AwsSmFetch = fetch,
+): Promise<{ ok: boolean; source: string; signing: "sigv4"; error?: string }> {
+  try {
+    const credentials = await resolveAwsCredentials(config);
+    const region = config.region || "us-east-1";
+    const endpoint =
+      config.endpoint?.replace(/\/$/, "") ||
+      `https://secretsmanager.${region}.amazonaws.com`;
+    const payload = JSON.stringify({ MaxResults: 1 });
+    const signed = signAwsV4({
+      method: "POST",
+      url: endpoint,
+      headers: {
+        "content-type": "application/x-amz-json-1.1",
+        "x-amz-target": "secretsmanager.ListSecrets",
+      },
+      body: payload,
+      region,
+      service: "secretsmanager",
+      credentials,
+    });
+    const res = await fetchImpl(signed.url, {
+      method: "POST",
+      headers: signed.headers,
+      body: payload,
+    });
+    if (!res.ok) {
+      return {
+        ok: false,
+        source: credentials.source,
+        signing: "sigv4",
+        error: `${res.status} ${await res.text()}`.slice(0, 500),
+      };
+    }
+    return { ok: true, source: credentials.source, signing: "sigv4" };
+  } catch (err) {
+    return {
+      ok: false,
+      source: "none",
+      signing: "sigv4",
+      error: err instanceof Error ? err.message : String(err),
+    };
+  }
 }

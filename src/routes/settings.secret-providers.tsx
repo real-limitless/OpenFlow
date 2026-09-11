@@ -89,6 +89,21 @@ function SecretProvidersPage() {
     await refresh();
   };
 
+  const probe = async (id: string) => {
+    const res = await apiFetch(`/api/v1/secret-providers/${id}/test`, { method: "POST" });
+    const body = (await res.json().catch(() => ({}))) as {
+      ok?: boolean;
+      source?: string;
+      signing?: string;
+      error?: string;
+    };
+    if (body.ok) {
+      toast.success(`SigV4 ${body.signing ?? "ok"} via ${body.source ?? "credentials"}`);
+    } else {
+      toast.error(body.error ?? "AWS SM probe failed");
+    }
+  };
+
   const remove = async (id: string) => {
     if (!confirm("Delete this provider?")) return;
     const res = await apiFetch(`/api/v1/secret-providers/${id}`, { method: "DELETE" });
@@ -105,8 +120,11 @@ function SecretProvidersPage() {
     <div>
       <h2 className="text-[15px] font-medium">Secret providers</h2>
       <p className="mt-1 text-[13px] text-muted-foreground">
-        External backends for credentials. Default is local AES encryption. Instance admins only when
-        auth is enabled.
+        External backends for credentials. Default is local AES encryption. AWS Secrets Manager
+        uses real SigV4 (not custom LocalStack headers). Leave access keys empty to use the default
+        credential chain: <code className="rounded bg-muted px-1">AWS_ACCESS_KEY_ID</code>, ECS task
+        role, or IRSA (<code className="rounded bg-muted px-1">AWS_WEB_IDENTITY_TOKEN_FILE</code>).
+        Instance admins only when auth is enabled.
       </p>
 
       <div className="mt-4 space-y-3 rounded-lg border border-border p-4">
@@ -175,6 +193,10 @@ function SecretProvidersPage() {
                 onChange={(e) => setSecretKey(e.target.value)}
               />
             </div>
+            <p className="sm:col-span-2 text-[12px] text-muted-foreground">
+              Signing is AWS SigV4 against <code className="rounded bg-muted px-1">secretsmanager</code>.
+              IAM roles do not need keys in this form.
+            </p>
           </div>
         )}
         <Button onClick={() => void create()}>Add provider</Button>
@@ -189,7 +211,18 @@ function SecretProvidersPage() {
               {p.isDefault && (
                 <span className="ml-2 rounded bg-muted px-1.5 py-0.5 text-[10px]">default</span>
               )}
+              {p.type === "aws-sm" && (
+                <span className="ml-2 rounded bg-muted px-1.5 py-0.5 text-[10px]">
+                  {(p.config.signing as string) ?? "sigv4"} ·{" "}
+                  {(p.config.credentialSource as string) ?? "default-chain"}
+                </span>
+              )}
             </div>
+            {p.type === "aws-sm" && (
+              <Button size="sm" variant="outline" onClick={() => void probe(p.id)}>
+                Test SigV4
+              </Button>
+            )}
             {!p.isDefault && (
               <Button size="sm" variant="outline" onClick={() => void setDefault(p.id)}>
                 Default
