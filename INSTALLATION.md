@@ -18,11 +18,8 @@ Project story: [README.md](README.md) · Legal: [LEGAL.md](LEGAL.md) · License:
 git clone https://github.com/real-limitless/OpenFlow.git
 cd OpenFlow
 
-# Active development line
+# Product line (there is no `main` branch on this remote)
 git checkout DEVELOPMENT
-
-# Or the default product branch:
-# git checkout main
 ```
 
 After switching you should see `docker-compose.yml`, `Dockerfile`, `src/`, etc.
@@ -94,26 +91,26 @@ bash scripts/setup.sh
 
 ## 4. One-line install (prebuilt image)
 
-Preferred interactive installer (product branch `main`):
+Preferred interactive installer (product branch `DEVELOPMENT`):
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/real-limitless/OpenFlow/main/scripts/get-openflow.sh | bash
+curl -fsSL https://raw.githubusercontent.com/real-limitless/OpenFlow/DEVELOPMENT/scripts/get-openflow.sh | bash
 ```
 
 Non-interactive examples:
 
 ```sh
 # try-out
-curl -fsSL https://raw.githubusercontent.com/real-limitless/OpenFlow/main/scripts/get-openflow.sh | bash -s -- --yes
+curl -fsSL https://raw.githubusercontent.com/real-limitless/OpenFlow/DEVELOPMENT/scripts/get-openflow.sh | bash -s -- --yes
 
 # production-oriented
-curl -fsSL https://raw.githubusercontent.com/real-limitless/OpenFlow/main/scripts/get-openflow.sh | bash -s -- --yes --mode production
+curl -fsSL https://raw.githubusercontent.com/real-limitless/OpenFlow/DEVELOPMENT/scripts/get-openflow.sh | bash -s -- --yes --mode production
 ```
 
 Back-compat wrapper (always non-interactive `--yes`):
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/real-limitless/OpenFlow/main/scripts/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/real-limitless/OpenFlow/DEVELOPMENT/scripts/install.sh | bash
 ```
 
 Writes Compose + `.env` under `~/openflow` by default (override with `OPENFLOW_HOME`) and starts the stack. **Containers only.**
@@ -134,8 +131,8 @@ Turns auth on by default, disables hot-reload, binds DB/Redis more tightly. Put 
 
 Full checklist on the product branch:
 
-- [docs/install.md](https://github.com/real-limitless/OpenFlow/blob/main/docs/install.md)
-- [SECURITY.md](https://github.com/real-limitless/OpenFlow/blob/main/SECURITY.md)
+- [docs/install.md](https://github.com/real-limitless/OpenFlow/blob/DEVELOPMENT/docs/install.md)
+- [SECURITY.md](https://github.com/real-limitless/OpenFlow/blob/DEVELOPMENT/SECURITY.md)
 
 ---
 

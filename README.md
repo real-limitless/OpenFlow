@@ -128,7 +128,7 @@ Full steps, ports, production overlay, and one-line install: **[INSTALLATION.md]
 | --- | --- | --- |
 | **`CORE`** (this branch) | Everyone | Concept, methodology, license, legal notes, screenshots |
 | **`DEVELOPMENT`** | Operators & developers | Active product: app, engine, Compose stack, TUI, specs, factory |
-| **`main`** | Operators & developers | Product default / stable line as published on the remote |
+| **`PRODUCTION`** | Operators | Published product line when used. There is no `main` branch today. |
 
 ```sh
 git clone https://github.com/real-limitless/OpenFlow.git
@@ -158,10 +158,10 @@ Siblings: [ansible-flow-mcp](https://github.com/real-limitless/ansible-flow-mcp)
 
 | Link | Topic |
 | --- | --- |
-| [Product README (`main`)](https://github.com/real-limitless/OpenFlow/blob/main/README.md) | Full product docs on the code branch |
-| [docs/install.md](https://github.com/real-limitless/OpenFlow/blob/main/docs/install.md) | Install / production notes |
-| [SECURITY.md](https://github.com/real-limitless/OpenFlow/blob/main/SECURITY.md) | Secrets & vulnerability reporting |
-| [CONTRIBUTING.md](https://github.com/real-limitless/OpenFlow/blob/main/CONTRIBUTING.md) | How to contribute on product branches |
+| [Product README (`DEVELOPMENT`)](https://github.com/real-limitless/OpenFlow/blob/DEVELOPMENT/README.md) | Full product docs on the code branch |
+| [docs/install.md](https://github.com/real-limitless/OpenFlow/blob/DEVELOPMENT/docs/install.md) | Install / production notes |
+| [SECURITY.md](https://github.com/real-limitless/OpenFlow/blob/DEVELOPMENT/SECURITY.md) | Secrets & vulnerability reporting |
+| [CONTRIBUTING.md](https://github.com/real-limitless/OpenFlow/blob/DEVELOPMENT/CONTRIBUTING.md) | How to contribute on product branches |
 | [Marketing site](https://real-limitless.github.io/OpenFlow/) | Product overview |
 | [Issues](https://github.com/real-limitless/OpenFlow/issues) | Bugs and discussion |
 
