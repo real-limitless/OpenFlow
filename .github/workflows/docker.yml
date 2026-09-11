@@ -2,10 +2,10 @@ name: Docker
 
 on:
   push:
-    branches: [main, master]
+    branches: [DEVELOPMENT, PRODUCTION, main, master]
     tags: ["v*"]
   pull_request:
-    branches: [main, master]
+    branches: [DEVELOPMENT, PRODUCTION, main, master]
   workflow_dispatch:
 
 env:

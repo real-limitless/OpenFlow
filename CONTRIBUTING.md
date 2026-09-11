@@ -1,6 +1,6 @@
 # Contributing
 
-Thanks for helping with OpenFlow.
+OpenFlow is Apache-2.0. See [LICENSE](LICENSE) and [LEGAL.md](LEGAL.md).
 
 ## Get set up
 
@@ -29,6 +29,8 @@ Node work follows a clean-room pipeline: public docs → behavioral spec → SDK
 | [docs/onboarding.md](docs/onboarding.md) | First clone |
 | [docs/install.md](docs/install.md) | Docker / production |
 | [SECURITY.md](SECURITY.md) | Secrets & reporting |
+| [LEGAL.md](LEGAL.md) | Apache-2.0, trademarks, n8n attribution |
+| [docs/RELEASING.md](docs/RELEASING.md) | Semver tags |
 | [docs/assistant.md](docs/assistant.md) | Editor AI assistant |
 | [docs/runtime.md](docs/runtime.md) | Lite headless embed runtime |
 | [docs/dogfood.md](docs/dogfood.md) | End-to-end fixtures |
