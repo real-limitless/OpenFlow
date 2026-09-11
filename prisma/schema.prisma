@@ -556,6 +556,24 @@ model InstanceSetting {
   @@map("instance_settings")
 }
 
+model AuditLog {
+  id         String   @id @default(cuid())
+  at         DateTime @default(now())
+  actorId    String
+  actorEmail String   @default("")
+  action     String
+  resource   String
+  resourceId String   @default("")
+  /// JSON object with non-secret details
+  detail     String   @default("{}") @db.Text
+  ip         String?
+
+  @@index([at])
+  @@index([action])
+  @@index([actorId])
+  @@map("audit_logs")
+}
+
 // ─── Public workflow templates (marketplace) ────────────
 
 /// Semantic catalog chunks for node discovery (RAG). Embeddings stored as pgvector + JSON fallback.

@@ -15,6 +15,7 @@ import { countRealUsers } from "./setup";
 import { canPublicRegister, sessionCookieSecure } from "../../lib/auth/registration-policy";
 import { issueCsrfCookie } from "../middleware/csrf";
 import { consumeInviteToken } from "../services/invites";
+import { recordAudit, requestIp } from "../services/audit";
 
 export { getSessionUserId } from "../services/sessions";
 
@@ -81,6 +82,15 @@ export default function authRoute(app: Hono<AppEnv>) {
     });
 
     await ensureUserWithProject(user.id);
+
+    void recordAudit({
+      actorId: user.id,
+      action: "user.register",
+      resource: "user",
+      resourceId: user.id,
+      detail: { email: user.email, role: user.role },
+      ip: requestIp(c),
+    });
 
     const token = await createSession(user.id);
     setSessionCookie(c, token);

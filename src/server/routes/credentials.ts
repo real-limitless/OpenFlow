@@ -13,6 +13,7 @@ import {
 import { prisma } from "../db";
 import { requireResourceAccess } from "../services/shares";
 import { projectIdFromRequest } from "../services/projects";
+import { recordAudit, requestIp } from "../services/audit";
 
 export default function credentialsRoute(app: Hono<AppEnv>) {
   app.post("/api/v1/credentials", async (c) => {
@@ -55,6 +56,14 @@ export default function credentialsRoute(app: Hono<AppEnv>) {
       externalRef: body.externalRef,
     });
     if (isServiceError(result)) return c.json({ error: result.error }, result.status as 400);
+    void recordAudit({
+      actorId: userId,
+      action: "credential.create",
+      resource: "credential",
+      resourceId: (result as { id?: string }).id,
+      detail: { name, type },
+      ip: requestIp(c),
+    });
     return c.json(result, 201);
   });
 
@@ -173,6 +182,13 @@ export default function credentialsRoute(app: Hono<AppEnv>) {
     const { id } = c.req.param();
     const result = await deleteCredential(userId, id);
     if (isServiceError(result)) return c.json({ error: result.error }, result.status as 404);
+    void recordAudit({
+      actorId: userId,
+      action: "credential.delete",
+      resource: "credential",
+      resourceId: id,
+      ip: requestIp(c),
+    });
     return c.json(result);
   });
 }

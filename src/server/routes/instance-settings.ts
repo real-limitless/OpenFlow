@@ -18,6 +18,7 @@ import { ALL_MCP_SCOPES } from "../oauth/scopes";
 import { mcpResourceUrl, publicOrigin } from "../oauth/public-url";
 import { OPENFLOW_MCP_TOOLS } from "../mcp/tools";
 import { requireInstanceAdmin } from "../services/instance-admin";
+import { recordAudit, requestIp } from "../services/audit";
 
 /** Built-in allowlist roots (mirrors code-python-native bootstrap; display only). */
 const BUILTIN_PYTHON_IMPORT_ROOTS = [
@@ -122,6 +123,14 @@ export default function instanceSettingsRoute(app: Hono<AppEnv>) {
       return c.json({ error: "enabled (boolean) is required" }, 400);
     }
     await setMcpEnabled(body.enabled);
+    void recordAudit({
+      actorId: userId,
+      action: "settings.mcp",
+      resource: "settings",
+      resourceId: "mcp",
+      detail: { enabled: body.enabled },
+      ip: requestIp(c),
+    });
     return c.json(await mcpSettingsPayload(c));
   });
 
@@ -152,6 +161,14 @@ export default function instanceSettingsRoute(app: Hono<AppEnv>) {
     }
 
     const python = await setCodePythonSettings({ allowImports });
+    void recordAudit({
+      actorId: userId,
+      action: "settings.code",
+      resource: "settings",
+      resourceId: "code",
+      detail: { allowImports: python.allowImports },
+      ip: requestIp(c),
+    });
     return c.json({
       python: {
         allowImports: python.allowImports,
@@ -196,6 +213,14 @@ export default function instanceSettingsRoute(app: Hono<AppEnv>) {
           ? body.mode
           : undefined,
       secret: typeof body.secret === "string" ? body.secret : undefined,
+    });
+    void recordAudit({
+      actorId: userId,
+      action: "settings.webhooks",
+      resource: "settings",
+      resourceId: "webhooks",
+      detail: { required: stored.required, mode: stored.mode, secret: stored.secret },
+      ip: requestIp(c),
     });
     return c.json({
       required: resolveWebhookAuthRequired(stored.required),
