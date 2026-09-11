@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { isApiPath } from "../../../server/api-prefixes";
 import {
   canChangeUserRole,
   consumeInviteRecord,
@@ -94,5 +95,12 @@ describe("role changes", () => {
     ).toBe(false);
     expect(normalizeInviteRole("admin")).toBe("admin");
     expect(normalizeInviteRole("nope")).toBe("member");
+  });
+});
+
+describe("invite register URL vs OAuth DCR", () => {
+  it("sends GET /register to the SPA and POST /register to Hono", () => {
+    expect(isApiPath("/register", "GET")).toBe(false);
+    expect(isApiPath("/register", "POST")).toBe(true);
   });
 });
