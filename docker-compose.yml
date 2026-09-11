@@ -16,8 +16,6 @@ services:
   api:
     build: .
     image: openflow:local
-    ports:
-      - "${OPENFLOW_PORT:-3000}:3000"
     expose:
       - "3000"
     env_file:
