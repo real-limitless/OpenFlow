@@ -19,6 +19,8 @@ export interface IBinaryData {
   fileName?: string;
   fileExtension?: string;
   fileSize?: number;
+  /** Binary-store object id when data is not inlined. */
+  id?: string;
   [key: string]: unknown;
 }
 

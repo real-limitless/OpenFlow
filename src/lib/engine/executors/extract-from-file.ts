@@ -1,6 +1,7 @@
 import type { NodeExecutor, INodeExecutionData } from "@/sdk";
 import type { IBinaryData } from "@/lib/workflow/types";
 import { ensureItems } from "@/sdk";
+import { binaryToBuffer } from "../binary-buffer";
 
 interface ExtractOptions {
   headerRow?: boolean;
@@ -8,8 +9,9 @@ interface ExtractOptions {
   fieldName?: string;
 }
 
-function decodeBinary(bin: IBinaryData): string {
-  return Buffer.from(bin.data, "base64").toString("utf8");
+async function decodeBinary(bin: IBinaryData): Promise<string> {
+  const buf = await binaryToBuffer(bin);
+  return buf.toString("utf8");
 }
 
 function parseCsv(text: string, options: ExtractOptions): Record<string, unknown>[] {
@@ -263,7 +265,7 @@ export const extractFromFileExecutor: NodeExecutor = async (ctx) => {
     }
 
     try {
-      const text = decodeBinary(bin);
+      const text = await decodeBinary(bin);
 
       switch (operation) {
         case "csv": {
@@ -333,10 +335,19 @@ export const extractFromFileExecutor: NodeExecutor = async (ctx) => {
 
         case "ods":
         case "xls":
-        case "xlsx":
-          throw new Error(
-            `Extract from File: operation "${operation}" is not yet implemented (requires spreadsheet library). TODO.`,
-          );
+        case "xlsx": {
+          const { initXlsx, parseXlsxBase64 } = await import("./spreadsheet-file");
+          await initXlsx();
+          const b64 = (await binaryToBuffer(bin)).toString("base64");
+          const records = parseXlsxBase64(b64, opts, operation);
+          for (const record of records) {
+            output.push({
+              json: record,
+              pairedItem: { item: itemIndex, input: 0 },
+            });
+          }
+          break;
+        }
 
         default:
           throw new Error(`Extract from File: unknown operation "${operation}"`);

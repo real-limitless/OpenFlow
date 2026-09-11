@@ -40,6 +40,9 @@ function mockResponse(body: unknown, init: MockResponseInit = {}) {
     async text() {
       return text;
     },
+    async arrayBuffer() {
+      return new TextEncoder().encode(text).buffer;
+    },
   };
 }
 
@@ -343,6 +346,23 @@ describe("http-request executor — n8n-nodes-base.httpRequest", () => {
     const out = await run({ method: "GET", url: "https://example.com/get" });
 
     expect(out[0][0].json).toMatchObject({ data: "plain text" });
+  });
+
+  it("puts file responses on item.binary", async () => {
+    installFetch(
+      mockResponse("PNGDATA", {
+        contentType: "application/octet-stream",
+        headers: { "content-disposition": 'attachment; filename="sheet.bin"' },
+      }),
+    );
+    const out = await run({
+      method: "GET",
+      url: "https://example.com/file",
+      options: { response: { responseFormat: "file" } },
+    });
+    expect(out[0][0].binary?.data.fileName).toBe("sheet.bin");
+    expect(out[0][0].json.fileSize).toBeGreaterThan(0);
+    expect(out[0][0].binary?.data.data).toBeTruthy();
   });
 
   it("throws a wrapped error when fetch rejects", async () => {

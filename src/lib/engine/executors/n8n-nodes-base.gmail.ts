@@ -155,21 +155,22 @@ function buildEmailMime(
   return `${headers.join("\r\n")}\r\n\r\n${opts.body}`;
 }
 
-function getAttachments(
+async function getAttachments(
   node: INode,
   item: INodeExecutionData,
-): Array<{ data: string; fileName: string; mimeType: string }> {
+): Promise<Array<{ data: string; fileName: string; mimeType: string }>> {
   const options = (node.parameters.options ?? {}) as Record<string, unknown>;
   const attachmentsUi = options.attachmentsUi as Record<string, unknown> | undefined;
   if (!attachmentsUi) return [];
   const list = (attachmentsUi.attachmentsBinary ?? []) as Array<Record<string, unknown>>;
   const out: Array<{ data: string; fileName: string; mimeType: string }> = [];
+  const { binaryToBase64 } = await import("../binary-buffer");
   for (const entry of list) {
     const propName = String(entry.property ?? "data");
     const binary = item.binary?.[propName];
     if (!binary) continue;
     out.push({
-      data: String(binary.data ?? ""),
+      data: await binaryToBase64(binary),
       fileName: String(binary.fileName ?? propName),
       mimeType: String(binary.mimeType ?? "application/octet-stream"),
     });
@@ -298,7 +299,7 @@ async function sendMessage(
   const appendAttribution = options.appendAttribution !== false;
   const finalBody = appendAttribution ? `${message}${ATTRIBUTION_SUFFIX}` : message;
 
-  const attachments = getAttachments(node, item);
+  const attachments = await getAttachments(node, item);
   const mime =
     attachments.length > 0
       ? buildMultipartEmail(
@@ -423,7 +424,7 @@ async function replyToMessage(
   const references = headers["References"] ? `${headers["References"]} ${inReplyTo}` : inReplyTo;
   const to = headers["From"] ?? "";
 
-  const attachments = getAttachments(node, item);
+  const attachments = await getAttachments(node, item);
   const mime =
     attachments.length > 0
       ? buildMultipartEmail(
@@ -624,7 +625,7 @@ async function createDraft(
   const replyTo = String(resolveValue(options.replyTo, itemJson) ?? "");
   const threadId = String(resolveValue(options.threadId, itemJson) ?? "");
 
-  const attachments = getAttachments(node, item);
+  const attachments = await getAttachments(node, item);
   const mime =
     attachments.length > 0
       ? buildMultipartEmail(
@@ -725,7 +726,7 @@ async function replyInThread(
   const references = headers["References"] ? `${headers["References"]} ${inReplyTo}` : inReplyTo;
   const to = headers["From"] ?? "";
 
-  const attachments = getAttachments(node, item);
+  const attachments = await getAttachments(node, item);
   const mime =
     attachments.length > 0
       ? buildMultipartEmail(

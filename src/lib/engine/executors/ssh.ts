@@ -212,11 +212,8 @@ async function runUpload(
       }
 
       let buffer: Buffer;
-      if (binary.id) {
-        throw new Error("SSH: engine binary streaming not implemented");
-      } else {
-        buffer = Buffer.from(binary.data, "base64");
-      }
+      const { binaryToBuffer } = await import("../binary-buffer");
+      buffer = await binaryToBuffer(binary);
 
       const fileName = fileNameOverride || (binary.fileName ?? "upload");
       const sanitizedName = sanitizeFileName(fileName);

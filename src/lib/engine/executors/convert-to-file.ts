@@ -359,10 +359,12 @@ export const convertToFileExecutor: NodeExecutor = async (ctx) => {
 
     case "ods":
     case "xls":
-    case "xlsx":
-      throw new Error(
-        `Convert to File: operation "${operation}" is not yet implemented (requires spreadsheet library). TODO.`,
-      );
+    case "xlsx": {
+      const { initXlsx, toXlsxBase64 } = await import("./spreadsheet-file");
+      await initXlsx();
+      const b64 = toXlsxBase64(items, opts, operation);
+      return [[makeOutput(Buffer.from(b64, "base64"), 0)]];
+    }
 
     default:
       throw new Error(`Convert to File: unknown operation "${operation}"`);
