@@ -36,13 +36,15 @@ export const codeExecutor: NodeExecutor = async (ctx) => {
   const mode = ctx.getParam<string>("mode", "runOnceForAllItems");
   const language = ctx.getParam<string>("language", "javaScript");
 
-  if (language === "pythonNative") {
+  // `python` and `pythonNative` both use the restricted host python3 subprocess.
+  // Pyodide remains available as `pythonPyodide` for in-process WASM.
+  if (language === "python" || language === "pythonNative") {
     const { runPythonNative } = await import("./code-python-native");
     const code = ctx.getParam<string>("pythonCode", "") ?? "";
     return runPythonMode(code, mode, inputItems, runPythonNative);
   }
 
-  if (language === "python") {
+  if (language === "pythonPyodide") {
     const { runPythonPyodide } = await import("./code-python-pyodide");
     const code = ctx.getParam<string>("pythonCode", "") ?? "";
     return runPythonMode(code, mode, inputItems, runPythonPyodide);
@@ -50,7 +52,7 @@ export const codeExecutor: NodeExecutor = async (ctx) => {
 
   if (language !== "javaScript") {
     throw new Error(
-      `Code node language '${language}' is not supported; use 'javaScript', 'pythonNative', or 'python'.`,
+      `Code node language '${language}' is not supported; use 'javaScript', 'python', 'pythonNative', or 'pythonPyodide'.`,
     );
   }
 

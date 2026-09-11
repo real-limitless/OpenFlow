@@ -318,7 +318,7 @@ return [{"json": {"ok": True, "n": len(_items), "has_j": hasattr(json, "dumps")}
       ).rejects.toThrow(/not allowed/i);
     });
 
-    it("python (pyodide) all-items maps via _items", async () => {
+    it("python uses the native subprocess (_items)", async () => {
       const out = await runNode(
         "n8n-nodes-base.code",
         {
@@ -331,14 +331,43 @@ return [{"json": {"ok": True, "n": len(_items), "has_j": hasattr(json, "dumps")}
       expect(out[0]).toHaveLength(2);
       expect(out[0][0].json.n).toBe(1);
       expect(out[0][1].json.n).toBe(2);
-    }, 120_000);
+    });
 
-    it("python (pyodide) each-item uses _json", async () => {
+    it("python each-item uses _item", async () => {
       const out = await runNode(
         "n8n-nodes-base.code",
         {
           mode: "runOnceForEachItem",
           language: "python",
+          pythonCode: `return {"json": {"doubled": _item["json"]["v"] * 2}}`,
+        },
+        [{ v: 3 }, { v: 5 }],
+      );
+      expect(out[0]).toHaveLength(2);
+      expect(out[0][0].json.doubled).toBe(6);
+      expect(out[0][1].json.doubled).toBe(10);
+    });
+
+    it("python blocks os import", async () => {
+      await expect(
+        runNode(
+          "n8n-nodes-base.code",
+          {
+            mode: "runOnceForAllItems",
+            language: "python",
+            pythonCode: `import os\nreturn [{"json": {}}]`,
+          },
+          [{ a: 1 }],
+        ),
+      ).rejects.toThrow(/not allowed/i);
+    });
+
+    it("pythonPyodide each-item uses _json", async () => {
+      const out = await runNode(
+        "n8n-nodes-base.code",
+        {
+          mode: "runOnceForEachItem",
+          language: "pythonPyodide",
           pythonCode: `return {"json": {"doubled": _json["v"] * 2}}`,
         },
         [{ v: 3 }, { v: 5 }],
