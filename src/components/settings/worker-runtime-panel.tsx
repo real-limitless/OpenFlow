@@ -35,8 +35,10 @@ export function WorkerRuntimePanel() {
           <code className="rounded bg-muted px-1">OPENFLOW_ROLE</code> is{" "}
           <code className="rounded bg-muted px-1">all</code> (API + worker),{" "}
           <code className="rounded bg-muted px-1">main</code> (HTTP only, enqueue to Redis), or{" "}
-          <code className="rounded bg-muted px-1">worker</code> (BullMQ consumer). Compose runs a
-          worker replica alongside the API.
+          <code className="rounded bg-muted px-1">worker</code> (BullMQ consumer). Compose and the
+          Helm chart in <code className="rounded bg-muted px-1">deploy/helm/openflow</code> run a
+          worker replica alongside the API (<code className="rounded bg-muted px-1">worker.replicaCount</code>
+          ).
         </p>
       </div>
       <ul className="space-y-1 text-[13px]">

@@ -1,0 +1,55 @@
+# OpenFlow Helm chart — api (OPENFLOW_ROLE=main) + worker + Postgres + Redis
+#
+#   helm install openflow ./deploy/helm/openflow \
+#     --set secrets.credentialsKey=$(openssl rand -hex 32) \
+#     --set secrets.postgresPassword=change-me
+#
+# Then port-forward or set ingress.enabled=true.
+
+image:
+  repository: openflow
+  tag: "0.1.0"
+  pullPolicy: IfNotPresent
+
+api:
+  replicaCount: 1
+  role: main
+  runWorker: false
+  service:
+    type: ClusterIP
+    port: 3000
+  resources: {}
+
+worker:
+  replicaCount: 1
+  role: worker
+  runWorker: true
+  concurrency: 5
+  resources: {}
+
+postgres:
+  enabled: true
+  image: postgres:16-alpine
+  database: openflow
+  user: openflow
+  persistence:
+    enabled: true
+    size: 8Gi
+
+redis:
+  enabled: true
+  image: redis:7-alpine
+
+ingress:
+  enabled: false
+  className: ""
+  host: openflow.local
+  tls: false
+
+secrets:
+  # Required in production. Do not commit real values.
+  credentialsKey: "change-me-set-credentials-key"
+  postgresPassword: "change-me-set-postgres-password"
+  authDisabled: "false"
+
+extraEnv: []
