@@ -13,6 +13,51 @@ export type AuthState = {
   loading: boolean;
 };
 
+let csrfToken = "";
+
+export function rememberCsrfToken(token: string | undefined) {
+  if (token) csrfToken = token;
+}
+
+export function readCsrfToken(): string {
+  if (csrfToken) return csrfToken;
+  if (typeof document === "undefined") return "";
+  const match = document.cookie.match(/(?:^|; )csrf=([^;]*)/);
+  if (!match?.[1]) return "";
+  const raw = decodeURIComponent(match[1]);
+  const cut = raw.lastIndexOf(".");
+  return cut > 0 ? raw.slice(0, cut) : raw;
+}
+
+export function csrfHeaderMap(): Record<string, string> {
+  const token = readCsrfToken();
+  return token ? { "X-CSRF-Token": token } : {};
+}
+
+let csrfFetchInstalled = false;
+
+/** Attach X-CSRF-Token on mutating fetch calls (cookie-session CSRF). */
+export function installCsrfFetch(): void {
+  if (csrfFetchInstalled || typeof window === "undefined") return;
+  csrfFetchInstalled = true;
+  const orig = window.fetch.bind(window);
+  window.fetch = (input: RequestInfo | URL, init?: RequestInit) => {
+    const method = (
+      init?.method ??
+      (input instanceof Request ? input.method : "GET")
+    ).toUpperCase();
+    if (method !== "GET" && method !== "HEAD" && method !== "OPTIONS") {
+      const headers = new Headers(
+        init?.headers ?? (input instanceof Request ? input.headers : undefined),
+      );
+      const token = readCsrfToken();
+      if (token && !headers.has("X-CSRF-Token")) headers.set("X-CSRF-Token", token);
+      init = { ...init, credentials: init?.credentials ?? "include", headers };
+    }
+    return orig(input, init);
+  };
+}
+
 export async function fetchAuthStatus(): Promise<{
   user: AuthUser | null;
   authDisabled: boolean;
@@ -25,9 +70,18 @@ export async function fetchAuthStatus(): Promise<{
     if (res.ok) {
       const body = (await res.json()) as
         | AuthUser
-        | { user?: AuthUser | null; authDisabled?: boolean; id?: string; email?: string };
+        | {
+            user?: AuthUser | null;
+            authDisabled?: boolean;
+            csrfToken?: string;
+            id?: string;
+            email?: string;
+          };
 
-      // New shape: { user, authDisabled }
+      if (body && typeof body === "object" && "csrfToken" in body) {
+        rememberCsrfToken((body as { csrfToken?: string }).csrfToken);
+      }
+
       if (body && typeof body === "object" && "user" in body) {
         const wrapped = body as { user?: AuthUser | null; authDisabled?: boolean };
         return {
@@ -36,7 +90,6 @@ export async function fetchAuthStatus(): Promise<{
         };
       }
 
-      // Legacy shape: bare user object (older servers)
       if (body && typeof body === "object" && "id" in body && "email" in body) {
         return {
           user: body as AuthUser,
@@ -45,7 +98,6 @@ export async function fetchAuthStatus(): Promise<{
       }
     }
 
-    // Legacy 401 = logged out
     if (res.status === 401) {
       return { user: null, authDisabled: false };
     }
@@ -53,7 +105,6 @@ export async function fetchAuthStatus(): Promise<{
     /* ignore */
   }
 
-  // Fallback: probe readiness for AUTH_DISABLED when /me is unavailable
   try {
     const ready = await fetch("/health/ready");
     if (ready.ok) {
@@ -83,7 +134,9 @@ export async function login(email: string, password: string): Promise<AuthUser> 
     const body = (await res.json().catch(() => ({}))) as { error?: string };
     throw new Error(body.error ?? "Login failed");
   }
-  return (await res.json()) as AuthUser;
+  const user = (await res.json()) as AuthUser & { csrfToken?: string };
+  rememberCsrfToken(user.csrfToken);
+  return user;
 }
 
 export async function register(email: string, password: string): Promise<AuthUser> {
@@ -97,14 +150,18 @@ export async function register(email: string, password: string): Promise<AuthUse
     const body = (await res.json().catch(() => ({}))) as { error?: string };
     throw new Error(body.error ?? "Registration failed");
   }
-  return (await res.json()) as AuthUser;
+  const user = (await res.json()) as AuthUser & { csrfToken?: string };
+  rememberCsrfToken(user.csrfToken);
+  return user;
 }
 
 export async function logout(): Promise<void> {
   await fetch("/api/v1/auth/logout", {
     method: "POST",
     credentials: "include",
+    headers: csrfHeaderMap(),
   });
+  csrfToken = "";
 }
 
 export type SetupStatus = {
@@ -133,6 +190,11 @@ export async function apiFetch(input: string, init?: RequestInit): Promise<Respo
   const headers = new Headers(projectHeaders(init?.headers));
   if (init?.body && !headers.has("Content-Type")) {
     headers.set("Content-Type", "application/json");
+  }
+  const method = (init?.method ?? "GET").toUpperCase();
+  if (method !== "GET" && method !== "HEAD" && method !== "OPTIONS") {
+    const token = readCsrfToken();
+    if (token && !headers.has("X-CSRF-Token")) headers.set("X-CSRF-Token", token);
   }
   return fetch(input, {
     ...init,

@@ -3,6 +3,7 @@ import { config } from "../config";
 import { authMiddleware, type AppEnv } from "./middleware/auth";
 import { rateLimitMiddleware } from "./middleware/rate-limit";
 import { securityHeadersMiddleware } from "./middleware/security-headers";
+import { csrfMiddleware } from "./middleware/csrf";
 import apiKeysRoute from "./routes/api-keys";
 import authRoute from "./routes/auth";
 import credentialsRoute from "./routes/credentials";
@@ -51,6 +52,7 @@ const app = new Hono<AppEnv>();
 app.use("*", rateLimitMiddleware);
 app.use("*", securityHeadersMiddleware);
 app.use("*", authMiddleware);
+app.use("*", csrfMiddleware);
 
 healthRoute(app);
 setupRoute(app);

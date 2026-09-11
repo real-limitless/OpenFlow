@@ -225,6 +225,12 @@ export default function instanceSettingsRoute(app: Hono<AppEnv>) {
         ]),
       ),
       cors: corsAllowlistForSettings(),
+      csrf: {
+        cookie: "csrf",
+        header: "X-CSRF-Token",
+        required: !config.auth.disabled,
+        note: "Cookie-session POST/PUT/PATCH/DELETE require a matching CSRF token. API keys and try-out mode skip this check. Public forms keep their own _csrf field.",
+      },
     });
   });
 }
