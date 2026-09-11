@@ -238,7 +238,9 @@ function ExecutionDetailPage() {
           })}
           {entries.length === 0 && (
             <p className="text-sm text-muted-foreground">
-              {row.status === "running" ? "Waiting for run data…" : "No run data"}
+              {row.status === "running" || row.status === "waiting"
+                ? "Waiting for run data…"
+                : "No run data"}
             </p>
           )}
         </div>
