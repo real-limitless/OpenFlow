@@ -33,6 +33,7 @@ export const Route = createFileRoute("/templates")({
       source?: string;
       sort?: "popular" | "recent";
       compat?: CompatLevel | "any";
+      certified?: boolean;
       page?: number;
     } = {};
     if (typeof s.q === "string" && s.q) out.q = s.q;
@@ -42,6 +43,7 @@ export const Route = createFileRoute("/templates")({
     if (s.compat === "ready" || s.compat === "partial" || s.compat === "limited" || s.compat === "any") {
       out.compat = s.compat;
     }
+    if (s.certified === true || s.certified === "1" || s.certified === "true") out.certified = true;
     if (typeof s.page === "string" || typeof s.page === "number") {
       const p = typeof s.page === "number" ? s.page : parseInt(s.page, 10);
       if (Number.isFinite(p) && p > 1) out.page = Math.floor(p);
@@ -55,6 +57,7 @@ function TemplatesMarketplace() {
   const navigate = Route.useNavigate();
   const sort = search.sort === "recent" ? "recent" : "popular";
   const compat = search.compat ?? "any";
+  const certified = search.certified === true;
   const page = search.page && search.page > 0 ? search.page : 1;
   const [qInput, setQInput] = useState(search.q ?? "");
   const [items, setItems] = useState<TemplateListItem[] | null>(null);
@@ -96,6 +99,7 @@ function TemplatesMarketplace() {
       source: search.source,
       sort,
       compat,
+      certified: certified || undefined,
       page,
       pageSize,
     })
@@ -112,7 +116,7 @@ function TemplatesMarketplace() {
         setError(e.message);
         setItems([]);
       });
-  }, [search.q, search.category, search.source, sort, compat, page]);
+  }, [search.q, search.category, search.source, sort, compat, certified, page]);
 
   useEffect(() => {
     load();
@@ -176,6 +180,7 @@ function TemplatesMarketplace() {
     source?: string | undefined;
     sort?: "popular" | "recent" | undefined;
     compat?: CompatLevel | "any" | undefined;
+    certified?: boolean | undefined;
     page?: number | undefined;
   }) => {
     void navigate({
@@ -186,13 +191,15 @@ function TemplatesMarketplace() {
           patch.category !== undefined ||
           patch.source !== undefined ||
           patch.sort !== undefined ||
-          patch.compat !== undefined;
+          patch.compat !== undefined ||
+          patch.certified !== undefined;
         if (resetPage && patch.page === undefined) {
           delete next.page;
         }
         if (next.page === 1) delete next.page;
         if (next.sort === "popular") delete next.sort;
         if (next.compat === "any") delete next.compat;
+        if (!next.certified) delete next.certified;
         if (!next.q) delete next.q;
         if (!next.category) delete next.category;
         if (!next.source) delete next.source;
@@ -282,6 +289,14 @@ function TemplatesMarketplace() {
             <option value="partial">Partial</option>
             <option value="limited">Stub</option>
           </select>
+          <Button
+            type="button"
+            variant={certified ? "default" : "outline"}
+            className="h-10"
+            onClick={() => setSearch({ certified: certified ? false : true })}
+          >
+            Certified
+          </Button>
           {sources.length > 0 && (
             <select
               className="h-10 max-w-[14rem] rounded-md border border-input bg-background px-2 text-[12px]"

@@ -29,6 +29,7 @@ export type TemplateListItem = {
   sourceUrl: string | null;
   libraryUrl: string | null;
   readyToDemo: boolean;
+  certified?: boolean;
   publishedAt: string | null;
   syncedAt: string;
   compatibility: {
@@ -60,6 +61,7 @@ export type ListParams = {
   source?: string;
   sort?: "popular" | "recent";
   compat?: CompatLevel | "any";
+  certified?: boolean;
   page?: number;
   pageSize?: number;
 };
@@ -84,6 +86,7 @@ export async function fetchTemplates(params: ListParams = {}): Promise<{
   if (params.source) sp.set("source", params.source);
   if (params.sort) sp.set("sort", params.sort);
   if (params.compat && params.compat !== "any") sp.set("compat", params.compat);
+  if (params.certified) sp.set("certified", "1");
   if (params.page) sp.set("page", String(params.page));
   if (params.pageSize) sp.set("pageSize", String(params.pageSize));
   const qs = sp.toString();
