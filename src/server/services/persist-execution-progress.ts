@@ -1,5 +1,6 @@
 import { prisma } from "../db";
 import { notifyExecutionProgress } from "./workflow-events";
+import { serializeRunData } from "./retention";
 
 export async function persistExecutionProgress(
   executionId: string,
@@ -7,7 +8,7 @@ export async function persistExecutionProgress(
 ): Promise<void> {
   await prisma.execution.update({
     where: { id: executionId },
-    data: { runData: JSON.stringify(runData) },
+    data: { runData: await serializeRunData(runData) },
   });
   notifyExecutionProgress(executionId, runData);
 }

@@ -45,4 +45,9 @@ describe("redactRunData", () => {
       { n: 1 },
     ]);
   });
+
+  it("optionally masks email-shaped strings", () => {
+    const out = redactRunData({ note: "mail user@example.com please" }, { pii: true });
+    expect(out).toEqual({ note: "mail [redacted-email] please" });
+  });
 });

@@ -9,7 +9,8 @@ export type AuditAction =
   | "credential.delete"
   | "settings.webhooks"
   | "settings.mcp"
-  | "settings.code";
+  | "settings.code"
+  | "settings.retention";
 
 export type AuditEvent = {
   action: AuditAction | string;

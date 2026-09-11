@@ -276,4 +276,52 @@ export default function instanceSettingsRoute(app: Hono<AppEnv>) {
       },
     });
   });
+
+  app.get("/api/v1/settings/retention", async (c) => {
+    const userId = c.get("userId");
+    await ensureUser(userId);
+    const { getRetentionPolicy } = await import("../services/retention");
+    const policy = await getRetentionPolicy();
+    return c.json({
+      ...policy,
+      note: "Backup Postgres before tightening retention. Prune deletes execution rows (runData) and does not touch workflow definitions. Waiting/running executions are kept unless pruneActive is on.",
+    });
+  });
+
+  app.put("/api/v1/settings/retention", async (c) => {
+    const userId = c.get("userId");
+    await ensureUser(userId);
+    const gate = await requireInstanceAdmin(userId);
+    if (gate !== true) return c.json({ error: gate.error }, gate.status);
+    const body = await c.req.json<Record<string, unknown>>();
+    const { setRetentionPolicy } = await import("../services/retention");
+    const policy = await setRetentionPolicy(body);
+    await recordAudit({
+      actorId: userId,
+      action: "settings.retention",
+      resource: "settings",
+      resourceId: "retention",
+      detail: policy,
+      ip: requestIp(c),
+    });
+    return c.json(policy);
+  });
+
+  app.post("/api/v1/settings/retention/prune", async (c) => {
+    const userId = c.get("userId");
+    await ensureUser(userId);
+    const gate = await requireInstanceAdmin(userId);
+    if (gate !== true) return c.json({ error: gate.error }, gate.status);
+    const { pruneExecutions } = await import("../services/retention");
+    const result = await pruneExecutions();
+    await recordAudit({
+      actorId: userId,
+      action: "settings.retention",
+      resource: "settings",
+      resourceId: "retention.prune",
+      detail: result,
+      ip: requestIp(c),
+    });
+    return c.json(result);
+  });
 }

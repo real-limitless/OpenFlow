@@ -6,6 +6,7 @@ import {
   type AbortReason,
 } from "../../lib/engine/governance";
 import type { IWorkflowSettings } from "../../lib/workflow/types";
+import { serializeRunData } from "./retention";
 
 const ACTIVE = ["running", "waiting"] as const;
 
@@ -138,12 +139,14 @@ export async function finalizeIfActive(
 ): Promise<boolean> {
   const row = await prisma.execution.findUnique({ where: { id: executionId }, select: { status: true } });
   if (!row || !ACTIVE.includes(row.status as (typeof ACTIVE)[number])) return false;
+  const runData =
+    data.runData !== undefined ? await serializeRunData(data.runData) : undefined;
   await prisma.execution.update({
     where: { id: executionId },
     data: {
       status: data.status,
       finishedAt: new Date(),
-      ...(data.runData !== undefined ? { runData: data.runData } : {}),
+      ...(runData !== undefined ? { runData } : {}),
       ...(data.error !== undefined ? { error: data.error } : {}),
     },
   });

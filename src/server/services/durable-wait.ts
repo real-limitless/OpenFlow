@@ -3,6 +3,7 @@ import { executionQueue } from "../queue";
 import type { RunResult } from "../../lib/engine/runner";
 import type { INodeExecutionData } from "../../lib/workflow/types";
 import { applyHitlDecision, type HitlDecision } from "../../lib/engine/hitl";
+import { serializeRunData } from "./retention";
 
 export async function persistPausedExecution(opts: {
   executionId: string;
@@ -36,7 +37,7 @@ export async function persistPausedExecution(opts: {
     data: {
       status: "waiting",
       finishedAt: null,
-      runData: JSON.stringify(opts.result.runData),
+      runData: await serializeRunData(opts.result.runData),
       meta: JSON.stringify(meta),
     },
   });
