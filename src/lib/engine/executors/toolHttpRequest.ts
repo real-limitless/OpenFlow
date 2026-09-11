@@ -32,7 +32,7 @@ export const toolHttpRequestExecutor: NodeExecutor = async (ctx) => {
   const description = String(ctx.getParam("description", "Makes an HTTP request to the specified URL and returns the response body."));
 
   const handle: ToolHandle = {
-    name: ctx.node.name,
+    name: String(ctx.getParam("toolName", "http_request")),
     description,
     inputSchema: {
       type: "object",
@@ -48,6 +48,9 @@ export const toolHttpRequestExecutor: NodeExecutor = async (ctx) => {
       const resolvedUrl = (args.url as string) || url;
       const resolvedMethod = (args.method as string) || method;
       const resolvedBody = (args.body as string) || undefined;
+      if (ctx.allowUrl && resolvedUrl && !ctx.allowUrl(resolvedUrl)) {
+        throw new Error(`HTTP Request blocked by allowUrl policy: ${resolvedUrl}`);
+      }
 
       const resolvedHeaders: Record<string, string> = {};
       if (sendHeaders) {

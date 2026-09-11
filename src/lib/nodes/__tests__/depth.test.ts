@@ -16,8 +16,10 @@ describe("nodeDepth", () => {
     expect(nodeDepth("n8n-nodes-base.definitelyDoesNotExistXYZ")).toBe("stub");
   });
 
-  it("treats sticky notes as canvas-only ready", () => {
-    expect(nodeDepth("n8n-nodes-base.stickyNote")).toBe("ready");
+  it("marks harness LangChain fill types as ready", () => {
+    expect(nodeDepth("@n8n/n8n-nodes-langchain.toolHttpRequest")).toBe("ready");
+    expect(nodeDepth("@n8n/n8n-nodes-langchain.memoryBufferWindow")).toBe("ready");
+    expect(nodeDepth("@n8n/n8n-nodes-langchain.lmChatGroq")).toBe("ready");
   });
 });
 

@@ -12,6 +12,9 @@ import { codeExecutor } from "../engine/executors/code";
 import { stickyNoteExecutor } from "../engine/executors/sticky-note";
 import { langchainAgentExecutor } from "../engine/executors/langchain-agent";
 import { lmChatOpenRouterExecutor } from "../engine/executors/lm-chat-open-router";
+import { lmChatGroqExecutor } from "../engine/executors/lm-chat-groq";
+import { memoryBufferWindowExecutor } from "../engine/executors/memory-buffer-window";
+import { toolHttpRequestExecutor } from "../engine/executors/toolHttpRequest";
 import { httpRequestToolExecutor } from "../engine/executors/httpRequestTool";
 import { githubToolExecutor } from "../engine/executors/n8n-nodes-base.githubTool";
 import { executeCommandToolExecutor } from "../engine/executors/executeCommandTool";
@@ -48,6 +51,9 @@ export function createRuntimeExecutorMap(preset: RuntimePreset): Record<string, 
   if (preset === "harness") {
     register(map, "@n8n/n8n-nodes-langchain.agent", langchainAgentExecutor);
     register(map, "@n8n/n8n-nodes-langchain.lmChatOpenRouter", lmChatOpenRouterExecutor);
+    register(map, "@n8n/n8n-nodes-langchain.lmChatGroq", lmChatGroqExecutor);
+    register(map, "@n8n/n8n-nodes-langchain.memoryBufferWindow", memoryBufferWindowExecutor);
+    register(map, "@n8n/n8n-nodes-langchain.toolHttpRequest", toolHttpRequestExecutor);
     register(map, "n8n-nodes-base.httpRequestTool", httpRequestToolExecutor);
     register(map, "n8n-nodes-base.githubTool", githubToolExecutor);
     register(map, "n8n-nodes-base.executeCommandTool", executeCommandToolExecutor);
