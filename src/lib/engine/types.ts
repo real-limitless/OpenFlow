@@ -10,7 +10,7 @@ export type IExecuteFunctions = ExecutionContext;
 
 export interface ExecutionRunData {
   [nodeName: string]: {
-    status: "pending" | "running" | "success" | "error" | "skipped";
+    status: "pending" | "running" | "success" | "error" | "skipped" | "waiting";
     items?: INodeExecutionData[][];
     error?: string;
     startedAt?: string;

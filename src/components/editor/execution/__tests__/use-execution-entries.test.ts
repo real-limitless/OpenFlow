@@ -45,6 +45,7 @@ describe("buildExecutionEntries", () => {
     expect(executionStats(entries)).toEqual({
       pending: 0,
       running: 1,
+      waiting: 0,
       success: 2,
       error: 1,
       skipped: 0,

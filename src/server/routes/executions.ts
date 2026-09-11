@@ -227,6 +227,23 @@ export default function executionsRoute(app: Hono<AppEnv>) {
     });
   });
 
+  app.post("/api/v1/executions/:id/resume", async (c) => {
+    const userId = c.get("userId");
+    const executionId = c.req.param("id");
+    const owned = await prisma.execution.findFirst({
+      where: {
+        id: executionId,
+        workflow: { project: { members: { some: { userId } } } },
+      },
+      select: { id: true },
+    });
+    if (!owned) return c.json({ error: "Execution not found" }, 404);
+    const { resumeWaitingExecution } = await import("../services/durable-wait");
+    const ok = await resumeWaitingExecution(executionId);
+    if (!ok) return c.json({ error: "Execution is not waiting" }, 409);
+    return c.json({ success: true, executionId });
+  });
+
   app.get("/api/v1/executions/:id", async (c) => {
     const userId = c.get("userId");
     const executionId = c.req.param("id");

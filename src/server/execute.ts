@@ -11,6 +11,7 @@ import { getDefaultEnvironment, resolveEnvironment } from "./services/environmen
 import { log } from "./log";
 import { notifyExecutionFinished } from "./services/workflow-events";
 import { persistExecutionProgress } from "./services/persist-execution-progress";
+import { persistPausedExecution } from "./services/durable-wait";
 import type { IWorkflow, INodeExecutionData } from "../lib/workflow/types";
 import { config } from "../config";
 import { requireRedisQueue } from "../lib/runtime/role";
@@ -142,7 +143,7 @@ export async function enqueueOrRun(
   const vars = await loadVarsMap(scope.projectId || null, envId ?? null);
 
   executeWorkflow({
-    workflow: definition,
+    workflow: { ...definition, __executionId: executionId } as typeof definition,
     nodeExecutors: getExecutorMap(),
     pinData: pinData ?? (definition.pinData as Record<string, INodeExecutionData[]> | undefined),
     credentialResolver,
@@ -157,6 +158,17 @@ export async function enqueueOrRun(
     },
   })
     .then(async (result) => {
+      if (result.paused) {
+        await persistPausedExecution({
+          executionId,
+          workflowId,
+          userId: scope.userId,
+          projectId: scope.projectId,
+          environmentId: envId,
+          result,
+        });
+        return;
+      }
       const status = result.success ? "success" : "error";
       await prisma.execution.update({
         where: { id: executionId },

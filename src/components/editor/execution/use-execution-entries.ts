@@ -18,7 +18,7 @@ function durationMs(
     const end = Date.parse(finishedAt);
     if (Number.isFinite(end)) return Math.max(0, end - start);
   }
-  if (status === "running") {
+  if (status === "running" || status === "waiting") {
     return Math.max(0, Date.now() - start);
   }
   return undefined;
@@ -79,6 +79,7 @@ export function executionStats(entries: ExecutionEntry[]) {
   const counts: Record<ExecutionStatus, number> = {
     pending: 0,
     running: 0,
+    waiting: 0,
     success: 0,
     error: 0,
     skipped: 0,

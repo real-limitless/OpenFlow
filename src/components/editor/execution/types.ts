@@ -23,6 +23,7 @@ export const EXECUTION_LAYOUT_STORAGE_KEY = "openflow.editor.executionLayout.v1"
 export const KANBAN_COLUMNS: ExecutionStatus[] = [
   "pending",
   "running",
+  "waiting",
   "success",
   "error",
   "skipped",

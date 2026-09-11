@@ -1,6 +1,7 @@
 import type { IWorkflow, INodeExecutionData } from "../workflow/types";
 import type { ExecutionPlan, ExecutionRunData, NodeExecutor } from "./types";
 import { NodeExecutionError } from "./agent-trace";
+import { isWaitPausedError } from "./wait-pause";
 import type { AgentTrace } from "./agent-trace";
 import type { CredentialResolver } from "./credentials";
 import type { DataTableAccess } from "@/lib/data-tables/access";
@@ -119,6 +120,12 @@ export interface RunOptions {
 export interface RunResult {
   runData: ExecutionRunData;
   success: boolean;
+  paused?: {
+    nodeName: string;
+    resume: string;
+    resumeAt: string | null;
+    items: import("../workflow/types").INodeExecutionData[];
+  };
 }
 
 /** Expressions that must be evaluated per input item inside the executor. */
@@ -428,6 +435,21 @@ export async function executeWorkflow(options: RunOptions): Promise<RunResult> {
         lastError = null;
         break;
       } catch (err) {
+        if (isWaitPausedError(err)) {
+          runData[nodeName].status = "waiting";
+          runData[nodeName].items = [err.items];
+          await emitProgress();
+          return {
+            runData,
+            success: true,
+            paused: {
+              nodeName,
+              resume: err.resume,
+              resumeAt: err.resumeAt,
+              items: err.items,
+            },
+          };
+        }
         lastError = err instanceof Error ? err : new Error(String(err));
         if (attempt < maxAttempts && node.waitBetweenTries) {
           await new Promise((r) => setTimeout(r, node.waitBetweenTries));
