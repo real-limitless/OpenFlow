@@ -79,6 +79,12 @@ export interface IWorkflowSettings {
   timezone?: string;
   webhookSecret?: string;
   webhookAuthMode?: "header" | "basic" | "signed";
+  /** Wall-clock timeout in seconds for a single execution. */
+  executionTimeout?: number;
+  /** Millisecond override used by tests and precise quotas. */
+  executionTimeoutMs?: number;
+  /** Max concurrent running+waiting executions for this workflow. */
+  maxConcurrency?: number;
   [key: string]: unknown;
 }
 

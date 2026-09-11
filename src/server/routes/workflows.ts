@@ -82,6 +82,7 @@ export default function workflowsRoute(app: Hono<AppEnv>) {
         name: true,
         active: true,
         nodes: true,
+        settings: true,
         projectId: true,
         updatedAt: true,
       },
@@ -89,15 +90,27 @@ export default function workflowsRoute(app: Hono<AppEnv>) {
     });
 
     const sharedSet = new Set(sharedIds);
-    const list = rows.map((r) => ({
-      id: r.id,
-      name: r.name,
-      active: r.active,
-      projectId: r.projectId,
-      shared: sharedSet.has(r.id) && !projectIds.includes(r.projectId),
-      nodeCount: (JSON.parse(r.nodes) as unknown[]).length,
-      updatedAt: r.updatedAt.toISOString(),
-    }));
+    const list = rows.map((r) => {
+      let settings: { executionTimeout?: number; maxConcurrency?: number } = {};
+      try {
+        settings = r.settings ? (JSON.parse(r.settings) as typeof settings) : {};
+      } catch {
+        settings = {};
+      }
+      return {
+        id: r.id,
+        name: r.name,
+        active: r.active,
+        projectId: r.projectId,
+        shared: sharedSet.has(r.id) && !projectIds.includes(r.projectId),
+        nodeCount: (JSON.parse(r.nodes) as unknown[]).length,
+        updatedAt: r.updatedAt.toISOString(),
+        settings: {
+          executionTimeout: settings.executionTimeout,
+          maxConcurrency: settings.maxConcurrency,
+        },
+      };
+    });
 
     return c.json(list);
   });
@@ -292,6 +305,45 @@ export default function workflowsRoute(app: Hono<AppEnv>) {
     }
 
     return c.json(deserializeJsonFields(row as unknown as Record<string, unknown>));
+  });
+
+  app.patch("/api/v1/workflows/:id/governance", async (c) => {
+    const userId = c.get("userId");
+    const { id } = c.req.param();
+    const result = await loadWorkflowIfAllowed(id, userId, "editor");
+    if ("error" in result) return c.json({ error: result.error }, result.status);
+    let body: { executionTimeout?: number | null; maxConcurrency?: number | null } = {};
+    try {
+      body = (await c.req.json()) as typeof body;
+    } catch {
+      return c.json({ error: "Invalid JSON body" }, 400);
+    }
+    let settings: Record<string, unknown> = {};
+    try {
+      settings = result.row.settings ? (JSON.parse(result.row.settings) as Record<string, unknown>) : {};
+    } catch {
+      settings = {};
+    }
+    if ("executionTimeout" in body) {
+      const n = body.executionTimeout;
+      if (n == null || n === 0) delete settings.executionTimeout;
+      else if (typeof n === "number" && n > 0) settings.executionTimeout = Math.floor(n);
+    }
+    if ("maxConcurrency" in body) {
+      const n = body.maxConcurrency;
+      if (n == null || n === 0) delete settings.maxConcurrency;
+      else if (typeof n === "number" && n > 0) settings.maxConcurrency = Math.floor(n);
+    }
+    const row = await prisma.workflow.update({
+      where: { id },
+      data: { settings: JSON.stringify(settings) },
+    });
+    return c.json({
+      id: row.id,
+      name: row.name,
+      executionTimeout: settings.executionTimeout ?? null,
+      maxConcurrency: settings.maxConcurrency ?? null,
+    });
   });
 
   app.delete("/api/v1/workflows/:id", async (c) => {
@@ -562,6 +614,13 @@ export default function workflowsRoute(app: Hono<AppEnv>) {
       snapshot = deserializeJsonFields(result.row as unknown as Record<string, unknown>);
       projectId = result.row.projectId;
       ownerUserId = result.row.userId;
+    }
+
+    const { assertWorkflowConcurrency } = await import("../services/execution-governance");
+    const quota = await assertWorkflowConcurrency(id, snapshot.settings);
+    if (!quota.ok) {
+      c.header("Retry-After", String(quota.retryAfterSec));
+      return c.json({ error: quota.error, retryAfterSec: quota.retryAfterSec }, quota.status);
     }
 
     const execution = await prisma.execution.create({

@@ -187,7 +187,7 @@ export default function executionsRoute(app: Hono<AppEnv>) {
               runData,
             });
 
-            if (live.status === "success" || live.status === "error") {
+            if (live.status === "success" || live.status === "error" || live.status === "cancelled") {
               sendEvent({
                 type: "complete",
                 status: live.status,
@@ -242,6 +242,26 @@ export default function executionsRoute(app: Hono<AppEnv>) {
     const ok = await resumeWaitingExecution(executionId);
     if (!ok) return c.json({ error: "Execution is not waiting" }, 409);
     return c.json({ success: true, executionId });
+  });
+
+  app.post("/api/v1/executions/:id/cancel", async (c) => {
+    const userId = c.get("userId");
+    const executionId = c.req.param("id");
+    const owned = await prisma.execution.findFirst({
+      where: {
+        id: executionId,
+        workflow: { project: { members: { some: { userId } } } },
+      },
+      select: { id: true },
+    });
+    if (!owned) return c.json({ error: "Execution not found" }, 404);
+    const { discardQueuedJobs, requestExecutionCancel } = await import(
+      "../services/execution-governance"
+    );
+    const ok = await requestExecutionCancel(executionId);
+    if (!ok) return c.json({ error: "Execution is not running or waiting" }, 409);
+    await discardQueuedJobs(executionId);
+    return c.json({ success: true, executionId, status: "cancelled" });
   });
 
   app.get("/api/v1/executions/:id", async (c) => {

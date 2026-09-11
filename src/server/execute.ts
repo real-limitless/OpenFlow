@@ -12,6 +12,14 @@ import { log } from "./log";
 import { notifyExecutionFinished } from "./services/workflow-events";
 import { persistExecutionProgress } from "./services/persist-execution-progress";
 import { persistPausedExecution } from "./services/durable-wait";
+import {
+  abortReasonFor,
+  assertWorkflowConcurrency,
+  discardQueuedJobs,
+  finalizeIfActive,
+  markExecutionTimeout,
+  stampTimeoutDeadline,
+} from "./services/execution-governance";
 import type { IWorkflow, INodeExecutionData } from "../lib/workflow/types";
 import { config } from "../config";
 import { requireRedisQueue } from "../lib/runtime/role";
@@ -91,6 +99,25 @@ export async function enqueueOrRun(
   const dest = destinationNode?.trim() || undefined;
   const stopBefore = stopBeforeDestination !== false;
 
+  const definitionForLimit = await resolveDefinition(workflowId, workflow);
+  const quota = await assertWorkflowConcurrency(
+    workflowId,
+    definitionForLimit?.settings,
+    executionId,
+  );
+  if (!quota.ok) {
+    await prisma.execution.update({
+      where: { id: executionId },
+      data: {
+        status: "error",
+        finishedAt: new Date(),
+        error: JSON.stringify({ code: "concurrency", message: quota.error }),
+      },
+    });
+    notifyExecutionFinished(workflowId, executionId, "error");
+    return;
+  }
+
   if (await checkRedis()) {
     await executionQueue.add("execute", {
       workflowId,
@@ -142,6 +169,15 @@ export async function enqueueOrRun(
 
   const vars = await loadVarsMap(scope.projectId || null, envId ?? null);
 
+  const startedAt = Date.now();
+  const timeoutMs = await stampTimeoutDeadline(executionId, definition.settings, startedAt);
+  let timeoutHandle: ReturnType<typeof setTimeout> | undefined;
+  if (timeoutMs != null) {
+    timeoutHandle = setTimeout(() => {
+      void markExecutionTimeout(executionId);
+    }, timeoutMs);
+  }
+
   executeWorkflow({
     workflow: { ...definition, __executionId: executionId } as typeof definition,
     nodeExecutors: getExecutorMap(),
@@ -156,8 +192,10 @@ export async function enqueueOrRun(
     onProgress: async (partial) => {
       await persistExecutionProgress(executionId, partial);
     },
+    shouldAbort: () => abortReasonFor(executionId),
   })
     .then(async (result) => {
+      if (timeoutHandle) clearTimeout(timeoutHandle);
       if (result.paused) {
         await persistPausedExecution({
           executionId,
@@ -169,23 +207,39 @@ export async function enqueueOrRun(
         });
         return;
       }
-      const status = result.success ? "success" : "error";
-      await prisma.execution.update({
-        where: { id: executionId },
-        data: {
-          status,
-          finishedAt: new Date(),
+      if (result.aborted === "cancelled") {
+        await finalizeIfActive(executionId, {
+          status: "cancelled",
           runData: JSON.stringify(result.runData),
-          error: result.success
-            ? null
-            : JSON.stringify({
-                message:
-                  Object.values(result.runData).find((d) => d.status === "error")?.error ??
-                  "Workflow failed",
-              }),
-        },
+          error: JSON.stringify({ message: "Execution cancelled" }),
+        });
+        await discardQueuedJobs(executionId);
+        notifyExecutionFinished(workflowId, executionId, "cancelled");
+        return;
+      }
+      if (result.aborted === "timeout") {
+        await finalizeIfActive(executionId, {
+          status: "error",
+          runData: JSON.stringify(result.runData),
+          error: JSON.stringify({ code: "timeout", message: "Execution timed out" }),
+        });
+        await discardQueuedJobs(executionId);
+        notifyExecutionFinished(workflowId, executionId, "error");
+        return;
+      }
+      const status = result.success ? "success" : "error";
+      const wrote = await finalizeIfActive(executionId, {
+        status,
+        runData: JSON.stringify(result.runData),
+        error: result.success
+          ? null
+          : JSON.stringify({
+              message:
+                Object.values(result.runData).find((d) => d.status === "error")?.error ??
+                "Workflow failed",
+            }),
       });
-      notifyExecutionFinished(workflowId, executionId, status);
+      if (wrote) notifyExecutionFinished(workflowId, executionId, status);
     })
     .catch(async (err) => {
       log.error("in-process execution failed", {
@@ -194,13 +248,9 @@ export async function enqueueOrRun(
         workflowId,
         error: err instanceof Error ? err.message : String(err),
       });
-      await prisma.execution.update({
-        where: { id: executionId },
-        data: {
-          status: "error",
-          finishedAt: new Date(),
-          error: JSON.stringify({ message: err instanceof Error ? err.message : String(err) }),
-        },
+      await finalizeIfActive(executionId, {
+        status: "error",
+        error: JSON.stringify({ message: err instanceof Error ? err.message : String(err) }),
       });
       notifyExecutionFinished(workflowId, executionId, "error");
     });

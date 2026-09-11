@@ -156,7 +156,7 @@ function ExecutionDetailPage() {
             variant={
               row.status === "success"
                 ? "default"
-                : row.status === "error"
+                : row.status === "error" || row.status === "cancelled"
                   ? "destructive"
                   : "secondary"
             }
@@ -175,6 +175,19 @@ function ExecutionDetailPage() {
               }}
             >
               Resume
+            </button>
+          )}
+          {(row.status === "running" || row.status === "waiting") && (
+            <button
+              type="button"
+              className="rounded-md border border-border px-3 py-1 text-xs font-medium"
+              onClick={() => {
+                void apiFetch(`/api/v1/executions/${row.id}/cancel`, { method: "POST" }).then((res) => {
+                  if (res.ok) window.location.reload();
+                });
+              }}
+            >
+              Cancel
             </button>
           )}
         </div>

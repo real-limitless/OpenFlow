@@ -4,6 +4,7 @@ import { RateLimitSettingsPanel } from "@/components/settings/rate-limit-setting
 import { SecurityHeadersPanel } from "@/components/settings/security-headers-panel";
 import { WorkerRuntimePanel } from "@/components/settings/worker-runtime-panel";
 import { WebhookSettingsPanel } from "@/components/settings/webhook-settings-panel";
+import { ExecutionGovernancePanel } from "@/components/settings/execution-governance-panel";
 
 export const Route = createFileRoute("/settings")({
   head: () => ({ meta: [{ title: "Settings — OpenFlow" }] }),
@@ -57,6 +58,7 @@ function SettingsOverview() {
     <div className="space-y-6 text-[14px] text-muted-foreground">
       <RateLimitSettingsPanel />
       <WorkerRuntimePanel />
+      <ExecutionGovernancePanel />
       <SecurityHeadersPanel />
       <WebhookSettingsPanel />
       <div className="space-y-3">

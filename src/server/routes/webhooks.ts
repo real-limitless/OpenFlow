@@ -18,6 +18,13 @@ import { getDefaultEnvironment } from "../services/environments";
 import { notifyExecutionFinished, notifyExecutionStarted } from "../services/workflow-events";
 import { persistExecutionProgress } from "../services/persist-execution-progress";
 import {
+  abortReasonFor,
+  assertWorkflowConcurrency,
+  finalizeIfActive,
+  markExecutionTimeout,
+  stampTimeoutDeadline,
+} from "../services/execution-governance";
+import {
   getWebhookAuthSettings,
   resolveWebhookAuthRequired,
 } from "../services/instance-settings";
@@ -94,6 +101,12 @@ export default function webhooksRoute(app: Hono<AppEnv>) {
       }
     }
 
+    const quota = await assertWorkflowConcurrency(workflow.id, definition.settings);
+    if (!quota.ok) {
+      c.header("Retry-After", String(quota.retryAfterSec));
+      return c.json({ error: quota.error, retryAfterSec: quota.retryAfterSec }, quota.status);
+    }
+
     const execution = await prisma.execution.create({
       data: {
         workflowId: workflow.id,
@@ -129,6 +142,14 @@ export default function webhooksRoute(app: Hono<AppEnv>) {
     const environmentId = defaultEnv?.id;
     const vars = await loadVarsMap(projectId, environmentId ?? null);
 
+    const timeoutMs = await stampTimeoutDeadline(execution.id, definition.settings);
+    let timeoutHandle: ReturnType<typeof setTimeout> | undefined;
+    if (timeoutMs != null) {
+      timeoutHandle = setTimeout(() => {
+        void markExecutionTimeout(execution.id);
+      }, timeoutMs);
+    }
+
     const runOptions = {
       workflow: { ...definition, __executionId: execution.id },
       nodeExecutors: getExecutorMap(),
@@ -140,19 +161,39 @@ export default function webhooksRoute(app: Hono<AppEnv>) {
       onProgress: async (partial: ExecutionRunData) => {
         await persistExecutionProgress(execution.id, partial);
       },
+      shouldAbort: () => abortReasonFor(execution.id),
     };
 
-    const updateExecution = async (result: { success: boolean; runData: unknown }) => {
-      const status = result.success ? "success" : "error";
-      await prisma.execution.update({
-        where: { id: execution.id },
-        data: {
-          status,
-          finishedAt: new Date(),
+    const updateExecution = async (result: {
+      success: boolean;
+      runData: unknown;
+      aborted?: string;
+    }) => {
+      if (timeoutHandle) clearTimeout(timeoutHandle);
+      if (result.aborted === "cancelled") {
+        await finalizeIfActive(execution.id, {
+          status: "cancelled",
           runData: JSON.stringify(result.runData),
-        },
+          error: JSON.stringify({ message: "Execution cancelled" }),
+        });
+        notifyExecutionFinished(workflow.id, execution.id, "cancelled", "webhook");
+        return;
+      }
+      if (result.aborted === "timeout") {
+        await finalizeIfActive(execution.id, {
+          status: "error",
+          runData: JSON.stringify(result.runData),
+          error: JSON.stringify({ code: "timeout", message: "Execution timed out" }),
+        });
+        notifyExecutionFinished(workflow.id, execution.id, "error", "webhook");
+        return;
+      }
+      const status = result.success ? "success" : "error";
+      const wrote = await finalizeIfActive(execution.id, {
+        status,
+        runData: JSON.stringify(result.runData),
       });
-      notifyExecutionFinished(workflow.id, execution.id, status, "webhook");
+      if (wrote) notifyExecutionFinished(workflow.id, execution.id, status, "webhook");
     };
 
     const handleError = async (err: unknown) => {
@@ -168,6 +209,7 @@ export default function webhooksRoute(app: Hono<AppEnv>) {
     };
 
     if (!shouldWait) {
+      if (timeoutHandle) clearTimeout(timeoutHandle);
       // Fire-and-forget: enqueue job and return 202 immediately
       await enqueueOrRun(
         workflow.id,
