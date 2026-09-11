@@ -101,6 +101,25 @@ export default function webhooksRoute(app: Hono<AppEnv>) {
       }
     }
 
+    const { readIdempotencyKey } = await import("../../lib/security/webhook-idempotency");
+    const idemKey = readIdempotencyKey(c.req.raw.headers);
+    if (idemKey) {
+      const { claimWebhookIdempotency } = await import("../services/webhook-idempotency");
+      const claim = await claimWebhookIdempotency(path, idemKey);
+      if ("replayOf" in claim) {
+        c.header("Idempotency-Replayed", "true");
+        return c.json(
+          {
+            success: true,
+            executionId: claim.replayOf,
+            replayed: true,
+            message: "Webhook received, execution started",
+          },
+          202,
+        );
+      }
+    }
+
     const quota = await assertWorkflowConcurrency(workflow.id, definition.settings);
     if (!quota.ok) {
       c.header("Retry-After", String(quota.retryAfterSec));
@@ -114,6 +133,10 @@ export default function webhooksRoute(app: Hono<AppEnv>) {
         mode: "webhook",
       },
     });
+    if (idemKey) {
+      const { storeWebhookIdempotency } = await import("../services/webhook-idempotency");
+      await storeWebhookIdempotency(path, idemKey, execution.id);
+    }
     notifyExecutionStarted(workflow.id, execution.id, "webhook");
 
     const isWebhookType = (t: string) =>

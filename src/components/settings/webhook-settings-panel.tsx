@@ -12,6 +12,7 @@ type WebhookSettings = {
   hasSecret: boolean;
   envSecretConfigured: boolean;
   tryOut: boolean;
+  idempotency?: { header: string; alternateHeader: string; windowSec: number };
 };
 
 type RouteRow = {
@@ -99,6 +100,14 @@ export function WebhookSettingsPanel() {
         {cfg.tryOut && (
           <p className="mt-2 rounded-md bg-muted px-3 py-2 text-[12px] text-muted-foreground">
             Try-out mode defaults this off. Production (AUTH_DISABLED=false) defaults it on.
+          </p>
+        )}
+        {cfg.idempotency && (
+          <p className="mt-2 text-[13px] text-muted-foreground">
+            Duplicate POSTs with the same{" "}
+            <code className="rounded bg-muted px-1">{cfg.idempotency.header}</code> (or{" "}
+            <code className="rounded bg-muted px-1">{cfg.idempotency.alternateHeader}</code>)
+            return the original execution for {cfg.idempotency.windowSec}s.
           </p>
         )}
       </div>

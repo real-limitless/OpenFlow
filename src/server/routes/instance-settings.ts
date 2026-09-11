@@ -183,6 +183,11 @@ export default function instanceSettingsRoute(app: Hono<AppEnv>) {
       hasSecret: Boolean(stored.secret || process.env.OPENFLOW_WEBHOOK_SECRET?.trim()),
       envSecretConfigured: Boolean(process.env.OPENFLOW_WEBHOOK_SECRET?.trim()),
       tryOut: config.auth.disabled,
+      idempotency: {
+        header: "Idempotency-Key",
+        alternateHeader: "X-Idempotency-Key",
+        windowSec: (await import("../../lib/security/webhook-idempotency")).defaultIdempotencyWindowSec(),
+      },
     });
   });
 
@@ -209,6 +214,11 @@ export default function instanceSettingsRoute(app: Hono<AppEnv>) {
       hasSecret: Boolean(stored.secret || process.env.OPENFLOW_WEBHOOK_SECRET?.trim()),
       envSecretConfigured: Boolean(process.env.OPENFLOW_WEBHOOK_SECRET?.trim()),
       tryOut: config.auth.disabled,
+      idempotency: {
+        header: "Idempotency-Key",
+        alternateHeader: "X-Idempotency-Key",
+        windowSec: (await import("../../lib/security/webhook-idempotency")).defaultIdempotencyWindowSec(),
+      },
     });
   });
 
