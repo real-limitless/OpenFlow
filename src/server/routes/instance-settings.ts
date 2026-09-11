@@ -231,6 +231,14 @@ export default function instanceSettingsRoute(app: Hono<AppEnv>) {
         required: !config.auth.disabled,
         note: "Cookie-session POST/PUT/PATCH/DELETE require a matching CSRF token. API keys and try-out mode skip this check. Public forms keep their own _csrf field.",
       },
+      runtime: {
+        role: config.worker.role,
+        worker: config.worker.enabled,
+        scheduler: config.worker.scheduler,
+        concurrency: config.worker.concurrency,
+        queue: "workflow-execution",
+        redis: process.env.REDIS_URL ? "configured" : "default",
+      },
     });
   });
 }

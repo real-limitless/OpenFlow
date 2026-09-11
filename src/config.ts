@@ -1,5 +1,10 @@
 import { randomBytes } from "node:crypto";
 import { assertProductionSecrets, isPlaceholderSecret } from "./lib/security/prod-secrets";
+import {
+  parseOpenFlowRole,
+  schedulerEnabledForRole,
+  workerEnabledForRole,
+} from "./lib/runtime/role";
 
 function isPlaceholderKey(key: string | undefined): boolean {
   return isPlaceholderSecret(key);
@@ -74,7 +79,18 @@ export const config = {
     },
   },
   worker: {
-    enabled: process.env.RUN_WORKER !== "false" && process.env.RUN_WORKER !== "0",
+    get role() {
+      return parseOpenFlowRole(process.env.OPENFLOW_ROLE);
+    },
+    get enabled() {
+      return workerEnabledForRole(
+        parseOpenFlowRole(process.env.OPENFLOW_ROLE),
+        process.env.RUN_WORKER,
+      );
+    },
+    get scheduler() {
+      return schedulerEnabledForRole(parseOpenFlowRole(process.env.OPENFLOW_ROLE));
+    },
     concurrency: Math.max(1, parseInt(process.env.WORKER_CONCURRENCY ?? "5", 10) || 5),
   },
   /** Dev hot-load of node executors (POST /api/v1/dev/reload-nodes). */
@@ -271,6 +287,6 @@ export function validateConfig(): void {
   })();
 
   console.info(
-    `[openflow] boot · db=${dbHost} · auth=${config.auth.disabled ? "disabled" : "enabled"} · worker=${config.worker.enabled ? "on" : "off"} · secrets=ok`,
+    `[openflow] boot · db=${dbHost} · auth=${config.auth.disabled ? "disabled" : "enabled"} · role=${config.worker.role} · worker=${config.worker.enabled ? "on" : "off"} · secrets=ok`,
   );
 }

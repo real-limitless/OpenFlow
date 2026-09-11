@@ -2,6 +2,7 @@ import { createFileRoute, Link, Outlet, useRouterState } from "@tanstack/react-r
 import { PageShell } from "@/components/layout/page-shell";
 import { RateLimitSettingsPanel } from "@/components/settings/rate-limit-settings-panel";
 import { SecurityHeadersPanel } from "@/components/settings/security-headers-panel";
+import { WorkerRuntimePanel } from "@/components/settings/worker-runtime-panel";
 import { WebhookSettingsPanel } from "@/components/settings/webhook-settings-panel";
 
 export const Route = createFileRoute("/settings")({
@@ -55,6 +56,7 @@ function SettingsOverview() {
   return (
     <div className="space-y-6 text-[14px] text-muted-foreground">
       <RateLimitSettingsPanel />
+      <WorkerRuntimePanel />
       <SecurityHeadersPanel />
       <WebhookSettingsPanel />
       <div className="space-y-3">

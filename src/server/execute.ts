@@ -12,6 +12,8 @@ import { log } from "./log";
 import { notifyExecutionFinished } from "./services/workflow-events";
 import { persistExecutionProgress } from "./services/persist-execution-progress";
 import type { IWorkflow, INodeExecutionData } from "../lib/workflow/types";
+import { config } from "../config";
+import { requireRedisQueue } from "../lib/runtime/role";
 
 let redisAvailable: boolean | null = null;
 
@@ -102,6 +104,21 @@ export async function enqueueOrRun(
       destinationNode: dest,
       stopBeforeDestination: stopBefore,
     });
+    return;
+  }
+
+  if (requireRedisQueue(config.worker.role) || !config.worker.enabled) {
+    await prisma.execution.update({
+      where: { id: executionId },
+      data: {
+        status: "error",
+        finishedAt: new Date(),
+        error: JSON.stringify({
+          message: "Redis is required to enqueue executions when OPENFLOW_ROLE is main or worker",
+        }),
+      },
+    });
+    notifyExecutionFinished(workflowId, executionId, "error");
     return;
   }
 
