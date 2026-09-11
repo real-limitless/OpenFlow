@@ -1,6 +1,6 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { useNavigate, useRouterState } from "@tanstack/react-router";
-import { fetchAuthStatus, fetchSetupStatus } from "@/lib/auth/client";
+import { fetchAuthStatus, fetchSetupStatus, installCsrfFetch } from "@/lib/auth/client";
 
 const PUBLIC = new Set(["/login", "/register", "/setup", "/docs/compatibility", "/templates"]);
 
@@ -11,6 +11,7 @@ export function AuthGate({ children }: { children: ReactNode }) {
   const [ready, setReady] = useState(typeof window === "undefined");
 
   useEffect(() => {
+    installCsrfFetch();
     let cancelled = false;
     void (async () => {
       const isPublic =

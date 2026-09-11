@@ -13,6 +13,7 @@ import {
 import { ensureUser, ensureUserWithProject, LOCAL_USER_ID } from "../services/users";
 import { countRealUsers } from "./setup";
 import { canPublicRegister, sessionCookieSecure } from "../../lib/auth/registration-policy";
+import { issueCsrfCookie } from "../middleware/csrf";
 
 export { getSessionUserId } from "../services/sessions";
 
@@ -76,7 +77,8 @@ export default function authRoute(app: Hono<AppEnv>) {
 
     const token = await createSession(user.id);
     setSessionCookie(c, token);
-    return c.json(user, 201);
+    const csrfToken = issueCsrfCookie(c);
+    return c.json({ ...user, csrfToken }, 201);
   });
 
   app.post("/api/v1/auth/login", async (c) => {
@@ -99,13 +101,15 @@ export default function authRoute(app: Hono<AppEnv>) {
 
     const token = await createSession(user.id);
     setSessionCookie(c, token);
-    return c.json({ id: user.id, email: user.email, role: user.role });
+    const csrfToken = issueCsrfCookie(c);
+    return c.json({ id: user.id, email: user.email, role: user.role, csrfToken });
   });
 
   app.post("/api/v1/auth/logout", async (c) => {
     const token = getCookie(c, "session");
     await destroySession(token);
     deleteCookie(c, "session", { path: "/" });
+    deleteCookie(c, "csrf", { path: "/" });
     return c.json({ ok: true });
   });
 
@@ -121,13 +125,14 @@ export default function authRoute(app: Hono<AppEnv>) {
       return c.json({
         user: user ?? { id: LOCAL_USER_ID, email: "local@local", role: "owner" },
         authDisabled: true,
+        csrfToken: issueCsrfCookie(c),
       });
     }
 
     const token = getCookie(c, "session");
     const userId = await getSessionUserId(token);
     if (!userId) {
-      return c.json({ user: null, authDisabled: false });
+      return c.json({ user: null, authDisabled: false, csrfToken: issueCsrfCookie(c) });
     }
 
     const user = await prisma.user.findUnique({
@@ -135,9 +140,9 @@ export default function authRoute(app: Hono<AppEnv>) {
       select: { id: true, email: true, role: true },
     });
     if (!user) {
-      return c.json({ user: null, authDisabled: false });
+      return c.json({ user: null, authDisabled: false, csrfToken: issueCsrfCookie(c) });
     }
 
-    return c.json({ user, authDisabled: false });
+    return c.json({ user, authDisabled: false, csrfToken: issueCsrfCookie(c) });
   });
 }

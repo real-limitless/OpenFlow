@@ -8,15 +8,24 @@ type CorsInfo = {
   headers: string[];
 };
 
+type CsrfInfo = {
+  cookie: string;
+  header: string;
+  required: boolean;
+  note: string;
+};
+
 export function SecurityHeadersPanel() {
   const [cors, setCors] = useState<CorsInfo | null>(null);
+  const [csrf, setCsrf] = useState<CsrfInfo | null>(null);
 
   useEffect(() => {
     void (async () => {
       const res = await apiFetch("/api/v1/settings/security");
       if (!res.ok) return;
-      const body = (await res.json()) as { cors?: CorsInfo };
+      const body = (await res.json()) as { cors?: CorsInfo; csrf?: CsrfInfo };
       if (body.cors) setCors(body.cors);
+      if (body.csrf) setCsrf(body.csrf);
     })();
   }, []);
 
@@ -47,6 +56,17 @@ export function SecurityHeadersPanel() {
           <li key={h}>{h}</li>
         ))}
       </ul>
+      {csrf && (
+        <div className="border-t border-border pt-3">
+          <h3 className="text-[14px] font-medium">CSRF</h3>
+          <p className="mt-1 text-[13px] text-muted-foreground">{csrf.note}</p>
+          <p className="mt-2 text-[13px]">
+            Header <code className="rounded bg-muted px-1">{csrf.header}</code> must match cookie{" "}
+            <code className="rounded bg-muted px-1">{csrf.cookie}</code>.{" "}
+            {csrf.required ? "Enforced for this session." : "Not enforced in try-out (AUTH_DISABLED)."}
+          </p>
+        </div>
+      )}
     </div>
   );
 }
