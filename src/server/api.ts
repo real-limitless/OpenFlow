@@ -109,6 +109,10 @@ if (config.worker.enabled) {
   startRetentionPruner();
 }
 
+void import("./services/circuit-breakers")
+  .then((m) => m.loadCircuitBreakerConfig())
+  .catch(() => undefined);
+
 log.info("api ready", {
   component: "api",
   auth: config.auth.disabled ? "disabled" : "enabled",

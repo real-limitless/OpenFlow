@@ -11,6 +11,7 @@ import { AuditLogPanel } from "@/components/settings/audit-log-panel";
 import { HitlInboxPanel } from "@/components/settings/hitl-inbox-panel";
 import { ObservabilityPanel } from "@/components/settings/observability-panel";
 import { RetentionPanel } from "@/components/settings/retention-panel";
+import { CircuitBreakerPanel } from "@/components/settings/circuit-breaker-panel";
 
 export const Route = createFileRoute("/settings")({
   head: () => ({ meta: [{ title: "Settings — OpenFlow" }] }),
@@ -67,6 +68,7 @@ function SettingsOverview() {
       <HitlInboxPanel />
       <ObservabilityPanel />
       <RetentionPanel />
+      <CircuitBreakerPanel />
       <RateLimitSettingsPanel />
       <WorkerRuntimePanel />
       <ExecutionGovernancePanel />
