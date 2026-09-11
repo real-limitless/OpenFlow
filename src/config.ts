@@ -1,8 +1,8 @@
 import { randomBytes } from "node:crypto";
+import { assertProductionSecrets, isPlaceholderSecret } from "./lib/security/prod-secrets";
 
 function isPlaceholderKey(key: string | undefined): boolean {
-  if (!key) return true;
-  return /^(replace-me|replace-with|changeme|change-me)/i.test(key);
+  return isPlaceholderSecret(key);
 }
 
 let resolvedCredentialsKey: string | undefined;
@@ -260,6 +260,8 @@ export function validateConfig(): void {
     );
   }
 
+  assertProductionSecrets();
+
   const dbHost = (() => {
     try {
       return new URL(config.database.url).host;
@@ -269,6 +271,6 @@ export function validateConfig(): void {
   })();
 
   console.info(
-    `[openflow] boot · db=${dbHost} · auth=${config.auth.disabled ? "disabled" : "enabled"} · worker=${config.worker.enabled ? "on" : "off"}`,
+    `[openflow] boot · db=${dbHost} · auth=${config.auth.disabled ? "disabled" : "enabled"} · worker=${config.worker.enabled ? "on" : "off"} · secrets=ok`,
   );
 }
