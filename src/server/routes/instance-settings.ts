@@ -438,4 +438,52 @@ export default function instanceSettingsRoute(app: Hono<AppEnv>) {
       })),
     });
   });
+
+  app.get("/api/v1/settings/plugins", async (c) => {
+    const userId = c.get("userId");
+    await ensureUser(userId);
+    const { getPluginSettings, catalogPlugins } = await import("../services/plugins");
+    const settings = await getPluginSettings();
+    return c.json({
+      ...settings,
+      catalog: catalogPlugins().map((p) => ({
+        id: p.id,
+        publisher: p.publisher,
+        version: p.version,
+        displayName: p.displayName,
+        types: p.nodes.map((n) => n.type),
+        enabled: settings.enabledIds.includes(p.id),
+      })),
+      note: "Only allowlisted OpenFlow defineNode plugins load. n8n-nodes-* packages are never imported.",
+    });
+  });
+
+  app.put("/api/v1/settings/plugins", async (c) => {
+    const userId = c.get("userId");
+    await ensureUser(userId);
+    const gate = await requireInstanceAdmin(userId);
+    if (gate !== true) return c.json({ error: gate.error }, gate.status);
+    const body = await c.req.json<Record<string, unknown>>();
+    const { setPluginSettings, catalogPlugins } = await import("../services/plugins");
+    const settings = await setPluginSettings(body);
+    await recordAudit({
+      actorId: userId,
+      action: "settings.plugins",
+      resource: "settings",
+      resourceId: "plugins",
+      detail: settings,
+      ip: requestIp(c),
+    });
+    return c.json({
+      ...settings,
+      catalog: catalogPlugins().map((p) => ({
+        id: p.id,
+        publisher: p.publisher,
+        version: p.version,
+        displayName: p.displayName,
+        types: p.nodes.map((n) => n.type),
+        enabled: settings.enabledIds.includes(p.id),
+      })),
+    });
+  });
 }
