@@ -2,6 +2,11 @@ import type { IWorkflow, INodeExecutionData } from "../workflow/types";
 import type { ExecutionPlan, ExecutionRunData, NodeExecutor } from "./types";
 import { NodeExecutionError } from "./agent-trace";
 import { isWaitPausedError } from "./wait-pause";
+import {
+  isExecutionAbortedError,
+  raceWithAbort,
+  type AbortReason,
+} from "./governance";
 import type { AgentTrace } from "./agent-trace";
 import type { CredentialResolver } from "./credentials";
 import type { DataTableAccess } from "@/lib/data-tables/access";
@@ -115,6 +120,8 @@ export interface RunOptions {
   destinationNode?: string | null;
   /** When true (default), destination itself is not executed. */
   stopBeforeDestination?: boolean;
+  /** Cooperative cancel / timeout. Return a reason to stop the run. */
+  shouldAbort?: () => AbortReason | null | Promise<AbortReason | null>;
 }
 
 export interface RunResult {
@@ -126,6 +133,7 @@ export interface RunResult {
     resumeAt: string | null;
     items: import("../workflow/types").INodeExecutionData[];
   };
+  aborted?: AbortReason;
 }
 
 /** Expressions that must be evaluated per input item inside the executor. */
@@ -238,6 +246,15 @@ export async function executeWorkflow(options: RunOptions): Promise<RunResult> {
   };
 
   for (const nodeName of plan.runOrder) {
+    const abortReason = await options.shouldAbort?.();
+    if (abortReason) {
+      return {
+        runData,
+        success: false,
+        aborted: abortReason,
+      };
+    }
+
     const node = workflow.nodes.find((n) => n.name === nodeName);
     if (!node) continue;
 
@@ -384,6 +401,7 @@ export async function executeWorkflow(options: RunOptions): Promise<RunResult> {
             envAllowlist: options.envAllowlist,
             allowUrl: options.allowUrl,
             fsRoot: options.fsRoot,
+            shouldAbort: options.shouldAbort,
           });
 
           if (!childResult.success) {
@@ -431,10 +449,17 @@ export async function executeWorkflow(options: RunOptions): Promise<RunResult> {
           },
         });
 
-        outputs = await executor(ctx, resolvedNode);
+        outputs = await raceWithAbort(executor(ctx, resolvedNode), options.shouldAbort);
         lastError = null;
         break;
       } catch (err) {
+        if (isExecutionAbortedError(err)) {
+          runData[nodeName].status = "error";
+          runData[nodeName].error = err.message;
+          runData[nodeName].finishedAt = new Date().toISOString();
+          await emitProgress();
+          return { runData, success: false, aborted: err.reason };
+        }
         if (isWaitPausedError(err)) {
           runData[nodeName].status = "waiting";
           runData[nodeName].items = [err.items];

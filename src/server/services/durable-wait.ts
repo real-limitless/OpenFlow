@@ -14,19 +14,29 @@ export async function persistPausedExecution(opts: {
   const paused = opts.result.paused;
   if (!paused) return;
 
+  const existing = await prisma.execution.findUnique({
+    where: { id: opts.executionId },
+    select: { meta: true },
+  });
+  let meta: Record<string, unknown> = {};
+  try {
+    meta = existing?.meta ? (JSON.parse(existing.meta) as Record<string, unknown>) : {};
+  } catch {
+    meta = {};
+  }
+  meta.wait = {
+    nodeName: paused.nodeName,
+    resume: paused.resume,
+    resumeAt: paused.resumeAt,
+  };
+
   await prisma.execution.update({
     where: { id: opts.executionId },
     data: {
       status: "waiting",
       finishedAt: null,
       runData: JSON.stringify(opts.result.runData),
-      meta: JSON.stringify({
-        wait: {
-          nodeName: paused.nodeName,
-          resume: paused.resume,
-          resumeAt: paused.resumeAt,
-        },
-      }),
+      meta: JSON.stringify(meta),
     },
   });
 
@@ -59,6 +69,13 @@ export async function persistPausedExecution(opts: {
 export async function resumeWaitingExecution(executionId: string): Promise<boolean> {
   const row = await prisma.execution.findUnique({ where: { id: executionId } });
   if (!row || row.status !== "waiting") return false;
+  const { abortReasonFor, markExecutionTimeout } = await import("./execution-governance");
+  const reason = await abortReasonFor(executionId);
+  if (reason === "timeout") {
+    await markExecutionTimeout(executionId);
+    return false;
+  }
+  if (reason === "cancelled") return false;
   let nodeName = "";
   let items: INodeExecutionData[] = [{ json: {} }];
   try {

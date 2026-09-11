@@ -14,6 +14,13 @@ import { initLogStreaming, log } from "./log";
 import { notifyExecutionFinished } from "./services/workflow-events";
 import { persistExecutionProgress } from "./services/persist-execution-progress";
 import { persistPausedExecution } from "./services/durable-wait";
+import {
+  abortReasonFor,
+  discardQueuedJobs,
+  finalizeIfActive,
+  markExecutionTimeout,
+  stampTimeoutDeadline,
+} from "./services/execution-governance";
 import type { ExecutionJobData } from "./queue";
 import type { INodeExecutionData, IWorkflow } from "../lib/workflow/types";
 
@@ -103,6 +110,35 @@ export function startWorker(concurrency = 5): Worker<ExecutionJobData> {
       const vars = await loadVarsMap(projectId || null, environmentId ?? null);
 
       const tagged = { ...definition, __executionId: executionId } as typeof definition;
+      const live = await prisma.execution.findUnique({
+        where: { id: executionId },
+        select: { status: true },
+      });
+      if (live && live.status !== "running" && live.status !== "waiting") {
+        wlog.info("skip stale execution job", { status: live.status });
+        return { success: false, skipped: true };
+      }
+
+      await prisma.execution.updateMany({
+        where: { id: executionId, status: "waiting" },
+        data: { status: "running" },
+      });
+
+      const startedAt = Date.now();
+      const timeoutMs = await stampTimeoutDeadline(executionId, definition.settings, startedAt);
+      if (timeoutMs === 0) {
+        await markExecutionTimeout(executionId);
+        wlog.error("execution timed out");
+        notifyExecutionFinished(workflowId, executionId, "error");
+        return { success: false, timeout: true };
+      }
+      let timeoutHandle: ReturnType<typeof setTimeout> | undefined;
+      if (timeoutMs != null) {
+        timeoutHandle = setTimeout(() => {
+          void markExecutionTimeout(executionId);
+        }, timeoutMs);
+      }
+
       const result = await executeWorkflow({
         workflow: tagged,
         nodeExecutors: getExecutorMap(),
@@ -119,7 +155,9 @@ export function startWorker(concurrency = 5): Worker<ExecutionJobData> {
         onProgress: async (partial) => {
           await persistExecutionProgress(executionId, partial);
         },
+        shouldAbort: () => abortReasonFor(executionId),
       });
+      if (timeoutHandle) clearTimeout(timeoutHandle);
 
       if (result.paused) {
         await persistPausedExecution({
@@ -134,16 +172,36 @@ export function startWorker(concurrency = 5): Worker<ExecutionJobData> {
         return { success: true, paused: true };
       }
 
-      const status = result.success ? "success" : "error";
-      await prisma.execution.update({
-        where: { id: executionId },
-        data: {
-          status,
-          finishedAt: new Date(),
+      if (result.aborted === "cancelled") {
+        await finalizeIfActive(executionId, {
+          status: "cancelled",
           runData: JSON.stringify(result.runData),
-        },
+          error: JSON.stringify({ message: "Execution cancelled" }),
+        });
+        await discardQueuedJobs(executionId);
+        notifyExecutionFinished(workflowId, executionId, "cancelled");
+        wlog.info("execution cancelled");
+        return { success: false, cancelled: true };
+      }
+
+      if (result.aborted === "timeout") {
+        await finalizeIfActive(executionId, {
+          status: "error",
+          runData: JSON.stringify(result.runData),
+          error: JSON.stringify({ code: "timeout", message: "Execution timed out" }),
+        });
+        await discardQueuedJobs(executionId);
+        notifyExecutionFinished(workflowId, executionId, "error");
+        wlog.error("execution timed out");
+        return { success: false, timeout: true };
+      }
+
+      const status = result.success ? "success" : "error";
+      const wrote = await finalizeIfActive(executionId, {
+        status,
+        runData: JSON.stringify(result.runData),
       });
-      notifyExecutionFinished(workflowId, executionId, status);
+      if (wrote) notifyExecutionFinished(workflowId, executionId, status);
 
       if (result.success) {
         wlog.info("execution succeeded");
