@@ -98,7 +98,7 @@ function LoginPage() {
           {registrationOpen ? (
             <>
               No account?{" "}
-              <Link to="/register" className="text-primary hover:underline">
+              <Link to="/register" search={{}} className="text-primary hover:underline">
                 Register
               </Link>
               {" · "}

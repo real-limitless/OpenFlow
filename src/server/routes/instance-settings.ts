@@ -1,7 +1,6 @@
 import type { Hono } from "hono";
 import type { AppEnv } from "../middleware/auth";
 import { ensureUser } from "../services/users";
-import { prisma } from "../db";
 import { config } from "../../config";
 import {
   getCodePythonSettings,
@@ -18,6 +17,7 @@ import {
 import { ALL_MCP_SCOPES } from "../oauth/scopes";
 import { mcpResourceUrl, publicOrigin } from "../oauth/public-url";
 import { OPENFLOW_MCP_TOOLS } from "../mcp/tools";
+import { requireInstanceAdmin } from "../services/instance-admin";
 
 /** Built-in allowlist roots (mirrors code-python-native bootstrap; display only). */
 const BUILTIN_PYTHON_IMPORT_ROOTS = [
@@ -69,16 +69,6 @@ const BUILTIN_PYTHON_IMPORT_ROOTS = [
   "fnmatch",
   "urllib.parse",
 ] as const;
-
-async function requireInstanceAdmin(userId: string): Promise<true | { error: string; status: 403 }> {
-  if (userId === "local" || config.auth.disabled) return true;
-  const user = await prisma.user.findUnique({
-    where: { id: userId },
-    select: { role: true },
-  });
-  if (user?.role === "owner" || user?.role === "admin") return true;
-  return { error: "Only instance admins can change this setting", status: 403 };
-}
 
 async function mcpSettingsPayload(c: {
   req: { url: string; header: (n: string) => string | undefined };

@@ -6,6 +6,7 @@ import { WorkerRuntimePanel } from "@/components/settings/worker-runtime-panel";
 import { WebhookSettingsPanel } from "@/components/settings/webhook-settings-panel";
 import { ExecutionGovernancePanel } from "@/components/settings/execution-governance-panel";
 import { DlqPanel } from "@/components/settings/dlq-panel";
+import { InviteAdminPanel } from "@/components/settings/invite-admin-panel";
 
 export const Route = createFileRoute("/settings")({
   head: () => ({ meta: [{ title: "Settings — OpenFlow" }] }),
@@ -57,6 +58,7 @@ function SettingsLayout() {
 function SettingsOverview() {
   return (
     <div className="space-y-6 text-[14px] text-muted-foreground">
+      <InviteAdminPanel />
       <RateLimitSettingsPanel />
       <WorkerRuntimePanel />
       <ExecutionGovernancePanel />
