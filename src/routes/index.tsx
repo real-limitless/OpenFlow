@@ -19,6 +19,7 @@ import {
 } from "@/lib/workflow/credentials-inventory";
 import { Button } from "@/components/ui/button";
 import { ImportCredentialsDialog } from "@/components/credentials";
+import { ImportCompatDialog } from "@/components/import/import-compat-dialog";
 import { ShareDialog } from "@/components/share/share-dialog";
 import { PageShell } from "@/components/layout/page-shell";
 import { WelcomePanel } from "@/components/onboarding/welcome-panel";
@@ -48,6 +49,7 @@ function WorkflowList() {
   const [workflows, setWorkflows] = useState<IWorkflow[] | null>(null);
   const [migrateCount, setMigrateCount] = useState<number | null>(null);
   const [importDraft, setImportDraft] = useState<IWorkflow | null>(null);
+  const [compatDraft, setCompatDraft] = useState<IWorkflow | null>(null);
   const [shareWf, setShareWf] = useState<IWorkflow | null>(null);
   const [onboarding, setOnboarding] = useState<OnboardingState>(() => loadOnboardingState());
   const [busySample, setBusySample] = useState(false);
@@ -136,13 +138,18 @@ function WorkflowList() {
       toast.error(result.error ?? "Import failed");
       return;
     }
+    setCompatDraft(result.workflow);
+  };
+
+  const afterCompatContinue = async (workflow: IWorkflow) => {
+    setCompatDraft(null);
     const locals = await fetchLocalCredentials();
-    const inv = collectWorkflowCredentials(result.workflow, locals);
+    const inv = collectWorkflowCredentials(workflow, locals);
     if (inv.missingCount > 0) {
-      setImportDraft(result.workflow);
+      setImportDraft(workflow);
       return;
     }
-    await create(result.workflow);
+    await create(workflow);
   };
 
   const empty = workflows !== null && workflows.length === 0;
@@ -203,6 +210,17 @@ function WorkflowList() {
           const file = e.target.files?.[0];
           if (file) void onImport(file);
           e.target.value = "";
+        }}
+      />
+
+      <ImportCompatDialog
+        open={compatDraft != null}
+        workflow={compatDraft}
+        onOpenChange={(o) => {
+          if (!o) setCompatDraft(null);
+        }}
+        onContinue={(wf) => {
+          void afterCompatContinue(wf);
         }}
       />
 
