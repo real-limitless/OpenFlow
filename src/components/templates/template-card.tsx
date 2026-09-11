@@ -71,7 +71,11 @@ export function TemplateCard({ item }: { item: TemplateListItem }) {
           <span className="tabular-nums">
             {Math.round(item.compatibility.ratio * 100)}% ready
           </span>
-          {item.readyToDemo ? (
+          {item.certified ? (
+            <span className="rounded-full border border-sky-500/30 bg-sky-500/10 px-1.5 py-0.5 text-[10px] text-sky-700 dark:text-sky-400">
+              Certified
+            </span>
+          ) : item.readyToDemo ? (
             <span className="rounded-full border border-emerald-500/30 bg-emerald-500/10 px-1.5 py-0.5 text-[10px] text-emerald-700 dark:text-emerald-400">
               Ready to demo
             </span>
@@ -84,8 +88,6 @@ export function TemplateCard({ item }: { item: TemplateListItem }) {
               {item.sourceName}
             </span>
           ) : null}
-            Ready to demo
-          </span>
           {cats.map((c) => (
             <span
               key={c}

@@ -18,6 +18,8 @@ import {
   scoreTemplateCompatibility,
   type CompatLevel,
 } from "../services/template-compat";
+import { isCertifiedTemplate } from "../../lib/templates/certified";
+import { ensureCertifiedPack } from "../services/certified-templates";
 
 const LIST_SELECT = {
   id: true,
@@ -98,6 +100,12 @@ function mapListItem(row: ListRow) {
     sourceUrl: row.sourceUrl,
     libraryUrl: row.libraryUrl,
     readyToDemo: row.readyToDemo && compatibility.level === "ready",
+    certified: isCertifiedTemplate({
+      sourceId: row.sourceId,
+      packId: row.packId,
+      readyToDemo: row.readyToDemo && compatibility.level === "ready",
+      compatibilityLevel: compatibility.level,
+    }),
     publishedAt: row.publishedAt?.toISOString() ?? null,
     syncedAt: row.syncedAt.toISOString(),
     compatibility: {
@@ -146,6 +154,7 @@ async function findTemplateByParam(idParam: string) {
 
 export default function templatesRoute(app: Hono<AppEnv>) {
   app.get("/api/v1/templates/facets", async (c) => {
+    await ensureCertifiedPack();
     const rows = await prisma.workflowTemplate.findMany({
       select: { categories: true, sourceId: true, sourceName: true },
     });
@@ -177,11 +186,13 @@ export default function templatesRoute(app: Hono<AppEnv>) {
   });
 
   app.get("/api/v1/templates", async (c) => {
+    await ensureCertifiedPack();
     const q = (c.req.query("q") ?? "").trim();
     const category = (c.req.query("category") ?? "").trim();
     const source = (c.req.query("source") ?? "").trim();
     const sort = c.req.query("sort") === "recent" ? "recent" : "popular";
     const compat = (c.req.query("compat") ?? "any") as CompatLevel | "any";
+    const certified = c.req.query("certified") === "1" || c.req.query("certified") === "true";
     const page = Math.max(1, parseInt(c.req.query("page") ?? "1", 10) || 1);
     const pageSize = Math.min(
       48,
@@ -207,6 +218,9 @@ export default function templatesRoute(app: Hono<AppEnv>) {
     }
     if (source) {
       and.push({ sourceId: source });
+    }
+    if (certified) {
+      and.push({ sourceId: "openflow-certified" });
     }
     if (and.length) where.AND = and;
 

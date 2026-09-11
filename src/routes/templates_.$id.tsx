@@ -91,6 +91,11 @@ function TemplateDetailPage() {
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
             <CompatibilityBadge level={tpl.compatibility.level} />
+            {tpl.certified ? (
+              <span className="rounded-full border border-sky-500/30 bg-sky-500/10 px-2 py-0.5 text-[11px] text-sky-700 dark:text-sky-400">
+                Certified
+              </span>
+            ) : null}
             {tpl.categories.map((c) => (
               <span
                 key={c}
