@@ -11,6 +11,9 @@ import {
   isMcpEnabled,
   isEnvMcpDisabled,
   setMcpEnabled,
+  getWebhookAuthSettings,
+  setWebhookAuthSettings,
+  resolveWebhookAuthRequired,
 } from "../services/instance-settings";
 import { ALL_MCP_SCOPES } from "../oauth/scopes";
 import { mcpResourceUrl, publicOrigin } from "../oauth/public-url";
@@ -165,6 +168,47 @@ export default function instanceSettingsRoute(app: Hono<AppEnv>) {
         builtinAllowImports: [...BUILTIN_PYTHON_IMPORT_ROOTS],
         envAllowImports: normalizeImportList(process.env.OPENFLOW_PYTHON_ALLOW_IMPORTS ?? ""),
       },
+    });
+  });
+
+  app.get("/api/v1/settings/webhooks", async (c) => {
+    const userId = c.get("userId");
+    await ensureUser(userId);
+    const stored = await getWebhookAuthSettings();
+    const required = resolveWebhookAuthRequired(stored.required);
+    return c.json({
+      required,
+      requiredOverride: stored.required,
+      mode: stored.mode,
+      hasSecret: Boolean(stored.secret || process.env.OPENFLOW_WEBHOOK_SECRET?.trim()),
+      envSecretConfigured: Boolean(process.env.OPENFLOW_WEBHOOK_SECRET?.trim()),
+      tryOut: config.auth.disabled,
+    });
+  });
+
+  app.put("/api/v1/settings/webhooks", async (c) => {
+    const userId = c.get("userId");
+    await ensureUser(userId);
+    const gate = await requireInstanceAdmin(userId);
+    if (gate !== true) return c.json({ error: gate.error }, gate.status);
+    const body = await c.req
+      .json<{ required?: boolean | null; mode?: string; secret?: string }>()
+      .catch(() => ({}));
+    const stored = await setWebhookAuthSettings({
+      required: body.required === undefined ? undefined : body.required,
+      mode:
+        body.mode === "header" || body.mode === "basic" || body.mode === "signed"
+          ? body.mode
+          : undefined,
+      secret: typeof body.secret === "string" ? body.secret : undefined,
+    });
+    return c.json({
+      required: resolveWebhookAuthRequired(stored.required),
+      requiredOverride: stored.required,
+      mode: stored.mode,
+      hasSecret: Boolean(stored.secret || process.env.OPENFLOW_WEBHOOK_SECRET?.trim()),
+      envSecretConfigured: Boolean(process.env.OPENFLOW_WEBHOOK_SECRET?.trim()),
+      tryOut: config.auth.disabled,
     });
   });
 }

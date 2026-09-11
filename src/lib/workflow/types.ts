@@ -77,6 +77,8 @@ export interface IWorkflowSettings {
   callerPolicy?: string;
   errorWorkflow?: string;
   timezone?: string;
+  webhookSecret?: string;
+  webhookAuthMode?: "header" | "basic" | "signed";
   [key: string]: unknown;
 }
 
