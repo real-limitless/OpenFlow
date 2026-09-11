@@ -30,6 +30,12 @@ import {
   folderFromMeta,
   tagsFromExtra,
 } from "../services/workflow-organization";
+import {
+  diffWorkflowVersions,
+  getWorkflowVersionSnapshot,
+  listWorkflowVersions,
+  snapshotWorkflowVersion,
+} from "../services/workflow-versions";
 
 function minShareForRole(minRole: ProjectRole): SharePermission {
   return minRole === "viewer" ? "view" : "edit";
@@ -123,6 +129,80 @@ export default function workflowsRoute(app: Hono<AppEnv>) {
     });
 
     return c.json(list);
+  });
+
+  app.get("/api/v1/workflows/:id/versions", async (c) => {
+    const userId = c.get("userId");
+    const { id } = c.req.param();
+    const result = await loadWorkflowIfAllowed(id, userId, "viewer");
+    if ("error" in result) return c.json({ error: result.error }, result.status);
+    return c.json({ versions: await listWorkflowVersions(id) });
+  });
+
+  app.get("/api/v1/workflows/:id/versions/:versionId", async (c) => {
+    const userId = c.get("userId");
+    const { id, versionId } = c.req.param();
+    const result = await loadWorkflowIfAllowed(id, userId, "viewer");
+    if ("error" in result) return c.json({ error: result.error }, result.status);
+    const snapshot = await getWorkflowVersionSnapshot(versionId);
+    if (!snapshot) return c.json({ error: "Version not found" }, 404);
+    return c.json(snapshot);
+  });
+
+  app.get("/api/v1/workflows/:id/versions/:fromId/diff/:toId", async (c) => {
+    const userId = c.get("userId");
+    const { id, fromId, toId } = c.req.param();
+    const result = await loadWorkflowIfAllowed(id, userId, "viewer");
+    if ("error" in result) return c.json({ error: result.error }, result.status);
+    const diff = await diffWorkflowVersions(fromId, toId);
+    if (!diff) return c.json({ error: "Version not found" }, 404);
+    return c.json(diff);
+  });
+
+  app.post("/api/v1/workflows/:id/versions/:versionId/restore", async (c) => {
+    const userId = c.get("userId");
+    const { id, versionId } = c.req.param();
+    const result = await loadWorkflowIfAllowed(id, userId, "editor");
+    if ("error" in result) return c.json({ error: result.error }, result.status);
+    const snapshot = await getWorkflowVersionSnapshot(versionId);
+    if (!snapshot) return c.json({ error: "Version not found" }, 404);
+    const parsed = parseWorkflowJson({ ...snapshot, id }, id);
+    if (!parsed.ok) return c.json({ error: parsed.error }, 400);
+    const wf = parsed.workflow!;
+    const data = serializeJsonFields({
+      name: wf.name,
+      active: wf.active,
+      versionId: crypto.randomUUID(),
+      nodes: wf.nodes,
+      connections: wf.connections,
+      settings: wf.settings,
+      staticData: wf.staticData ?? null,
+      pinData: wf.pinData ?? null,
+      meta: wf.meta ?? null,
+      ...Object.fromEntries(
+        Object.entries(wf as Record<string, unknown>).filter(
+          ([k]) => !KNOWN_WORKFLOW_FIELDS.has(k),
+        ),
+      ),
+    });
+    const row = await prisma.workflow.update({
+      where: { id },
+      data: {
+        name: data.name as string,
+        active: data.active as boolean,
+        versionId: data.versionId as string,
+        nodes: data.nodes as string,
+        connections: data.connections as string,
+        settings: (data.settings as string) ?? null,
+        staticData: (data.staticData as string) ?? null,
+        pinData: (data.pinData as string) ?? null,
+        meta: (data.meta as string) ?? null,
+        extra: (data.extra as string) ?? null,
+      },
+    });
+    const saved = deserializeJsonFields(row as unknown as Record<string, unknown>);
+    void snapshotWorkflowVersion({ workflowId: id, workflow: saved, createdBy: userId });
+    return c.json(saved);
   });
 
   app.post("/api/v1/workflows/organization", async (c) => {
@@ -227,7 +307,9 @@ export default function workflowsRoute(app: Hono<AppEnv>) {
             extra: (data.extra as string) ?? null,
           },
         });
-        return c.json(deserializeJsonFields(row as unknown as Record<string, unknown>));
+        const saved = deserializeJsonFields(row as unknown as Record<string, unknown>);
+        void snapshotWorkflowVersion({ workflowId: saved.id, workflow: saved, createdBy: userId });
+        return c.json(saved);
       }
     }
 
@@ -266,7 +348,9 @@ export default function workflowsRoute(app: Hono<AppEnv>) {
       },
     });
 
-    return c.json(deserializeJsonFields(row as unknown as Record<string, unknown>), 201);
+    const created = deserializeJsonFields(row as unknown as Record<string, unknown>);
+    void snapshotWorkflowVersion({ workflowId: created.id, workflow: created, createdBy: userId });
+    return c.json(created, 201);
   });
 
   app.put("/api/v1/workflows/:id", async (c) => {
@@ -346,13 +430,16 @@ export default function workflowsRoute(app: Hono<AppEnv>) {
           },
         });
 
+    const saved = deserializeJsonFields(row as unknown as Record<string, unknown>);
+    void snapshotWorkflowVersion({ workflowId: saved.id, workflow: saved, createdBy: userId });
+
     // Keep public Chat URLs in sync when the graph changes while already active.
     if (row.active) {
       const { syncChatRoutes } = await import("../chat/register");
       await syncChatRoutes(row.id, wf.nodes, true);
     }
 
-    return c.json(deserializeJsonFields(row as unknown as Record<string, unknown>));
+    return c.json(saved);
   });
 
   app.patch("/api/v1/workflows/:id/governance", async (c) => {

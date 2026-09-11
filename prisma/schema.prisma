@@ -280,10 +280,26 @@ model Workflow {
   scheduledTriggers ScheduledTrigger[]
   formRoutes FormRoute[]
   chatRoutes ChatRoute[]
+  versions   WorkflowVersion[]
 
   @@index([userId])
   @@index([projectId])
   @@map("workflows")
+}
+
+model WorkflowVersion {
+  id         String   @id @default(cuid())
+  workflowId String
+  versionId  String
+  name       String
+  snapshot   String   @db.Text
+  createdBy  String   @default("")
+  createdAt  DateTime @default(now())
+
+  workflow Workflow @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+
+  @@index([workflowId, createdAt])
+  @@map("workflow_versions")
 }
 
 // ─── Form Trigger public routes ─────────────────────────
