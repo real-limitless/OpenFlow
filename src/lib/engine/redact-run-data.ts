@@ -28,16 +28,26 @@ function isSecretKey(key: string): boolean {
   return false;
 }
 
-function redactString(value: string): string {
-  if (BEARER.test(value)) return value.replace(BEARER, "$1********");
-  if (SK_KEY.test(value) || OF_KEY.test(value)) return "********";
-  return value;
+function redactString(value: string, pii: boolean): string {
+  let out = value;
+  if (BEARER.test(out)) out = out.replace(BEARER, "$1********");
+  if (SK_KEY.test(out) || OF_KEY.test(out)) out = "********";
+  if (pii) {
+    out = out.replace(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi, "[redacted-email]");
+  }
+  return out;
 }
 
+export type RedactOptions = {
+  /** Also mask email-shaped strings (GDPR-ish run data). */
+  pii?: boolean;
+};
+
 /** Walk runData (or any JSON) and mask credential-shaped keys and tokens. */
-export function redactRunData<T>(value: T): T {
+export function redactRunData<T>(value: T, options: RedactOptions = {}): T {
+  const pii = Boolean(options.pii);
   if (Array.isArray(value)) {
-    return value.map((v) => redactRunData(v)) as T;
+    return value.map((v) => redactRunData(v, options)) as T;
   }
   if (value && typeof value === "object") {
     const out: Record<string, unknown> = {};
@@ -45,11 +55,11 @@ export function redactRunData<T>(value: T): T {
       if (isSecretKey(k)) {
         out[k] = "********";
       } else {
-        out[k] = redactRunData(v);
+        out[k] = redactRunData(v, options);
       }
     }
     return out as T;
   }
-  if (typeof value === "string") return redactString(value) as T;
+  if (typeof value === "string") return redactString(value, pii) as T;
   return value;
 }

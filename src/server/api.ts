@@ -40,6 +40,7 @@ import ansibleRoute from "./routes/ansible";
 import mcpGalleryRoute from "./routes/mcp-gallery";
 import mcpFlowRoute from "./routes/mcp-flow";
 import { startWorker } from "./worker";
+import { startRetentionPruner } from "./services/retention";
 import { seedBuiltinExecutors } from "../lib/engine";
 import { seedBuiltinDescriptions } from "../lib/nodes/registry";
 import { initBinaryStorage } from "./binary-init";
@@ -105,6 +106,7 @@ if (config.worker.scheduler) {
 
 if (config.worker.enabled) {
   startWorker(config.worker.concurrency);
+  startRetentionPruner();
 }
 
 log.info("api ready", {
