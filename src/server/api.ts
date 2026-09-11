@@ -2,6 +2,7 @@ import { Hono } from "hono";
 import { config } from "../config";
 import { authMiddleware, type AppEnv } from "./middleware/auth";
 import { rateLimitMiddleware } from "./middleware/rate-limit";
+import { securityHeadersMiddleware } from "./middleware/security-headers";
 import apiKeysRoute from "./routes/api-keys";
 import authRoute from "./routes/auth";
 import credentialsRoute from "./routes/credentials";
@@ -48,6 +49,7 @@ initBinaryStorage();
 const app = new Hono<AppEnv>();
 
 app.use("*", rateLimitMiddleware);
+app.use("*", securityHeadersMiddleware);
 app.use("*", authMiddleware);
 
 healthRoute(app);

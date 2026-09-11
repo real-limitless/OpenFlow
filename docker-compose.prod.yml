@@ -16,6 +16,7 @@ services:
       OPENFLOW_OPEN_REGISTER: "false"
       OPENFLOW_HOT_NODES: "false"
       NODE_ENV: production
+      OPENFLOW_CORS_ORIGINS: ${OPENFLOW_CORS_ORIGINS:-}
       DATABASE_URL: ${DATABASE_URL:?Set DATABASE_URL with a non-default password}
       CREDENTIALS_KEY: ${CREDENTIALS_KEY:?Set CREDENTIALS_KEY}
       BINARY_STORAGE_DIR: /data/binary
