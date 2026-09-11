@@ -21,10 +21,22 @@ services:
       CREDENTIALS_KEY: ${CREDENTIALS_KEY:?Set CREDENTIALS_KEY}
       BINARY_STORAGE_DIR: /data/binary
       OPENFLOW_SECRETS_DIR: /data/secrets
+      OPENFLOW_ROLE: main
+      RUN_WORKER: "false"
     restart: unless-stopped
     # Prefer binding only when behind a reverse proxy on the same host:
     # ports:
     #   - "127.0.0.1:3000:3000"
+
+  worker:
+    environment:
+      AUTH_DISABLED: "false"
+      NODE_ENV: production
+      DATABASE_URL: ${DATABASE_URL:?Set DATABASE_URL with a non-default password}
+      CREDENTIALS_KEY: ${CREDENTIALS_KEY:?Set CREDENTIALS_KEY}
+      OPENFLOW_ROLE: worker
+      RUN_WORKER: "true"
+    restart: unless-stopped
 
   db:
     ports: !override

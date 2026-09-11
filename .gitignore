@@ -122,3 +122,4 @@ graphify-out/
 
 # graphify knowledge-graph output (regenerable, local only)
 graphify-out/
+dump.rdb

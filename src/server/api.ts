@@ -86,12 +86,14 @@ mcpFlowRoute(app);
 openflowMcpRoute(app);
 devRoute(app);
 
-initializeSchedules().catch((err) =>
-  log.error("schedule init failed", {
-    component: "api",
-    error: err instanceof Error ? err.message : String(err),
-  }),
-);
+if (config.worker.scheduler) {
+  initializeSchedules().catch((err) =>
+    log.error("schedule init failed", {
+      component: "api",
+      error: err instanceof Error ? err.message : String(err),
+    }),
+  );
+}
 
 if (config.worker.enabled) {
   startWorker(config.worker.concurrency);
@@ -100,6 +102,7 @@ if (config.worker.enabled) {
 log.info("api ready", {
   component: "api",
   auth: config.auth.disabled ? "disabled" : "enabled",
+  role: config.worker.role,
   worker: config.worker.enabled,
 });
 
