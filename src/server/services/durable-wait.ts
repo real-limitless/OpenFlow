@@ -2,6 +2,7 @@ import { prisma } from "../db";
 import { executionQueue } from "../queue";
 import type { RunResult } from "../../lib/engine/runner";
 import type { INodeExecutionData } from "../../lib/workflow/types";
+import { applyHitlDecision, type HitlDecision } from "../../lib/engine/hitl";
 
 export async function persistPausedExecution(opts: {
   executionId: string;
@@ -66,7 +67,10 @@ export async function persistPausedExecution(opts: {
   );
 }
 
-export async function resumeWaitingExecution(executionId: string): Promise<boolean> {
+export async function resumeWaitingExecution(
+  executionId: string,
+  opts?: { decision?: HitlDecision; comment?: string },
+): Promise<boolean> {
   const row = await prisma.execution.findUnique({ where: { id: executionId } });
   if (!row || row.status !== "waiting") return false;
   const { abortReasonFor, markExecutionTimeout } = await import("./execution-governance");
@@ -88,6 +92,9 @@ export async function resumeWaitingExecution(executionId: string): Promise<boole
     items = runData[nodeName]?.items?.[0] ?? items;
   } catch {
     /* ignore */
+  }
+  if (opts?.decision) {
+    items = applyHitlDecision(items, opts.decision, opts.comment);
   }
   const workflow = await prisma.workflow.findUnique({ where: { id: row.workflowId } });
   if (!workflow) return false;

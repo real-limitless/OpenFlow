@@ -8,6 +8,7 @@ import { ExecutionGovernancePanel } from "@/components/settings/execution-govern
 import { DlqPanel } from "@/components/settings/dlq-panel";
 import { InviteAdminPanel } from "@/components/settings/invite-admin-panel";
 import { AuditLogPanel } from "@/components/settings/audit-log-panel";
+import { HitlInboxPanel } from "@/components/settings/hitl-inbox-panel";
 
 export const Route = createFileRoute("/settings")({
   head: () => ({ meta: [{ title: "Settings — OpenFlow" }] }),
@@ -61,6 +62,7 @@ function SettingsOverview() {
     <div className="space-y-6 text-[14px] text-muted-foreground">
       <InviteAdminPanel />
       <AuditLogPanel />
+      <HitlInboxPanel />
       <RateLimitSettingsPanel />
       <WorkerRuntimePanel />
       <ExecutionGovernancePanel />
