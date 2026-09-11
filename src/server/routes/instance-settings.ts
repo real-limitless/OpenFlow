@@ -216,6 +216,7 @@ export default function instanceSettingsRoute(app: Hono<AppEnv>) {
     const userId = c.get("userId");
     await ensureUser(userId);
     const { RATE_LIMITS } = await import("../../lib/security/rate-limit");
+    const { corsAllowlistForSettings } = await import("../middleware/security-headers");
     return c.json({
       rateLimits: Object.fromEntries(
         Object.entries(RATE_LIMITS).map(([k, v]) => [
@@ -223,6 +224,7 @@ export default function instanceSettingsRoute(app: Hono<AppEnv>) {
           { limit: v.limit, windowSec: Math.round(v.windowMs / 1000) },
         ]),
       ),
+      cors: corsAllowlistForSettings(),
     });
   });
 }

@@ -1,6 +1,7 @@
 import { createFileRoute, Link, Outlet, useRouterState } from "@tanstack/react-router";
 import { PageShell } from "@/components/layout/page-shell";
 import { RateLimitSettingsPanel } from "@/components/settings/rate-limit-settings-panel";
+import { SecurityHeadersPanel } from "@/components/settings/security-headers-panel";
 import { WebhookSettingsPanel } from "@/components/settings/webhook-settings-panel";
 
 export const Route = createFileRoute("/settings")({
@@ -54,6 +55,7 @@ function SettingsOverview() {
   return (
     <div className="space-y-6 text-[14px] text-muted-foreground">
       <RateLimitSettingsPanel />
+      <SecurityHeadersPanel />
       <WebhookSettingsPanel />
       <div className="space-y-3">
       <p>Manage instance and project operations for OpenFlow enterprise features.</p>
