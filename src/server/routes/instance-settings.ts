@@ -211,4 +211,18 @@ export default function instanceSettingsRoute(app: Hono<AppEnv>) {
       tryOut: config.auth.disabled,
     });
   });
+
+  app.get("/api/v1/settings/security", async (c) => {
+    const userId = c.get("userId");
+    await ensureUser(userId);
+    const { RATE_LIMITS } = await import("../../lib/security/rate-limit");
+    return c.json({
+      rateLimits: Object.fromEntries(
+        Object.entries(RATE_LIMITS).map(([k, v]) => [
+          k,
+          { limit: v.limit, windowSec: Math.round(v.windowMs / 1000) },
+        ]),
+      ),
+    });
+  });
 }
