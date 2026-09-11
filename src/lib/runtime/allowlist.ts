@@ -18,6 +18,9 @@ export const LITE_NODE_TYPES = [
 export const HARNESS_EXTRA_TYPES = [
   "@n8n/n8n-nodes-langchain.agent",
   "@n8n/n8n-nodes-langchain.lmChatOpenRouter",
+  "@n8n/n8n-nodes-langchain.lmChatGroq",
+  "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+  "@n8n/n8n-nodes-langchain.toolHttpRequest",
   "n8n-nodes-base.httpRequestTool",
   "n8n-nodes-base.githubTool",
   "n8n-nodes-base.executeCommandTool",
@@ -29,6 +32,7 @@ export const HARNESS_EXTRA_TYPES = [
 export const HARNESS_NODE_TYPES = [...LITE_NODE_TYPES, ...HARNESS_EXTRA_TYPES] as const;
 
 export const HARNESS_TOOL_TYPES = [
+  "@n8n/n8n-nodes-langchain.toolHttpRequest",
   "n8n-nodes-base.httpRequestTool",
   "n8n-nodes-base.githubTool",
   "n8n-nodes-base.executeCommandTool",

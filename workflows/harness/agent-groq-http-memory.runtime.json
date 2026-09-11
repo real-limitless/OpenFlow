@@ -1,0 +1,78 @@
+{
+  "name": "Harness Agent Groq HTTP Memory",
+  "active": false,
+  "nodes": [
+    {
+      "id": "start",
+      "name": "Start",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [0, 0],
+      "parameters": {}
+    },
+    {
+      "id": "agent",
+      "name": "Agent",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1,
+      "position": [280, 0],
+      "parameters": {
+        "promptType": "auto",
+        "options": {
+          "systemMessage": "Use the HTTP tool, then answer.",
+          "maxIterations": 5,
+          "returnIntermediateSteps": true
+        }
+      }
+    },
+    {
+      "id": "model",
+      "name": "Groq Chat Model",
+      "type": "@n8n/n8n-nodes-langchain.lmChatGroq",
+      "typeVersion": 1,
+      "position": [280, -180],
+      "parameters": {
+        "model": { "__rl": true, "mode": "list", "value": "llama-3.3-70b-versatile" },
+        "options": { "temperature": 0 }
+      },
+      "credentials": { "groqApi": { "name": "Groq" } }
+    },
+    {
+      "id": "http",
+      "name": "HTTP Request Tool",
+      "type": "@n8n/n8n-nodes-langchain.toolHttpRequest",
+      "typeVersion": 1,
+      "position": [280, 180],
+      "parameters": {
+        "method": "GET",
+        "url": "https://example.com/doc",
+        "toolName": "http_request",
+        "description": "Fetch a URL and return the response body"
+      }
+    },
+    {
+      "id": "memory",
+      "name": "Simple Memory",
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1,
+      "position": [280, 320],
+      "parameters": {
+        "sessionId": "harness-session",
+        "contextWindowLength": 5
+      }
+    }
+  ],
+  "connections": {
+    "Start": { "main": [[{ "node": "Agent", "type": "main", "index": 0 }]] },
+    "Groq Chat Model": {
+      "ai_languageModel": [[{ "node": "Agent", "type": "ai_languageModel", "index": 0 }]]
+    },
+    "HTTP Request Tool": {
+      "ai_tool": [[{ "node": "Agent", "type": "ai_tool", "index": 0 }]]
+    },
+    "Simple Memory": {
+      "ai_memory": [[{ "node": "Agent", "type": "ai_memory", "index": 0 }]]
+    }
+  },
+  "settings": {}
+}

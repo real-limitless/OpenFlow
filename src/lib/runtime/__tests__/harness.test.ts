@@ -8,6 +8,8 @@ import { createRuntime } from "../index";
 import { httpRequestToolExecutor } from "../../engine/executors/httpRequestTool";
 import { filesystemToolExecutor } from "../../engine/executors/filesystemTool";
 import { setOpenRouterHttpClient } from "../../engine/executors/lm-chat-open-router";
+import { setGroqHttpClient } from "../../engine/executors/lm-chat-groq";
+import { clearMemoryBufferWindowStore } from "../../engine/executors/memory-buffer-window";
 import { createExecutionContext } from "@/sdk";
 import { getNodeType, seedBuiltinDescriptions } from "../../nodes/registry";
 
@@ -51,6 +53,8 @@ function makeCtx(
 afterEach(() => {
   vi.unstubAllGlobals();
   setOpenRouterHttpClient(null);
+  setGroqHttpClient(null);
+  clearMemoryBufferWindowStore();
 });
 
 const agentGraph = wf(
@@ -108,6 +112,116 @@ describe("harness runtime", () => {
       node({ name: "Model", type: "openflow-node-langchain.lmChatOpenRouter" }),
     ]);
     expect(createRuntime({ preset: "harness" }).validate(aliased).unsupportedNodes).toEqual([]);
+  });
+
+  it("validates Groq + HTTP tool + Simple Memory on the harness path", async () => {
+    const raw = await readFile(
+      fileURLToPath(
+        new URL(
+          "../../../../workflows/harness/agent-groq-http-memory.runtime.json",
+          import.meta.url,
+        ),
+      ),
+      "utf8",
+    );
+    const report = createRuntime({ preset: "harness" }).validate(raw);
+    expect(report.unsupportedNodes).toEqual([]);
+    expect(report.requiredCredentials.some((c) => c.slot === "groqApi")).toBe(true);
+  });
+
+  it("runs Agent with Groq, HTTP tool, and memory", async () => {
+    let groqCalls = 0;
+    setGroqHttpClient(async () => {
+      groqCalls++;
+      if (groqCalls === 1) {
+        return {
+          status: 200,
+          headers: {},
+          body: {
+            choices: [
+              {
+                message: {
+                  content: null,
+                  tool_calls: [
+                    {
+                      id: "call_http",
+                      type: "function",
+                      function: {
+                        name: "http_request",
+                        arguments: '{"url":"https://example.com/doc"}',
+                      },
+                    },
+                  ],
+                },
+              },
+            ],
+            model: "llama-3.3-70b-versatile",
+          },
+        };
+      }
+      return {
+        status: 200,
+        headers: {},
+        body: { choices: [{ message: { content: "summarized" } }] },
+      };
+    });
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => ({
+        ok: true,
+        status: 200,
+        statusText: "OK",
+        headers: { get: () => "text/plain" },
+        text: async () => "doc-body",
+        json: async () => ({ ok: true }),
+      })),
+    );
+    const graph = wf(
+      [
+        node({ name: "Start", type: "n8n-nodes-base.manualTrigger" }),
+        node({
+          name: "Agent",
+          type: "@n8n/n8n-nodes-langchain.agent",
+          parameters: {
+            promptType: "auto",
+            options: { maxIterations: 4, returnIntermediateSteps: true },
+          },
+        }),
+        node({
+          name: "Groq",
+          type: "@n8n/n8n-nodes-langchain.lmChatGroq",
+          parameters: {
+            model: { __rl: true, mode: "list", value: "llama-3.3-70b-versatile" },
+          },
+          credentials: { groqApi: { name: "Groq" } },
+        }),
+        node({
+          name: "HTTP",
+          type: "@n8n/n8n-nodes-langchain.toolHttpRequest",
+          parameters: { method: "GET", url: "https://example.com/doc", toolName: "http_request" },
+        }),
+        node({
+          name: "Memory",
+          type: "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+          parameters: { sessionId: "harness-session", contextWindowLength: 5 },
+        }),
+      ],
+      {
+        Start: { main: [[{ node: "Agent", type: "main", index: 0 }]] },
+        Groq: { ai_languageModel: [[{ node: "Agent", type: "ai_languageModel", index: 0 }]] },
+        HTTP: { ai_tool: [[{ node: "Agent", type: "ai_tool", index: 0 }]] },
+        Memory: { ai_memory: [[{ node: "Agent", type: "ai_memory", index: 0 }]] },
+      },
+    );
+    const result = await createRuntime({
+      preset: "harness",
+      credentials: { groqApi: { apiKey: "gsk-test" } },
+      allowUrl: () => true,
+    }).run(graph, { input: { userPrompt: "Summarize the doc" } });
+    expect(result.success).toBe(true);
+    expect(result.runData.Agent.status).toBe("success");
+    expect(String(result.runData.Agent.items?.[0]?.[0]?.json.output ?? "")).toContain("summarized");
+    expect(groqCalls).toBe(2);
   });
 
   it("still rejects Slack under harness", async () => {
