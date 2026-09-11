@@ -36,4 +36,4 @@ Features that import or convert **n8n-oriented templates** into OpenFlow-usable 
 
 ## Contact
 
-For security issues, see the product-branch [SECURITY.md](https://github.com/real-limitless/OpenFlow/blob/main/SECURITY.md). For license questions, see [LICENSE.md](LICENSE.md).
+For security issues, see the product-branch [SECURITY.md](https://github.com/real-limitless/OpenFlow/blob/DEVELOPMENT/SECURITY.md). For license questions, see [LICENSE.md](LICENSE.md).

@@ -6,7 +6,7 @@ Source: private kit TheFLOW (`real-limitless/TheFLOW`). Do not fork these rules 
 | --- | --- | --- |
 | `CORE` (this branch) | Everyone | Concept, license, campaign, screenshots, install pointers. No application source. |
 | `DEVELOPMENT` | Operators and developers | Runnable OpenFlow. Compose is the supported run path. |
-| `main` | Operators | Stable product alias when the remote publishes one. |
+| `PRODUCTION` | Operators | Published product line when used. There is no `main` branch on this remote today. |
 
 If you only see markdown and no `docker-compose.yml`, you are still on `CORE`.
 
