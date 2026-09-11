@@ -4,6 +4,7 @@ import type { IWorkflow } from "../../lib/workflow/types";
 import * as mutations from "../../lib/workflow/mutations";
 import { deserializeJsonFields, KNOWN_WORKFLOW_FIELDS, serializeJsonFields } from "./workflow-io";
 import { emitWorkflowEvent, notifyExecutionStarted } from "./workflow-events";
+import { snapshotWorkflowVersion } from "./workflow-versions";
 import { allNodeTypes, getNodeType } from "../../lib/nodes/registry";
 import { enqueueOrRun } from "../execute";
 import { ensurePersonalProject } from "./projects";
@@ -29,7 +30,7 @@ export async function saveWorkflow(
   const data = serializeJsonFields({
     name: next.name,
     active: next.active,
-    versionId: next.versionId ?? existing?.versionId ?? crypto.randomUUID(),
+    versionId: crypto.randomUUID(),
     nodes: next.nodes,
     connections: next.connections,
     settings: next.settings,
@@ -81,6 +82,7 @@ export async function saveWorkflow(
       });
 
   const saved = deserializeJsonFields(row as unknown as Record<string, unknown>);
+  void snapshotWorkflowVersion({ workflowId, workflow: saved, createdBy: userId });
   // "editor" saves are local client flushes — don't bounce the graph back over SSE.
   if (source !== "editor") {
     emitWorkflowEvent({

@@ -18,6 +18,7 @@ import {
   Table2,
   Undo2,
   Upload,
+  History,
 } from "lucide-react";
 import type { DockviewApi } from "dockview";
 import { toast } from "sonner";
@@ -53,6 +54,7 @@ import { McpShareDialog } from "@/components/editor/McpShareDialog";
 import { projectHeaders } from "@/lib/projects/client";
 import type { IWorkflow } from "@/lib/workflow/types";
 import { EnvironmentSwitcher } from "./EnvironmentSwitcher";
+import { VersionHistoryDialog } from "./VersionHistoryDialog";
 import { cn } from "@/lib/utils";
 import { EDITOR_PANELS, type EditorPanelId } from "@/components/editor/dock/panel-registry";
 import {
@@ -77,6 +79,7 @@ export function EditorTopBar({
   const [credsOpen, setCredsOpen] = useState(false);
   const [shareOpen, setShareOpen] = useState(false);
   const [mcpShareOpen, setMcpShareOpen] = useState(false);
+  const [historyOpen, setHistoryOpen] = useState(false);
   const [importDraft, setImportDraft] = useState<IWorkflow | null>(null);
   const [missingCount, setMissingCount] = useState(0);
 
@@ -416,6 +419,16 @@ export function EditorTopBar({
 
         <Button
           size="sm"
+          variant="outline"
+          className="h-8 shrink-0 px-2.5 text-[12px]"
+          onClick={() => setHistoryOpen(true)}
+        >
+          <History className="mr-1 size-3.5" />
+          <span className="hidden sm:inline">History</span>
+        </Button>
+
+        <Button
+          size="sm"
           variant={dirty ? "default" : "outline"}
           className={cn("h-8 shrink-0 px-2.5 text-[12px]", !dirty && "text-muted-foreground")}
           disabled={!dirty}
@@ -436,6 +449,11 @@ export function EditorTopBar({
         </Button>
       </div>
 
+      <VersionHistoryDialog
+        open={historyOpen}
+        workflowId={workflow.id}
+        onClose={() => setHistoryOpen(false)}
+      />
       <ShareDialog
         open={shareOpen}
         onOpenChange={setShareOpen}
