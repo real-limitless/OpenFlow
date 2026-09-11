@@ -486,4 +486,41 @@ export default function instanceSettingsRoute(app: Hono<AppEnv>) {
       })),
     });
   });
+
+  app.get("/api/v1/settings/sso", async (c) => {
+    const userId = c.get("userId");
+    await ensureUser(userId);
+    const { getOidcSettings, publicOidcSettings } = await import("../services/oidc");
+    const { publicOidcStatus, defaultRedirectUri } = await import("../../lib/auth/oidc");
+    const settings = await getOidcSettings();
+    return c.json({
+      ...publicOidcSettings(settings),
+      loginEnabled: publicOidcStatus(settings).enabled,
+      suggestedRedirect: defaultRedirectUri(publicOrigin(c)),
+      note: "OIDC authorization-code + PKCE. SAML is not in this release. First SSO user becomes owner if no accounts exist.",
+    });
+  });
+
+  app.put("/api/v1/settings/sso", async (c) => {
+    const userId = c.get("userId");
+    await ensureUser(userId);
+    const gate = await requireInstanceAdmin(userId);
+    if (gate !== true) return c.json({ error: gate.error }, gate.status);
+    const body = await c.req.json<Record<string, unknown>>();
+    const { setOidcSettings, publicOidcSettings } = await import("../services/oidc");
+    const { publicOidcStatus } = await import("../../lib/auth/oidc");
+    const settings = await setOidcSettings(body);
+    await recordAudit({
+      actorId: userId,
+      action: "settings.sso",
+      resource: "settings",
+      resourceId: "sso",
+      detail: { enabled: settings.enabled, issuer: settings.issuer, jitProvisioning: settings.jitProvisioning },
+      ip: requestIp(c),
+    });
+    return c.json({
+      ...publicOidcSettings(settings),
+      loginEnabled: publicOidcStatus(settings).enabled,
+    });
+  });
 }

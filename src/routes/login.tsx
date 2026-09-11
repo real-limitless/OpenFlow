@@ -23,6 +23,7 @@ function LoginPage() {
   const [busy, setBusy] = useState(false);
   const [registrationOpen, setRegistrationOpen] = useState(true);
   const [tryOut, setTryOut] = useState(false);
+  const [sso, setSso] = useState<{ enabled: boolean; issuer: string }>({ enabled: false, issuer: "" });
 
   useEffect(() => {
     let cancelled = false;
@@ -33,6 +34,13 @@ function LoginPage() {
         Boolean(status.needsOwner || status.registrationOpen) && !status.inviteOnly,
       );
     });
+    void fetch("/api/v1/auth/oidc/status", { credentials: "include" })
+      .then((res) => (res.ok ? res.json() : null))
+      .then((body: { enabled?: boolean; issuer?: string } | null) => {
+        if (cancelled || !body) return;
+        setSso({ enabled: Boolean(body.enabled), issuer: body.issuer ?? "" });
+      })
+      .catch(() => undefined);
     return () => {
       cancelled = true;
     };
@@ -94,6 +102,14 @@ function LoginPage() {
         <Button type="submit" className="w-full" disabled={busy}>
           {busy ? "Signing in…" : "Sign in"}
         </Button>
+        {sso.enabled ? (
+          <a
+            href={`/api/v1/auth/oidc/start${redirect ? `?redirect=${encodeURIComponent(redirect)}` : ""}`}
+            className="inline-flex h-9 w-full items-center justify-center rounded-md border border-input bg-background text-sm font-medium shadow-sm hover:bg-accent"
+          >
+            Sign in with SSO{sso.issuer ? ` (${sso.issuer})` : ""}
+          </a>
+        ) : null}
         <p className="text-center text-[13px] text-muted-foreground">
           {registrationOpen ? (
             <>

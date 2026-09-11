@@ -175,6 +175,7 @@ export type SetupStatus = {
   inviteOnly?: boolean;
   registrationOpen?: boolean;
   tryOut?: boolean;
+  ssoEnabled?: boolean;
 };
 
 export async function fetchSetupStatus(): Promise<SetupStatus> {

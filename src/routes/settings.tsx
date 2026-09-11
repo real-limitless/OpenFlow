@@ -14,6 +14,7 @@ import { RetentionPanel } from "@/components/settings/retention-panel";
 import { CircuitBreakerPanel } from "@/components/settings/circuit-breaker-panel";
 import { LifecycleWebhooksPanel } from "@/components/settings/lifecycle-webhooks-panel";
 import { PluginsPanel } from "@/components/settings/plugins-panel";
+import { SsoOidcPanel } from "@/components/settings/sso-oidc-panel";
 
 export const Route = createFileRoute("/settings")({
   head: () => ({ meta: [{ title: "Settings — OpenFlow" }] }),
@@ -66,6 +67,7 @@ function SettingsOverview() {
   return (
     <div className="space-y-6 text-[14px] text-muted-foreground">
       <InviteAdminPanel />
+      <SsoOidcPanel />
       <AuditLogPanel />
       <HitlInboxPanel />
       <ObservabilityPanel />
