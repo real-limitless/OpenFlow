@@ -94,8 +94,9 @@ function SetupPage() {
         <div className="space-y-1">
           <h1 className="text-lg font-semibold tracking-tight">Create instance owner</h1>
           <p className="text-[13px] text-muted-foreground">
-            This first account owns secret providers and admin settings. You can add more
-            users later.
+            This first account owns secret providers and admin settings. Public registration
+            closes after this owner exists. Compose without the production overlay keeps
+            AUTH_DISABLED=true as a labeled try-out.
           </p>
         </div>
         <div className="space-y-1.5">

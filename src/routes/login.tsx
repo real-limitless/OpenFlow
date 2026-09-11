@@ -1,11 +1,11 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { OpenFlowLogo } from "@/components/brand/openflow-logo";
-import { login } from "@/lib/auth/client";
+import { fetchSetupStatus, login } from "@/lib/auth/client";
 
 export const Route = createFileRoute("/login")({
   head: () => ({ meta: [{ title: "Sign in — OpenFlow" }] }),
@@ -21,6 +21,22 @@ function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
+  const [registrationOpen, setRegistrationOpen] = useState(true);
+  const [tryOut, setTryOut] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    void fetchSetupStatus().then((status) => {
+      if (cancelled) return;
+      setTryOut(Boolean(status.tryOut || status.authDisabled));
+      setRegistrationOpen(
+        Boolean(status.needsOwner || status.registrationOpen) && !status.inviteOnly,
+      );
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -47,6 +63,11 @@ function LoginPage() {
         className="w-full max-w-sm space-y-4 rounded-lg border border-border p-6"
       >
         <h1 className="text-lg font-semibold tracking-tight">Sign in</h1>
+        {tryOut && (
+          <p className="rounded-md bg-muted px-3 py-2 text-[12px] text-muted-foreground">
+            Try-out mode is on (AUTH_DISABLED). Sign-in is optional.
+          </p>
+        )}
         <div className="space-y-1.5">
           <Label htmlFor="email">Email</Label>
           <Input
@@ -74,11 +95,17 @@ function LoginPage() {
           {busy ? "Signing in…" : "Sign in"}
         </Button>
         <p className="text-center text-[13px] text-muted-foreground">
-          No account?{" "}
-          <Link to="/register" className="text-primary hover:underline">
-            Register
-          </Link>
-          {" · "}
+          {registrationOpen ? (
+            <>
+              No account?{" "}
+              <Link to="/register" className="text-primary hover:underline">
+                Register
+              </Link>
+              {" · "}
+            </>
+          ) : (
+            <>Registration is invite-only. </>
+          )}
           <Link to="/setup" className="text-primary hover:underline">
             First-time setup
           </Link>

@@ -9,6 +9,7 @@
 #   docker compose exec toolbox catalog-reindex-hash
 #
 # No .env required. Optional: cp .env.example .env and edit.
+# AUTH_DISABLED defaults to true: labeled try-out, no login required.
 # Production: docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
 
 services:
@@ -25,6 +26,7 @@ services:
     environment:
       DATABASE_URL: postgresql://openflow:openflow@db:5432/openflow
       REDIS_URL: redis://redis:6379
+      # Labeled try-out: no login. Production overlay sets AUTH_DISABLED=false.
       AUTH_DISABLED: ${AUTH_DISABLED:-true}
       CREDENTIALS_KEY: ${CREDENTIALS_KEY:-}
       # Fixed container paths (do not interpolate host .env — breaks the volume mounts)

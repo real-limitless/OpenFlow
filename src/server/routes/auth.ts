@@ -12,17 +12,22 @@ import {
 } from "../services/sessions";
 import { ensureUser, ensureUserWithProject, LOCAL_USER_ID } from "../services/users";
 import { countRealUsers } from "./setup";
+import { canPublicRegister, sessionCookieSecure } from "../../lib/auth/registration-policy";
 
 export { getSessionUserId } from "../services/sessions";
 
 function setSessionCookie(
-  c: { req: { raw: Request }; json: (data: unknown, status?: number) => Response },
+  c: { req: { raw: Request; url: string; header: (name: string) => string | undefined } },
   token: string,
 ) {
   setCookie(c as never, "session", token, {
     httpOnly: true,
     path: "/",
     sameSite: "Lax",
+    secure: sessionCookieSecure({
+      url: c.req.url,
+      forwardedProto: c.req.header("x-forwarded-proto"),
+    }),
     maxAge: SESSION_MAX_AGE_SEC,
   });
 }
@@ -43,13 +48,22 @@ export default function authRoute(app: Hono<AppEnv>) {
       return c.json({ error: "Password must be at least 8 characters" }, 400);
     }
 
+    const realUsers = await countRealUsers();
+    if (!canPublicRegister(realUsers > 0)) {
+      return c.json(
+        {
+          error: "Registration is invite-only after the owner account exists",
+          code: "invite_only",
+        },
+        403,
+      );
+    }
+
     const existing = await prisma.user.findUnique({ where: { email } });
     if (existing) {
       return c.json({ error: "Email already registered" }, 409);
     }
 
-    // First real account becomes instance owner (secret providers, admin gates).
-    const realUsers = await countRealUsers();
     const role = realUsers === 0 ? "owner" : "member";
 
     const passwordHash = await bcrypt.hash(password, 10);
