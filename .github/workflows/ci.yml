@@ -1,0 +1,36 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [DEVELOPMENT, PRODUCTION]
+  push:
+    branches: [DEVELOPMENT, PRODUCTION]
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      - name: Prisma client
+        run: npx prisma generate
+
+      - name: Targeted unit tests
+        run: npm run test:ci
+
+      - name: Typecheck (server, sdk, config)
+        run: npm run typecheck:ci
+
+      - name: Lint (server, sdk, config)
+        run: npx eslint src/server src/sdk src/config.ts

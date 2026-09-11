@@ -1,0 +1,13 @@
+{
+  "extends": "./tsconfig.json",
+  "include": [
+    "src/server/**/*.ts",
+    "src/sdk/**/*.ts",
+    "src/config.ts",
+    "src/lib/engine/__tests__/executors.test.ts"
+  ],
+  "exclude": [
+    "src/lib/engine/executors/**",
+    "src/generated/**"
+  ]
+}
