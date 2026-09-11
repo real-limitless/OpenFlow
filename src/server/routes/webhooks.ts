@@ -17,9 +17,17 @@ import { loadVarsMap } from "../services/variables";
 import { getDefaultEnvironment } from "../services/environments";
 import { notifyExecutionFinished, notifyExecutionStarted } from "../services/workflow-events";
 import { persistExecutionProgress } from "../services/persist-execution-progress";
+import {
+  getWebhookAuthSettings,
+  resolveWebhookAuthRequired,
+} from "../services/instance-settings";
+import {
+  normalizeWebhookAuthMode,
+  verifyWebhookAuth,
+} from "../../lib/security/webhook-auth";
 
 export default function webhooksRoute(app: Hono<AppEnv>) {
-  // Public webhook endpoint — no auth required
+  // Public webhook endpoint — authenticated by header/basic/HMAC when required.
   app.all("/webhook/:path", async (c) => {
     const path = c.req.param("path");
     const method = c.req.method;
@@ -51,11 +59,39 @@ export default function webhooksRoute(app: Hono<AppEnv>) {
       versionId: workflow.versionId,
     } as unknown as IWorkflow;
 
+    const rawBody = await c.req.text().catch(() => "");
     let requestData: Record<string, unknown>;
     try {
-      requestData = await c.req.json();
+      requestData = rawBody ? (JSON.parse(rawBody) as Record<string, unknown>) : {};
     } catch {
-      requestData = { body: await c.req.text().catch(() => "") };
+      requestData = { body: rawBody };
+    }
+
+    const instanceAuth = await getWebhookAuthSettings();
+    const required = resolveWebhookAuthRequired(instanceAuth.required);
+    const settings = (definition.settings ?? {}) as Record<string, unknown>;
+    const workflowSecret =
+      typeof settings.webhookSecret === "string" ? settings.webhookSecret : "";
+    const secret =
+      workflowSecret ||
+      instanceAuth.secret ||
+      process.env.OPENFLOW_WEBHOOK_SECRET?.trim() ||
+      "";
+    const mode = normalizeWebhookAuthMode(settings.webhookAuthMode ?? instanceAuth.mode);
+
+    if (required) {
+      if (!secret) {
+        return c.json({ error: "Webhook authentication required" }, 401);
+      }
+      const ok = verifyWebhookAuth({
+        headers: c.req.raw.headers,
+        body: rawBody,
+        secret,
+        mode,
+      });
+      if (!ok) {
+        return c.json({ error: "Webhook authentication failed" }, 401);
+      }
     }
 
     const execution = await prisma.execution.create({
@@ -204,9 +240,55 @@ export default function webhooksRoute(app: Hono<AppEnv>) {
     const userId = c.get("userId");
     const routes = await prisma.webhookRoute.findMany({
       where: { workflow: { project: { members: { some: { userId } } } } },
-      include: { workflow: { select: { id: true, name: true } } },
+      include: { workflow: { select: { id: true, name: true, settings: true } } },
     });
-    return c.json(routes);
+    return c.json(
+      routes.map((r) => {
+        let hasWorkflowSecret = false;
+        try {
+          const s = r.workflow.settings ? (JSON.parse(r.workflow.settings) as { webhookSecret?: string }) : {};
+          hasWorkflowSecret = Boolean(s.webhookSecret);
+        } catch {
+          hasWorkflowSecret = false;
+        }
+        return {
+          id: r.id,
+          path: r.path,
+          workflowId: r.workflowId,
+          nodeId: r.nodeId,
+          method: r.method,
+          active: r.active,
+          workflow: { id: r.workflow.id, name: r.workflow.name },
+          hasWorkflowSecret,
+        };
+      }),
+    );
+  });
+
+  app.put("/api/v1/webhooks/:id/secret", async (c) => {
+    const userId = c.get("userId");
+    const id = c.req.param("id");
+    const existing = await prisma.webhookRoute.findFirst({
+      where: { id, workflow: { project: { members: { some: { userId } } } } },
+      include: { workflow: true },
+    });
+    if (!existing) return c.json({ error: "Not found" }, 404);
+    const body = await c.req.json<{ secret?: string; mode?: string }>().catch(() => ({}));
+    let settings: Record<string, unknown> = {};
+    try {
+      settings = existing.workflow.settings ? (JSON.parse(existing.workflow.settings) as Record<string, unknown>) : {};
+    } catch {
+      settings = {};
+    }
+    if (typeof body.secret === "string") settings.webhookSecret = body.secret;
+    if (body.mode === "header" || body.mode === "basic" || body.mode === "signed") {
+      settings.webhookAuthMode = body.mode;
+    }
+    await prisma.workflow.update({
+      where: { id: existing.workflowId },
+      data: { settings: JSON.stringify(settings) },
+    });
+    return c.json({ ok: true, hasWorkflowSecret: Boolean(settings.webhookSecret) });
   });
 
   // Admin: delete a webhook route

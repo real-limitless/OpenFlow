@@ -1,5 +1,6 @@
 import { createFileRoute, Link, Outlet, useRouterState } from "@tanstack/react-router";
 import { PageShell } from "@/components/layout/page-shell";
+import { WebhookSettingsPanel } from "@/components/settings/webhook-settings-panel";
 
 export const Route = createFileRoute("/settings")({
   head: () => ({ meta: [{ title: "Settings — OpenFlow" }] }),
@@ -50,7 +51,9 @@ function SettingsLayout() {
 
 function SettingsOverview() {
   return (
-    <div className="space-y-3 text-[14px] text-muted-foreground">
+    <div className="space-y-6 text-[14px] text-muted-foreground">
+      <WebhookSettingsPanel />
+      <div className="space-y-3">
       <p>Manage instance and project operations for OpenFlow enterprise features.</p>
       <ul className="list-inside list-disc space-y-1">
         <li>
@@ -102,6 +105,7 @@ function SettingsOverview() {
           — recent structured application logs
         </li>
       </ul>
+      </div>
     </div>
   );
 }

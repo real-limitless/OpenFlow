@@ -3,6 +3,13 @@ import { config } from "../../config";
 
 export const CODE_PYTHON_ALLOW_IMPORTS_KEY = "code.pythonAllowImports";
 export const MCP_ENABLED_KEY = "mcp.enabled";
+export const WEBHOOK_AUTH_KEY = "webhook.auth";
+
+export type WebhookAuthSettings = {
+  required: boolean | null;
+  mode: "header" | "basic" | "signed";
+  secret: string;
+};
 
 export type CodePythonSettings = {
   /** Extra module roots allowed beyond the built-in safe stdlib list. */
@@ -22,6 +29,8 @@ type CacheEntry = { at: number; value: CodePythonSettings };
 let codePythonCache: CacheEntry | null = null;
 type McpCacheEntry = { at: number; value: McpInstanceSettings };
 let mcpCache: McpCacheEntry | null = null;
+type WebhookAuthCacheEntry = { at: number; value: WebhookAuthSettings };
+let webhookAuthCache: WebhookAuthCacheEntry | null = null;
 const CACHE_TTL_MS = 5_000;
 
 const MODULE_RE = /^[A-Za-z_][A-Za-z0-9_]*(\.[A-Za-z_][A-Za-z0-9_]*)*$/;
@@ -47,6 +56,7 @@ export function normalizeImportList(input: unknown): string[] {
 export function invalidateInstanceSettingsCache(): void {
   codePythonCache = null;
   mcpCache = null;
+  webhookAuthCache = null;
 }
 
 function envMcpKillSwitch(): boolean {
@@ -176,4 +186,71 @@ export async function resolvePythonExtraImports(): Promise<string[]> {
   const fromDb = (await getCodePythonSettings()).allowImports;
   const fromEnv = normalizeImportList(process.env.OPENFLOW_PYTHON_ALLOW_IMPORTS ?? "");
   return normalizeImportList([...fromDb, ...fromEnv]);
+}
+
+const DEFAULT_WEBHOOK_AUTH: WebhookAuthSettings = {
+  required: null,
+  mode: "header",
+  secret: "",
+};
+
+export async function getWebhookAuthSettings(): Promise<WebhookAuthSettings> {
+  const now = Date.now();
+  if (webhookAuthCache && now - webhookAuthCache.at < CACHE_TTL_MS) {
+    return webhookAuthCache.value;
+  }
+  try {
+    const row = await prisma.instanceSetting.findUnique({
+      where: { key: WEBHOOK_AUTH_KEY },
+    });
+    let value: WebhookAuthSettings = { ...DEFAULT_WEBHOOK_AUTH };
+    if (row?.value) {
+      try {
+        const parsed = JSON.parse(row.value) as Partial<WebhookAuthSettings>;
+        value = {
+          required: typeof parsed.required === "boolean" ? parsed.required : null,
+          mode:
+            parsed.mode === "basic" || parsed.mode === "signed" || parsed.mode === "header"
+              ? parsed.mode
+              : "header",
+          secret: typeof parsed.secret === "string" ? parsed.secret : "",
+        };
+      } catch {
+        value = { ...DEFAULT_WEBHOOK_AUTH };
+      }
+    }
+    webhookAuthCache = { at: now, value };
+    return value;
+  } catch {
+    return { ...DEFAULT_WEBHOOK_AUTH };
+  }
+}
+
+export async function setWebhookAuthSettings(
+  patch: Partial<WebhookAuthSettings>,
+): Promise<WebhookAuthSettings> {
+  const current = await getWebhookAuthSettings();
+  const next: WebhookAuthSettings = {
+    required: patch.required !== undefined ? patch.required : current.required,
+    mode: patch.mode ?? current.mode,
+    secret: patch.secret !== undefined ? patch.secret : current.secret,
+  };
+  await prisma.instanceSetting.upsert({
+    where: { key: WEBHOOK_AUTH_KEY },
+    create: { key: WEBHOOK_AUTH_KEY, value: JSON.stringify(next) },
+    update: { value: JSON.stringify(next) },
+  });
+  webhookAuthCache = { at: Date.now(), value: next };
+  return next;
+}
+
+export function resolveWebhookAuthRequired(stored: boolean | null): boolean {
+  if (typeof stored === "boolean") return stored;
+  if (process.env.OPENFLOW_WEBHOOK_AUTH === "off" || process.env.OPENFLOW_WEBHOOK_AUTH === "0") {
+    return false;
+  }
+  if (process.env.OPENFLOW_WEBHOOK_AUTH === "on" || process.env.OPENFLOW_WEBHOOK_AUTH === "1") {
+    return true;
+  }
+  return !config.auth.disabled;
 }
