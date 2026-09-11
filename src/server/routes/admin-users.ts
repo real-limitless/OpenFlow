@@ -11,6 +11,7 @@ import {
   normalizeInviteRole,
 } from "../../lib/auth/invites";
 import { createInvite, listInvites, revokeInvite } from "../services/invites";
+import { recordAudit, requestIp } from "../services/audit";
 import { config } from "../../config";
 
 function inviteUrl(origin: string, token: string): string {
@@ -60,6 +61,14 @@ export default function adminUsersRoute(app: Hono<AppEnv>) {
           : undefined,
     });
     const origin = new URL(c.req.url).origin;
+    void recordAudit({
+      actorId: userId,
+      action: "user.invite_create",
+      resource: "invite",
+      resourceId: rec.id,
+      detail: { email: rec.email, role: rec.role },
+      ip: requestIp(c),
+    });
     return c.json(
       {
         id: rec.id,
@@ -80,6 +89,13 @@ export default function adminUsersRoute(app: Hono<AppEnv>) {
     if (gate !== true) return c.json({ error: gate.error }, gate.status);
     const ok = await revokeInvite(c.req.param("id"));
     if (!ok) return c.json({ error: "Invite not found" }, 404);
+    void recordAudit({
+      actorId: userId,
+      action: "user.invite_revoke",
+      resource: "invite",
+      resourceId: c.req.param("id"),
+      ip: requestIp(c),
+    });
     return c.json({ ok: true });
   });
 
@@ -112,6 +128,14 @@ export default function adminUsersRoute(app: Hono<AppEnv>) {
       where: { id: targetId },
       data: { role: body.role },
       select: { id: true, email: true, role: true, updatedAt: true },
+    });
+    void recordAudit({
+      actorId: userId,
+      action: "user.role_change",
+      resource: "user",
+      resourceId: targetId,
+      detail: { email: target.email, from: target.role, to: body.role },
+      ip: requestIp(c),
     });
     return c.json(updated);
   });

@@ -10,6 +10,7 @@ import {
   type SharePermission,
   type ShareResourceType,
 } from "../services/shares";
+import { recordAudit, requestIp } from "../services/audit";
 
 function iso(d: Date | null | undefined): string | null {
   if (!d) return null;
@@ -215,8 +216,7 @@ export default function sharesRoute(app: Hono<AppEnv>) {
           },
         });
 
-    return c.json(
-      {
+    const payload = {
         id: share.id,
         resourceType: share.resourceType,
         resourceId: share.resourceId,
@@ -228,9 +228,16 @@ export default function sharesRoute(app: Hono<AppEnv>) {
         createdByUserId: share.createdByUserId,
         expiresAt: iso(share.expiresAt),
         createdAt: iso(share.createdAt),
-      },
-      existing ? 200 : 201,
-    );
+      };
+    void recordAudit({
+      actorId: userId,
+      action: "share.create",
+      resource: resourceType,
+      resourceId,
+      detail: { permission, granteeUserId, granteeProjectId },
+      ip: requestIp(c),
+    });
+    return c.json(payload, existing ? 200 : 201);
   });
 
   // DELETE /api/v1/shares/:id
@@ -253,6 +260,14 @@ export default function sharesRoute(app: Hono<AppEnv>) {
     }
 
     await prisma.share.delete({ where: { id } });
+    void recordAudit({
+      actorId: userId,
+      action: "share.delete",
+      resource: share.resourceType,
+      resourceId: share.resourceId,
+      detail: { shareId: id },
+      ip: requestIp(c),
+    });
     return c.body(null, 204);
   });
 }
