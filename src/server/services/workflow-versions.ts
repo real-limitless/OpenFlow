@@ -64,5 +64,3 @@ export async function diffWorkflowVersions(fromId: string, toId: string) {
   if (!from || !to) return null;
   return diffWorkflows(from, to);
 }
-
-export { deserializeJsonFields };
