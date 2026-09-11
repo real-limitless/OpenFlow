@@ -1,6 +1,7 @@
 import { Queue, QueueEvents } from "bullmq";
 import IORedis from "ioredis";
 import { config } from "../config";
+import type { INodeExecutionData } from "../lib/workflow/types";
 
 export const connection = new IORedis(config.redis.url, {
   maxRetriesPerRequest: null,
@@ -25,6 +26,8 @@ export interface ExecutionJobData {
   destinationNode?: string;
   /** When true (default), destination itself is not executed. */
   stopBeforeDestination?: boolean;
+  /** Items for startNode when replaying from a failed node. */
+  startInputItems?: INodeExecutionData[];
 }
 
 export const executionQueue = new Queue<ExecutionJobData>("workflow-execution", {

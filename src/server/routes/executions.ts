@@ -106,6 +106,55 @@ export default function executionsRoute(app: Hono<AppEnv>) {
     });
   });
 
+  app.get("/api/v1/executions/dlq", async (c) => {
+    const userId = c.get("userId");
+    const limit = Math.min(parseInt(c.req.query("limit") ?? "50"), 100);
+    const projectIds = (
+      await prisma.projectMember.findMany({
+        where: { userId },
+        select: { projectId: true },
+      })
+    ).map((m) => m.projectId);
+    const list = await prisma.execution.findMany({
+      where: {
+        status: "error",
+        workflow: { projectId: { in: projectIds } },
+      },
+      orderBy: { startedAt: "desc" },
+      take: limit,
+      include: { workflow: { select: { id: true, name: true, settings: true } } },
+    });
+    return c.json({
+      executions: list.map((e) => {
+        let error: unknown = e.error;
+        try {
+          error = e.error ? JSON.parse(e.error) : null;
+        } catch {
+          /* keep */
+        }
+        let runData: Record<string, { status?: string; error?: string }> = {};
+        try {
+          runData = JSON.parse(e.runData || "{}") as typeof runData;
+        } catch {
+          runData = {};
+        }
+        const failed = Object.entries(runData).find(([, v]) => v?.status === "error");
+        return {
+          id: e.id,
+          workflowId: e.workflowId,
+          workflowName: e.workflow.name,
+          status: e.status,
+          mode: e.mode,
+          startedAt: e.startedAt.toISOString(),
+          finishedAt: e.finishedAt?.toISOString() ?? null,
+          error,
+          failedNode: failed?.[0] ?? null,
+          failedMessage: failed?.[1]?.error ?? (error as { message?: string } | null)?.message ?? null,
+        };
+      }),
+    });
+  });
+
   app.get("/api/v1/executions/:id/stream", async (c) => {
     const userId = c.get("userId");
     const executionId = c.req.param("id");
@@ -262,6 +311,27 @@ export default function executionsRoute(app: Hono<AppEnv>) {
     if (!ok) return c.json({ error: "Execution is not running or waiting" }, 409);
     await discardQueuedJobs(executionId);
     return c.json({ success: true, executionId, status: "cancelled" });
+  });
+
+  app.post("/api/v1/executions/:id/replay", async (c) => {
+    const userId = c.get("userId");
+    const executionId = c.req.param("id");
+    const owned = await prisma.execution.findFirst({
+      where: {
+        id: executionId,
+        workflow: { project: { members: { some: { userId } } } },
+      },
+      select: { id: true },
+    });
+    if (!owned) return c.json({ error: "Execution not found" }, 404);
+    const { replayFailedExecution } = await import("../services/error-replay");
+    const result = await replayFailedExecution(executionId);
+    if (!result.ok) return c.json({ error: result.error }, result.status ?? 400);
+    return c.json({
+      success: true,
+      executionId: result.executionId,
+      destinationNode: result.destinationNode,
+    }, 202);
   });
 
   app.get("/api/v1/executions/:id", async (c) => {

@@ -46,6 +46,7 @@ export function startWorker(concurrency = 5): Worker<ExecutionJobData> {
         startNode: jobStartNode,
         destinationNode: jobDestinationNode,
         stopBeforeDestination: jobStopBefore,
+        startInputItems: jobStartInputItems,
       } = job.data;
 
       const wlog = log.child({
@@ -156,6 +157,7 @@ export function startWorker(concurrency = 5): Worker<ExecutionJobData> {
           await persistExecutionProgress(executionId, partial);
         },
         shouldAbort: () => abortReasonFor(executionId),
+        startInputItems: jobStartInputItems as INodeExecutionData[] | undefined,
       });
       if (timeoutHandle) clearTimeout(timeoutHandle);
 
@@ -193,6 +195,14 @@ export function startWorker(concurrency = 5): Worker<ExecutionJobData> {
         await discardQueuedJobs(executionId);
         notifyExecutionFinished(workflowId, executionId, "error");
         wlog.error("execution timed out");
+        const { triggerErrorWorkflow } = await import("./services/error-replay");
+        await triggerErrorWorkflow({
+          sourceWorkflowId: workflowId,
+          sourceExecutionId: executionId,
+          mode: job.data.mode,
+          runData: result.runData,
+          message: "Execution timed out",
+        });
         return { success: false, timeout: true };
       }
 
@@ -210,6 +220,14 @@ export function startWorker(concurrency = 5): Worker<ExecutionJobData> {
         wlog.error("execution failed", {
           node: errNode?.[0],
           error: errNode?.[1]?.error,
+        });
+        const { triggerErrorWorkflow } = await import("./services/error-replay");
+        await triggerErrorWorkflow({
+          sourceWorkflowId: workflowId,
+          sourceExecutionId: executionId,
+          mode: job.data.mode,
+          runData: result.runData,
+          message: errNode?.[1]?.error ?? "Workflow failed",
         });
       }
       return { success: result.success };

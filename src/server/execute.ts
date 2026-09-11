@@ -92,6 +92,7 @@ export async function enqueueOrRun(
   startNode?: string | null,
   destinationNode?: string | null,
   stopBeforeDestination?: boolean,
+  startInputItems?: INodeExecutionData[],
 ): Promise<void> {
   const scope = await resolveScope(workflowId, userId, projectId);
   const envId = await resolveEnvId(scope.projectId, environmentId);
@@ -131,6 +132,7 @@ export async function enqueueOrRun(
       startNode: start,
       destinationNode: dest,
       stopBeforeDestination: stopBefore,
+      startInputItems,
     });
     return;
   }
@@ -193,6 +195,7 @@ export async function enqueueOrRun(
       await persistExecutionProgress(executionId, partial);
     },
     shouldAbort: () => abortReasonFor(executionId),
+    startInputItems,
   })
     .then(async (result) => {
       if (timeoutHandle) clearTimeout(timeoutHandle);
@@ -225,6 +228,14 @@ export async function enqueueOrRun(
         });
         await discardQueuedJobs(executionId);
         notifyExecutionFinished(workflowId, executionId, "error");
+        const { triggerErrorWorkflow } = await import("./services/error-replay");
+        await triggerErrorWorkflow({
+          sourceWorkflowId: workflowId,
+          sourceExecutionId: executionId,
+          mode,
+          runData: result.runData,
+          message: "Execution timed out",
+        });
         return;
       }
       const status = result.success ? "success" : "error";
@@ -240,6 +251,18 @@ export async function enqueueOrRun(
             }),
       });
       if (wrote) notifyExecutionFinished(workflowId, executionId, status);
+      if (wrote && status === "error") {
+        const { triggerErrorWorkflow } = await import("./services/error-replay");
+        await triggerErrorWorkflow({
+          sourceWorkflowId: workflowId,
+          sourceExecutionId: executionId,
+          mode,
+          runData: result.runData,
+          message:
+            Object.values(result.runData).find((d) => d.status === "error")?.error ??
+            "Workflow failed",
+        });
+      }
     })
     .catch(async (err) => {
       log.error("in-process execution failed", {
