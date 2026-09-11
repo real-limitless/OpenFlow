@@ -3,6 +3,9 @@ import { config } from "../../config";
 import { prisma } from "../db";
 import type { AppEnv } from "../middleware/auth";
 import { LOCAL_USER_ID } from "../services/users";
+import {
+  canPublicRegister,
+} from "../../lib/auth/registration-policy";
 
 /** Count real accounts (exclude AUTH_DISABLED synthetic local user). */
 export async function countRealUsers(): Promise<number> {
@@ -22,10 +25,15 @@ export default function setupRoute(app: Hono<AppEnv>) {
     const authDisabled = config.auth.disabled;
     const realUsers = await countRealUsers();
     const hasUsers = realUsers > 0;
+    const needsOwner = !authDisabled && !hasUsers;
+    const inviteOnly = !authDisabled && !canPublicRegister(hasUsers);
     return c.json({
       authDisabled,
       hasUsers,
-      needsOwner: !authDisabled && !hasUsers,
+      needsOwner,
+      inviteOnly,
+      registrationOpen: !authDisabled && canPublicRegister(hasUsers),
+      tryOut: authDisabled,
     });
   });
 }

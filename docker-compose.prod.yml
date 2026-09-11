@@ -11,6 +11,7 @@ services:
     environment:
       # Literals so a try-out .env (AUTH_DISABLED=true) cannot silently win
       AUTH_DISABLED: "false"
+      OPENFLOW_OPEN_REGISTER: "false"
       OPENFLOW_HOT_NODES: "false"
       NODE_ENV: production
       BINARY_STORAGE_DIR: /data/binary

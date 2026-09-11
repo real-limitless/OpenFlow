@@ -111,6 +111,9 @@ export type SetupStatus = {
   authDisabled: boolean;
   hasUsers: boolean;
   needsOwner: boolean;
+  inviteOnly?: boolean;
+  registrationOpen?: boolean;
+  tryOut?: boolean;
 };
 
 export async function fetchSetupStatus(): Promise<SetupStatus> {
