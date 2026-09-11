@@ -81,6 +81,8 @@ export default defineConfig(({ command }) => {
     server: {
       host: "::",
       port: 8080,
+      // Hono securityHeadersMiddleware owns CORS / OPTIONS for API paths.
+      cors: false,
     },
     plugins,
   };
