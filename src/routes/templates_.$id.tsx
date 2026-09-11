@@ -168,7 +168,7 @@ function TemplateDetailPage() {
       <div className="mt-8 grid gap-6 sm:grid-cols-2">
         <div>
           <h2 className="text-sm font-semibold">
-            Supported nodes ({tpl.compatibility.supportedCount})
+            Ready executors ({tpl.compatibility.supportedCount})
           </h2>
           <div className="mt-2 flex flex-wrap gap-1">
             {tpl.compatibility.supported.length === 0 ? (
@@ -187,12 +187,12 @@ function TemplateDetailPage() {
         </div>
         <div>
           <h2 className="text-sm font-semibold">
-            Missing in OpenFlow ({tpl.compatibility.missingCount})
+            Partial or stub ({tpl.compatibility.missingCount})
           </h2>
           <div className="mt-2 flex flex-wrap gap-1">
             {tpl.compatibility.missing.length === 0 ? (
               <span className="text-[12px] text-muted-foreground">
-                All scored nodes are available
+                All scored nodes have a ready executor
               </span>
             ) : (
               tpl.compatibility.missing.map((t) => (

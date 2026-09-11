@@ -7,6 +7,7 @@ import {
   isCanvasInspectType,
   STICKY_NOTE_TYPE,
 } from "../nodes/registry";
+import { nodeDepth, type NodeDepth } from "../nodes/depth";
 import { isAiToolSubnode, resolveInputs, resolveOutputs } from "../nodes/types";
 import {
   channelEdgeColor,
@@ -247,7 +248,7 @@ export function channelHandleIds(channels: string[]): string[] {
 export interface MigrationRow {
   name: string;
   type: string;
-  status: "supported" | "placeholder";
+  status: NodeDepth;
   displayName: string;
 }
 
@@ -257,7 +258,7 @@ export function migrationReport(workflow: IWorkflow): MigrationRow[] {
     return {
       name: node.name,
       type: node.type,
-      status: d.placeholder ? "placeholder" : "supported",
+      status: nodeDepth(node.type),
       displayName: d.displayName,
     };
   });

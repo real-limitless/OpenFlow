@@ -151,10 +151,12 @@ const aliases: Record<string, string> = Object.fromEntries(ALIAS_PAIRS);
  */
 export const NODE_CATEGORIES: NodeCategory[] = [
   "Triggers",
-  "Actions",
+  "Core",
   "Flow",
+  "Actions",
   "Transform",
   "Helpers",
+  "Canvas",
   "AI",
   "AI Tool",
   "Communication",
@@ -170,10 +172,8 @@ export const NODE_CATEGORIES: NodeCategory[] = [
   "Payments",
   "Analytics",
   "App",
-  "Core",
   "Utility",
   "Miscellaneous",
-  "Canvas",
 ];
 
 /** Canvas-only annotation / inspect nodes (no execution edges). */

@@ -2,6 +2,8 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { ArrowLeft, CheckCircle2, CircleDashed } from "lucide-react";
 import { allNodeTypes } from "@/lib/nodes/registry";
 import { EXPRESSION_HELPERS } from "@/lib/expressions/evaluate";
+import { nodeDepth } from "@/lib/nodes/depth";
+import { DepthBadge } from "@/components/nodes/depth-badge";
 
 export const Route = createFileRoute("/docs/compatibility")({
   head: () => ({
@@ -33,6 +35,9 @@ const roadmap = [
 
 function CompatibilityPage() {
   const nodes = allNodeTypes();
+  const ready = nodes.filter((n) => nodeDepth(n.name) === "ready").length;
+  const partial = nodes.filter((n) => nodeDepth(n.name) === "partial").length;
+  const stub = nodes.filter((n) => nodeDepth(n.name) === "stub").length;
 
   return (
     <main className="mx-auto min-h-screen w-full max-w-4xl px-6 py-14">
@@ -66,7 +71,11 @@ function CompatibilityPage() {
         </ul>
       </Section>
 
-      <Section title={`Implemented nodes (${nodes.length})`}>
+      <Section title={`Node depth (${ready} ready · ${partial} partial · ${stub} stub)`}>
+        <p className="mb-3 text-[13px] text-muted-foreground">
+          Counts come from builtin executors, not catalog.json. A palette entry is ready only
+          when OpenFlow can run it.
+        </p>
         <div className="overflow-hidden rounded-lg border border-border">
           <table className="w-full text-left text-[13px]">
             <thead className="bg-card text-[11px] uppercase tracking-wider text-muted-foreground">
@@ -74,6 +83,7 @@ function CompatibilityPage() {
                 <th className="px-3 py-2 font-medium">Node</th>
                 <th className="px-3 py-2 font-medium">Type string</th>
                 <th className="px-3 py-2 font-medium">Category</th>
+                <th className="px-3 py-2 font-medium">Depth</th>
               </tr>
             </thead>
             <tbody>
@@ -82,14 +92,17 @@ function CompatibilityPage() {
                   <td className="px-3 py-2">{n.displayName}</td>
                   <td className="px-3 py-2 font-mono text-[11px] text-muted-foreground">{n.name}</td>
                   <td className="px-3 py-2 text-muted-foreground">{n.category}</td>
+                  <td className="px-3 py-2">
+                    <DepthBadge depth={nodeDepth(n.name)} />
+                  </td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
         <p className="mt-3 text-[13px] text-muted-foreground">
-          Any other node type imports as a placeholder: its parameters, credentials and position are
-          preserved and re-exported unchanged, and the migration report flags it.
+          Stub types import as placeholders: parameters, credentials and position are preserved
+          and re-exported unchanged. The migration report flags them.
         </p>
       </Section>
 

@@ -83,23 +83,29 @@ the server engine planned for Level 2.
 | `$if(cond, a, b)` | Inline conditional. |
 | `$isEmpty(value)` | True when value is empty. |
 
-## Implemented nodes
+## Node depth
 
-| Display name | Type string | Category |
-| --- | --- | --- |
-| Manual Trigger | `n8n-nodes-base.manualTrigger` | Triggers |
-| Webhook | `n8n-nodes-base.webhook` | Triggers |
-| Schedule Trigger | `n8n-nodes-base.scheduleTrigger` | Triggers |
-| Respond to Webhook | `n8n-nodes-base.respondToWebhook` | Triggers |
-| HTTP Request | `n8n-nodes-base.httpRequest` | Core |
-| Set | `n8n-nodes-base.set` | Core |
-| Code | `n8n-nodes-base.code` | Core |
-| If | `n8n-nodes-base.if` | Flow |
-| Switch | `n8n-nodes-base.switch` | Flow |
-| Merge | `n8n-nodes-base.merge` | Flow |
-| Wait | `n8n-nodes-base.wait` | Flow |
-| No Operation | `n8n-nodes-base.noOp` | Utility |
-| Sticky Note | `n8n-nodes-base.stickyNote` | Utility |
+Badges on the palette and templates are **executor truth**, not catalog.json
+counts. Ready means a builtin executor can run. Partial means a definition or
+an unwired transport. Stub types import as non-executable placeholders.
+
+## Core nodes (examples)
+
+| Display name | Type string | Category | Depth |
+| --- | --- | --- | --- |
+| Manual Trigger | `n8n-nodes-base.manualTrigger` | Triggers | Ready |
+| Webhook | `n8n-nodes-base.webhook` | Triggers | Ready |
+| Schedule Trigger | `n8n-nodes-base.scheduleTrigger` | Triggers | Ready |
+| Respond to Webhook | `n8n-nodes-base.respondToWebhook` | Triggers | Ready |
+| HTTP Request | `n8n-nodes-base.httpRequest` | Core | Ready |
+| Set | `n8n-nodes-base.set` | Core | Ready |
+| Code | `n8n-nodes-base.code` | Core | Ready |
+| If | `n8n-nodes-base.if` | Flow | Ready |
+| Switch | `n8n-nodes-base.switch` | Flow | Ready |
+| Merge | `n8n-nodes-base.merge` | Flow | Ready |
+| Wait | `n8n-nodes-base.wait` | Flow | Ready |
+| No Operation | `n8n-nodes-base.noOp` | Utility | Ready |
+| Sticky Note | `n8n-nodes-base.stickyNote` | Canvas | Ready (canvas) |
 
 **Type aliases** — these legacy type strings resolve to the same node:
 
