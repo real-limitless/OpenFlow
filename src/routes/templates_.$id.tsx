@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { ArrowLeft, Boxes, Eye, ExternalLink } from "lucide-react";
 import { PageShell } from "@/components/layout/page-shell";
 import { Button } from "@/components/ui/button";
+import { SafeMarkdown } from "@/components/markdown/safe-markdown";
 import { CompatibilityBadge } from "@/components/templates/compatibility-badge";
 import { ImportTemplateButton } from "@/components/templates/import-template-button";
 import {
@@ -164,8 +165,8 @@ function TemplateDetailPage() {
       {tpl.description && (
         <div className="mt-8">
           <h2 className="text-sm font-semibold">About</h2>
-          <div className="mt-2 whitespace-pre-wrap text-[13px] leading-relaxed text-muted-foreground">
-            {tpl.description}
+          <div className="mt-2">
+            <SafeMarkdown content={tpl.description} />
           </div>
         </div>
       )}
