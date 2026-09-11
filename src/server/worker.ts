@@ -13,6 +13,7 @@ import { initBinaryStorage } from "./binary-init";
 import { initLogStreaming, log } from "./log";
 import { notifyExecutionFinished } from "./services/workflow-events";
 import { persistExecutionProgress } from "./services/persist-execution-progress";
+import { persistPausedExecution } from "./services/durable-wait";
 import type { ExecutionJobData } from "./queue";
 import type { INodeExecutionData, IWorkflow } from "../lib/workflow/types";
 
@@ -101,8 +102,9 @@ export function startWorker(concurrency = 5): Worker<ExecutionJobData> {
       }
       const vars = await loadVarsMap(projectId || null, environmentId ?? null);
 
+      const tagged = { ...definition, __executionId: executionId } as typeof definition;
       const result = await executeWorkflow({
-        workflow: definition,
+        workflow: tagged,
         nodeExecutors: getExecutorMap(),
         pinData:
           (pinData as unknown as Record<string, INodeExecutionData[]>) ??
@@ -118,6 +120,19 @@ export function startWorker(concurrency = 5): Worker<ExecutionJobData> {
           await persistExecutionProgress(executionId, partial);
         },
       });
+
+      if (result.paused) {
+        await persistPausedExecution({
+          executionId,
+          workflowId,
+          userId: ownerId || "local",
+          projectId: projectId || "",
+          environmentId,
+          result,
+        });
+        wlog.info("execution waiting", { node: result.paused.nodeName, resume: result.paused.resume });
+        return { success: true, paused: true };
+      }
 
       const status = result.success ? "success" : "error";
       await prisma.execution.update({

@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import type { ExecutionRunData } from "@/lib/engine/types";
 import { openExecutionStream } from "@/lib/editor/execution-stream";
 import { AgentTraceBlock, extractAgentView } from "@/components/editor/execution/AgentTraceView";
-import { buildExecutionEntries } from "@/components/editor/execution/use-execution-entries";
+import { apiFetch } from "@/lib/auth/client";
 
 export const Route = createFileRoute("/executions/$id")({
   head: () => ({
@@ -163,6 +163,19 @@ function ExecutionDetailPage() {
             {row.status}
           </Badge>
           <span className="text-xs text-muted-foreground">{row.mode}</span>
+          {row.status === "waiting" && (
+            <button
+              type="button"
+              className="rounded-md bg-primary px-3 py-1 text-xs font-medium text-primary-foreground"
+              onClick={() => {
+                void apiFetch(`/api/v1/executions/${row.id}/resume`, { method: "POST" }).then((res) => {
+                  if (res.ok) window.location.reload();
+                });
+              }}
+            >
+              Resume
+            </button>
+          )}
         </div>
         <h1 className="font-mono text-sm text-muted-foreground">{row.id}</h1>
         {(meta.host || meta.stageId || meta.projectId || meta.fingerprint) && (
