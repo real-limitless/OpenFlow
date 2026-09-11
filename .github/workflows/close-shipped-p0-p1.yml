@@ -1,0 +1,41 @@
+# One-shot closer for the 2026-09 P0/P1 gap tickets.
+# Safe to delete after those issues are closed. Idempotent if re-run.
+name: close-shipped-p0-p1
+
+on:
+  push:
+    branches: [CORE]
+    paths:
+      - "docs/SHIPPED_P0_P1.md"
+      - ".github/workflows/close-shipped-p0-p1.yml"
+  workflow_dispatch:
+
+permissions:
+  issues: write
+  contents: read
+
+jobs:
+  close:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Close shipped issues
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: real-limitless/OpenFlow
+        run: |
+          set -euo pipefail
+          ISSUES=(7 8 9 10 11 12 13 14 16 18 19 20 21 22 24 26 27 28 29 32 33 34 36 37 38 40 42 45 50 54 67 79 114 121 122)
+          note='Shipped on DEVELOPMENT (P0/P1 gap program). Closing from CORE docs/SHIPPED_P0_P1.md. Parent tracker remains #86.'
+          for n in "${ISSUES[@]}"; do
+            state="$(gh issue view "$n" --json state --jq .state)"
+            if [ "$state" != "OPEN" ]; then
+              echo "#${n} already ${state}"
+              continue
+            fi
+            if gh issue close "$n" --reason completed --comment "$note"; then
+              echo "closed #${n}"
+            else
+              echo "close-with-comment failed for #${n}; retrying without comment" >&2
+              gh issue close "$n" --reason completed
+            fi
+          done

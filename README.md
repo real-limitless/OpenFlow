@@ -13,6 +13,7 @@ This branch (`CORE`) is the public front door: why it exists, how it was made, l
 | [LICENSE.md](LICENSE.md) | Apache License 2.0 |
 | [LEGAL.md](LEGAL.md) | Independence, trademarks, why “n8n” is mentioned |
 | [docs/screenshots/](docs/screenshots/) | Product captures used below |
+| [docs/SHIPPED_P0_P1.md](docs/SHIPPED_P0_P1.md) | P0/P1 gap tickets shipped on `DEVELOPMENT` |
 
 | | |
 |---|---|
