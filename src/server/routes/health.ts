@@ -57,6 +57,8 @@ export default function healthRoute(app: Hono<AppEnv>) {
         workerConcurrency: config.worker.concurrency,
         secrets: "ok",
         logStream: config.log.streamType,
+        metrics: "/metrics",
+        otel: config.observability.otelExporterOtlpEndpoint ? "configured" : "unset",
       },
       ready ? 200 : 503,
     );

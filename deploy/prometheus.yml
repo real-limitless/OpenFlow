@@ -1,0 +1,14 @@
+# Prometheus scrape for OpenFlow (issue #22).
+#
+#   prometheus --config.file=deploy/prometheus.yml
+#
+global:
+  scrape_interval: 15s
+
+scrape_configs:
+  - job_name: openflow
+    metrics_path: /metrics
+    static_configs:
+      - targets: ["127.0.0.1:8080"]
+        labels:
+          service: openflow

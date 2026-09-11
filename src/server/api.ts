@@ -1,6 +1,7 @@
 import { Hono } from "hono";
 import { config } from "../config";
 import { authMiddleware, type AppEnv } from "./middleware/auth";
+import { observabilityMiddleware } from "./middleware/observability";
 import { rateLimitMiddleware } from "./middleware/rate-limit";
 import { securityHeadersMiddleware } from "./middleware/security-headers";
 import { csrfMiddleware } from "./middleware/csrf";
@@ -10,6 +11,7 @@ import credentialsRoute from "./routes/credentials";
 import dataTablesRoute from "./routes/data-tables";
 import executionsRoute from "./routes/executions";
 import healthRoute from "./routes/health";
+import metricsRoute from "./routes/metrics";
 import setupRoute from "./routes/setup";
 import schedulesRoute, { initializeSchedules } from "./routes/schedules";
 import webhooksRoute from "./routes/webhooks";
@@ -51,12 +53,14 @@ initBinaryStorage();
 
 const app = new Hono<AppEnv>();
 
+app.use("*", observabilityMiddleware);
 app.use("*", rateLimitMiddleware);
 app.use("*", securityHeadersMiddleware);
 app.use("*", authMiddleware);
 app.use("*", csrfMiddleware);
 
 healthRoute(app);
+metricsRoute(app);
 setupRoute(app);
 oauthRoute(app);
 authRoute(app);

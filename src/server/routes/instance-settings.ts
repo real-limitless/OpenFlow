@@ -270,6 +270,10 @@ export default function instanceSettingsRoute(app: Hono<AppEnv>) {
         maxConcurrency: "workflow.settings.maxConcurrency",
         cancel: "POST /api/v1/executions/:id/cancel",
       },
+      observability: {
+        scrapePath: "/metrics",
+        otel: config.observability.otelExporterOtlpEndpoint ? "configured" : "unset",
+      },
     });
   });
 }
