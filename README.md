@@ -296,3 +296,9 @@ See [docs/clean-room.md](docs/clean-room.md) and [docs/sdk/OVERVIEW.md](docs/sdk
 | [docs/mcp.md](docs/mcp.md) | Remote MCP for third-party chatbots |
 | [docs/clean-room.md](docs/clean-room.md) | Spec → implement pipeline |
 | [ansible-flow-mcp](https://github.com/real-limitless/ansible-flow-mcp) | Standalone Ansible MCP server (paired) |
+
+## License
+
+Apache License 2.0: [LICENSE](LICENSE) · [LICENSE.md](LICENSE.md) · [NOTICE](NOTICE).  
+Trademarks and n8n attribution: [LEGAL.md](LEGAL.md).  
+`package.json` is `"private": true` (not published to npm) with `"license": "Apache-2.0"` and `"version": "0.1.0"`. Tags: [docs/RELEASING.md](docs/RELEASING.md).

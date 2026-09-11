@@ -1,8 +1,14 @@
+import { createRequire } from "node:module";
 import type { Hono } from "hono";
 import type { AppEnv } from "../middleware/auth";
 import { config } from "../../config";
 import { prisma } from "../db";
 import { getRecentLogs } from "../log";
+
+const require = createRequire(import.meta.url);
+const pkg = require("../../../package.json") as { version?: string; license?: string };
+const OPENFLOW_VERSION = pkg.version ?? "0.0.0";
+const OPENFLOW_LICENSE = pkg.license ?? "UNLICENSED";
 
 async function checkDb(): Promise<"ok" | "error"> {
   try {
@@ -29,7 +35,11 @@ async function checkRedis(): Promise<"ok" | "skipped" | "error"> {
 export default function healthRoute(app: Hono<AppEnv>) {
   /** Liveness — process is up (used by Docker healthcheck). */
   app.get("/health", (c) => {
-    return c.json({ status: "ok" });
+    return c.json({
+      status: "ok",
+      version: OPENFLOW_VERSION,
+      license: OPENFLOW_LICENSE,
+    });
   });
 
   /** Readiness — dependencies. */
