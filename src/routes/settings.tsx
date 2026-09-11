@@ -13,6 +13,7 @@ import { ObservabilityPanel } from "@/components/settings/observability-panel";
 import { RetentionPanel } from "@/components/settings/retention-panel";
 import { CircuitBreakerPanel } from "@/components/settings/circuit-breaker-panel";
 import { LifecycleWebhooksPanel } from "@/components/settings/lifecycle-webhooks-panel";
+import { PluginsPanel } from "@/components/settings/plugins-panel";
 
 export const Route = createFileRoute("/settings")({
   head: () => ({ meta: [{ title: "Settings — OpenFlow" }] }),
@@ -71,6 +72,7 @@ function SettingsOverview() {
       <RetentionPanel />
       <CircuitBreakerPanel />
       <LifecycleWebhooksPanel />
+      <PluginsPanel />
       <RateLimitSettingsPanel />
       <WorkerRuntimePanel />
       <ExecutionGovernancePanel />

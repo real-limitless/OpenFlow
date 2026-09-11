@@ -84,6 +84,13 @@ export function registerNode(options: {
   if (options.description) registerDescription(options.description);
 }
 
+export function unregisterType(type: string): void {
+  for (const key of dualKeys(type)) {
+    executors.delete(key);
+    descriptions.delete(key);
+  }
+}
+
 export function getExecutor(type: string): NodeExecutor | undefined {
   const resolved = resolveTypeKey(type);
   return (
