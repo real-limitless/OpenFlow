@@ -11,6 +11,7 @@ describe("Phase 4 Gate: Trigger Integration", () => {
   let app: Hono<AppEnv>;
   let testWorkflowId: string;
   let webhookWorkflowId: string;
+  let multiTriggerWorkflowId: string;
 
   beforeAll(async () => {
     process.env.AUTH_DISABLED = "true";
@@ -29,7 +30,7 @@ describe("Phase 4 Gate: Trigger Integration", () => {
   });
 
   afterAll(async () => {
-    for (const id of [testWorkflowId, webhookWorkflowId]) {
+    for (const id of [testWorkflowId, webhookWorkflowId, multiTriggerWorkflowId]) {
       if (id) {
         await prisma.execution.deleteMany({ where: { workflowId: id } });
         await prisma.webhookRoute.deleteMany({ where: { workflowId: id } });
@@ -172,5 +173,99 @@ describe("Phase 4 Gate: Trigger Integration", () => {
     const runData = JSON.parse(execution!.runData);
     expect(runData["Webhook"]).toBeDefined();
     expect(runData["Set"]).toBeDefined();
+  });
+
+  it("webhook payload reaches Process when a Manual Trigger is also on the canvas", async () => {
+    const createRes = await app.request("/api/v1/workflows", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        name: "Multi Trigger Webhook Gate",
+        nodes: [
+          {
+            id: "m1",
+            name: "Manual Trigger",
+            type: "n8n-nodes-base.manualTrigger",
+            typeVersion: 1,
+            position: [0, 0],
+            parameters: {},
+          },
+          {
+            id: "wh1",
+            name: "Webhook",
+            type: "n8n-nodes-base.webhook",
+            typeVersion: 2,
+            position: [0, 120],
+            parameters: {
+              httpMethod: "POST",
+              path: "issue-129-multi-trigger",
+              responseMode: "lastNode",
+            },
+          },
+          {
+            id: "p1",
+            name: "Process",
+            type: "n8n-nodes-base.noOp",
+            typeVersion: 1,
+            position: [220, 60],
+            parameters: {},
+          },
+          {
+            id: "r1",
+            name: "Respond",
+            type: "n8n-nodes-base.respondToWebhook",
+            typeVersion: 1,
+            position: [440, 60],
+            parameters: { respondWith: "firstIncomingItem" },
+          },
+        ],
+        connections: {
+          "Manual Trigger": { main: [[{ node: "Process", type: "main", index: 0 }]] },
+          Webhook: { main: [[{ node: "Process", type: "main", index: 0 }]] },
+          Process: { main: [[{ node: "Respond", type: "main", index: 0 }]] },
+        },
+      }),
+    });
+
+    expect(createRes.status).toBe(201);
+    const wf = await createRes.json();
+    multiTriggerWorkflowId = wf.id;
+
+    const activateRes = await app.request(`/api/v1/workflows/${multiTriggerWorkflowId}/activate`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ active: true }),
+    });
+    expect(activateRes.status).toBe(200);
+
+    const webhookRes = await app.request("/webhook/issue-129-multi-trigger", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ marker: "hello-world-12345" }),
+    });
+
+    expect(webhookRes.status).toBe(200);
+    const webhookBody = await webhookRes.json();
+    expect(webhookBody).toMatchObject({ marker: "hello-world-12345" });
+
+    const route = await prisma.webhookRoute.findUnique({
+      where: { path: "issue-129-multi-trigger" },
+    });
+    expect(route).toBeDefined();
+
+    const executions = await prisma.execution.findMany({
+      where: { workflowId: multiTriggerWorkflowId },
+      orderBy: { startedAt: "desc" },
+      take: 1,
+    });
+    expect(executions[0]).toBeDefined();
+    expect(executions[0]!.status).toBe("success");
+    expect(executions[0]!.mode).toBe("webhook");
+
+    const runData = JSON.parse(executions[0]!.runData);
+    expect(runData["Manual Trigger"]).toBeUndefined();
+    expect(runData.Webhook?.status).toBe("success");
+    expect(runData.Process?.status).toBe("success");
+    expect(runData.Process?.items?.[0]?.[0]?.json).toMatchObject({ marker: "hello-world-12345" });
   });
 });
