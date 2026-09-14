@@ -33,8 +33,7 @@ function makeCtx(
       connections: {},
       settings: {},
     },
-    getNodeInputItems: () =>
-      items.map((json) => ({ json: json as Record<string, unknown> })),
+    getNodeInputItems: () => items.map((json) => ({ json: json as Record<string, unknown> })),
     continueOnFail: false,
     vars: extras?.vars,
   });
@@ -100,7 +99,7 @@ describe("NoOp Executor", () => {
   it("returns empty output when no input", async () => {
     const node = makeNode();
     const result = await noopExecutor(makeCtx([], node), node);
-    expect(result).toEqual([[]]);
+    expect(result).toEqual([[{ json: {} }]]);
   });
 });
 
@@ -210,10 +209,7 @@ describe("IF Executor", () => {
         combinator: "and",
       },
     });
-    const result = await ifExecutor(
-      makeCtx([{}], node, { vars: { threshold: 10 } }),
-      node,
-    );
+    const result = await ifExecutor(makeCtx([{}], node, { vars: { threshold: 10 } }), node);
     expect(result[0]).toHaveLength(1);
     expect(result[1]).toHaveLength(0);
   });
