@@ -23,6 +23,7 @@ import {
 } from "./graph";
 import { evaluateExpression, isExpression } from "../expressions/evaluate";
 import { createExecutionContext } from "@/sdk";
+import { typesEqual } from "../nodes/type-ids";
 
 export function createExecutionPlan(
   workflow: IWorkflow,
@@ -386,18 +387,7 @@ export async function executeWorkflow(options: RunOptions): Promise<RunResult> {
             throw new Error(hint);
           }
 
-          const start =
-            child.nodes.find((n) => {
-              const t = n.type;
-              return (
-                t === "openflow-node-base.executeWorkflowTrigger" ||
-                t === "openflow-node-base.manualTrigger" ||
-                t === "openflow-node-base.webhook" ||
-                t === "n8n-nodes-base.executeWorkflowTrigger" ||
-                t === "n8n-nodes-base.manualTrigger" ||
-                t === "n8n-nodes-base.webhook"
-              );
-            }) ?? child.nodes[0];
+          const start = resolveNestedStartNode(child);
 
           const childPin =
             start && subOpts.items.length > 0 ? { [start.name]: subOpts.items } : undefined;
@@ -406,6 +396,7 @@ export async function executeWorkflow(options: RunOptions): Promise<RunResult> {
             workflow: child,
             nodeExecutors,
             pinData: childPin,
+            startNode: start?.name,
             credentialResolver: options.credentialResolver,
             subWorkflows: options.subWorkflows,
             resolveSubWorkflow: options.resolveSubWorkflow,
@@ -431,7 +422,7 @@ export async function executeWorkflow(options: RunOptions): Promise<RunResult> {
             );
           }
 
-          const childPlan = createExecutionPlan(child);
+          const childPlan = createExecutionPlan(child, start?.name);
           return collectTerminalItems(child, childResult.runData, childPlan.adjacency);
         };
 
@@ -554,4 +545,15 @@ export async function executeWorkflow(options: RunOptions): Promise<RunResult> {
 
   const success = Object.values(runData).every((d) => d.status !== "error");
   return { runData, success };
+}
+
+/** Prefer the dedicated sub-workflow trigger when several triggers share a child canvas. */
+function resolveNestedStartNode(child: IWorkflow) {
+  const findByType = (type: string) => child.nodes.find((n) => typesEqual(n.type, type));
+  return (
+    findByType("n8n-nodes-base.executeWorkflowTrigger") ??
+    findByType("n8n-nodes-base.manualTrigger") ??
+    findByType("n8n-nodes-base.webhook") ??
+    child.nodes[0]
+  );
 }

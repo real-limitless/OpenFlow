@@ -32,6 +32,8 @@ import {
   normalizeWebhookAuthMode,
   verifyWebhookAuth,
 } from "../../lib/security/webhook-auth";
+import { typesEqual } from "../../lib/nodes/type-ids";
+import { log } from "../log";
 
 export default function webhooksRoute(app: Hono<AppEnv>) {
   // Public webhook endpoint — authenticated by header/basic/HMAC when required.
@@ -139,20 +141,27 @@ export default function webhooksRoute(app: Hono<AppEnv>) {
     }
     notifyExecutionStarted(workflow.id, execution.id, "webhook");
 
-    const isWebhookType = (t: string) =>
-      t === "openflow-node-base.webhook" || t === "n8n-nodes-base.webhook";
-    const isRespondType = (t: string) =>
-      t === "openflow-node-base.respondToWebhook" || t === "n8n-nodes-base.respondToWebhook";
+    const isWebhookType = (t: string) => typesEqual(t, "n8n-nodes-base.webhook");
+    const isRespondType = (t: string) => typesEqual(t, "n8n-nodes-base.respondToWebhook");
 
-    const webhookNodeName = definition.nodes.find((n: { type: string }) =>
-      isWebhookType(n.type),
-    )?.name;
+    // Prefer the route's stored nodeId when several webhook nodes share a canvas.
+    const webhookNode =
+      definition.nodes.find((n) => n.id === webhookRoute.nodeId && isWebhookType(n.type)) ??
+      definition.nodes.find((n) => isWebhookType(n.type));
+    const webhookNodeName = webhookNode?.name;
+    if (!webhookNodeName) {
+      log.warn("webhook route could not resolve firing node", {
+        component: "webhooks",
+        path,
+        nodeId: webhookRoute.nodeId,
+        workflowId: workflow.id,
+      });
+    }
 
     // Determine if workflow uses "Respond to Webhook" node
-    const hasRespondNode = definition.nodes.some((n: { type: string }) => isRespondType(n.type));
+    const hasRespondNode = definition.nodes.some((n) => isRespondType(n.type));
 
     // Check the webhook trigger's responseMode setting
-    const webhookNode = definition.nodes.find((n: { type: string }) => isWebhookType(n.type));
     const responseMode = (webhookNode?.parameters as Record<string, unknown>)?.responseMode as
       string | undefined;
     const shouldWait =
@@ -177,6 +186,7 @@ export default function webhooksRoute(app: Hono<AppEnv>) {
       workflow: { ...definition, __executionId: execution.id },
       nodeExecutors: getExecutorMap(),
       pinData: webhookNodeName ? { [webhookNodeName]: [{ json: requestData }] } : undefined,
+      startNode: webhookNodeName,
       credentialResolver: credentialResolverForProject(projectId, ownerId, environmentId),
       dataTables: dataTableAccessForProject(projectId),
       vars,
@@ -243,6 +253,7 @@ export default function webhooksRoute(app: Hono<AppEnv>) {
         ownerId,
         projectId,
         environmentId,
+        webhookNodeName,
       );
 
       return c.json(

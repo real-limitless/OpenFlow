@@ -94,6 +94,8 @@ export async function triggerErrorWorkflow(opts: {
     definition,
     target.userId,
     target.projectId,
+    undefined,
+    trigger.name,
   );
   return execution.id;
 }
