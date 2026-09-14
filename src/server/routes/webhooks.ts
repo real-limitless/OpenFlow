@@ -24,14 +24,8 @@ import {
   markExecutionTimeout,
   stampTimeoutDeadline,
 } from "../services/execution-governance";
-import {
-  getWebhookAuthSettings,
-  resolveWebhookAuthRequired,
-} from "../services/instance-settings";
-import {
-  normalizeWebhookAuthMode,
-  verifyWebhookAuth,
-} from "../../lib/security/webhook-auth";
+import { getWebhookAuthSettings, resolveWebhookAuthRequired } from "../services/instance-settings";
+import { normalizeWebhookAuthMode, verifyWebhookAuth } from "../../lib/security/webhook-auth";
 import { typesEqual } from "../../lib/nodes/type-ids";
 import { log } from "../log";
 
@@ -79,13 +73,9 @@ export default function webhooksRoute(app: Hono<AppEnv>) {
     const instanceAuth = await getWebhookAuthSettings();
     const required = resolveWebhookAuthRequired(instanceAuth.required);
     const settings = (definition.settings ?? {}) as Record<string, unknown>;
-    const workflowSecret =
-      typeof settings.webhookSecret === "string" ? settings.webhookSecret : "";
+    const workflowSecret = typeof settings.webhookSecret === "string" ? settings.webhookSecret : "";
     const secret =
-      workflowSecret ||
-      instanceAuth.secret ||
-      process.env.OPENFLOW_WEBHOOK_SECRET?.trim() ||
-      "";
+      workflowSecret || instanceAuth.secret || process.env.OPENFLOW_WEBHOOK_SECRET?.trim() || "";
     const mode = normalizeWebhookAuthMode(settings.webhookAuthMode ?? instanceAuth.mode);
 
     if (required) {
@@ -322,7 +312,9 @@ export default function webhooksRoute(app: Hono<AppEnv>) {
       routes.map((r) => {
         let hasWorkflowSecret = false;
         try {
-          const s = r.workflow.settings ? (JSON.parse(r.workflow.settings) as { webhookSecret?: string }) : {};
+          const s = r.workflow.settings
+            ? (JSON.parse(r.workflow.settings) as { webhookSecret?: string })
+            : {};
           hasWorkflowSecret = Boolean(s.webhookSecret);
         } catch {
           hasWorkflowSecret = false;
@@ -352,7 +344,9 @@ export default function webhooksRoute(app: Hono<AppEnv>) {
     const body = await c.req.json<{ secret?: string; mode?: string }>().catch(() => ({}));
     let settings: Record<string, unknown> = {};
     try {
-      settings = existing.workflow.settings ? (JSON.parse(existing.workflow.settings) as Record<string, unknown>) : {};
+      settings = existing.workflow.settings
+        ? (JSON.parse(existing.workflow.settings) as Record<string, unknown>)
+        : {};
     } catch {
       settings = {};
     }

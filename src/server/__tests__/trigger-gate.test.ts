@@ -49,8 +49,22 @@ describe("Phase 4 Gate: Trigger Integration", () => {
       body: JSON.stringify({
         name: "Gate Test Workflow",
         nodes: [
-          { id: "1", name: "Manual Trigger", type: "n8n-nodes-base.manualTrigger", typeVersion: 1, position: [0, 0], parameters: {} },
-          { id: "2", name: "Set", type: "n8n-nodes-base.set", typeVersion: 3, position: [200, 0], parameters: {} },
+          {
+            id: "1",
+            name: "Manual Trigger",
+            type: "n8n-nodes-base.manualTrigger",
+            typeVersion: 1,
+            position: [0, 0],
+            parameters: {},
+          },
+          {
+            id: "2",
+            name: "Set",
+            type: "n8n-nodes-base.set",
+            typeVersion: 3,
+            position: [200, 0],
+            parameters: {},
+          },
         ],
         connections: {
           "Manual Trigger": { main: [[{ node: "Set", type: "main", index: 0 }]] },

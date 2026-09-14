@@ -90,7 +90,9 @@ async function stopDurableSchedule(scheduleId: string, cronExpr?: string) {
     }
   }
   if (cronExpr) {
-    await scheduleQueue.removeRepeatable("fire", { pattern: cronExpr }, scheduleId).catch(() => undefined);
+    await scheduleQueue
+      .removeRepeatable("fire", { pattern: cronExpr }, scheduleId)
+      .catch(() => undefined);
   }
 }
 

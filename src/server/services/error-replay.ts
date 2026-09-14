@@ -112,7 +112,8 @@ export async function replayFailedExecution(executionId: string): Promise<{
     include: { workflow: true },
   });
   if (!row) return { ok: false, status: 404, error: "Execution not found" };
-  if (row.status !== "error") return { ok: false, status: 409, error: "Only failed executions can be replayed" };
+  if (row.status !== "error")
+    return { ok: false, status: 409, error: "Only failed executions can be replayed" };
 
   let runData: ExecutionRunData = {};
   try {
