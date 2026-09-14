@@ -1,4 +1,6 @@
 import { describe, expect, it, beforeEach, afterEach, vi } from "vitest";
+import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 import type { PrismaClient } from "../../../generated/prisma/client";
 import {
   getTemplateSyncJobState,
@@ -10,6 +12,15 @@ import {
 describe("runGit", () => {
   it("runs git asynchronously (does not use spawnSync)", async () => {
     await runGit(["--version"]);
+  });
+
+  it("does not call spawnSync (piped clone must not deadlock the API)", () => {
+    const src = readFileSync(
+      fileURLToPath(new URL("../template-library-sync.ts", import.meta.url)),
+      "utf8",
+    );
+    expect(src).toContain('import { spawn } from "node:child_process"');
+    expect(src).not.toMatch(/spawnSync\s*\(/);
   });
 });
 
