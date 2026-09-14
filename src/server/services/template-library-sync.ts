@@ -4,7 +4,7 @@
  */
 import { readdir, readFile, access, mkdir } from "node:fs/promises";
 import path from "node:path";
-import { spawnSync } from "node:child_process";
+import { spawn } from "node:child_process";
 import type { PrismaClient } from "../../generated/prisma/client";
 import {
   loadTemplateSources,
@@ -60,6 +60,72 @@ export function getTemplateSyncJobState(): SyncJobState {
   return { ...job, result: job.result ? { ...job.result } : null };
 }
 
+/** Test helper: drop in-memory job flags without touching a running child. */
+export function resetTemplateSyncJobState(): void {
+  job.running = false;
+  job.startedAt = null;
+  job.finishedAt = null;
+  job.error = null;
+  job.result = null;
+}
+
+const GIT_TIMEOUT_MS = 5 * 60 * 1000;
+const GIT_LOG_CAP = 8_000;
+
+function appendCapped(acc: string, chunk: string): string {
+  if (acc.length >= GIT_LOG_CAP) return acc;
+  return acc + chunk.slice(0, GIT_LOG_CAP - acc.length);
+}
+
+/**
+ * Async git — never spawnSync. Cloning n8n-workflow-library writes a lot of
+ * progress to stderr; spawnSync with piped stdio can fill the buffer and
+ * deadlock the whole Node process (setup UI stuck on first owner create).
+ */
+export function runGit(args: string[], cwd?: string, timeoutMs = GIT_TIMEOUT_MS): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const child = spawn("git", args, {
+      cwd,
+      stdio: ["ignore", "pipe", "pipe"],
+    });
+    let stderr = "";
+    let stdout = "";
+    let settled = false;
+    const finish = (fn: () => void) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      fn();
+    };
+    child.stdout?.on("data", (d: Buffer | string) => {
+      stdout = appendCapped(stdout, String(d));
+    });
+    child.stderr?.on("data", (d: Buffer | string) => {
+      stderr = appendCapped(stderr, String(d));
+    });
+    const timer = setTimeout(() => {
+      child.kill("SIGKILL");
+      finish(() => reject(new Error(`git ${args.join(" ")} timed out after ${timeoutMs}ms`)));
+    }, timeoutMs);
+    child.on("error", (err) => {
+      finish(() => reject(err));
+    });
+    child.on("close", (status) => {
+      if (status !== 0) {
+        finish(() =>
+          reject(
+            new Error(
+              `git ${args.join(" ")} failed: ${(stderr || stdout || `exit ${status}`).trim()}`,
+            ),
+          ),
+        );
+        return;
+      }
+      finish(() => resolve());
+    });
+  });
+}
+
 async function exists(p: string): Promise<boolean> {
   try {
     await access(p);
@@ -73,19 +139,6 @@ async function isLibraryRoot(p: string): Promise<boolean> {
   return exists(path.join(p, "workflows"));
 }
 
-function git(args: string[], cwd?: string): void {
-  const r = spawnSync("git", args, {
-    cwd,
-    encoding: "utf8",
-    stdio: ["ignore", "pipe", "pipe"],
-  });
-  if (r.status !== 0) {
-    throw new Error(
-      `git ${args.join(" ")} failed: ${(r.stderr || r.stdout || "").trim()}`,
-    );
-  }
-}
-
 async function ensureVendorClone(
   vendorDir: string,
   url: string,
@@ -94,13 +147,13 @@ async function ensureVendorClone(
 ): Promise<void> {
   if (await exists(path.join(vendorDir, ".git"))) {
     log(`  Updating ${vendorDir} @ ${ref}…`);
-    git(["fetch", "--depth", "1", "origin", ref], vendorDir);
-    git(["checkout", "-f", "FETCH_HEAD"], vendorDir);
+    await runGit(["fetch", "--depth", "1", "origin", ref], vendorDir);
+    await runGit(["checkout", "-f", "FETCH_HEAD"], vendorDir);
     return;
   }
   await mkdir(path.dirname(vendorDir), { recursive: true });
   log(`  Cloning ${url} (${ref}) → ${vendorDir}…`);
-  git(["clone", "--depth", "1", "--branch", ref, url, vendorDir]);
+  await runGit(["clone", "--depth", "1", "--branch", ref, url, vendorDir]);
 }
 
 async function resolveSourceRoot(
@@ -476,19 +529,23 @@ export function startTemplateLibrarySyncBackground(
   job.error = null;
   job.result = null;
 
-  void runTemplateLibrarySync(prisma, opts)
-    .then((result) => {
-      job.result = result;
-      job.error = null;
-    })
-    .catch((e) => {
-      job.error = e instanceof Error ? e.message : String(e);
-      job.result = null;
-    })
-    .finally(() => {
-      job.running = false;
-      job.finishedAt = new Date().toISOString();
-    });
+  // Yield so the HTTP response for POST /template-sources/sync can flush
+  // before clone/index work (owner setup must not wait on the library).
+  setImmediate(() => {
+    void runTemplateLibrarySync(prisma, opts)
+      .then((result) => {
+        job.result = result;
+        job.error = null;
+      })
+      .catch((e) => {
+        job.error = e instanceof Error ? e.message : String(e);
+        job.result = null;
+      })
+      .finally(() => {
+        job.running = false;
+        job.finishedAt = new Date().toISOString();
+      });
+  });
 
   return true;
 }
