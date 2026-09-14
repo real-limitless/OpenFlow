@@ -12,6 +12,7 @@ import {
   OpenRouterStreamSilentError,
   type OpenRouterStreamDelta,
 } from "./openrouter-sse";
+import { resolveChatModelId } from "@/lib/nodes/resource-locator";
 
 const DEFAULT_BASE_URL = "https://openrouter.ai/api/v1";
 const DEFAULT_TIMEOUT = 900000;
@@ -74,35 +75,8 @@ export function setOpenRouterHttpClient(factory: OpenRouterHttpClient | null): v
   httpOverride = factory;
 }
 
-interface ResourceLocator {
-  __rl?: boolean;
-  mode?: string;
-  value?: unknown;
-  cachedResultName?: string;
-}
-
 function resolveModelId(ctx: ExecutionContext): string {
-  const modelParam = ctx.getParam<unknown>("model");
-  let raw: unknown = modelParam;
-
-  if (modelParam && typeof modelParam === "object" && "__rl" in modelParam) {
-    raw = (modelParam as ResourceLocator).value;
-  }
-
-  if (raw == null || raw === "") {
-    throw new Error("OpenRouter Chat Model: model id is required");
-  }
-
-  const str = String(raw);
-  const items = ctx.getInputItems(0);
-  const firstJson = items[0]?.json ?? {};
-  const resolved = ctx.evaluate(str, firstJson);
-  const modelId = String(resolved ?? "").trim();
-
-  if (!modelId) {
-    throw new Error("OpenRouter Chat Model: model id resolved to empty");
-  }
-  return modelId;
+  return resolveChatModelId(ctx, "OpenRouter Chat Model: model id");
 }
 
 function buildHeaders(apiKey: string): Record<string, string> {

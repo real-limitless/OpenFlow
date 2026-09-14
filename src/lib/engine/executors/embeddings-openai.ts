@@ -1,6 +1,7 @@
 import type { NodeExecutor, INodeExecutionData, ExecutionContext } from "@/sdk";
 import { requireCredential } from "@/sdk";
 import { sdkHttpRequest, type SdkHttpRequestOptions, type SdkHttpResponse } from "@/sdk";
+import { requireScalarLocatorValue, unwrapResourceLocator } from "@/lib/nodes/resource-locator";
 
 const DEFAULT_BASE_URL = "https://api.openai.com/v1";
 const DEFAULT_MODEL = "text-embedding-3-small";
@@ -28,31 +29,18 @@ export function setEmbeddingsOpenAiHttpClient(factory: EmbeddingsOpenAiHttpClien
   httpOverride = factory;
 }
 
-interface ResourceLocator {
-  __rl?: boolean;
-  mode?: string;
-  value?: unknown;
-  cachedResultName?: string;
-}
-
 function firstItemJson(ctx: ExecutionContext): Record<string, unknown> {
   const items = ctx.getInputItems(0);
   return items[0]?.json ?? {};
 }
 
 function resolveModel(ctx: ExecutionContext): string {
-  const modelParam = ctx.getParam<unknown>("model", DEFAULT_MODEL);
-  let raw: unknown = modelParam;
-
-  if (modelParam && typeof modelParam === "object" && "__rl" in modelParam) {
-    raw = (modelParam as ResourceLocator).value;
-  }
-
+  let raw: unknown = unwrapResourceLocator(ctx.getParam<unknown>("model", DEFAULT_MODEL));
   if (raw == null || raw === "") {
     raw = DEFAULT_MODEL;
   }
+  const str = requireScalarLocatorValue(raw, "Embeddings OpenAI: model");
 
-  const str = String(raw);
   if (str.startsWith("=")) {
     const resolved = ctx.evaluate(str, firstItemJson(ctx));
     const modelId = String(resolved ?? "").trim();

@@ -1,6 +1,7 @@
 import type { NodeExecutor, INodeExecutionData, ExecutionContext } from "@/sdk";
 import { requireCredential } from "@/sdk";
 import { sdkHttpRequest, type SdkHttpRequestOptions, type SdkHttpResponse } from "@/sdk";
+import { resolveChatModelId } from "@/lib/nodes/resource-locator";
 
 const DEFAULT_TIMEOUT = 120000;
 const DEFAULT_MAX_RETRIES = 2;
@@ -54,35 +55,8 @@ export function setAzureOpenAiHttpClient(factory: AzureOpenAiHttpClient | null):
   httpOverride = factory;
 }
 
-interface ResourceLocator {
-  __rl?: boolean;
-  mode?: string;
-  value?: unknown;
-  cachedResultName?: string;
-}
-
 function resolveDeploymentId(ctx: ExecutionContext): string {
-  const modelParam = ctx.getParam<unknown>("model");
-  let raw: unknown = modelParam;
-
-  if (modelParam && typeof modelParam === "object" && "__rl" in modelParam) {
-    raw = (modelParam as ResourceLocator).value;
-  }
-
-  if (raw == null || raw === "") {
-    throw new Error("Azure OpenAI Chat Model: model/deployment id is required");
-  }
-
-  const str = String(raw);
-  const items = ctx.getInputItems(0);
-  const firstJson = items[0]?.json ?? {};
-  const resolved = ctx.evaluate(str, firstJson);
-  const deployment = String(resolved ?? "").trim();
-
-  if (!deployment) {
-    throw new Error("Azure OpenAI Chat Model: deployment id resolved to empty");
-  }
-  return deployment;
+  return resolveChatModelId(ctx, "Azure OpenAI Chat Model: model/deployment id");
 }
 
 function serializeMessagesForApi(messages: AzureOpenAiChatMessage[]): unknown[] {

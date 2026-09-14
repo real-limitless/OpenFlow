@@ -2,6 +2,7 @@ import type { NodeExecutor, INodeExecutionData, ExecutionContext } from "@/sdk";
 import { requireCredential } from "@/sdk";
 import { sdkHttpRequest, type SdkHttpRequestOptions, type SdkHttpResponse } from "@/sdk";
 import { createHash, createHmac } from "crypto";
+import { resolveChatModelId } from "@/lib/nodes/resource-locator";
 
 export interface BedrockChatMessage {
   role: "system" | "user" | "assistant" | "tool";
@@ -35,38 +36,11 @@ export function setBedrockHttpClient(factory: BedrockHttpClient | null): void {
   httpOverride = factory;
 }
 
-interface ResourceLocator {
-  __rl?: boolean;
-  mode?: string;
-  value?: unknown;
-  cachedResultName?: string;
-}
-
 const DEFAULT_TIMEOUT = 120000;
 const DEFAULT_MAX_RETRIES = 2;
 
 function resolveModelId(ctx: ExecutionContext): string {
-  const modelParam = ctx.getParam<unknown>("model");
-  let raw: unknown = modelParam;
-
-  if (modelParam && typeof modelParam === "object" && "__rl" in modelParam) {
-    raw = (modelParam as ResourceLocator).value;
-  }
-
-  if (raw == null || raw === "") {
-    throw new Error("AWS Bedrock Chat Model: model id is required");
-  }
-
-  const str = String(raw);
-  const items = ctx.getInputItems(0);
-  const firstJson = items[0]?.json ?? {};
-  const resolved = ctx.evaluate(str, firstJson);
-  const modelId = String(resolved ?? "").trim();
-
-  if (!modelId) {
-    throw new Error("AWS Bedrock Chat Model: model id resolved to empty");
-  }
-  return modelId;
+  return resolveChatModelId(ctx, "AWS Bedrock Chat Model: model id");
 }
 
 function getOptions(ctx: ExecutionContext): Record<string, unknown> {

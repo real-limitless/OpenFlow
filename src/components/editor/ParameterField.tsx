@@ -16,6 +16,7 @@ import type {
   INodePropertyOption,
 } from "@/lib/nodes/types";
 import { matchesDisplayOptions } from "@/lib/nodes/types";
+import { normalizeResourceLocator } from "@/lib/nodes/resource-locator";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
@@ -196,11 +197,14 @@ export function ParameterField({
       if (prop.typeOptions?.resource === "dataTable") {
         return <DataTableLocatorField prop={prop} value={value} onChange={onChange} />;
       }
-      const rl = (value ?? { mode: "id", value: "" }) as { mode?: string; value?: string };
+      const rl = normalizeResourceLocator(value);
       return (
         <FieldShell prop={prop}>
           <div className="flex gap-2">
-            <Select value={rl.mode ?? "id"} onValueChange={(mode) => onChange({ ...rl, mode })}>
+            <Select
+              value={rl.mode || "id"}
+              onValueChange={(mode) => onChange(normalizeResourceLocator({ ...rl, mode }))}
+            >
               <SelectTrigger className="h-9 w-28 text-[13px]">
                 <SelectValue />
               </SelectTrigger>
@@ -211,8 +215,8 @@ export function ParameterField({
               </SelectContent>
             </Select>
             <Input
-              value={rl.value ?? ""}
-              onChange={(e) => onChange({ ...rl, value: e.target.value })}
+              value={rl.value}
+              onChange={(e) => onChange(normalizeResourceLocator({ ...rl, value: e.target.value }))}
               className="h-9 flex-1 text-[13px]"
             />
           </div>
@@ -634,7 +638,7 @@ function DataTableLocatorField({
   value: unknown;
   onChange: (value: unknown) => void;
 }) {
-  const rl = (value ?? { mode: "list", value: "" }) as { mode?: string; value?: string };
+  const rl = normalizeResourceLocator(value, "list");
   const mode = rl.mode === "id" || rl.mode === "name" ? rl.mode : "list";
   const [tables, setTables] = useState<Array<{ id: string; name: string }>>([]);
   const [loading, setLoading] = useState(true);
@@ -669,7 +673,10 @@ function DataTableLocatorField({
     <FieldShell prop={prop}>
       <div className="flex flex-col gap-2">
         <div className="flex gap-2">
-          <Select value={mode} onValueChange={(m) => onChange({ mode: m, value: rl.value ?? "" })}>
+          <Select
+            value={mode}
+            onValueChange={(m) => onChange(normalizeResourceLocator({ ...rl, mode: m }, "list"))}
+          >
             <SelectTrigger className="h-9 w-28 text-[13px]">
               <SelectValue />
             </SelectTrigger>
@@ -682,7 +689,14 @@ function DataTableLocatorField({
           {mode === "list" ? (
             <Select
               value={rl.value || undefined}
-              onValueChange={(v) => onChange({ mode: "list", value: v === "__none__" ? "" : v })}
+              onValueChange={(v) =>
+                onChange(
+                  normalizeResourceLocator(
+                    { ...rl, mode: "list", value: v === "__none__" ? "" : v },
+                    "list",
+                  ),
+                )
+              }
               disabled={loading}
             >
               <SelectTrigger className="h-9 flex-1 text-[13px]">
@@ -701,7 +715,9 @@ function DataTableLocatorField({
           ) : (
             <Input
               value={rl.value ?? ""}
-              onChange={(e) => onChange({ mode, value: e.target.value })}
+              onChange={(e) =>
+                onChange(normalizeResourceLocator({ ...rl, mode, value: e.target.value }, "list"))
+              }
               className="h-9 flex-1 text-[13px]"
               placeholder={mode === "name" ? "Table name" : "Table id"}
             />
