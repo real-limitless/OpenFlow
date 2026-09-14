@@ -24,14 +24,10 @@ import {
   markExecutionTimeout,
   stampTimeoutDeadline,
 } from "../services/execution-governance";
-import {
-  getWebhookAuthSettings,
-  resolveWebhookAuthRequired,
-} from "../services/instance-settings";
-import {
-  normalizeWebhookAuthMode,
-  verifyWebhookAuth,
-} from "../../lib/security/webhook-auth";
+import { getWebhookAuthSettings, resolveWebhookAuthRequired } from "../services/instance-settings";
+import { normalizeWebhookAuthMode, verifyWebhookAuth } from "../../lib/security/webhook-auth";
+import { typesEqual } from "../../lib/nodes/type-ids";
+import { log } from "../log";
 
 export default function webhooksRoute(app: Hono<AppEnv>) {
   // Public webhook endpoint — authenticated by header/basic/HMAC when required.
@@ -77,13 +73,9 @@ export default function webhooksRoute(app: Hono<AppEnv>) {
     const instanceAuth = await getWebhookAuthSettings();
     const required = resolveWebhookAuthRequired(instanceAuth.required);
     const settings = (definition.settings ?? {}) as Record<string, unknown>;
-    const workflowSecret =
-      typeof settings.webhookSecret === "string" ? settings.webhookSecret : "";
+    const workflowSecret = typeof settings.webhookSecret === "string" ? settings.webhookSecret : "";
     const secret =
-      workflowSecret ||
-      instanceAuth.secret ||
-      process.env.OPENFLOW_WEBHOOK_SECRET?.trim() ||
-      "";
+      workflowSecret || instanceAuth.secret || process.env.OPENFLOW_WEBHOOK_SECRET?.trim() || "";
     const mode = normalizeWebhookAuthMode(settings.webhookAuthMode ?? instanceAuth.mode);
 
     if (required) {
@@ -139,20 +131,27 @@ export default function webhooksRoute(app: Hono<AppEnv>) {
     }
     notifyExecutionStarted(workflow.id, execution.id, "webhook");
 
-    const isWebhookType = (t: string) =>
-      t === "openflow-node-base.webhook" || t === "n8n-nodes-base.webhook";
-    const isRespondType = (t: string) =>
-      t === "openflow-node-base.respondToWebhook" || t === "n8n-nodes-base.respondToWebhook";
+    const isWebhookType = (t: string) => typesEqual(t, "n8n-nodes-base.webhook");
+    const isRespondType = (t: string) => typesEqual(t, "n8n-nodes-base.respondToWebhook");
 
-    const webhookNodeName = definition.nodes.find((n: { type: string }) =>
-      isWebhookType(n.type),
-    )?.name;
+    // Prefer the route's stored nodeId when several webhook nodes share a canvas.
+    const webhookNode =
+      definition.nodes.find((n) => n.id === webhookRoute.nodeId && isWebhookType(n.type)) ??
+      definition.nodes.find((n) => isWebhookType(n.type));
+    const webhookNodeName = webhookNode?.name;
+    if (!webhookNodeName) {
+      log.warn("webhook route could not resolve firing node", {
+        component: "webhooks",
+        path,
+        nodeId: webhookRoute.nodeId,
+        workflowId: workflow.id,
+      });
+    }
 
     // Determine if workflow uses "Respond to Webhook" node
-    const hasRespondNode = definition.nodes.some((n: { type: string }) => isRespondType(n.type));
+    const hasRespondNode = definition.nodes.some((n) => isRespondType(n.type));
 
     // Check the webhook trigger's responseMode setting
-    const webhookNode = definition.nodes.find((n: { type: string }) => isWebhookType(n.type));
     const responseMode = (webhookNode?.parameters as Record<string, unknown>)?.responseMode as
       string | undefined;
     const shouldWait =
@@ -177,6 +176,7 @@ export default function webhooksRoute(app: Hono<AppEnv>) {
       workflow: { ...definition, __executionId: execution.id },
       nodeExecutors: getExecutorMap(),
       pinData: webhookNodeName ? { [webhookNodeName]: [{ json: requestData }] } : undefined,
+      startNode: webhookNodeName,
       credentialResolver: credentialResolverForProject(projectId, ownerId, environmentId),
       dataTables: dataTableAccessForProject(projectId),
       vars,
@@ -243,6 +243,7 @@ export default function webhooksRoute(app: Hono<AppEnv>) {
         ownerId,
         projectId,
         environmentId,
+        webhookNodeName,
       );
 
       return c.json(
@@ -311,7 +312,9 @@ export default function webhooksRoute(app: Hono<AppEnv>) {
       routes.map((r) => {
         let hasWorkflowSecret = false;
         try {
-          const s = r.workflow.settings ? (JSON.parse(r.workflow.settings) as { webhookSecret?: string }) : {};
+          const s = r.workflow.settings
+            ? (JSON.parse(r.workflow.settings) as { webhookSecret?: string })
+            : {};
           hasWorkflowSecret = Boolean(s.webhookSecret);
         } catch {
           hasWorkflowSecret = false;
@@ -341,7 +344,9 @@ export default function webhooksRoute(app: Hono<AppEnv>) {
     const body = await c.req.json<{ secret?: string; mode?: string }>().catch(() => ({}));
     let settings: Record<string, unknown> = {};
     try {
-      settings = existing.workflow.settings ? (JSON.parse(existing.workflow.settings) as Record<string, unknown>) : {};
+      settings = existing.workflow.settings
+        ? (JSON.parse(existing.workflow.settings) as Record<string, unknown>)
+        : {};
     } catch {
       settings = {};
     }

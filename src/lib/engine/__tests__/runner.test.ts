@@ -110,6 +110,67 @@ describe("Runner", () => {
     expect(result.runData["Set A"]).toBeUndefined();
   });
 
+  it("uses webhook pinData when startNode is the webhook in a multi-trigger workflow", async () => {
+    const workflow = makeWorkflow(
+      [
+        {
+          id: "1",
+          name: "Manual Trigger",
+          type: "n8n-nodes-base.manualTrigger",
+          typeVersion: 1,
+          position: [0, 0],
+          parameters: {},
+        },
+        {
+          id: "2",
+          name: "Webhook",
+          type: "n8n-nodes-base.webhook",
+          typeVersion: 2,
+          position: [0, 100],
+          parameters: {},
+        },
+        {
+          id: "3",
+          name: "Process",
+          type: "pass",
+          typeVersion: 1,
+          position: [200, 50],
+          parameters: {},
+        },
+      ],
+      {
+        "Manual Trigger": { main: [[{ node: "Process", type: "main", index: 0 }]] },
+        Webhook: { main: [[{ node: "Process", type: "main", index: 0 }]] },
+      },
+    );
+
+    const empty: NodeExecutor = async () => [[{ json: {} }]];
+    const pass: NodeExecutor = async (ctx) => {
+      const items = ctx.getInputItems(0);
+      return [items.length > 0 ? items : [{ json: {} }]];
+    };
+
+    const result = await executeWorkflow({
+      workflow,
+      nodeExecutors: {
+        "n8n-nodes-base.manualTrigger": empty,
+        "n8n-nodes-base.webhook": empty,
+        pass,
+      },
+      pinData: { Webhook: [{ json: { marker: "hello-world-12345" } }] },
+      startNode: "Webhook",
+    });
+
+    expect(result.success).toBe(true);
+    expect(result.runData["Manual Trigger"]).toBeUndefined();
+    expect(result.runData.Webhook?.status).toBe("success");
+    expect(result.runData.Webhook?.items).toEqual([[{ json: { marker: "hello-world-12345" } }]]);
+    expect(result.runData.Process?.status).toBe("success");
+    expect(result.runData.Process?.items?.[0]?.[0]?.json).toMatchObject({
+      marker: "hello-world-12345",
+    });
+  });
+
   it("creates plan for empty workflow", () => {
     const workflow = makeWorkflow([]);
     const plan = createExecutionPlan(workflow);

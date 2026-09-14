@@ -351,6 +351,64 @@ describe("batch-queue executeWorkflow — n8n-nodes-base.executeWorkflow", () =>
     expect(result.runData["Run Child"]?.items?.[0]?.[0]?.json).toEqual({ x: 1 });
   });
 
+  it("starts the child at executeWorkflowTrigger even when a Manual Trigger is listed first", async () => {
+    const child = makeWorkflow(
+      [
+        makeNode({
+          id: "cm",
+          name: "Manual Trigger",
+          type: "n8n-nodes-base.manualTrigger",
+          typeVersion: 1,
+        }),
+        makeNode({
+          id: "ct",
+          name: "When Executed by Another Workflow",
+          type: "n8n-nodes-base.executeWorkflowTrigger",
+          typeVersion: 1.1,
+          parameters: { inputSource: "passthrough" },
+        }),
+        makeNode({ id: "cp", name: "Pass", type: "n8n-nodes-base.noOp", typeVersion: 1 }),
+      ],
+      {
+        "Manual Trigger": { main: [[{ node: "Pass", type: "main", index: 0 }]] },
+        "When Executed by Another Workflow": {
+          main: [[{ node: "Pass", type: "main", index: 0 }]],
+        },
+      },
+    );
+    child.id = "child-multi-trigger";
+
+    const parent = makeWorkflow(
+      [
+        makeNode({ id: "pt", name: "Start", type: "n8n-nodes-base.manualTrigger", typeVersion: 1 }),
+        makeNode({
+          id: "pr",
+          name: "Run Child",
+          type: TYPE,
+          typeVersion: 1.2,
+          parameters: {
+            source: "database",
+            workflowId: "child-multi-trigger",
+            mode: "once",
+            options: { waitForSubWorkflow: true },
+          },
+        }),
+      ],
+      {
+        Start: { main: [[{ node: "Run Child", type: "main", index: 0 }]] },
+      },
+    );
+
+    const result = await runWithPin(parent, {
+      pinData: { Start: [{ json: { marker: "from-parent" } }] },
+      subWorkflows: { "child-multi-trigger": child },
+    });
+
+    expect(result.success).toBe(true);
+    expect(result.runData["Run Child"]?.status).toBe("success");
+    expect(result.runData["Run Child"]?.items?.[0]?.[0]?.json).toEqual({ marker: "from-parent" });
+  });
+
   it("runs end-to-end via runWorkflowFixture helper", async () => {
     const child = makeChildWorkflow("c2");
     const parent = makeWorkflow(

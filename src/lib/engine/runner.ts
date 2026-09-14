@@ -2,11 +2,7 @@ import type { IWorkflow, INodeExecutionData } from "../workflow/types";
 import type { ExecutionPlan, ExecutionRunData, NodeExecutor } from "./types";
 import { NodeExecutionError } from "./agent-trace";
 import { isWaitPausedError } from "./wait-pause";
-import {
-  isExecutionAbortedError,
-  raceWithAbort,
-  type AbortReason,
-} from "./governance";
+import { isExecutionAbortedError, raceWithAbort, type AbortReason } from "./governance";
 import type { AgentTrace } from "./agent-trace";
 import type { CredentialResolver } from "./credentials";
 import type { DataTableAccess } from "@/lib/data-tables/access";
@@ -23,6 +19,7 @@ import {
 } from "./graph";
 import { evaluateExpression, isExpression } from "../expressions/evaluate";
 import { createExecutionContext } from "@/sdk";
+import { typesEqual } from "../nodes/type-ids";
 
 export function createExecutionPlan(
   workflow: IWorkflow,
@@ -305,8 +302,9 @@ export async function executeWorkflow(options: RunOptions): Promise<RunResult> {
     // IF/Switch empty branches: do not run downstream nodes with no main items.
     // (Matches n8n — only the live branch executes.)
     const mainIncoming = (incoming.get(nodeName) ?? []).filter((e) => e.channel === "main");
-    const hasStartInput =
-      Boolean(options.startNode && nodeName === options.startNode && options.startInputItems?.length);
+    const hasStartInput = Boolean(
+      options.startNode && nodeName === options.startNode && options.startInputItems?.length,
+    );
     if (mainIncoming.length > 0 && !isTriggerNode(node) && !hasStartInput) {
       const hasMainItems = mainIncoming.some((e) => {
         const outs = nodeOutputs.get(e.source);
@@ -386,18 +384,7 @@ export async function executeWorkflow(options: RunOptions): Promise<RunResult> {
             throw new Error(hint);
           }
 
-          const start =
-            child.nodes.find((n) => {
-              const t = n.type;
-              return (
-                t === "openflow-node-base.executeWorkflowTrigger" ||
-                t === "openflow-node-base.manualTrigger" ||
-                t === "openflow-node-base.webhook" ||
-                t === "n8n-nodes-base.executeWorkflowTrigger" ||
-                t === "n8n-nodes-base.manualTrigger" ||
-                t === "n8n-nodes-base.webhook"
-              );
-            }) ?? child.nodes[0];
+          const start = resolveNestedStartNode(child);
 
           const childPin =
             start && subOpts.items.length > 0 ? { [start.name]: subOpts.items } : undefined;
@@ -406,6 +393,7 @@ export async function executeWorkflow(options: RunOptions): Promise<RunResult> {
             workflow: child,
             nodeExecutors,
             pinData: childPin,
+            startNode: start?.name,
             credentialResolver: options.credentialResolver,
             subWorkflows: options.subWorkflows,
             resolveSubWorkflow: options.resolveSubWorkflow,
@@ -431,7 +419,7 @@ export async function executeWorkflow(options: RunOptions): Promise<RunResult> {
             );
           }
 
-          const childPlan = createExecutionPlan(child);
+          const childPlan = createExecutionPlan(child, start?.name);
           return collectTerminalItems(child, childResult.runData, childPlan.adjacency);
         };
 
@@ -554,4 +542,15 @@ export async function executeWorkflow(options: RunOptions): Promise<RunResult> {
 
   const success = Object.values(runData).every((d) => d.status !== "error");
   return { runData, success };
+}
+
+/** Prefer the dedicated sub-workflow trigger when several triggers share a child canvas. */
+function resolveNestedStartNode(child: IWorkflow) {
+  const findByType = (type: string) => child.nodes.find((n) => typesEqual(n.type, type));
+  return (
+    findByType("n8n-nodes-base.executeWorkflowTrigger") ??
+    findByType("n8n-nodes-base.manualTrigger") ??
+    findByType("n8n-nodes-base.webhook") ??
+    child.nodes[0]
+  );
 }
