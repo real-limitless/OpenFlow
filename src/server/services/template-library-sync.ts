@@ -171,9 +171,7 @@ async function resolveSourceRoot(
   }
 
   if (source.dir) {
-    const p = path.isAbsolute(source.dir)
-      ? source.dir
-      : path.resolve(root, source.dir);
+    const p = path.isAbsolute(source.dir) ? source.dir : path.resolve(root, source.dir);
     if (await isLibraryRoot(p)) return p;
     throw new Error(`Source ${source.id} dir is not a library root: ${p}`);
   }
@@ -378,16 +376,14 @@ async function syncOneSource(
         nodeTypes: JSON.stringify(nodeTypes),
         categories: JSON.stringify(categories),
         authorName: typeof meta.authorName === "string" ? meta.authorName : null,
-        authorUsername:
-          typeof meta.authorUsername === "string" ? meta.authorUsername : null,
+        authorUsername: typeof meta.authorUsername === "string" ? meta.authorUsername : null,
         authorAvatar: typeof meta.authorAvatar === "string" ? meta.authorAvatar : null,
         workflowJson: JSON.stringify(workflow),
         metaJson: Object.keys(meta).length ? JSON.stringify(meta) : null,
         sourceUrl,
         libraryUrl: libUrl,
         readyToDemo: Boolean(meta.readyToDemo),
-        publishedAt:
-          publishedAt && !Number.isNaN(publishedAt.getTime()) ? publishedAt : null,
+        publishedAt: publishedAt && !Number.isNaN(publishedAt.getTime()) ? publishedAt : null,
         syncedAt: new Date(),
       };
 
@@ -468,10 +464,7 @@ export async function runTemplateLibrarySync(
     );
   }
 
-  log(
-    "Sources: " +
-      sources.map((s) => `${s.id}@${s.ref}`).join(", "),
-  );
+  log("Sources: " + sources.map((s) => `${s.id}@${s.ref}`).join(", "));
 
   const globalLimit = {
     remaining: opts.limit && opts.limit > 0 ? opts.limit : Infinity,
@@ -481,9 +474,7 @@ export async function runTemplateLibrarySync(
   for (const source of sources) {
     if ((opts.limit ?? 0) > 0 && globalLimit.remaining <= 0) break;
     try {
-      allStats.push(
-        await syncOneSource(source, opts, prisma, globalLimit, root, log),
-      );
+      allStats.push(await syncOneSource(source, opts, prisma, globalLimit, root, log));
     } catch (e) {
       log(`Source ${source.id} failed: ${e instanceof Error ? e.message : e}`);
       allStats.push({

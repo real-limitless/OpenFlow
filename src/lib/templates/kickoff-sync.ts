@@ -7,9 +7,7 @@ export const SETUP_TEMPLATE_SOURCE_ID = "n8n-community";
  * Start the community template sync without blocking the caller.
  * Owner setup must navigate after register even if git clone is slow.
  */
-export function kickoffCommunityTemplateSync(
-  fetchFn: typeof apiFetch = apiFetch,
-): void {
+export function kickoffCommunityTemplateSync(fetchFn: typeof apiFetch = apiFetch): void {
   void fetchFn("/api/v1/template-sources/sync", {
     method: "POST",
     headers: { "Content-Type": "application/json" },

@@ -29,7 +29,10 @@ function SetupPage() {
       const status = await fetchSetupStatus();
       if (cancelled) return;
       if (status.authDisabled || !status.needsOwner) {
-        navigate({ to: status.hasUsers ? "/login" : "/", search: status.hasUsers ? {} : undefined });
+        navigate({
+          to: status.hasUsers ? "/login" : "/",
+          search: status.hasUsers ? {} : undefined,
+        });
         return;
       }
       setChecking(false);
@@ -89,9 +92,9 @@ function SetupPage() {
         <div className="space-y-1">
           <h1 className="text-lg font-semibold tracking-tight">Create instance owner</h1>
           <p className="text-[13px] text-muted-foreground">
-            This first account owns secret providers and admin settings. Public registration
-            closes after this owner exists. Compose without the production overlay keeps
-            AUTH_DISABLED=true as a labeled try-out.
+            This first account owns secret providers and admin settings. Public registration closes
+            after this owner exists. Compose without the production overlay keeps AUTH_DISABLED=true
+            as a labeled try-out.
           </p>
         </div>
         <div className="space-y-1.5">
@@ -127,13 +130,14 @@ function SetupPage() {
             className="mt-0.5"
             onCheckedChange={(value) => setLoadTemplates(value === true)}
           />
-          <Label htmlFor="load-templates" className="cursor-pointer text-[12px] font-normal leading-snug">
+          <Label
+            htmlFor="load-templates"
+            className="cursor-pointer text-[12px] font-normal leading-snug"
+          >
             <span className="font-medium text-foreground">Load community templates</span>
             <span className="mt-0.5 block text-muted-foreground">
-              Sync{" "}
-              <span className="text-foreground">n8n-workflow-library</span> into
-              the marketplace after setup. You can add more repos later under
-              Settings → Templates.
+              Sync <span className="text-foreground">n8n-workflow-library</span> into the
+              marketplace after setup. You can add more repos later under Settings → Templates.
             </span>
           </Label>
         </div>
