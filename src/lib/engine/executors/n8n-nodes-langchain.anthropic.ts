@@ -1,5 +1,6 @@
 import type { NodeExecutor, INodeExecutionData } from "@/sdk";
 import { requireCredential, withPairedItem, sdkHttpRequest, type SdkHttpResponse } from "@/sdk";
+import { requireScalarLocatorValue, unwrapResourceLocator } from "@/lib/nodes/resource-locator";
 
 const DEFAULT_BASE_URL = "https://api.anthropic.com";
 const ANTHROPIC_VERSION = "2023-06-01";
@@ -29,17 +30,8 @@ function evalIfExpr(val: unknown, json: Record<string, unknown>, evaluate: (expr
 }
 
 function resolveModelId(modelParam: unknown, firstJson: Record<string, unknown>, evaluate: (expr: string, json: Record<string, unknown>) => unknown): string {
-  let raw: unknown = modelParam;
-  if (modelParam && typeof modelParam === "object") {
-    const obj = modelParam as Record<string, unknown>;
-    if (obj.value != null && (obj.mode != null || obj.__rl != null)) {
-      raw = obj.value;
-    }
-  }
-  if (raw == null || raw === "") {
-    throw new Error("Anthropic: model id is required");
-  }
-  const str = String(raw);
+  const raw = unwrapResourceLocator(modelParam);
+  const str = requireScalarLocatorValue(raw, "Anthropic: model id");
   if (str.startsWith("=")) {
     const resolved = evaluate(str, firstJson);
     const modelId = String(resolved ?? "").trim();

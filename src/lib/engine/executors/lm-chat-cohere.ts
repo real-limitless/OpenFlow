@@ -1,6 +1,7 @@
 import type { NodeExecutor, INodeExecutionData, ExecutionContext } from "@/sdk";
 import { requireCredential } from "@/sdk";
 import { sdkHttpRequest, type SdkHttpRequestOptions, type SdkHttpResponse } from "@/sdk";
+import { resolveChatModelId } from "@/lib/nodes/resource-locator";
 
 const COHERE_API_BASE = "https://api.cohere.com/v2";
 const DEFAULT_TIMEOUT = 120000;
@@ -51,35 +52,8 @@ export function setCohereHttpClient(factory: CohereHttpClient | null): void {
   httpOverride = factory;
 }
 
-interface ResourceLocator {
-  __rl?: boolean;
-  mode?: string;
-  value?: unknown;
-  cachedResultName?: string;
-}
-
 function resolveModelId(ctx: ExecutionContext): string {
-  const modelParam = ctx.getParam<unknown>("model");
-  let raw: unknown = modelParam;
-
-  if (modelParam && typeof modelParam === "object" && "__rl" in modelParam) {
-    raw = (modelParam as ResourceLocator).value;
-  }
-
-  if (raw == null || raw === "") {
-    throw new Error("Cohere Chat Model: model id is required");
-  }
-
-  const str = String(raw);
-  const items = ctx.getInputItems(0);
-  const firstJson = items[0]?.json ?? {};
-  const resolved = ctx.evaluate(str, firstJson);
-  const modelId = String(resolved ?? "").trim();
-
-  if (!modelId) {
-    throw new Error("Cohere Chat Model: model id resolved to empty");
-  }
-  return modelId;
+  return resolveChatModelId(ctx, "Cohere Chat Model: model id");
 }
 
 function buildHeaders(apiKey: string): Record<string, string> {

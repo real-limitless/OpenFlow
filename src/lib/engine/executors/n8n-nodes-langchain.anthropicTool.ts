@@ -1,5 +1,6 @@
 import type { NodeExecutor, INodeExecutionData, SdkHttpResponse } from "@/sdk";
 import { requireCredential, withPairedItem, sdkHttpRequest } from "@/sdk";
+import { requireScalarLocatorValue, unwrapResourceLocator } from "@/lib/nodes/resource-locator";
 
 const DEFAULT_BASE_URL = "https://api.anthropic.com";
 const ANTHROPIC_VERSION = "2023-06-01";
@@ -19,12 +20,7 @@ export function setAnthropicToolHttpClient(factory: AnthropicToolHttpClient | nu
 }
 
 function resolveModelId(raw: unknown): string {
-  if (raw && typeof raw === "object") {
-    const obj = raw as Record<string, unknown>;
-    if (obj.value != null) return String(obj.value);
-  }
-  if (raw == null || raw === "") throw new Error("Anthropic Tool: model id is required");
-  return String(raw);
+  return requireScalarLocatorValue(unwrapResourceLocator(raw), "Anthropic Tool: model id");
 }
 
 function buildHeaders(apiKey: string): Record<string, string> {
