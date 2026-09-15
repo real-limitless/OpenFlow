@@ -1,6 +1,7 @@
 import type { NodeExecutor, INodeExecutionData, ExecutionContext } from "@/sdk";
 import { requireCredential } from "@/sdk";
 import { sdkHttpRequest, type SdkHttpRequestOptions, type SdkHttpResponse } from "@/sdk";
+import { resolveChatModelId } from "@/lib/nodes/resource-locator";
 
 const DEFAULT_REGION = "us-central1";
 const DEFAULT_TIMEOUT = 120000;
@@ -37,33 +38,8 @@ export function setVertexHttpClient(factory: VertexHttpClient | null): void {
   httpOverride = factory;
 }
 
-interface ResourceLocator {
-  __rl?: boolean;
-  mode?: string;
-  value?: unknown;
-  cachedResultName?: string;
-}
-
 function resolveResourceLocatorParam(ctx: ExecutionContext, name: string): string {
-  const raw = ctx.getParam<unknown>(name);
-  let value: unknown;
-  if (raw && typeof raw === "object" && "__rl" in (raw as Record<string, unknown>)) {
-    value = (raw as ResourceLocator).value;
-  } else {
-    value = raw;
-  }
-  if (value == null || value === "") {
-    throw new Error(`Google Vertex Chat Model: ${name} is required`);
-  }
-  const str = String(value);
-  const items = ctx.getInputItems(0);
-  const firstJson = items[0]?.json ?? {};
-  const resolved = ctx.evaluate(str, firstJson);
-  const result = String(resolved ?? "").trim();
-  if (!result) {
-    throw new Error(`Google Vertex Chat Model: ${name} resolved to empty`);
-  }
-  return result;
+  return resolveChatModelId(ctx, `Google Vertex Chat Model: ${name}`, name);
 }
 
 function buildGenerateContentUrl(projectId: string, model: string, region: string): string {

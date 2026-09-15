@@ -1,6 +1,7 @@
 import type { NodeExecutor, INodeExecutionData, ExecutionContext } from "@/sdk";
 import { requireCredential } from "@/sdk";
 import { sdkHttpRequest, type SdkHttpRequestOptions, type SdkHttpResponse } from "@/sdk";
+import { requireScalarLocatorValue, unwrapResourceLocator } from "@/lib/nodes/resource-locator";
 
 const DEFAULT_MODEL = "mistral-embed";
 const BASE_URL = "https://api.mistral.ai/v1";
@@ -33,18 +34,12 @@ function firstItemJson(ctx: ExecutionContext): Record<string, unknown> {
 }
 
 function resolveModel(ctx: ExecutionContext): string {
-  const modelParam = ctx.getParam<unknown>("model", DEFAULT_MODEL);
-  let raw: unknown = modelParam;
-
-  if (modelParam && typeof modelParam === "object" && "__rl" in modelParam) {
-    raw = (modelParam as { __rl?: boolean; value?: unknown }).value;
-  }
-
+  let raw: unknown = unwrapResourceLocator(ctx.getParam<unknown>("model", DEFAULT_MODEL));
   if (raw == null || raw === "") {
     raw = DEFAULT_MODEL;
   }
+  const str = requireScalarLocatorValue(raw, "Embeddings Mistral Cloud: model");
 
-  const str = String(raw);
   if (str.startsWith("=")) {
     const resolved = ctx.evaluate(str, firstItemJson(ctx));
     const modelId = String(resolved ?? "").trim();

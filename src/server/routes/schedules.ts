@@ -37,6 +37,22 @@ async function fireSchedule(scheduleId: string): Promise<void> {
     },
   });
   notifyExecutionStarted(schedule.workflowId, execution.id, "trigger");
+  let startNode: string | undefined;
+  try {
+    const nodes = JSON.parse(workflow.nodes) as Array<{ id?: string; name?: string }>;
+    const match = nodes.find((n) => n.id === schedule.nodeId);
+    startNode = typeof match?.name === "string" && match.name ? match.name : undefined;
+  } catch {
+    startNode = undefined;
+  }
+  if (!startNode) {
+    log.warn("schedule fire could not resolve firing node", {
+      component: "scheduler",
+      scheduleId,
+      nodeId: schedule.nodeId,
+      workflowId: schedule.workflowId,
+    });
+  }
   await enqueueOrRun(
     schedule.workflowId,
     execution.id,
@@ -45,6 +61,8 @@ async function fireSchedule(scheduleId: string): Promise<void> {
     undefined,
     workflow.userId,
     workflow.projectId,
+    undefined,
+    startNode,
   );
   await prisma.scheduledTrigger.update({
     where: { id: schedule.id },
@@ -72,7 +90,9 @@ async function stopDurableSchedule(scheduleId: string, cronExpr?: string) {
     }
   }
   if (cronExpr) {
-    await scheduleQueue.removeRepeatable("fire", { pattern: cronExpr }, scheduleId).catch(() => undefined);
+    await scheduleQueue
+      .removeRepeatable("fire", { pattern: cronExpr }, scheduleId)
+      .catch(() => undefined);
   }
 }
 

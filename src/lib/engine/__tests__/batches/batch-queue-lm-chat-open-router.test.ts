@@ -109,6 +109,29 @@ describe("batch-queue lmChatOpenRouter — @n8n/n8n-nodes-langchain.lmChatOpenRo
     expect(getHandle(out).model).toBe("google/gemini-2.0-flash-exp");
   });
 
+  it("unwraps editor-written { mode, value } without __rl", async () => {
+    const out = await runModel({
+      model: { mode: "list", value: "nvidia/nemotron-3.5-lightning:free" },
+      options: {},
+    });
+    expect(getHandle(out).model).toBe("nvidia/nemotron-3.5-lightning:free");
+  });
+
+  it("recovers the new model id from a spread-string corrupted locator", async () => {
+    const indexed: Record<string, string> = {};
+    const legacy = "anthropic/claude-sonnet-4.5";
+    for (let i = 0; i < legacy.length; i++) indexed[String(i)] = legacy[i]!;
+    const corrupted = { ...indexed, mode: "list", value: "nvidia/nemotron-3.5-lightning:free" };
+    const out = await runModel({ model: corrupted, options: {} });
+    expect(getHandle(out).model).toBe("nvidia/nemotron-3.5-lightning:free");
+  });
+
+  it("throws a JSON preview instead of sending [object Object] as the model id", async () => {
+    await expect(runModel({ model: { foo: 1 }, options: {} })).rejects.toThrow(
+      /OpenRouter Chat Model: model id resolved to a non-string value: \{.*"foo":1.*\}/,
+    );
+  });
+
   it("throws when openRouterApi credential is missing", async () => {
     await expect(
       runModel(

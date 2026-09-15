@@ -2,6 +2,7 @@ import type { NodeExecutor, INodeExecutionData, ExecutionContext } from "@/sdk";
 import { requireCredential } from "@/sdk";
 import { sdkHttpRequest, type SdkHttpRequestOptions, type SdkHttpResponse } from "@/sdk";
 import type { IBinaryData } from "@/lib/workflow/types";
+import { requireScalarLocatorValue, unwrapResourceLocator } from "@/lib/nodes/resource-locator";
 
 const DEFAULT_BASE_URL = "https://api.openai.com/v1";
 const DEFAULT_TIMEOUT = 120000;
@@ -12,13 +13,6 @@ let httpOverride: OpenAiAppHttpClient | null = null;
 
 export function setOpenAiAppHttpClient(factory: OpenAiAppHttpClient | null): void {
   httpOverride = factory;
-}
-
-interface ResourceLocator {
-  __rl?: boolean;
-  mode?: string;
-  value?: unknown;
-  cachedResultName?: string;
 }
 
 interface OpenAiCredentials {
@@ -59,15 +53,8 @@ function resolveString(
 }
 
 function resolveModel(ctx: ExecutionContext, itemJson: Record<string, unknown>): string {
-  const modelParam = ctx.getParam<unknown>("model");
-  let raw: unknown = modelParam;
-  if (modelParam && typeof modelParam === "object" && "__rl" in modelParam) {
-    raw = (modelParam as ResourceLocator).value;
-  }
-  if (raw == null || raw === "") {
-    throw new Error("OpenAI: model is required");
-  }
-  const str = String(raw);
+  const raw = unwrapResourceLocator(ctx.getParam<unknown>("model"));
+  const str = requireScalarLocatorValue(raw, "OpenAI: model");
   const resolved = ctx.evaluate(str, itemJson);
   const modelId = String(resolved ?? "").trim();
   if (!modelId) {
