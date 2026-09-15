@@ -9,7 +9,9 @@ import {
   snapshot,
 } from "../../lib/observability/metrics";
 
-function presentedMetricsToken(c: { req: { header: (n: string) => string | undefined; query: (n: string) => string | undefined } }): string | undefined {
+function presentedMetricsToken(c: {
+  req: { header: (n: string) => string | undefined; query: (n: string) => string | undefined };
+}): string | undefined {
   const auth = c.req.header("authorization");
   if (auth?.toLowerCase().startsWith("bearer ")) return auth.slice(7).trim();
   const query = c.req.query("token")?.trim();
@@ -25,15 +27,36 @@ function tokenMatches(presented: string | undefined, expected: string): boolean 
   return timingSafeEqual(a, b);
 }
 
+const QUEUE_GAUGE_TIMEOUT_MS = 250;
+
+function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error("queue metrics timeout")), ms);
+    timer.unref?.();
+    promise.then(
+      (value) => {
+        clearTimeout(timer);
+        resolve(value);
+      },
+      (err) => {
+        clearTimeout(timer);
+        reject(err);
+      },
+    );
+  });
+}
+
 async function refreshQueueGauges() {
   try {
     const { executionQueue } = await import("../queue");
-    const counts = await executionQueue.getJobCounts();
+    const countsPromise = executionQueue.getJobCounts();
+    void countsPromise.catch(() => undefined);
+    const counts = await withTimeout(countsPromise, QUEUE_GAUGE_TIMEOUT_MS);
     for (const [state, n] of Object.entries(counts)) {
       setGauge("openflow_queue_jobs", Number(n) || 0, { state });
     }
   } catch {
-    /* Redis optional for unit tests */
+    /* Redis optional for unit tests /metrics must not block */
   }
 }
 

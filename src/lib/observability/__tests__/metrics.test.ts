@@ -1,5 +1,18 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { Hono } from "hono";
+
+vi.mock("../../../server/queue", () => ({
+  executionQueue: {
+    getJobCounts: vi.fn(async () => ({
+      waiting: 0,
+      active: 0,
+      completed: 0,
+      failed: 0,
+      delayed: 0,
+    })),
+  },
+}));
+import { executionQueue } from "../../../server/queue";
 import {
   incCounter,
   metricsTokenFromEnv,
@@ -28,7 +41,7 @@ describe("Prometheus text", () => {
     expect(text).toContain('route="/api/v1/workflows/:id"');
     expect(text).toContain("openflow_http_request_duration_seconds_bucket");
     expect(text).toContain("openflow_executions_total");
-    expect(text).toContain("openflow_build_info{version=\"0.1.0\"} 1");
+    expect(text).toContain('openflow_build_info{version="0.1.0"} 1');
     expect(text).toContain("openflow_up");
     expect(snapshot().counters).toBeGreaterThan(0);
   });
@@ -91,5 +104,17 @@ describe("GET /metrics", () => {
       if (prev === undefined) delete process.env.OPENFLOW_METRICS_TOKEN;
       else process.env.OPENFLOW_METRICS_TOKEN = prev;
     }
+  });
+
+  it("returns Prometheus text even if Redis queue counts hang", async () => {
+    vi.mocked(executionQueue.getJobCounts).mockImplementationOnce(() => new Promise(() => {}));
+    resetMetricsForTests();
+    const app = new Hono<AppEnv>();
+    metricsRoute(app);
+    const started = Date.now();
+    const res = await app.request("/metrics");
+    expect(res.status).toBe(200);
+    expect(Date.now() - started).toBeLessThan(2000);
+    expect(await res.text()).toContain("openflow_up");
   });
 });
