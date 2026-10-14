@@ -86,6 +86,7 @@ function makeCtx(
   items: Array<Record<string, unknown> | INodeExecutionData>,
   node: INode,
   credentials?: Record<string, Record<string, unknown>>,
+  continueOnFail = false,
 ): ExecutionContext {
   const normalized: INodeExecutionData[] = items.map((i) =>
     i && typeof i === "object" && "json" in i
@@ -103,7 +104,7 @@ function makeCtx(
       settings: {},
     },
     getNodeInputItems: () => normalized,
-    continueOnFail: false,
+    continueOnFail,
     getCredential: async (name) => credentials?.[name] ?? null,
   });
 }
@@ -115,6 +116,7 @@ async function run(
     refs: Record<string, { name: string }>;
     data: Record<string, Record<string, unknown>>;
   },
+  continueOnFail = false,
 ) {
   const node = makeNode({
     name: "N",
@@ -122,7 +124,7 @@ async function run(
     parameters,
     credentials: credentials?.refs,
   });
-  const ctx = makeCtx(inputItems, node, credentials?.data);
+  const ctx = makeCtx(inputItems, node, credentials?.data, continueOnFail);
   const executor = getExecutor(TYPE)!;
   return executor(ctx, node);
 }
@@ -368,6 +370,66 @@ describe("http-request executor — n8n-nodes-base.httpRequest", () => {
     expect(out[0][0].binary?.data.fileName).toBe("sheet.bin");
     expect(out[0][0].json.fileSize).toBeGreaterThan(0);
     expect(out[0][0].binary?.data.data).toBeTruthy();
+  });
+
+  it("sends one request per input item and resolves expressions per item", async () => {
+    await run(
+      {
+        method: "POST",
+        url: "={{ $json.rosterUrl }}/api/v1/bus/send",
+        sendBody: true,
+        contentType: "json",
+        jsonBody: "={{ ({ to: $json.plan.seatId, runId: $json.runId }) }}",
+      },
+      [
+        { rosterUrl: "https://roster.example", runId: "r1", plan: { seatId: "a" } },
+        { rosterUrl: "https://roster.example", runId: "r1", plan: { seatId: "b" } },
+      ],
+    );
+
+    expect(calls).toHaveLength(2);
+    expect(calls[0].url).toBe("https://roster.example/api/v1/bus/send");
+    expect(calls[1].url).toBe("https://roster.example/api/v1/bus/send");
+    expect(JSON.parse(calls[0].body ?? "")).toEqual({ to: "a", runId: "r1" });
+    expect(JSON.parse(calls[1].body ?? "")).toEqual({ to: "b", runId: "r1" });
+  });
+
+  it("keeps later items when an earlier request fails and continueOnFail is set", async () => {
+    let n = 0;
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (url: string, init: RequestInit | undefined) => {
+        n += 1;
+        calls.push({
+          url: String(url),
+          method: init?.method ?? "GET",
+          headers: {},
+          body: typeof init?.body === "string" ? init.body : undefined,
+          redirect: "follow",
+        });
+        if (n === 1) return mockResponse({ error: "nope" }, { status: 500 });
+        return mockResponse({ ok: true });
+      }),
+    );
+
+    await expect(
+      run(
+        {
+          method: "POST",
+          url: "https://example.com/post",
+          sendBody: true,
+          contentType: "json",
+          jsonBody: "={{ $json.n }}",
+        },
+        [{ n: 1 }, { n: 2 }],
+        undefined,
+        true,
+      ),
+    ).rejects.toMatchObject({
+      name: "NodeExecutionError",
+      items: [[{ json: { error: expect.stringContaining("HTTP 500") } }, { json: { ok: true } }]],
+    });
+    expect(calls).toHaveLength(2);
   });
 
   it("throws a wrapped error when fetch rejects", async () => {

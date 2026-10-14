@@ -1,0 +1,69 @@
+{
+  "id": "wiki-flow-docs-build",
+  "name": "wiki-flow/docs-build",
+  "active": false,
+  "nodes": [
+    {
+      "id": "wfb-webhook",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [0, 0],
+      "webhookId": "wiki-build",
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "wiki-build",
+        "responseMode": "onReceived",
+        "options": {}
+      }
+    },
+    {
+      "id": "wfb-split",
+      "name": "Split Plan",
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [280, 0],
+      "parameters": {
+        "fieldToSplitOut": "plan",
+        "include": "allOtherFields",
+        "options": {
+          "destinationFieldName": "plan"
+        }
+      }
+    },
+    {
+      "id": "wfb-http",
+      "name": "Send Handoff",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [560, 0],
+      "continueOnFail": true,
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $json.rosterUrl }}/api/v1/bus/send",
+        "authentication": "none",
+        "sendBody": true,
+        "contentType": "json",
+        "jsonBody": "={{ ({ from: 'wiki-supervisor', to: $json.plan.seatId, kind: 'handoff', wake: true, text: $json.plan.brief + '\\nrunId: ' + $json.runId + '\\nslug: ' + $json.plan.slug }) }}"
+      }
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [[{ "node": "Split Plan", "type": "main", "index": 0 }]]
+    },
+    "Split Plan": {
+      "main": [[{ "node": "Send Handoff", "type": "main", "index": 0 }]]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "webhookAuthMode": "header",
+    "executionTimeout": 600
+  },
+  "pinData": {},
+  "meta": {
+    "integration": "wiki-flow",
+    "role": "docs-build"
+  }
+}
