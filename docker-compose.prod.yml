@@ -1,10 +1,14 @@
 # Production overlay — use with the base compose file:
+#   POSTGRES_PASSWORD=$(openssl rand -hex 24)
+#   CREDENTIALS_KEY=$(node -e "console.log(require('crypto').randomBytes(32).toString('hex'))")
 #   docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
 #
-# Before first start, set strong secrets in .env:
-#   CREDENTIALS_KEY=$(node -e "console.log(require('crypto').randomBytes(32).toString('hex'))")
-#   POSTGRES_PASSWORD=<non-default>
-#   DATABASE_URL=postgresql://openflow:${POSTGRES_PASSWORD}@db:5432/openflow
+# POSTGRES_PASSWORD is required and must not be the dev default (openflow) or
+# CREDENTIALS_KEY. Compose builds DATABASE_URL from POSTGRES_USER, POSTGRES_PASSWORD,
+# and POSTGRES_DB. Do not set DATABASE_URL for this stack.
+#
+# Existing volumes keep the password they were initialized with. See docs/install.md
+# for the ALTER USER migration.
 #
 # Do not expose this stack on the public internet without TLS (Caddy/nginx/Traefik).
 
@@ -22,7 +26,10 @@ services:
       OPENFLOW_OIDC_CLIENT_SECRET: ${OPENFLOW_OIDC_CLIENT_SECRET:-}
       OPENFLOW_OIDC_REDIRECT_URI: ${OPENFLOW_OIDC_REDIRECT_URI:-}
       OPENFLOW_OIDC_ENABLED: ${OPENFLOW_OIDC_ENABLED:-}
-      DATABASE_URL: ${DATABASE_URL:?Set DATABASE_URL with a non-default password}
+      POSTGRES_USER: ${POSTGRES_USER:-openflow}
+      POSTGRES_DB: ${POSTGRES_DB:-openflow}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD to a non-default value}
+      DATABASE_URL: postgresql://${POSTGRES_USER:-openflow}:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD to a non-default value}@db:5432/${POSTGRES_DB:-openflow}
       CREDENTIALS_KEY: ${CREDENTIALS_KEY:?Set CREDENTIALS_KEY}
       BINARY_STORAGE_DIR: /data/binary
       OPENFLOW_SECRETS_DIR: /data/secrets
@@ -37,7 +44,10 @@ services:
     environment:
       AUTH_DISABLED: "false"
       NODE_ENV: production
-      DATABASE_URL: ${DATABASE_URL:?Set DATABASE_URL with a non-default password}
+      POSTGRES_USER: ${POSTGRES_USER:-openflow}
+      POSTGRES_DB: ${POSTGRES_DB:-openflow}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD to a non-default value}
+      DATABASE_URL: postgresql://${POSTGRES_USER:-openflow}:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD to a non-default value}@db:5432/${POSTGRES_DB:-openflow}
       CREDENTIALS_KEY: ${CREDENTIALS_KEY:?Set CREDENTIALS_KEY}
       OPENFLOW_ROLE: worker
       RUN_WORKER: "true"
@@ -47,7 +57,22 @@ services:
     ports: !override
       - "127.0.0.1:15432:5432"
     environment:
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD}
+      POSTGRES_USER: ${POSTGRES_USER:-openflow}
+      POSTGRES_DB: ${POSTGRES_DB:-openflow}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD to a non-default value}
+    # Reject the dev default before Postgres accepts connections. `:?` only
+    # catches an unset variable; this catches POSTGRES_PASSWORD=openflow.
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        pw=$$(printf '%s' "$$POSTGRES_PASSWORD" | tr '[:upper:]' '[:lower:]' | tr -d '[:space:]')
+        case "$$pw" in
+          ""|openflow|postgres|password|secret|changeme|change-me|replace-me|replace-with*)
+            echo "Refusing to start Postgres: POSTGRES_PASSWORD is missing or a default. Set a dedicated POSTGRES_PASSWORD. Do not reuse CREDENTIALS_KEY." >&2
+            exit 1
+            ;;
+        esac
+        exec docker-entrypoint.sh postgres
     restart: unless-stopped
 
   redis:
@@ -59,3 +84,7 @@ services:
     restart: unless-stopped
     environment:
       NODE_ENV: production
+      POSTGRES_USER: ${POSTGRES_USER:-openflow}
+      POSTGRES_DB: ${POSTGRES_DB:-openflow}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD to a non-default value}
+      DATABASE_URL: postgresql://${POSTGRES_USER:-openflow}:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD to a non-default value}@db:5432/${POSTGRES_DB:-openflow}

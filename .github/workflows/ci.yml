@@ -34,3 +34,6 @@ jobs:
 
       - name: Lint (server, sdk, config)
         run: npx eslint src/server src/sdk src/config.ts
+
+      - name: Compose worker smoke
+        run: bash scripts/smoke-compose-worker.sh

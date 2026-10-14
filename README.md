@@ -108,7 +108,8 @@ Installs under `~/openflow` by default (`OPENFLOW_HOME` to override). Until the 
 ### Production overlay
 
 ```sh
-# set a strong CREDENTIALS_KEY in .env first
+# set a strong CREDENTIALS_KEY and a dedicated POSTGRES_PASSWORD in .env first
+# (do not reuse the credential key as the database password)
 docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
 ```
 
@@ -203,7 +204,8 @@ See [`.env.example`](.env.example) for the full list. Common variables:
 | --- | --- |
 | `AUTH_DISABLED` | `true` for local try-out; `false` for real deployments |
 | `CREDENTIALS_KEY` | 64 hex chars; AES key for stored credentials |
-| `DATABASE_URL` | Host dev uses `localhost:15432` |
+| `POSTGRES_PASSWORD` | Dedicated database password. Dev compose defaults to `openflow`; production requires a non-default value and builds `DATABASE_URL` from it |
+| `DATABASE_URL` | Host dev uses `localhost:15432`. Compose overrides this inside containers |
 | `REDIS_URL` | BullMQ queue (optional for some execute paths) |
 | `OPENFLOW_ASSISTANT_*` | Editor AI assistant |
 | `OPENFLOW_MCP_ENABLED` / `OPENFLOW_PUBLIC_URL` | Remote MCP + OAuth issuer ([docs/mcp.md](docs/mcp.md)) |

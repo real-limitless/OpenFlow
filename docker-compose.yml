@@ -10,7 +10,24 @@
 #
 # No .env required. Optional: cp .env.example .env and edit.
 # AUTH_DISABLED defaults to true: labeled try-out, no login required.
-# Production: docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+# Production: set POSTGRES_PASSWORD (do not reuse CREDENTIALS_KEY), then
+#   docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+
+# Dev-only Postgres defaults. The prod overlay requires POSTGRES_PASSWORD
+# and refuses this password. DATABASE_URL is rebuilt by the entrypoint so
+# the password is percent-encoded. A host .env DATABASE_URL (localhost:15432)
+# must not leak into containers — these keys override env_file.
+x-postgres-app: &postgres-app
+  OPENFLOW_BUILD_DATABASE_URL: "1"
+  POSTGRES_USER: ${POSTGRES_USER:-openflow}
+  POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-openflow}
+  POSTGRES_DB: ${POSTGRES_DB:-openflow}
+  POSTGRES_HOST: db
+  POSTGRES_PORT: "5432"
+  DATABASE_URL: postgresql://${POSTGRES_USER:-openflow}:${POSTGRES_PASSWORD:-openflow}@db:5432/${POSTGRES_DB:-openflow}
+  # The image bakes NODE_ENV=production, which refuses the dev password and
+  # exits before /health exists. Try-out must not inherit that.
+  NODE_ENV: development
 
 services:
   api:
@@ -22,7 +39,7 @@ services:
       - path: .env
         required: false
     environment:
-      DATABASE_URL: postgresql://openflow:openflow@db:5432/openflow
+      <<: *postgres-app
       REDIS_URL: redis://redis:6379
       # Labeled try-out: no login. Production overlay sets AUTH_DISABLED=false.
       AUTH_DISABLED: ${AUTH_DISABLED:-true}
@@ -82,20 +99,26 @@ services:
       timeout: 5s
       retries: 12
       start_period: 40s
+    restart: unless-stopped
     depends_on:
       db:
         condition: service_healthy
       redis:
         condition: service_healthy
 
+  # Do not depend on api health. The API used to exit on the dev DB password
+  # (image NODE_ENV=production) and this container stayed Created forever, so
+  # queued, webhook, and scheduled runs never ran. Migrations run in this
+  # entrypoint; Postgres and Redis being healthy is enough to start.
+  # Same image as api. One build target only: a second `build:` races
+  # `docker compose up --build` and fails with "image already exists".
   worker:
     image: openflow:local
-    build: .
     env_file:
       - path: .env
         required: false
     environment:
-      DATABASE_URL: postgresql://openflow:openflow@db:5432/openflow
+      <<: *postgres-app
       REDIS_URL: redis://redis:6379
       AUTH_DISABLED: ${AUTH_DISABLED:-true}
       CREDENTIALS_KEY: ${CREDENTIALS_KEY:-}
@@ -119,12 +142,11 @@ services:
       timeout: 5s
       retries: 12
       start_period: 40s
+    restart: unless-stopped
     depends_on:
       db:
         condition: service_healthy
       redis:
-        condition: service_healthy
-      api:
         condition: service_healthy
 
   # Toolbox: git/bash/python + baked-in app for catalog RAG.
@@ -139,7 +161,7 @@ services:
       - path: .env
         required: false
     environment:
-      DATABASE_URL: postgresql://openflow:openflow@db:5432/openflow
+      <<: *postgres-app
       REDIS_URL: redis://redis:6379
       OPENFLOW_APP_DIR: /app
       OPENFLOW_WORKSPACE_DIR: /data/workspace
@@ -174,14 +196,15 @@ services:
     volumes:
       - pgdata:/var/lib/postgresql/data
     environment:
-      POSTGRES_DB: openflow
-      POSTGRES_USER: openflow
-      POSTGRES_PASSWORD: openflow
+      POSTGRES_DB: ${POSTGRES_DB:-openflow}
+      POSTGRES_USER: ${POSTGRES_USER:-openflow}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-openflow}
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U openflow -d openflow"]
+      test: ["CMD-SHELL", "pg_isready -U \"$$POSTGRES_USER\" -d \"$$POSTGRES_DB\""]
       interval: 5s
       timeout: 3s
       retries: 5
+    restart: unless-stopped
 
   redis:
     image: redis:7-alpine
@@ -194,6 +217,7 @@ services:
       interval: 5s
       timeout: 3s
       retries: 5
+    restart: unless-stopped
 
 volumes:
   pgdata:

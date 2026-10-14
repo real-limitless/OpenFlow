@@ -39,9 +39,10 @@ docker compose up -d
 No `.env` file is required. On first start the container:
 
 1. Waits for healthy Postgres and Redis
-2. Generates `CREDENTIALS_KEY` if unset (persisted under the `secrets-data` volume)
-3. Runs `prisma migrate deploy`
-4. Serves the app on port **3000**
+2. Starts the API and the worker. The worker does not wait on API health
+3. Generates `CREDENTIALS_KEY` if unset (persisted under the `secrets-data` volume)
+4. Runs `prisma migrate deploy`
+5. Serves the app on port **3000**
 
 ### Useful commands
 
@@ -68,7 +69,7 @@ cp .env.example .env
 docker compose up -d
 ```
 
-Compose still forces in-network `DATABASE_URL` / `REDIS_URL` to the `db` and `redis` services.
+Compose builds the in-network `DATABASE_URL` from `POSTGRES_USER`, `POSTGRES_PASSWORD`, and `POSTGRES_DB` (dev default `openflow` / `openflow` / `openflow`) and points `REDIS_URL` at the `redis` service. A `DATABASE_URL` in `.env` is for the API on the host (`localhost:15432`) and is overridden inside containers.
 
 ## get-openflow.sh (recommended one-liner)
 
@@ -164,26 +165,54 @@ Secret hygiene before you publish a branch: `bash scripts/check-no-secrets.sh` �
 
 ## Production checklist
 
-Use the prod overlay:
+Use the prod overlay. `POSTGRES_PASSWORD` is required and must not be the dev default. Compose builds `DATABASE_URL` from it. Do not point that password at `CREDENTIALS_KEY`.
 
 ```sh
 cp .env.example .env
-# REQUIRED: strong 64-char hex key
+# REQUIRED: strong 64-char hex key (credential encryption — not the DB password)
 node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
 # put result in CREDENTIALS_KEY=
 
+# REQUIRED: dedicated database password (hex is URL-safe)
+openssl rand -hex 24
+# put result in POSTGRES_PASSWORD=
+# optional: POSTGRES_USER and POSTGRES_DB (default openflow / openflow)
+
 docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
 ```
+
+`docker compose` fails immediately when `POSTGRES_PASSWORD` is unset. The value `openflow` (and other placeholders) is refused before Postgres accepts connections, and the API/worker entrypoint exits before migrations.
 
 | Item | Recommendation |
 | --- | --- |
 | Auth | `AUTH_DISABLED=false` (prod overlay default) |
 | Secrets | Stable `CREDENTIALS_KEY`; back up `secrets-data` volume |
+| Database | Dedicated `POSTGRES_PASSWORD`. Optional `POSTGRES_USER` / `POSTGRES_DB` |
 | Hot nodes | Off in prod (`OPENFLOW_HOT_NODES=false`) |
 | Postgres / Redis | Bound to `127.0.0.1` in prod overlay; do not publish publicly |
 | TLS | Terminate with Caddy, nginx, or Traefik in front of `:3000` |
 | Backups | Volume snapshots for `pgdata`, `binary-data`, `secrets-data` |
 | Image pin | Prefer a version tag, not only `latest` |
+| Worker | Separate `worker` service (`OPENFLOW_ROLE=worker`). It starts once Postgres and Redis are healthy |
+
+### Migrating an existing compose deploy
+
+Try-out stacks that already use the dev password `openflow` keep working with `docker compose up -d`. No volume change.
+
+Production stacks that already set `POSTGRES_PASSWORD` to a non-default value, with user and database `openflow`, keep working. You can remove `DATABASE_URL` from the environment you pass to Compose. The overlay builds `postgresql://POSTGRES_USER:POSTGRES_PASSWORD@db:5432/POSTGRES_DB`.
+
+If the running database was initialized with a different password than the one you want to keep using (the old hardcoded `openflow`, or a stopgap that copied `CREDENTIALS_KEY`):
+
+```sh
+# while the current password still works
+docker compose exec db psql -U openflow -d openflow -c "ALTER USER openflow PASSWORD 'new-password';"
+```
+
+Then set `POSTGRES_PASSWORD=new-password` in `.env` and recreate `api` and `worker`. Changing `POSTGRES_USER` or `POSTGRES_DB` does not rename a role or database that already exists in the volume; set them only when they already match the volume.
+
+`CREDENTIALS_KEY` stays the credential-encryption key. Rotate it on its own schedule. Rotating it does not change the database password, and rotating `POSTGRES_PASSWORD` does not re-encrypt stored credentials.
+
+Host-side `npm run dev` still uses `DATABASE_URL` (`localhost:15432`). That variable is not the in-container URL.
 
 ### Minimal Caddy example
 
@@ -218,8 +247,10 @@ See [`.env.example`](../.env.example) for the full list. Common vars:
 | Variable | Default (Docker try-out) | Notes |
 | --- | --- | --- |
 | `AUTH_DISABLED` | `true` | Set `false` for real deployments |
-| `CREDENTIALS_KEY` | auto-generated | AES key for stored credentials |
-| `DATABASE_URL` | compose internal | Host dev uses `localhost:15432` |
+| `CREDENTIALS_KEY` | auto-generated | AES key for stored credentials. Not the database password |
+| `POSTGRES_PASSWORD` | `openflow` (dev only) | Required in production. Compose builds `DATABASE_URL` from this |
+| `POSTGRES_USER` / `POSTGRES_DB` | `openflow` | Optional. Must match the role and database already in the volume |
+| `DATABASE_URL` | compose-built inside containers | Host dev uses `localhost:15432`. Do not derive it from `CREDENTIALS_KEY` |
 | `REDIS_URL` | compose internal | Optional for execute (in-process fallback) |
 | `BINARY_STORAGE_DIR` | `/data/binary` | Workflow binary payloads (fs mode) |
 | `BINARY_STORAGE` | `fs` | `fs` or `s3` (MinIO/AWS-compatible) |
@@ -228,7 +259,8 @@ See [`.env.example`](../.env.example) for the full list. Common vars:
 | `LOG_STREAM_TYPE` | `none` | `none` / `http` / `datadog` |
 | `LOG_STREAM_URL` | — | HTTP sink URL when `LOG_STREAM_TYPE=http` |
 | `DD_API_KEY` | — | Datadog Logs API key when type=`datadog` |
-| `RUN_WORKER` | `true` | BullMQ worker inside API process |
+| `OPENFLOW_ROLE` | `main` on `api`, `worker` on `worker` | Host `npm run dev` defaults to `all` (worker in the API process) |
+| `RUN_WORKER` | `false` on `api`, `true` on `worker` | BullMQ consumer. Queued runs need the `worker` service |
 | `OPENFLOW_ASSISTANT_*` | optional | Editor AI assistant |
 | `OPENFLOW_MCP_ENABLED` / `OPENFLOW_PUBLIC_URL` | optional | Remote MCP + OAuth ([docs/mcp.md](mcp.md)) |
 
@@ -262,6 +294,8 @@ Recent in-process logs: `GET /api/v1/logs/recent` (authenticated when auth is on
 | Symptom | Fix |
 | --- | --- |
 | `CREDENTIALS_KEY is not set` in production | Set env or rely on entrypoint + `secrets-data` volume |
+| `POSTGRES_PASSWORD` missing or refused | Set a dedicated non-default password. Do not reuse `CREDENTIALS_KEY`. See the migration notes above |
+| Worker container stays `Created` | It no longer waits on API health. `docker compose ps` should show `worker` running after Postgres and Redis are healthy. `docker compose logs worker` |
 | API unhealthy / migrate errors | `docker compose logs api`; ensure `db` is healthy |
 | Port 3000 in use | `OPENFLOW_PORT=3001` with deploy compose, or change ports mapping |
 | Local `npm run dev` can't reach DB | `docker compose up -d db redis` and use port **15432** |

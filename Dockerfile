@@ -43,6 +43,7 @@ RUN npm install prisma@7.9.1 dotenv@17.4.2 \
 COPY prisma/schema.prisma prisma/schema.prisma
 COPY prisma/migrations prisma/migrations
 COPY prisma.config.ts prisma.config.ts
+COPY scripts/lib/build-database-url.sh /usr/local/lib/openflow/build-database-url.sh
 COPY scripts/docker-entrypoint.sh /usr/local/bin/openflow-entrypoint.sh
 RUN chmod +x /usr/local/bin/openflow-entrypoint.sh
 COPY --from=build /app/.output ./.output

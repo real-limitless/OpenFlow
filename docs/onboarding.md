@@ -125,7 +125,7 @@ Automated smoke: `npm run test:dogfood` (see [dogfood.md](dogfood.md)).
 
 | Symptom | Fix |
 | --- | --- |
-| `npm run dev` can't reach DB | `docker compose up -d db redis`; `DATABASE_URL` uses port **15432** |
+| `npm run dev` can't reach DB | `docker compose up -d db redis`; `DATABASE_URL` uses port **15432**. Compose itself builds the in-container URL from `POSTGRES_PASSWORD` |
 | Node version errors | Install Node **≥ 22** |
 | Docker API unhealthy | `docker compose logs -f api`; ensure `db` is healthy |
 | Missing `CREDENTIALS_KEY` | Re-run setup/wizard, or generate: `node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"` |
