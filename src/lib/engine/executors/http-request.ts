@@ -1,5 +1,6 @@
-import type { NodeExecutor } from "../types";
+import type { INodeExecutionData, NodeExecutor } from "../types";
 import { evaluateExpression } from "../../expressions/evaluate";
+import { NodeExecutionError } from "../agent-trace";
 
 interface HeaderParam {
   name: string;
@@ -20,9 +21,12 @@ function resolveValue(raw: unknown, itemJson: Record<string, unknown>): unknown 
   return raw;
 }
 
-export const httpRequestExecutor: NodeExecutor = async (ctx, node) => {
-  const inputItems = ctx.getNodeInputItems(node.name, 0);
-  const itemJson = inputItems[0]?.json ?? {};
+async function executeForItem(
+  ctx: Parameters<NodeExecutor>[0],
+  node: Parameters<NodeExecutor>[1],
+  item: INodeExecutionData | undefined,
+): Promise<INodeExecutionData[][]> {
+  const itemJson = item?.json ?? {};
 
   const method = (node.parameters.method as string) ?? "GET";
   const rawUrl = (node.parameters.url as string) ?? "";
@@ -65,7 +69,7 @@ export const httpRequestExecutor: NodeExecutor = async (ctx, node) => {
       const prop = String(
         node.parameters.inputDataFieldName ?? node.parameters.binaryPropertyName ?? "data",
       );
-      const bin = inputItems[0]?.binary?.[prop];
+      const bin = item?.binary?.[prop];
       if (!bin) {
         throw new Error(`HTTP Request: binary property "${prop}" is missing`);
       }
@@ -128,6 +132,45 @@ export const httpRequestExecutor: NodeExecutor = async (ctx, node) => {
   }
 
   return executeWithUrl(url, method, headers, bodyInit, node, ctx.allowUrl);
+}
+
+/**
+ * One HTTP call per input item. A single node run still walks every item;
+ * this is not a workflow loop. Zero items keeps the previous one-call
+ * behavior against an empty json object.
+ *
+ * `continueOnFail` attempts every item, keeps successful responses, and
+ * records `{ error }` for the ones that threw. The node then fails with
+ * those partial outputs so the run is not marked success.
+ */
+export const httpRequestExecutor: NodeExecutor = async (ctx, node) => {
+  const inputItems = ctx.getNodeInputItems(node.name, 0);
+  if (inputItems.length <= 1) {
+    return executeForItem(ctx, node, inputItems[0]);
+  }
+
+  const out: INodeExecutionData[] = [];
+  const failures: string[] = [];
+  for (let i = 0; i < inputItems.length; i++) {
+    const item = inputItems[i];
+    try {
+      const [batch] = await executeForItem(ctx, node, item);
+      out.push(batch?.[0] ?? { json: {}, pairedItem: item.pairedItem ?? { item: i, input: 0 } });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      if (!ctx.continueOnFail()) throw err;
+      failures.push(message);
+      out.push({
+        json: { error: message },
+        pairedItem: item.pairedItem ?? { item: i, input: 0 },
+      });
+    }
+  }
+
+  if (failures.length > 0) {
+    throw new NodeExecutionError(failures[0] ?? "HTTP Request failed", { items: [out] });
+  }
+  return [out];
 };
 
 async function executeWithUrl(
