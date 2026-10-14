@@ -82,6 +82,10 @@ services:
       timeout: 5s
       retries: 12
       start_period: 40s
+    networks:
+      default: {}
+      dokploy-network:
+        aliases: [openflow]
     depends_on:
       db:
         condition: service_healthy
@@ -194,6 +198,10 @@ services:
       interval: 5s
       timeout: 3s
       retries: 5
+
+networks:
+  dokploy-network:
+    external: true
 
 volumes:
   pgdata:
