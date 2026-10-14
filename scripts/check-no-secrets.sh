@@ -50,7 +50,7 @@ if git grep -nE 'BEGIN (RSA |OPENSSH |EC |DSA )?PRIVATE KEY' -- \
 fi
 
 # 5) Remind about local-only defaults (not a failure)
-if git grep -q 'POSTGRES_PASSWORD: openflow' -- docker-compose.yml 2>/dev/null; then
+if git grep -qE 'POSTGRES_PASSWORD: (\$\{POSTGRES_PASSWORD:)?-?openflow\}?|POSTGRES_PASSWORD: openflow' -- docker-compose.yml 2>/dev/null; then
   warn "Compose uses local-only Postgres password 'openflow' (documented; not production)."
 fi
 

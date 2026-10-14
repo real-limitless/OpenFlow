@@ -38,6 +38,10 @@ ensure_credentials_key() {
   echo "[openflow] Persist the secrets volume (or set CREDENTIALS_KEY) so encrypted credentials survive restarts."
 }
 
+# shellcheck source=scripts/lib/build-database-url.sh
+. /usr/local/lib/openflow/build-database-url.sh
+openflow_prepare_database_url
+
 ensure_credentials_key
 
 echo "[openflow] Applying database migrations…"

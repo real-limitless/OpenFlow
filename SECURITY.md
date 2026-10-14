@@ -20,7 +20,7 @@ Never commit or paste these into issues, PRs, or logs:
 | `OPENFLOW_ASSISTANT_API_KEY` / `OPENAI_API_KEY` | `.env` — LLM assistant |
 | OAuth access/refresh tokens (`ofa_` / `ofr_`) | Hashed in DB; issued to remote MCP clients |
 | `OPENCODE_API_KEY` / server password | `.env` when using the OpenCode backend |
-| Database passwords | Compose / `DATABASE_URL` |
+| Database passwords | `POSTGRES_PASSWORD` (Compose builds `DATABASE_URL`). Not `CREDENTIALS_KEY` |
 | Cloud keys (AWS, Vault, S3, Datadog, …) | `.env` or secret providers UI |
 | Workflow credential payloads | Database (encrypted at rest with `CREDENTIALS_KEY`) |
 

@@ -18,7 +18,16 @@ services:
       - path: .env
         required: false
     environment:
-      DATABASE_URL: postgresql://openflow:openflow@db:5432/openflow
+      # Dev default password. Set POSTGRES_PASSWORD and NODE_ENV=production for a real deploy.
+      # DATABASE_URL is built from POSTGRES_*; do not reuse CREDENTIALS_KEY as the password.
+      OPENFLOW_BUILD_DATABASE_URL: "1"
+      POSTGRES_USER: ${POSTGRES_USER:-openflow}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-openflow}
+      POSTGRES_DB: ${POSTGRES_DB:-openflow}
+      POSTGRES_HOST: db
+      POSTGRES_PORT: "5432"
+      DATABASE_URL: postgresql://${POSTGRES_USER:-openflow}:${POSTGRES_PASSWORD:-openflow}@db:5432/${POSTGRES_DB:-openflow}
+      NODE_ENV: ${NODE_ENV:-development}
       REDIS_URL: redis://redis:6379
       AUTH_DISABLED: ${AUTH_DISABLED:-true}
       CREDENTIALS_KEY: ${CREDENTIALS_KEY:-}
@@ -60,11 +69,11 @@ services:
     volumes:
       - pgdata:/var/lib/postgresql/data
     environment:
-      POSTGRES_DB: openflow
-      POSTGRES_USER: openflow
+      POSTGRES_DB: ${POSTGRES_DB:-openflow}
+      POSTGRES_USER: ${POSTGRES_USER:-openflow}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-openflow}
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U openflow -d openflow"]
+      test: ["CMD-SHELL", "pg_isready -U \"$$POSTGRES_USER\" -d \"$$POSTGRES_DB\""]
       interval: 5s
       timeout: 3s
       retries: 5

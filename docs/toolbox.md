@@ -53,7 +53,7 @@ ls /data/workspace            # agent scratch — often empty
 
 ## Catalog reindex
 
-Uses `DATABASE_URL` pointing at the `db` service (in compose: `postgresql://openflow:openflow@db:5432/openflow`).
+Uses `DATABASE_URL` pointing at the `db` service. Compose builds it from `POSTGRES_USER`, `POSTGRES_PASSWORD`, and `POSTGRES_DB` (dev default `postgresql://openflow:openflow@db:5432/openflow`).
 
 ## Production
 

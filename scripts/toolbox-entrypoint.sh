@@ -7,6 +7,13 @@
 
 set -euo pipefail
 
+# shellcheck source=scripts/lib/build-database-url.sh
+if [ -f /app/scripts/lib/build-database-url.sh ]; then
+  # shellcheck disable=SC1091
+  . /app/scripts/lib/build-database-url.sh
+  openflow_prepare_database_url
+fi
+
 APP_DIR="${OPENFLOW_APP_DIR:-/app}"
 WORKSPACE="${OPENFLOW_WORKSPACE_DIR:-/data/workspace}"
 mkdir -p "$WORKSPACE" /data/catalog 2>/dev/null || true
