@@ -187,8 +187,8 @@ services:
     command:
       - |
         set -e
-        if PGPASSWORD="$NEWPW" psql -h db -U openflow -d openflow -tAc 'select 1' >/dev/null 2>&1; then echo 'db password already rotated'; exit 0; fi
-        PGPASSWORD=openflow psql -h db -U openflow -d openflow -v ON_ERROR_STOP=1 -v pw="$NEWPW" -c "ALTER ROLE openflow PASSWORD :'pw'" >/dev/null
+        if PGPASSWORD="$$NEWPW" psql -h db -U openflow -d openflow -tAc 'select 1' >/dev/null 2>&1; then echo 'db password already rotated'; exit 0; fi
+        echo "ALTER ROLE openflow PASSWORD :'pw';" | PGPASSWORD=openflow psql -h db -U openflow -d openflow -v ON_ERROR_STOP=1 -v pw="$$NEWPW" >/dev/null
         echo 'db password rotated'
     depends_on:
       db:
