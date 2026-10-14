@@ -22,7 +22,7 @@ services:
       - path: .env
         required: false
     environment:
-      DATABASE_URL: postgresql://openflow:openflow@db:5432/openflow
+      DATABASE_URL: postgresql://openflow:${CREDENTIALS_KEY:?CREDENTIALS_KEY required}@db:5432/openflow
       REDIS_URL: redis://redis:6379
       # Labeled try-out: no login. Production overlay sets AUTH_DISABLED=false.
       AUTH_DISABLED: ${AUTH_DISABLED:-true}
@@ -89,6 +89,8 @@ services:
     depends_on:
       db:
         condition: service_healthy
+      db-password-sync:
+        condition: service_completed_successfully
       redis:
         condition: service_healthy
 
@@ -99,7 +101,7 @@ services:
       - path: .env
         required: false
     environment:
-      DATABASE_URL: postgresql://openflow:openflow@db:5432/openflow
+      DATABASE_URL: postgresql://openflow:${CREDENTIALS_KEY:?CREDENTIALS_KEY required}@db:5432/openflow
       REDIS_URL: redis://redis:6379
       AUTH_DISABLED: ${AUTH_DISABLED:-true}
       CREDENTIALS_KEY: ${CREDENTIALS_KEY:-}
@@ -126,6 +128,8 @@ services:
     depends_on:
       db:
         condition: service_healthy
+      db-password-sync:
+        condition: service_completed_successfully
       redis:
         condition: service_healthy
       api:
@@ -143,7 +147,7 @@ services:
       - path: .env
         required: false
     environment:
-      DATABASE_URL: postgresql://openflow:openflow@db:5432/openflow
+      DATABASE_URL: postgresql://openflow:${CREDENTIALS_KEY:?CREDENTIALS_KEY required}@db:5432/openflow
       REDIS_URL: redis://redis:6379
       OPENFLOW_APP_DIR: /app
       OPENFLOW_WORKSPACE_DIR: /data/workspace
@@ -168,7 +172,27 @@ services:
     depends_on:
       db:
         condition: service_healthy
+      db-password-sync:
+        condition: service_completed_successfully
     restart: unless-stopped
+
+  # Suite test only: rotate the default 'openflow' role password (prod guard rejects it)
+  # to the instance CREDENTIALS_KEY. Idempotent; replace with a dedicated POSTGRES_PASSWORD later.
+  db-password-sync:
+    image: pgvector/pgvector:pg16
+    restart: "no"
+    environment:
+      NEWPW: ${CREDENTIALS_KEY:?CREDENTIALS_KEY required}
+    entrypoint: ["sh", "-c"]
+    command:
+      - |
+        set -e
+        if PGPASSWORD="$NEWPW" psql -h db -U openflow -d openflow -tAc 'select 1' >/dev/null 2>&1; then echo 'db password already rotated'; exit 0; fi
+        PGPASSWORD=openflow psql -h db -U openflow -d openflow -v ON_ERROR_STOP=1 -v pw="$NEWPW" -c "ALTER ROLE openflow PASSWORD :'pw'" >/dev/null
+        echo 'db password rotated'
+    depends_on:
+      db:
+        condition: service_healthy
 
   db:
     # pgvector-enabled Postgres for semantic node catalog (RAG)
