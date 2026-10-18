@@ -1,0 +1,51 @@
+{
+  "id": "wiki-flow-docs-build-complete",
+  "name": "wiki-flow/docs-build-complete",
+  "active": false,
+  "nodes": [
+    {
+      "id": "wfc-webhook",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [0, 0],
+      "webhookId": "wiki-build-complete",
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "wiki-build-complete",
+        "responseMode": "onReceived",
+        "options": {}
+      }
+    },
+    {
+      "id": "wfc-http",
+      "name": "Complete Run",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [280, 0],
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $json.wikiUrl }}/api/v1/repos/{{ $json.owner }}/{{ $json.repo }}/runs/{{ $json.runId }}/complete",
+        "authentication": "none",
+        "sendBody": true,
+        "contentType": "json",
+        "jsonBody": "={{ ({ owner: $json.owner, repo: $json.repo, runId: $json.runId, status: $json.status }) }}"
+      }
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [[{ "node": "Complete Run", "type": "main", "index": 0 }]]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "webhookAuthMode": "header",
+    "executionTimeout": 600
+  },
+  "pinData": {},
+  "meta": {
+    "integration": "wiki-flow",
+    "role": "docs-build-complete"
+  }
+}
