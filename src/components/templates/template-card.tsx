@@ -72,11 +72,11 @@ export function TemplateCard({ item }: { item: TemplateListItem }) {
             {Math.round(item.compatibility.ratio * 100)}% ready
           </span>
           {item.certified ? (
-            <span className="rounded-full border border-sky-500/30 bg-sky-500/10 px-1.5 py-0.5 text-[10px] text-sky-700 dark:text-sky-400">
+            <span className="rounded-full border border-action/30 bg-action/10 px-1.5 py-0.5 text-[10px] text-action">
               Certified
             </span>
           ) : item.readyToDemo ? (
-            <span className="rounded-full border border-emerald-500/30 bg-emerald-500/10 px-1.5 py-0.5 text-[10px] text-emerald-700 dark:text-emerald-400">
+            <span className="rounded-full border border-success/30 bg-success/10 px-1.5 py-0.5 text-[10px] text-success">
               Ready to demo
             </span>
           ) : null}
