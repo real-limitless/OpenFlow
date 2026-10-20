@@ -305,7 +305,7 @@ function ApiKeysPage() {
       </p>
 
       {createdRaw && (
-        <div className="mt-4 rounded-md border border-amber-500/40 bg-amber-500/10 p-3 text-[13px]">
+        <div className="mt-4 rounded-md border border-warning/40 bg-warning/10 p-3 text-[13px]">
           <p className="font-medium">Copy this key — it won’t be shown again:</p>
           <code className="mt-1 block break-all font-mono text-[12px]">{createdRaw}</code>
           <Button

@@ -93,7 +93,7 @@ function TemplateDetailPage() {
           <div className="flex flex-wrap items-center gap-2">
             <CompatibilityBadge level={tpl.compatibility.level} />
             {tpl.certified ? (
-              <span className="rounded-full border border-sky-500/30 bg-sky-500/10 px-2 py-0.5 text-[11px] text-sky-700 dark:text-sky-400">
+              <span className="rounded-full border border-action/30 bg-action/10 px-2 py-0.5 text-[11px] text-action">
                 Certified
               </span>
             ) : null}
@@ -183,7 +183,7 @@ function TemplateDetailPage() {
               tpl.compatibility.supported.map((t) => (
                 <code
                   key={t}
-                  className="rounded bg-emerald-500/10 px-1.5 py-0.5 text-[10px] text-emerald-800 dark:text-emerald-300"
+                  className="rounded bg-success/10 px-1.5 py-0.5 text-[10px] text-success"
                 >
                   {t.replace(/^n8n-nodes-base\./, "").replace(/^@n8n\/n8n-nodes-langchain\./, "lc:")}
                 </code>
