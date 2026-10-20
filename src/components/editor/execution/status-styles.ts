@@ -3,9 +3,9 @@ import type { ExecutionStatus } from "./types";
 export function statusPlayClass(status: ExecutionStatus): string {
   switch (status) {
     case "running":
-      return "animate-pulse text-blue-500";
+      return "animate-pulse text-action";
     case "success":
-      return "text-emerald-500";
+      return "text-success";
     case "error":
       return "text-destructive";
     case "pending":
@@ -35,9 +35,9 @@ export function statusBadgeVariant(
 export function statusBarClass(status: ExecutionStatus): string {
   switch (status) {
     case "running":
-      return "bg-blue-500/80 animate-pulse";
+      return "bg-action/80 animate-pulse";
     case "success":
-      return "bg-emerald-500/80";
+      return "bg-success/80";
     case "error":
       return "bg-destructive/80";
     case "pending":
@@ -52,9 +52,9 @@ export function statusBarClass(status: ExecutionStatus): string {
 export function statusColumnClass(status: ExecutionStatus): string {
   switch (status) {
     case "running":
-      return "border-blue-500/30 bg-blue-500/5";
+      return "border-action/30 bg-action/5";
     case "success":
-      return "border-emerald-500/30 bg-emerald-500/5";
+      return "border-success/30 bg-success/5";
     case "error":
       return "border-destructive/30 bg-destructive/5";
     case "pending":
