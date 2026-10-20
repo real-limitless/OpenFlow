@@ -161,9 +161,9 @@ export function CircuitBreakerPanel() {
                 <span
                   className={
                     b.state === "open"
-                      ? "text-red-500"
+                      ? "text-destructive"
                       : b.state === "half_open"
-                        ? "text-amber-500"
+                        ? "text-warning"
                         : "text-muted-foreground"
                   }
                 >
