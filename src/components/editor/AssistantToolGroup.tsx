@@ -82,7 +82,7 @@ export function AssistantToolGroup({ tools }: { tools: ToolStep[] }) {
                   ) : t.status === "error" ? (
                     <X className="size-3 shrink-0 text-destructive" />
                   ) : (
-                    <Check className="size-3 shrink-0 text-emerald-500" />
+                    <Check className="size-3 shrink-0 text-success" />
                   )}
                   <span
                     className={cn(

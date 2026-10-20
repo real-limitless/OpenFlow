@@ -143,7 +143,7 @@ export function McpShareDialog({ open, onOpenChange, workflowId, workflowName }:
           </div>
         ) : (
           <div className="space-y-3 py-2 text-[13px]">
-            <p className="text-amber-700 dark:text-amber-400">
+            <p className="text-warning">
               Copy now — the token is shown once. Expires{" "}
               {new Date(result.expiresAt).toLocaleString()}.
             </p>

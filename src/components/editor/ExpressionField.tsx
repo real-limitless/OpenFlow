@@ -24,7 +24,7 @@ function cssVarToHex(name: string, fallback: string): string {
   if (typeof document === "undefined") return fallback;
   const value = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
   if (!value) return fallback;
-  
+
   try {
     const canvas = document.createElement("canvas");
     const ctx = canvas.getContext("2d");
@@ -55,7 +55,7 @@ function handleEditorWillMount(monaco: Monaco) {
       "editorSuggestWidget.selectedBackground": cssVarToHex("--accent", "#343a46"),
     },
   });
-  
+
   if (providersRegistered) return;
   providersRegistered = true;
 
