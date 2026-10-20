@@ -27,11 +27,17 @@ function cssVarToHex(name: string, fallback: string): string {
 
   try {
     const canvas = document.createElement("canvas");
-    const ctx = canvas.getContext("2d");
+    canvas.width = 1;
+    canvas.height = 1;
+    const ctx = canvas.getContext("2d", { willReadFrequently: true });
     if (!ctx) return fallback;
+    // fillStyle may serialise modern colours (e.g. oklch) as-is, so paint a
+    // pixel and read it back to get a hex value Monaco accepts.
     ctx.fillStyle = fallback;
     ctx.fillStyle = value;
-    return String(ctx.fillStyle);
+    ctx.fillRect(0, 0, 1, 1);
+    const [r, g, b] = ctx.getImageData(0, 0, 1, 1).data;
+    return `#${[r, g, b].map((n) => (n ?? 0).toString(16).padStart(2, "0")).join("")}`;
   } catch {
     return fallback;
   }
