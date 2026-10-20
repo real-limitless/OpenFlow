@@ -20,7 +20,42 @@ const MonacoEditor = lazy(() =>
 let providersRegistered = false;
 let currentNodeNames: string[] = [];
 
+function cssVarToHex(name: string, fallback: string): string {
+  if (typeof document === "undefined") return fallback;
+  const value = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+  if (!value) return fallback;
+  
+  try {
+    const canvas = document.createElement("canvas");
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return fallback;
+    ctx.fillStyle = fallback;
+    ctx.fillStyle = value;
+    return String(ctx.fillStyle);
+  } catch {
+    return fallback;
+  }
+}
+
 function handleEditorWillMount(monaco: Monaco) {
+  monaco.editor.defineTheme("openflow", {
+    base: "vs-dark",
+    inherit: true,
+    rules: [],
+    colors: {
+      "editor.background": cssVarToHex("--background", "#151a23"),
+      "editor.foreground": cssVarToHex("--foreground", "#eef0f4"),
+      "editorLineNumber.foreground": cssVarToHex("--muted-foreground", "#9aa1ad"),
+      "editorCursor.foreground": cssVarToHex("--primary", "#84cc16"),
+      "editor.selectionBackground": cssVarToHex("--accent", "#343a46"),
+      "editorWidget.background": cssVarToHex("--popover", "#1c2129"),
+      "editorWidget.border": cssVarToHex("--border", "#2f3540"),
+      "editorSuggestWidget.background": cssVarToHex("--popover", "#1c2129"),
+      "editorSuggestWidget.border": cssVarToHex("--border", "#2f3540"),
+      "editorSuggestWidget.selectedBackground": cssVarToHex("--accent", "#343a46"),
+    },
+  });
+  
   if (providersRegistered) return;
   providersRegistered = true;
 
@@ -161,7 +196,7 @@ function CodeArea({
           <MonacoEditor
             height={rows * 19 + 16}
             language={language}
-            theme="vs-dark"
+            theme="openflow"
             value={value}
             onChange={(v) => onChange(v ?? "")}
             beforeMount={handleEditorWillMount}
