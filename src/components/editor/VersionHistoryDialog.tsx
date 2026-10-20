@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { apiFetch } from "@/lib/auth/client";
 import { useWorkflowStore } from "@/store/workflow-store";
 import type { IWorkflow } from "@/lib/workflow/types";
@@ -38,8 +39,6 @@ export function VersionHistoryDialog({
     });
   }, [open, workflowId]);
 
-  if (!open) return null;
-
   const restore = async (id: string) => {
     setBusy(true);
     try {
@@ -66,23 +65,32 @@ export function VersionHistoryDialog({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-      <div className="max-h-[80vh] w-full max-w-lg overflow-auto rounded-lg border border-border bg-card p-4 shadow-xl">
-        <div className="mb-3 flex items-center justify-between">
-          <h2 className="text-[15px] font-medium">Version history</h2>
-          <Button type="button" size="sm" variant="ghost" onClick={onClose}>
-            Close
-          </Button>
-        </div>
+    <Dialog
+      open={open}
+      onOpenChange={(o) => {
+        if (!o) onClose();
+      }}
+    >
+      <DialogContent className="max-h-[80vh] max-w-lg overflow-auto">
+        <DialogHeader>
+          <DialogTitle>Version history</DialogTitle>
+        </DialogHeader>
         {rows.length === 0 ? (
-          <p className="text-[13px] text-muted-foreground">No snapshots yet. Save the workflow to create one.</p>
+          <p className="text-[13px] text-muted-foreground">
+            No snapshots yet. Save the workflow to create one.
+          </p>
         ) : (
           <ul className="space-y-2 text-[13px]">
             {rows.map((row, i) => (
-              <li key={row.id} className="flex items-start justify-between gap-2 border-b border-border/60 pb-2">
+              <li
+                key={row.id}
+                className="flex items-start justify-between gap-2 border-b border-border/60 pb-2"
+              >
                 <div>
                   <p className="font-medium text-foreground">{row.name}</p>
-                  <p className="text-muted-foreground">{new Date(row.createdAt).toLocaleString()}</p>
+                  <p className="text-muted-foreground">
+                    {new Date(row.createdAt).toLocaleString()}
+                  </p>
                 </div>
                 <div className="flex gap-1">
                   {i < rows.length - 1 && (
@@ -95,7 +103,12 @@ export function VersionHistoryDialog({
                       Diff
                     </Button>
                   )}
-                  <Button type="button" size="sm" disabled={busy} onClick={() => void restore(row.id)}>
+                  <Button
+                    type="button"
+                    size="sm"
+                    disabled={busy}
+                    onClick={() => void restore(row.id)}
+                  >
                     Restore
                   </Button>
                 </div>
@@ -109,10 +122,13 @@ export function VersionHistoryDialog({
               {diff.fromName} → {diff.toName}
               {diff.nameChanged ? " (renamed)" : ""}
             </p>
-            <p>Added {diff.nodesAdded.length} · removed {diff.nodesRemoved.length} · changed {diff.nodesChanged.length}</p>
+            <p>
+              Added {diff.nodesAdded.length} · removed {diff.nodesRemoved.length} · changed{" "}
+              {diff.nodesChanged.length}
+            </p>
           </div>
         )}
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 }
