@@ -331,11 +331,12 @@ function BaseNodeInner({ data, selected, id }: NodeProps<OpenFlowNode>) {
           selected && "ring-2 ring-primary ring-offset-2 ring-offset-background",
           node.disabled && "opacity-45 grayscale",
           connecting && nodeHasCompatible && "ring-1 ring-offset-1 ring-offset-background",
-      isRunning &&
-      "border-action/60 shadow-[0_0_0_2px_color-mix(in_oklab,var(--action)_35%,transparent),0_0_20px_color-mix(in_oklab,var(--action)_25%,transparent)]",
-    isSuccess && "border-success/50 shadow-[0_0_0_2px_color-mix(in_oklab,var(--success)_25%,transparent)]",
-    isError &&
-      "border-destructive/60 shadow-[0_0_0_2px_color-mix(in_oklab,var(--destructive)_35%,transparent)] animate-[shake_0.4s_ease-in-out]",
+          isRunning &&
+            "border-action/60 shadow-[0_0_0_2px_color-mix(in_oklab,var(--action)_35%,transparent),0_0_20px_color-mix(in_oklab,var(--action)_25%,transparent)]",
+          isSuccess &&
+            "border-success/50 shadow-[0_0_0_2px_color-mix(in_oklab,var(--success)_25%,transparent)]",
+          isError &&
+            "border-destructive/60 shadow-[0_0_0_2px_color-mix(in_oklab,var(--destructive)_35%,transparent)] animate-[shake_0.4s_ease-in-out]",
           isPending && "opacity-70",
           isSkipped && "opacity-50 grayscale",
         )}
