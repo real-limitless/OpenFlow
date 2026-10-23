@@ -27,11 +27,23 @@ type KeyRow = {
   scopes: string[];
   restrictWorkflows: boolean;
   canCreateWorkflows: boolean;
+  ownerEmail?: string;
+  ownerName?: string;
   expiresAt: string | null;
+  rotationDueAt?: string | null;
   lastUsedAt: string | null;
   createdAt: string;
   grants: Grant[];
 };
+
+function toLocalInput(d: Date): string {
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+function defaultExpiryInput(days: number): string {
+  return toLocalInput(new Date(Date.now() + days * 24 * 60 * 60 * 1000));
+}
 
 type WfOption = { id: string; name: string };
 type WfPerm = { w: boolean; x: boolean };
@@ -195,10 +207,13 @@ function ApiKeysPage() {
   const [list, setList] = useState<KeyRow[] | null>(null);
   const [workflows, setWorkflows] = useState<WfOption[]>([]);
   const [name, setName] = useState("");
+  const [ownerEmail, setOwnerEmail] = useState("");
+  const [ownerName, setOwnerName] = useState("");
   const [restrict, setRestrict] = useState(true);
   const [canCreate, setCanCreate] = useState(false);
   const [scopes, setScopes] = useState<string[]>([...CLASSIC_SCOPES]);
-  const [expiresAt, setExpiresAt] = useState("");
+  const [maxTtlDays, setMaxTtlDays] = useState(90);
+  const [expiresAt, setExpiresAt] = useState(() => defaultExpiryInput(90));
   const [selectedWf, setSelectedWf] = useState<Record<string, { w: boolean; x: boolean }>>({});
   const [createdRaw, setCreatedRaw] = useState<string | null>(null);
   const [expanded, setExpanded] = useState<string | null>(null);
@@ -209,6 +224,8 @@ function ApiKeysPage() {
       setList([]);
       return;
     }
+    const ttl = Number(res.headers.get("X-Api-Key-Max-Ttl-Days"));
+    if (Number.isFinite(ttl) && ttl > 0) setMaxTtlDays(ttl);
     setList((await res.json()) as KeyRow[]);
   }, []);
 
@@ -230,6 +247,10 @@ function ApiKeysPage() {
 
   const create = async () => {
     if (!name.trim()) return;
+    if (!expiresAt) {
+      toast.error("Expiry is required");
+      return;
+    }
     const res = await apiFetch("/api/v1/api-keys", {
       method: "POST",
       body: JSON.stringify({
@@ -237,7 +258,9 @@ function ApiKeysPage() {
         scopes,
         restrictWorkflows: restrict,
         canCreateWorkflows: canCreate,
-        expiresAt: expiresAt ? new Date(expiresAt).toISOString() : null,
+        expiresAt: new Date(expiresAt).toISOString(),
+        ...(ownerEmail.trim() ? { ownerEmail: ownerEmail.trim() } : {}),
+        ...(ownerName.trim() ? { ownerName: ownerName.trim() } : {}),
         grants: restrict ? selectedToGrants(selectedWf) : [],
       }),
     });
@@ -249,6 +272,9 @@ function ApiKeysPage() {
     const body = (await res.json()) as { key: string };
     setCreatedRaw(body.key);
     setName("");
+    setOwnerEmail("");
+    setOwnerName("");
+    setExpiresAt(defaultExpiryInput(maxTtlDays));
     setSelectedWf({});
     toast.success("API key created — copy it now");
     await refresh();
@@ -302,10 +328,31 @@ function ApiKeysPage() {
           <Label htmlFor="key-name">Name</Label>
           <Input
             id="key-name"
-            placeholder="Claude MCP"
+            placeholder="automation"
             value={name}
             onChange={(e) => setName(e.target.value)}
           />
+        </div>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <div className="space-y-1">
+            <Label htmlFor="key-owner-name">Owner name</Label>
+            <Input
+              id="key-owner-name"
+              placeholder="Owner name"
+              value={ownerName}
+              onChange={(e) => setOwnerName(e.target.value)}
+            />
+          </div>
+          <div className="space-y-1">
+            <Label htmlFor="key-owner-email">Owner email</Label>
+            <Input
+              id="key-owner-email"
+              type="email"
+              placeholder="Defaults to your account"
+              value={ownerEmail}
+              onChange={(e) => setOwnerEmail(e.target.value)}
+            />
+          </div>
         </div>
 
         <div className="space-y-2">
@@ -362,13 +409,18 @@ function ApiKeysPage() {
         </div>
 
         <div className="space-y-1">
-          <Label htmlFor="key-exp">Expires (optional)</Label>
+          <Label htmlFor="key-exp">Expires (required)</Label>
           <Input
             id="key-exp"
             type="datetime-local"
+            required
             value={expiresAt}
             onChange={(e) => setExpiresAt(e.target.value)}
           />
+          <p className="text-[11px] text-muted-foreground">
+            Rotation is due on this date. Maximum lifetime is {maxTtlDays} days
+            (API_KEY_MAX_TTL_DAYS). Leaving the server field empty uses that maximum.
+          </p>
         </div>
 
         {restrict && (
@@ -396,11 +448,18 @@ function ApiKeysPage() {
               <div>
                 <p className="font-medium">{k.name}</p>
                 <p className="text-[11px] text-muted-foreground">
+                  {k.ownerName ? `${k.ownerName} · ` : ""}
+                  {k.ownerEmail ? `${k.ownerEmail} · ` : ""}
                   {k.restrictWorkflows
                     ? `${k.grants.length} workflow grant(s)`
                     : "Unrestricted (all workflows)"}
-                  {k.expiresAt ? ` · expires ${new Date(k.expiresAt).toLocaleString()}` : ""}
                   {k.lastUsedAt ? ` · last used ${new Date(k.lastUsedAt).toLocaleString()}` : ""}
+                </p>
+                <p className="text-[11px] text-muted-foreground">
+                  Rotation due{" "}
+                  {k.rotationDueAt || k.expiresAt
+                    ? new Date(k.rotationDueAt || k.expiresAt || "").toLocaleString()
+                    : "unset"}
                 </p>
                 <p className="mt-0.5 font-mono text-[10px] text-muted-foreground">
                   {(k.scopes ?? []).join(" ")}
