@@ -12,6 +12,7 @@ if [ -f /app/scripts/lib/build-database-url.sh ]; then
   # shellcheck disable=SC1091
   . /app/scripts/lib/build-database-url.sh
   openflow_prepare_database_url
+  openflow_prepare_redis_url
 fi
 
 APP_DIR="${OPENFLOW_APP_DIR:-/app}"

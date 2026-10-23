@@ -1,0 +1,12 @@
+# Opt-in loopback ports for host-side debugging of Postgres and Redis.
+# Not for production. The prod overlay does not publish these ports.
+#
+#   docker compose -f docker-compose.yml -f docker-compose.debug-ports.yml up -d db redis
+
+services:
+  db:
+    ports:
+      - "127.0.0.1:15432:5432"
+  redis:
+    ports:
+      - "127.0.0.1:6379:6379"

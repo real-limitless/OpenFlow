@@ -26,6 +26,10 @@ spec:
               value: production
             - name: AUTH_DISABLED
               value: {{ .Values.secrets.authDisabled | quote }}
+            - name: OPENFLOW_HOT_NODES
+              value: {{ .Values.hotNodes | default false | quote }}
+            - name: OPENFLOW_OPEN_REGISTER
+              value: {{ .Values.openRegister | default false | quote }}
             - name: OPENFLOW_ROLE
               value: {{ .Values.worker.role | quote }}
             - name: RUN_WORKER

@@ -108,7 +108,7 @@ curl -s http://localhost:3000/api/v1/dev/nodes | jq
 curl -s -X POST http://localhost:3000/api/v1/dev/reload-nodes | jq
 ```
 
-Requires `OPENFLOW_HOT_NODES=1` or `AUTH_DISABLED=true` / `NODE_ENV=development`.
+Requires `OPENFLOW_HOT_NODES=1`. Auth-off and development mode do not enable it.
 
 ## Machine-readable
 

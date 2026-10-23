@@ -28,7 +28,8 @@ postgresql://{{ .Values.postgres.user }}:{{ .Values.secrets.postgresPassword }}@
 
 {{- define "openflow.redisUrl" -}}
 {{- if .Values.redis.enabled -}}
-redis://{{ include "openflow.fullname" . }}-redis:6379
+{{- $pass := required "secrets.redisPassword is required" .Values.secrets.redisPassword -}}
+redis://:{{ $pass | urlquery }}@{{ include "openflow.fullname" . }}-redis:6379
 {{- else -}}
 {{ required "external REDIS_URL required when redis.enabled=false" .Values.externalRedisUrl }}
 {{- end -}}

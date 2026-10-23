@@ -2,7 +2,8 @@
 #
 #   helm install openflow ./deploy/helm/openflow \
 #     --set secrets.credentialsKey=$(openssl rand -hex 32) \
-#     --set secrets.postgresPassword=change-me
+#     --set secrets.postgresPassword=change-me \
+#     --set secrets.redisPassword=$(openssl rand -hex 16)
 #
 # Then port-forward or set ingress.enabled=true.
 
@@ -40,6 +41,10 @@ redis:
   enabled: true
   image: redis:7-alpine
 
+# Secure defaults. Set hotNodes or openRegister true only for a private dev cluster.
+hotNodes: false
+openRegister: false
+
 ingress:
   enabled: false
   className: ""
@@ -50,6 +55,8 @@ secrets:
   # Required in production. Do not commit real values.
   credentialsKey: "change-me-set-credentials-key"
   postgresPassword: "change-me-set-postgres-password"
+  # Required. No default. Generate with: openssl rand -hex 24
+  redisPassword: ""
   authDisabled: "false"
 
 extraEnv: []

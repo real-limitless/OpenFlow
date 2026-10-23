@@ -1,10 +1,15 @@
 # Image-based deploy (no local build). Used by scripts/install.sh and bare-metal hosts.
 #
 #   export OPENFLOW_IMAGE=ghcr.io/<owner>/openflow:latest
+#   export REDIS_PASSWORD="$(openssl rand -hex 24)"
 #   docker compose -f deploy/docker-compose.yml up -d
 #
+# The API is not published on a host port. Put a reverse proxy on the `api`
+# network. Plain local use (loopback only):
+#   docker compose -f deploy/docker-compose.yml -f deploy/docker-compose.local-ports.yml up -d
+#
 # Or from this directory after copying .env:
-#   cp ../.env.example .env   # then set CREDENTIALS_KEY
+#   cp ../.env.example .env   # then set CREDENTIALS_KEY and REDIS_PASSWORD
 #   docker compose up -d
 
 name: openflow
@@ -12,14 +17,15 @@ name: openflow
 services:
   api:
     image: ${OPENFLOW_IMAGE:-ghcr.io/real-limitless/openflow:latest}
-    ports:
-      - "${OPENFLOW_PORT:-3000}:3000"
+    expose:
+      - "3000"
     env_file:
       - path: .env
         required: false
     environment:
-      # Dev default password. Set POSTGRES_PASSWORD and NODE_ENV=production for a real deploy.
-      # DATABASE_URL is built from POSTGRES_*; do not reuse CREDENTIALS_KEY as the password.
+      # Dev default database password. Set POSTGRES_PASSWORD and NODE_ENV=production
+      # for a real deploy. DATABASE_URL is built from POSTGRES_*; do not reuse
+      # CREDENTIALS_KEY as the password.
       OPENFLOW_BUILD_DATABASE_URL: "1"
       POSTGRES_USER: ${POSTGRES_USER:-openflow}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-openflow}
@@ -28,8 +34,13 @@ services:
       POSTGRES_PORT: "5432"
       DATABASE_URL: postgresql://${POSTGRES_USER:-openflow}:${POSTGRES_PASSWORD:-openflow}@db:5432/${POSTGRES_DB:-openflow}
       NODE_ENV: ${NODE_ENV:-development}
-      REDIS_URL: redis://redis:6379
-      AUTH_DISABLED: ${AUTH_DISABLED:-true}
+      OPENFLOW_BUILD_REDIS_URL: "1"
+      REDIS_PASSWORD: ${REDIS_PASSWORD:?Set REDIS_PASSWORD}
+      REDIS_HOST: redis
+      REDIS_PORT: "6379"
+      REDIS_URL: redis://:${REDIS_PASSWORD:?Set REDIS_PASSWORD}@redis:6379
+      AUTH_DISABLED: ${AUTH_DISABLED:-false}
+      OPENFLOW_OPEN_REGISTER: ${OPENFLOW_OPEN_REGISTER:-false}
       CREDENTIALS_KEY: ${CREDENTIALS_KEY:-}
       BINARY_STORAGE_DIR: /data/binary
       OPENFLOW_SECRETS_DIR: /data/secrets
@@ -62,6 +73,9 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+    networks:
+      - backend
+      - api
     restart: unless-stopped
 
   db:
@@ -77,18 +91,37 @@ services:
       interval: 5s
       timeout: 3s
       retries: 5
+    networks:
+      - backend
     restart: unless-stopped
 
   redis:
     image: redis:7-alpine
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD:?Set REDIS_PASSWORD}
+    command:
+      - sh
+      - -c
+      - exec redis-server --appendonly yes --requirepass "$$REDIS_PASSWORD"
     volumes:
       - redis-data:/data
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test:
+        [
+          "CMD-SHELL",
+          "REDISCLI_AUTH=\"$$REDIS_PASSWORD\" redis-cli ping | grep -q PONG",
+        ]
       interval: 5s
       timeout: 3s
       retries: 5
+    networks:
+      - backend
     restart: unless-stopped
+
+networks:
+  backend:
+    internal: true
+  api: {}
 
 volumes:
   pgdata:

@@ -1,0 +1,12 @@
+# Opt-in loopback port for plain local use of the API.
+# The base compose file does not publish a host port; put a reverse proxy on
+# the `api` network instead.
+#
+#   docker compose -f docker-compose.yml -f docker-compose.local-ports.yml up -d
+#
+# INSECURE if this host is reachable past loopback and AUTH_DISABLED=true.
+
+services:
+  api:
+    ports:
+      - "127.0.0.1:${OPENFLOW_PORT:-3000}:3000"

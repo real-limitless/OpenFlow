@@ -76,12 +76,12 @@ Default library: [real-limitless/n8n-workflow-library](https://github.com/real-l
 
 ## First-run expectations
 
-- **Auth is disabled** by default (`AUTH_DISABLED=true`). Anyone who can reach the port can use the app. Keep it local or put it behind a private network until you enable auth.
+- **Auth is on** by default (`AUTH_DISABLED=false`). The first account is the instance owner at `/setup` (`GET /api/v1/setup/status`, then `POST /api/v1/auth/register`). That path stays open when `OPENFLOW_OPEN_REGISTER=false`. `AUTH_DISABLED=true` is an INSECURE local try-out with no login.
 - **`CREDENTIALS_KEY`** encrypts credential payloads in the database. Do not lose or commit it. Docker persists a generated key on the `secrets-data` volume if unset.
+- **`REDIS_PASSWORD`** is required. Compose does not ship a default.
 - **Ports**
-  - App: `3000`
-  - Postgres (published for host dev): `15432`
-  - Redis: `6379`
+  - App: not published. `docker-compose.local-ports.yml` binds `127.0.0.1:3000`
+  - Postgres / Redis: internal network only. `docker-compose.debug-ports.yml` binds `127.0.0.1:15432` and `127.0.0.1:6379` for host dev
 
 ## Configure the editor assistant (optional)
 
