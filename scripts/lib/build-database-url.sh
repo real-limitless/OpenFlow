@@ -97,3 +97,37 @@ if (isWeak(fromUrl)) {
 }
 JS
 }
+
+# Build REDIS_URL from REDIS_PASSWORD. No default password. Production rejects
+# placeholder values. Never reads CREDENTIALS_KEY.
+openflow_prepare_redis_url() {
+  set -e
+  if [ "${OPENFLOW_BUILD_REDIS_URL:-}" != "1" ]; then
+    return 0
+  fi
+  if [ -z "${REDIS_PASSWORD:-}" ]; then
+    echo "[openflow] Refusing to boot: REDIS_PASSWORD is required. No default is set." >&2
+    exit 1
+  fi
+  if [ "${NODE_ENV:-}" = "production" ]; then
+    pw=$(printf '%s' "$REDIS_PASSWORD" | tr '[:upper:]' '[:lower:]' | tr -d '[:space:]')
+    case "$pw" in
+      ""|openflow|redis|password|secret|changeme|change-me|replace-me|replace-with*)
+        echo "[openflow] Refusing to boot: REDIS_PASSWORD is missing or still a default." >&2
+        exit 1
+        ;;
+    esac
+  fi
+  : "${REDIS_HOST:=redis}"
+  : "${REDIS_PORT:=6379}"
+  export REDIS_HOST REDIS_PORT
+  REDIS_URL="$(node <<'JS'
+const password = process.env.REDIS_PASSWORD ?? "";
+const host = (process.env.REDIS_HOST || "redis").trim() || "redis";
+const port = (process.env.REDIS_PORT || "6379").trim() || "6379";
+process.stdout.write("redis://:" + encodeURIComponent(password) + "@" + host + ":" + port);
+JS
+)"
+  export REDIS_URL
+  echo "[openflow] REDIS_URL built from REDIS_PASSWORD." >&2
+}

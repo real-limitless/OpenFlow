@@ -12,7 +12,12 @@ import {
 } from "../services/sessions";
 import { ensureUser, ensureUserWithProject, LOCAL_USER_ID } from "../services/users";
 import { countRealUsers } from "./setup";
-import { canPublicRegister, sessionCookieSecure } from "../../lib/auth/registration-policy";
+import {
+  canPublicRegister,
+  isLoginDisabled,
+  isRegistrationDisabled,
+  sessionCookieSecure,
+} from "../../lib/auth/registration-policy";
 import { issueCsrfCookie } from "../middleware/csrf";
 import { consumeInviteToken } from "../services/invites";
 import { recordAudit, requestIp } from "../services/audit";
@@ -59,6 +64,9 @@ function isValidEmail(email: string): boolean {
 
 export default function authRoute(app: Hono<AppEnv>) {
   app.post("/api/v1/auth/register", async (c) => {
+    if (isRegistrationDisabled()) {
+      return c.json({ error: "Registration is disabled", code: "registration_disabled" }, 403);
+    }
     const body = await c.req.json<{ email?: string; password?: string; inviteToken?: string }>();
     const { email, password, inviteToken } = body ?? {};
 
@@ -117,6 +125,9 @@ export default function authRoute(app: Hono<AppEnv>) {
   });
 
   app.post("/api/v1/auth/login", async (c) => {
+    if (isLoginDisabled()) {
+      return c.json({ error: "Login is disabled", code: "login_disabled" }, 403);
+    }
     const body = await c.req.json<{ email?: string; password?: string }>();
     const { email, password } = body ?? {};
 
@@ -193,6 +204,9 @@ export default function authRoute(app: Hono<AppEnv>) {
   });
 
   app.get("/api/v1/auth/oidc/start", async (c) => {
+    if (isLoginDisabled()) {
+      return c.json({ error: "Login is disabled", code: "login_disabled" }, 403);
+    }
     const settings = await getOidcSettings();
     if (!oidcReady(settings)) {
       return c.json({ error: "OIDC is not configured" }, 400);
@@ -223,14 +237,14 @@ export default function authRoute(app: Hono<AppEnv>) {
         }),
       );
     } catch (err) {
-      return c.json(
-        { error: err instanceof Error ? err.message : "OIDC start failed" },
-        502,
-      );
+      return c.json({ error: err instanceof Error ? err.message : "OIDC start failed" }, 502);
     }
   });
 
   app.get("/api/v1/auth/oidc/callback", async (c) => {
+    if (isLoginDisabled()) {
+      return c.json({ error: "Login is disabled", code: "login_disabled" }, 403);
+    }
     const idpError = c.req.query("error");
     if (idpError) {
       return c.json({ error: idpError, description: c.req.query("error_description") ?? "" }, 400);
@@ -280,6 +294,9 @@ export default function authRoute(app: Hono<AppEnv>) {
       if (!decision.ok) {
         return c.json({ error: decision.error, code: "oidc" }, decision.status);
       }
+      if (decision.action === "create" && isRegistrationDisabled()) {
+        return c.json({ error: "Registration is disabled", code: "registration_disabled" }, 403);
+      }
       let user = existing;
       if (decision.action === "create") {
         user = await prisma.user.create({
@@ -307,10 +324,7 @@ export default function authRoute(app: Hono<AppEnv>) {
       issueCsrfCookie(c);
       return c.redirect(flow.returnTo || "/");
     } catch (err) {
-      return c.json(
-        { error: err instanceof Error ? err.message : "OIDC callback failed" },
-        502,
-      );
+      return c.json({ error: err instanceof Error ? err.message : "OIDC callback failed" }, 502);
     }
   });
 }

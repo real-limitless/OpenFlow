@@ -26,8 +26,11 @@ TMP="$(mktemp -d)"
 trap 'rm -rf "$TMP"' EXIT
 
 # Isolate interpolation from a developer .env in the repo.
+# AUTH_DISABLED=true is an explicit INSECURE override for this smoke only.
+# REDIS_PASSWORD has no default; the value below is a fixture, not a real secret.
 tryout_env="$TMP/tryout.env"
-printf 'AUTH_DISABLED=true\n' >"$tryout_env"
+redis_fixture="c8f1e0a9b7d64e21aa0099ff"
+printf 'AUTH_DISABLED=true\nREDIS_PASSWORD=%s\n' "$redis_fixture" >"$tryout_env"
 
 echo "smoke: rendering try-out compose"
 tryout="$(docker compose --env-file "$tryout_env" -f docker-compose.yml config)"
@@ -38,10 +41,14 @@ printf '%s\n' "$tryout" | grep -q 'run_worker: "true"\|RUN_WORKER: "true"' \
   || fail "try-out worker is not set to run"
 printf '%s\n' "$tryout" | grep -q 'restart: unless-stopped' \
   || fail "try-out stack is missing restart: unless-stopped"
+# Only a depends_on entry counts. The worker also joins the api network,
+# which renders as "api:" and must not look like a service dependency.
 if printf '%s\n' "$tryout" | awk '
-  $0 ~ /^  worker:/ { in_worker=1; next }
-  in_worker && $0 ~ /^  [a-zA-Z0-9-]+:/ { in_worker=0 }
-  in_worker && $0 ~ /^      api:/ { found=1 }
+  $0 ~ /^  worker:/ { in_worker=1; in_depends=0; next }
+  in_worker && $0 ~ /^  [a-zA-Z0-9-]+:/ { in_worker=0; in_depends=0 }
+  in_worker && $0 ~ /^    depends_on:/ { in_depends=1; next }
+  in_worker && in_depends && $0 ~ /^    [a-zA-Z0-9_-]+:/ { in_depends=0 }
+  in_depends && $0 ~ /^      api:/ { found=1 }
   END { exit found ? 0 : 1 }
 '; then
   fail "worker still depends on api (that gate left the container Created)"
@@ -50,19 +57,48 @@ printf '%s\n' "$tryout" | grep -q 'node_env: development\|NODE_ENV: development'
   || fail "try-out API/worker must set NODE_ENV=development so the dev DB password can boot"
 printf '%s\n' "$tryout" | grep -q 'postgres_password: openflow\|POSTGRES_PASSWORD: openflow' \
   || fail "try-out is missing the dev-only Postgres password"
+printf '%s\n' "$tryout" | grep -q "$redis_fixture" \
+  || fail "try-out REDIS_URL was not built from REDIS_PASSWORD"
+printf '%s\n' "$tryout" | grep -q 'internal: true' \
+  || fail "backend network is not internal"
+if printf '%s\n' "$tryout" | grep -q 'host_ip:\|published:'; then
+  fail "base compose published a host port"
+fi
+
+echo "smoke: secure defaults keep auth, hot nodes, and open register off"
+secure_env="$TMP/secure.env"
+printf 'REDIS_PASSWORD=%s\n' "$redis_fixture" >"$secure_env"
+secure="$(docker compose --env-file "$secure_env" -f docker-compose.yml config)"
+printf '%s\n' "$secure" | grep -q 'auth_disabled: "false"\|AUTH_DISABLED: "false"' \
+  || fail "AUTH_DISABLED did not default to false"
+printf '%s\n' "$secure" | grep -q 'openflow_hot_nodes: "false"\|OPENFLOW_HOT_NODES: "false"' \
+  || fail "OPENFLOW_HOT_NODES did not default to false"
+printf '%s\n' "$secure" | grep -q 'openflow_open_register: "false"\|OPENFLOW_OPEN_REGISTER: "false"' \
+  || fail "OPENFLOW_OPEN_REGISTER did not default to false"
 
 echo "smoke: production compose without POSTGRES_PASSWORD must fail"
 prod_missing="$TMP/prod-missing.env"
-printf 'CREDENTIALS_KEY=%s\n' "0123456789abcdef0123456789abcdef" >"$prod_missing"
+printf 'CREDENTIALS_KEY=%s\nREDIS_PASSWORD=%s\n' "0123456789abcdef0123456789abcdef" "$redis_fixture" >"$prod_missing"
 if docker compose --env-file "$prod_missing" -f docker-compose.yml -f docker-compose.prod.yml config >/dev/null 2>"$TMP/prod-missing.err"; then
   fail "production compose rendered without POSTGRES_PASSWORD"
 fi
 grep -q 'POSTGRES_PASSWORD' "$TMP/prod-missing.err" \
   || fail "production compose failed without mentioning POSTGRES_PASSWORD: $(cat "$TMP/prod-missing.err")"
 
+echo "smoke: production compose without REDIS_PASSWORD must fail"
+redis_missing="$TMP/redis-missing.env"
+printf 'CREDENTIALS_KEY=%s\nPOSTGRES_PASSWORD=%s\n' \
+  "0123456789abcdef0123456789abcdef" "$redis_fixture" >"$redis_missing"
+if docker compose --env-file "$redis_missing" -f docker-compose.yml -f docker-compose.prod.yml config >/dev/null 2>"$TMP/redis-missing.err"; then
+  fail "production compose rendered without REDIS_PASSWORD"
+fi
+grep -q 'REDIS_PASSWORD' "$TMP/redis-missing.err" \
+  || fail "production compose failed without mentioning REDIS_PASSWORD: $(cat "$TMP/redis-missing.err")"
+
 echo "smoke: production compose must not keep the dev password"
 prod_default="$TMP/prod-default.env"
-printf 'CREDENTIALS_KEY=%s\nPOSTGRES_PASSWORD=openflow\n' "0123456789abcdef0123456789abcdef" >"$prod_default"
+printf 'CREDENTIALS_KEY=%s\nPOSTGRES_PASSWORD=openflow\nREDIS_PASSWORD=%s\n' \
+  "0123456789abcdef0123456789abcdef" "$redis_fixture" >"$prod_default"
 prod_default_cfg="$(docker compose --env-file "$prod_default" -f docker-compose.yml -f docker-compose.prod.yml config)"
 # Rendering succeeds; the db command refuses the value before Postgres starts.
 printf '%s\n' "$prod_default_cfg" | grep -q 'Refusing to start Postgres' \
@@ -72,14 +108,27 @@ printf '%s\n' "$prod_default_cfg" | grep -q 'node_env: production\|NODE_ENV: pro
 
 echo "smoke: production compose renders a dedicated password into DATABASE_URL"
 prod_ok="$TMP/prod-ok.env"
-printf 'CREDENTIALS_KEY=%s\nPOSTGRES_PASSWORD=%s\nPOSTGRES_USER=openflow\nPOSTGRES_DB=openflow\n' \
-  "0123456789abcdef0123456789abcdef" "c8f1e0a9b7d64e21aa0099ff" >"$prod_ok"
+printf 'CREDENTIALS_KEY=%s\nPOSTGRES_PASSWORD=%s\nREDIS_PASSWORD=%s\nPOSTGRES_USER=openflow\nPOSTGRES_DB=openflow\n' \
+  "0123456789abcdef0123456789abcdef" "c8f1e0a9b7d64e21aa0099ff" "$redis_fixture" >"$prod_ok"
 prod_ok_cfg="$(docker compose --env-file "$prod_ok" -f docker-compose.yml -f docker-compose.prod.yml config)"
 printf '%s\n' "$prod_ok_cfg" | grep -q 'c8f1e0a9b7d64e21aa0099ff' \
   || fail "production DATABASE_URL was not built from POSTGRES_PASSWORD"
 if printf '%s\n' "$prod_ok_cfg" | grep -q 'postgres_password: openflow\|POSTGRES_PASSWORD: openflow'; then
   fail "production config still contains the dev Postgres password"
 fi
+printf '%s\n' "$prod_ok_cfg" | grep -q 'Refusing to start Redis' \
+  || fail "production redis command does not refuse a default password"
+if printf '%s\n' "$prod_ok_cfg" | grep -q 'host_ip:\|published:'; then
+  fail "production compose published a host port"
+fi
+
+echo "smoke: production compose refuses a default REDIS_PASSWORD in the redis command"
+prod_redis_weak="$TMP/prod-redis-weak.env"
+printf 'CREDENTIALS_KEY=%s\nPOSTGRES_PASSWORD=%s\nREDIS_PASSWORD=redis\n' \
+  "0123456789abcdef0123456789abcdef" "$redis_fixture" >"$prod_redis_weak"
+prod_redis_weak_cfg="$(docker compose --env-file "$prod_redis_weak" -f docker-compose.yml -f docker-compose.prod.yml config)"
+printf '%s\n' "$prod_redis_weak_cfg" | grep -q 'Refusing to start Redis' \
+  || fail "production redis command does not mention the refusal"
 
 echo "smoke: compose config ok"
 

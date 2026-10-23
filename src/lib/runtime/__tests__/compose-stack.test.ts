@@ -14,7 +14,7 @@ function serviceBlock(src: string, name: string): string {
   if (start < 0) throw new Error(`missing service ${name}`);
   let end = lines.length;
   for (let i = start + 1; i < lines.length; i++) {
-    if (/^  [a-zA-Z0-9-]+:/.test(lines[i] ?? "")) {
+    if (/^ {2}[a-zA-Z0-9-]+:/.test(lines[i] ?? "")) {
       end = i;
       break;
     }
@@ -41,7 +41,13 @@ describe("single compose worker", () => {
     expect(compose).toContain("POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-openflow}");
     expect(compose).toContain('OPENFLOW_BUILD_DATABASE_URL: "1"');
     expect(compose).toContain("NODE_ENV: development");
-    expect(worker).toContain("<<: *postgres-app");
+    expect(compose).toContain("AUTH_DISABLED: ${AUTH_DISABLED:-false}");
+    expect(compose).toContain("OPENFLOW_HOT_NODES: ${OPENFLOW_HOT_NODES:-false}");
+    expect(compose).toContain("OPENFLOW_OPEN_REGISTER: ${OPENFLOW_OPEN_REGISTER:-false}");
+    expect(compose).toContain("REDIS_PASSWORD: ${REDIS_PASSWORD:?Set REDIS_PASSWORD}");
+    expect(compose).toContain("internal: true");
+    expect(compose).not.toMatch(/^\s+-\s+"127\.0\.0\.1:/m);
+    expect(worker).toContain("*postgres-app");
     expect(worker).toContain("image: openflow:local");
     expect(worker).not.toMatch(/^\s+build:/m);
   });
@@ -56,6 +62,25 @@ describe("production compose password", () => {
     expect(prod).toContain("NODE_ENV: production");
     expect(prod).toMatch(/openflow\|postgres\|password/);
     expect(prod).not.toMatch(/POSTGRES_PASSWORD:.*CREDENTIALS_KEY/);
+    expect(prod).toContain("REDIS_PASSWORD:?Set REDIS_PASSWORD");
+    expect(prod).toContain("Refusing to start Redis");
+    expect(prod).not.toContain("127.0.0.1");
+  });
+});
+
+describe("deploy compose", () => {
+  const deploy = read("deploy/docker-compose.yml");
+  const api = serviceBlock(deploy, "api");
+
+  it("does not publish the API and requires a Redis password", () => {
+    expect(api).not.toMatch(/^\s+ports:/m);
+    expect(api).toContain("AUTH_DISABLED: ${AUTH_DISABLED:-false}");
+    expect(api).toContain("OPENFLOW_OPEN_REGISTER: ${OPENFLOW_OPEN_REGISTER:-false}");
+    expect(api).toContain("OPENFLOW_HOT_NODES: ${OPENFLOW_HOT_NODES:-false}");
+    expect(deploy).toContain("REDIS_PASSWORD: ${REDIS_PASSWORD:?Set REDIS_PASSWORD}");
+    expect(deploy).toContain("internal: true");
+    expect(read("deploy/docker-compose.local-ports.yml")).toContain("127.0.0.1:");
+    expect(read("docker-compose.debug-ports.yml")).toContain("127.0.0.1:15432:5432");
   });
 });
 

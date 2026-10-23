@@ -1,16 +1,27 @@
-# OpenFlow — local try-out stack (family port 3000)
-#   git clone -b DEVELOPMENT …
+# OpenFlow stack.
+#   cp .env.example .env
+#   # REDIS_PASSWORD is required (no default). POSTGRES_PASSWORD defaults to
+#   # the dev-only value openflow until the prod overlay.
 #   docker compose up -d --build
-#   bash scripts/doctor.sh
-#   open http://localhost:3000
+#
+# The API is not published on a host port. Routing belongs on the `api`
+# network (reverse proxy). Loopback UI:
+#   docker compose -f docker-compose.yml -f docker-compose.local-ports.yml up -d
+# Host ports for Postgres/Redis are opt-in (not for production):
+#   docker compose -f docker-compose.yml -f docker-compose.debug-ports.yml up -d db redis
+#
+# Auth, hot-node reload, and public registration default off.
+# INSECURE local try-out (no login): set AUTH_DISABLED=true in .env.
+# First owner with auth on: open /setup (GET /api/v1/setup/status, then
+# POST /api/v1/auth/register). OPENFLOW_OPEN_REGISTER=false still allows that
+# first account.
 #
 # Toolbox (git/shell/RAG reindex) starts with the stack:
 #   docker compose exec toolbox bash
 #   docker compose exec toolbox catalog-reindex-hash
 #
-# No .env required. Optional: cp .env.example .env and edit.
-# AUTH_DISABLED defaults to true: labeled try-out, no login required.
-# Production: set POSTGRES_PASSWORD (do not reuse CREDENTIALS_KEY), then
+# Production: set POSTGRES_PASSWORD and REDIS_PASSWORD (do not reuse
+# CREDENTIALS_KEY), then
 #   docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
 
 # Dev-only Postgres defaults. The prod overlay requires POSTGRES_PASSWORD
@@ -26,8 +37,15 @@ x-postgres-app: &postgres-app
   POSTGRES_PORT: "5432"
   DATABASE_URL: postgresql://${POSTGRES_USER:-openflow}:${POSTGRES_PASSWORD:-openflow}@db:5432/${POSTGRES_DB:-openflow}
   # The image bakes NODE_ENV=production, which refuses the dev password and
-  # exits before /health exists. Try-out must not inherit that.
+  # exits before /health exists. This stack must not inherit that.
   NODE_ENV: development
+
+x-redis-app: &redis-app
+  OPENFLOW_BUILD_REDIS_URL: "1"
+  REDIS_PASSWORD: ${REDIS_PASSWORD:?Set REDIS_PASSWORD}
+  REDIS_HOST: redis
+  REDIS_PORT: "6379"
+  REDIS_URL: redis://:${REDIS_PASSWORD:?Set REDIS_PASSWORD}@redis:6379
 
 services:
   api:
@@ -39,10 +57,10 @@ services:
       - path: .env
         required: false
     environment:
-      <<: *postgres-app
-      REDIS_URL: redis://redis:6379
-      # Labeled try-out: no login. Production overlay sets AUTH_DISABLED=false.
-      AUTH_DISABLED: ${AUTH_DISABLED:-true}
+      <<: [*postgres-app, *redis-app]
+      # Auth on by default. INSECURE local try-out only: AUTH_DISABLED=true
+      AUTH_DISABLED: ${AUTH_DISABLED:-false}
+      OPENFLOW_OPEN_REGISTER: ${OPENFLOW_OPEN_REGISTER:-false}
       # Optional OIDC (authorization-code + PKCE). Also configurable in Settings → SSO.
       OPENFLOW_OIDC_ISSUER: ${OPENFLOW_OIDC_ISSUER:-}
       OPENFLOW_OIDC_CLIENT_ID: ${OPENFLOW_OIDC_CLIENT_ID:-}
@@ -56,7 +74,7 @@ services:
       OPENFLOW_ROLE: ${OPENFLOW_ROLE:-main}
       RUN_WORKER: ${RUN_WORKER:-false}
       WORKER_CONCURRENCY: ${WORKER_CONCURRENCY:-5}
-      OPENFLOW_HOT_NODES: ${OPENFLOW_HOT_NODES:-true}
+      OPENFLOW_HOT_NODES: ${OPENFLOW_HOT_NODES:-false}
       OPENFLOW_ASSISTANT_ENABLED: ${OPENFLOW_ASSISTANT_ENABLED:-true}
       OPENFLOW_ASSISTANT_BACKEND: ${OPENFLOW_ASSISTANT_BACKEND:-builtin}
       OPENFLOW_ASSISTANT_MAX_STEPS: ${OPENFLOW_ASSISTANT_MAX_STEPS:-24}
@@ -99,6 +117,9 @@ services:
       timeout: 5s
       retries: 12
       start_period: 40s
+    networks:
+      - backend
+      - api
     restart: unless-stopped
     depends_on:
       db:
@@ -118,9 +139,10 @@ services:
       - path: .env
         required: false
     environment:
-      <<: *postgres-app
-      REDIS_URL: redis://redis:6379
-      AUTH_DISABLED: ${AUTH_DISABLED:-true}
+      <<: [*postgres-app, *redis-app]
+      AUTH_DISABLED: ${AUTH_DISABLED:-false}
+      OPENFLOW_OPEN_REGISTER: ${OPENFLOW_OPEN_REGISTER:-false}
+      OPENFLOW_HOT_NODES: ${OPENFLOW_HOT_NODES:-false}
       CREDENTIALS_KEY: ${CREDENTIALS_KEY:-}
       BINARY_STORAGE_DIR: /data/binary
       OPENFLOW_SECRETS_DIR: /data/secrets
@@ -142,6 +164,9 @@ services:
       timeout: 5s
       retries: 12
       start_period: 40s
+    networks:
+      - backend
+      - api
     restart: unless-stopped
     depends_on:
       db:
@@ -161,8 +186,7 @@ services:
       - path: .env
         required: false
     environment:
-      <<: *postgres-app
-      REDIS_URL: redis://redis:6379
+      <<: [*postgres-app, *redis-app]
       OPENFLOW_APP_DIR: /app
       OPENFLOW_WORKSPACE_DIR: /data/workspace
       OPENFLOW_CATALOG_RAG_ENABLED: ${OPENFLOW_CATALOG_RAG_ENABLED:-true}
@@ -186,6 +210,9 @@ services:
     depends_on:
       db:
         condition: service_healthy
+    networks:
+      - backend
+      - api
     restart: unless-stopped
 
   db:
@@ -204,20 +231,41 @@ services:
       interval: 5s
       timeout: 3s
       retries: 5
+    networks:
+      - backend
     restart: unless-stopped
 
   redis:
     image: redis:7-alpine
     expose:
       - "6379"
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD:?Set REDIS_PASSWORD}
+    command:
+      - sh
+      - -c
+      - exec redis-server --appendonly yes --requirepass "$$REDIS_PASSWORD"
     volumes:
       - redis-data:/data
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test:
+        [
+          "CMD-SHELL",
+          "REDISCLI_AUTH=\"$$REDIS_PASSWORD\" redis-cli ping | grep -q PONG",
+        ]
       interval: 5s
       timeout: 3s
       retries: 5
+    networks:
+      - backend
     restart: unless-stopped
+
+networks:
+  # db and redis only. No host ports and no egress.
+  backend:
+    internal: true
+  # api, worker, and toolbox. A reverse proxy attaches here.
+  api: {}
 
 volumes:
   pgdata:

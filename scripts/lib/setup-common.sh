@@ -82,7 +82,7 @@ of_db_ready() {
 
 of_redis_ready() {
   of_compose_cmd &>/dev/null || return 1
-  of_dc exec -T redis redis-cli ping 2>/dev/null | grep -qi pong
+  of_dc exec -T redis sh -c 'REDISCLI_AUTH="$REDIS_PASSWORD" redis-cli ping' 2>/dev/null | grep -qi pong
 }
 
 of_stack_running() {
@@ -233,7 +233,7 @@ of_env_get() {
 
 of_show_env_summary() {
   local auth backend
-  auth="$(of_env_get AUTH_DISABLED 2>/dev/null || echo true)"
+  auth="$(of_env_get AUTH_DISABLED 2>/dev/null || echo false)"
   backend="$(of_env_get OPENFLOW_ASSISTANT_BACKEND 2>/dev/null || echo builtin)"
   of_info "Env summary (non-secret):"
   echo -e "    AUTH_DISABLED=${BOLD}${auth}${NC}"
@@ -262,10 +262,37 @@ of_install_deps() {
   return 0
 }
 
+of_ensure_redis_password() {
+  local root envf pass tmp
+  root="$(of_root)"
+  envf="$root/.env"
+  [[ -f "$envf" ]] || { of_fail ".env missing — run of_ensure_env first"; return 1; }
+  if grep -qE '^REDIS_PASSWORD=["'\'']?[0-9a-fA-F]{16,}' "$envf" 2>/dev/null; then
+    of_info "REDIS_PASSWORD already set"
+    return 0
+  fi
+  if ! of_has_cmd node; then
+    of_fail "Node.js required to generate REDIS_PASSWORD"
+    return 1
+  fi
+  pass="$(node -e "process.stdout.write(require('crypto').randomBytes(24).toString('hex'))")"
+  if grep -qE '^REDIS_PASSWORD=' "$envf" 2>/dev/null; then
+    tmp="$(mktemp)"
+    sed "s|^REDIS_PASSWORD=.*|REDIS_PASSWORD=\"${pass}\"|" "$envf" > "$tmp"
+    mv "$tmp" "$envf"
+  else
+    printf '\nREDIS_PASSWORD="%s"\n' "$pass" >> "$envf"
+  fi
+  of_ok "Generated REDIS_PASSWORD in .env"
+  return 0
+}
+
 of_start_db_redis() {
+  local root
+  root="$(of_root)"
   of_compose_cmd &>/dev/null || { of_fail "Docker Compose required"; return 1; }
-  of_info "Starting Postgres + Redis…"
-  of_dc up -d db redis
+  of_info "Starting Postgres + Redis (loopback ports via the debug overlay)…"
+  (cd "$root" && of_dc -f docker-compose.yml -f docker-compose.debug-ports.yml up -d db redis)
   of_ok "db + redis are up"
   return 0
 }
@@ -330,6 +357,7 @@ of_setup_all_dev() {
   of_check_prereqs_dev || return 1
   of_ensure_env || return 1
   of_ensure_credentials_key || return 1
+  of_ensure_redis_password || return 1
   of_install_deps || return 1
   of_start_db_redis || return 1
   of_wait_postgres || return 1
@@ -343,7 +371,8 @@ of_setup_all_dev() {
   echo -e "  Full stack:      ${BOLD}docker compose up -d${NC}"
   echo -e "  Menu:            ${BOLD}npm run tui${NC}"
   echo ""
-  echo -e "${DIM}Auth is disabled by default (AUTH_DISABLED=true). Not for public internet.${NC}"
+  echo -e "${DIM}Auth is on by default (AUTH_DISABLED=false). First open uses /setup for the owner account.${NC}"
+  echo -e "${DIM}INSECURE local try-out only: set AUTH_DISABLED=true. Do not expose that mode.${NC}"
   echo ""
   return 0
 }

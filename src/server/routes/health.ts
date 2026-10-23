@@ -4,6 +4,7 @@ import type { AppEnv } from "../middleware/auth";
 import { config } from "../../config";
 import { prisma } from "../db";
 import { getRecentLogs } from "../log";
+import { requireInstanceAdmin } from "../services/instance-admin";
 
 const require = createRequire(import.meta.url);
 const pkg = require("../../../package.json") as { version?: string; license?: string };
@@ -64,8 +65,12 @@ export default function healthRoute(app: Hono<AppEnv>) {
     );
   });
 
-  /** Recent in-memory logs (auth required when AUTH_DISABLED is off). */
-  app.get("/api/v1/logs/recent", (c) => {
+  /** Recent in-memory logs. Owner or admin only. */
+  app.get("/api/v1/logs/recent", async (c) => {
+    const userId = c.get("userId");
+    if (!userId) return c.json({ error: "Authentication required" }, 401);
+    const gate = await requireInstanceAdmin(userId);
+    if (gate !== true) return c.json({ error: "Admin role required" }, 403);
     const limit = Math.min(200, Math.max(1, parseInt(c.req.query("limit") ?? "50", 10) || 50));
     return c.json({ logs: getRecentLogs(limit) });
   });

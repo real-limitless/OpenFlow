@@ -6,7 +6,7 @@ New to the project? Start with [onboarding.md](onboarding.md) (guided TUI wizard
 
 | Goal | Command |
 | --- | --- |
-| Try OpenFlow | `docker compose up -d` → http://localhost:3000 → **Run sample workflow** |
+| Try OpenFlow | Set `REDIS_PASSWORD`, then `docker compose -f docker-compose.yml -f docker-compose.local-ports.yml up -d` → http://127.0.0.1:3000 → **Run sample workflow** |
 | Toolbox (git/shell/RAG) | included in `docker compose up -d` → [toolbox.md](toolbox.md) |
 | One-line TUI install | `curl -fsSL …/scripts/get-openflow.sh \| bash` |
 | Non-interactive try-out | `…/get-openflow.sh \| bash -s -- --yes` |
@@ -19,12 +19,13 @@ New to the project? Start with [onboarding.md](onboarding.md) (guided TUI wizard
 
 After the stack is healthy:
 
-1. Open the UI (default **http://localhost:3000**).
-2. **Try-out** (`AUTH_DISABLED=true`, default): no login. On the home page use **Run sample workflow**, then **Execute** for a zero-credential success.
-3. **Production / auth on** (`AUTH_DISABLED=false`, `--prod`, or prod compose overlay): if no users exist, the UI redirects to **`/setup`** to create the **instance owner**. That account gets the global `owner` role (secret providers, admin gates). Further registers are `member` unless promoted.
-4. Dismiss the welcome checklist anytime; it is stored in browser `localStorage` (`openflow:onboarding.v1`).
+1. Open the UI (loopback **http://127.0.0.1:3000** when the local-ports file is included).
+2. **Auth on** (default, `AUTH_DISABLED=false`): if no real users exist, the UI redirects to **`/setup`** to create the **instance owner**.
+3. **First owner with registration closed**: `OPENFLOW_OPEN_REGISTER=false` (the default) still allows that first account. `GET /api/v1/setup/status` returns `needsOwner: true` until a real user exists. The setup form calls `POST /api/v1/auth/register`. The zero-user account receives the global `owner` role. Later public signups get `403` with `invite_only` unless you set `OPENFLOW_OPEN_REGISTER=true` or issue an invite.
+4. **INSECURE local try-out** (`AUTH_DISABLED=true` in `.env` only): no login. On the home page use **Run sample workflow**, then **Execute**. Do not expose that mode past your own machine.
+5. Dismiss the welcome checklist anytime; it is stored in browser `localStorage` (`openflow:onboarding.v1`).
 
-Product readiness (not infra): `GET /api/v1/setup/status` → `{ authDisabled, hasUsers, needsOwner }`.
+Product readiness (not infra): `GET /api/v1/setup/status` → `{ authDisabled, hasUsers, needsOwner, registrationOpen, inviteOnly }`.
 
 ## Docker (recommended)
 
@@ -33,24 +34,26 @@ Requirements: Docker Engine + Compose v2.
 ```sh
 git clone https://github.com/real-limitless/OpenFlow.git
 cd OpenFlow
-docker compose up -d
+cp .env.example .env
+# set REDIS_PASSWORD (required, no default): openssl rand -hex 24
+docker compose -f docker-compose.yml -f docker-compose.local-ports.yml up -d
 ```
 
-No `.env` file is required. On first start the container:
+`REDIS_PASSWORD` is required. Postgres still defaults to the dev-only password `openflow` until the prod overlay. On first start the container:
 
 1. Waits for healthy Postgres and Redis
 2. Starts the API and the worker. The worker does not wait on API health
 3. Generates `CREDENTIALS_KEY` if unset (persisted under the `secrets-data` volume)
 4. Runs `prisma migrate deploy`
-5. Serves the app on port **3000**
+5. Serves the app on port **3000** inside the `api` network. The local-ports file publishes it on `127.0.0.1` only.
 
 ### Useful commands
 
 ```sh
 docker compose ps
 docker compose logs -f api
-curl -s http://localhost:3000/health
-curl -s http://localhost:3000/health/ready
+curl -s http://127.0.0.1:3000/health
+curl -s http://127.0.0.1:3000/health/ready
 docker compose down          # keep volumes
 docker compose down -v       # wipe database + secrets (destructive)
 
@@ -65,11 +68,11 @@ docker compose exec toolbox catalog-reindex-hash
 
 ```sh
 cp .env.example .env
-# edit CREDENTIALS_KEY, assistant keys, AUTH_DISABLED, etc.
-docker compose up -d
+# set REDIS_PASSWORD. AUTH_DISABLED=true is an INSECURE local try-out.
+docker compose -f docker-compose.yml -f docker-compose.local-ports.yml up -d
 ```
 
-Compose builds the in-network `DATABASE_URL` from `POSTGRES_USER`, `POSTGRES_PASSWORD`, and `POSTGRES_DB` (dev default `openflow` / `openflow` / `openflow`) and points `REDIS_URL` at the `redis` service. A `DATABASE_URL` in `.env` is for the API on the host (`localhost:15432`) and is overridden inside containers.
+Compose builds the in-network `DATABASE_URL` from `POSTGRES_USER`, `POSTGRES_PASSWORD`, and `POSTGRES_DB` (dev default `openflow` / `openflow` / `openflow`) and builds `REDIS_URL` from `REDIS_PASSWORD`. A `DATABASE_URL` in `.env` is for the API on the host (`localhost:15432`, debug-ports overlay) and is overridden inside containers.
 
 ## get-openflow.sh (recommended one-liner)
 
@@ -81,7 +84,7 @@ curl -fsSL https://raw.githubusercontent.com/real-limitless/OpenFlow/main/script
 
 | Mode | What it does |
 | --- | --- |
-| `tryout` (default) | Prebuilt image under `~/openflow`, `AUTH_DISABLED=true` |
+| `tryout` (default) | Prebuilt image under `~/openflow`. **INSECURE**: `AUTH_DISABLED=true` (no login). Local only |
 | `production` | Same stack with auth on → first open is `/setup` owner account |
 | `build` | `git clone` + `docker compose up -d --build` (when GHCR image missing) |
 | `develop` | `git clone` + `npm run setup` (Node 22+) |
@@ -154,8 +157,10 @@ npm run dev      # http://localhost:3000
 Infra only (API on the host):
 
 ```sh
-docker compose up -d db redis
+# publishes Postgres and Redis on loopback only
+docker compose -f docker-compose.yml -f docker-compose.debug-ports.yml up -d db redis
 # DATABASE_URL=postgresql://openflow:openflow@localhost:15432/openflow
+# REDIS_URL=redis://:<REDIS_PASSWORD>@localhost:6379
 npm run dev
 ```
 
@@ -165,7 +170,7 @@ Secret hygiene before you publish a branch: `bash scripts/check-no-secrets.sh` �
 
 ## Production checklist
 
-Use the prod overlay. `POSTGRES_PASSWORD` is required and must not be the dev default. Compose builds `DATABASE_URL` from it. Do not point that password at `CREDENTIALS_KEY`.
+Use the prod overlay. `POSTGRES_PASSWORD` and `REDIS_PASSWORD` are required and must not be dev defaults. Compose builds `DATABASE_URL` from the Postgres variables and `REDIS_URL` from `REDIS_PASSWORD`. Do not point either password at `CREDENTIALS_KEY`. db and redis publish no host ports.
 
 ```sh
 cp .env.example .env
@@ -178,26 +183,36 @@ openssl rand -hex 24
 # put result in POSTGRES_PASSWORD=
 # optional: POSTGRES_USER and POSTGRES_DB (default openflow / openflow)
 
+# REQUIRED: dedicated Redis password (no default)
+openssl rand -hex 24
+# put result in REDIS_PASSWORD=
+
 docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+# loopback UI only, if you are not attaching a reverse proxy to the api network:
+# docker compose -f docker-compose.yml -f docker-compose.prod.yml -f docker-compose.local-ports.yml up -d
 ```
 
-`docker compose` fails immediately when `POSTGRES_PASSWORD` is unset. The value `openflow` (and other placeholders) is refused before Postgres accepts connections, and the API/worker entrypoint exits before migrations.
+`docker compose` fails immediately when `POSTGRES_PASSWORD` or `REDIS_PASSWORD` is unset. The value `openflow` (and other placeholders) is refused before Postgres accepts connections. `redis`, `openflow`, and other placeholders are refused before Redis accepts connections. The API/worker entrypoint exits before migrations.
 
 | Item | Recommendation |
 | --- | --- |
-| Auth | `AUTH_DISABLED=false` (prod overlay default) |
+| Auth | `AUTH_DISABLED=false` (default) |
+| Registration | `OPENFLOW_OPEN_REGISTER=false` (default). First owner still uses `/setup` |
 | Secrets | Stable `CREDENTIALS_KEY`; back up `secrets-data` volume |
 | Database | Dedicated `POSTGRES_PASSWORD`. Optional `POSTGRES_USER` / `POSTGRES_DB` |
-| Hot nodes | Off in prod (`OPENFLOW_HOT_NODES=false`) |
-| Postgres / Redis | Bound to `127.0.0.1` in prod overlay; do not publish publicly |
-| TLS | Terminate with Caddy, nginx, or Traefik in front of `:3000` |
+| Redis | Dedicated `REDIS_PASSWORD`. No default. Compose builds `REDIS_URL` |
+| Hot nodes | Off unless `OPENFLOW_HOT_NODES=true` |
+| Metrics | Set `OPENFLOW_METRICS_TOKEN` in production or `GET /metrics` returns 404 |
+| Postgres / Redis | Internal `backend` network. No host ports. Debug overlay is opt-in |
+| API | No host port by default. Reverse proxy on the `api` network, or `docker-compose.local-ports.yml` |
+| TLS | Terminate in front of the API |
 | Backups | Volume snapshots for `pgdata`, `binary-data`, `secrets-data` |
 | Image pin | Prefer a version tag, not only `latest` |
 | Worker | Separate `worker` service (`OPENFLOW_ROLE=worker`). It starts once Postgres and Redis are healthy |
 
 ### Migrating an existing compose deploy
 
-Try-out stacks that already use the dev password `openflow` keep working with `docker compose up -d`. No volume change.
+Stacks that already use the dev Postgres password `openflow` keep that volume. Set `REDIS_PASSWORD` before the next `up` (Redis now requires it; there is no default). Add `docker-compose.local-ports.yml` if you still want the API on `127.0.0.1:3000`.
 
 Production stacks that already set `POSTGRES_PASSWORD` to a non-default value, with user and database `openflow`, keep working. You can remove `DATABASE_URL` from the environment you pass to Compose. The overlay builds `postgresql://POSTGRES_USER:POSTGRES_PASSWORD@db:5432/POSTGRES_DB`.
 
@@ -246,7 +261,12 @@ See [`.env.example`](../.env.example) for the full list. Common vars:
 
 | Variable | Default (Docker try-out) | Notes |
 | --- | --- | --- |
-| `AUTH_DISABLED` | `true` | Set `false` for real deployments |
+| `AUTH_DISABLED` | `false` | `true` is an INSECURE local try-out with no login |
+| `OPENFLOW_OPEN_REGISTER` | `false` | First owner via `/setup` still works. `true` keeps public signup open |
+| `OPENFLOW_HOT_NODES` | `false` | Set `true` only to hot-load node executors |
+| `REDIS_PASSWORD` | required, no default | Compose builds `REDIS_URL`. Prod refuses placeholders |
+| `OPENFLOW_METRICS_TOKEN` | unset | Required in production or `GET /metrics` is 404 |
+| `TRUSTED_PROXY_COUNT` / `TRUSTED_PROXY_CIDRS` | unset | Rate limit and audit use the socket address until a proxy is trusted |
 | `CREDENTIALS_KEY` | auto-generated | AES key for stored credentials. Not the database password |
 | `POSTGRES_PASSWORD` | `openflow` (dev only) | Required in production. Compose builds `DATABASE_URL` from this |
 | `POSTGRES_USER` / `POSTGRES_DB` | `openflow` | Optional. Must match the role and database already in the volume |

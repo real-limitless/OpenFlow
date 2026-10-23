@@ -41,6 +41,7 @@ ensure_credentials_key() {
 # shellcheck source=scripts/lib/build-database-url.sh
 . /usr/local/lib/openflow/build-database-url.sh
 openflow_prepare_database_url
+openflow_prepare_redis_url
 
 ensure_credentials_key
 

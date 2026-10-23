@@ -73,6 +73,8 @@ describe("traceparent", () => {
 describe("GET /metrics", () => {
   it("is an API path and returns Prometheus text with request ids", async () => {
     expect(isApiPath("/metrics")).toBe(true);
+    const prevNode = process.env.NODE_ENV;
+    process.env.NODE_ENV = "development";
     resetMetricsForTests();
     const app = new Hono<AppEnv>();
     app.use("*", observabilityMiddleware);
@@ -86,6 +88,8 @@ describe("GET /metrics", () => {
     expect(res.headers.get("x-trace-id")).toMatch(/^[0-9a-f]{32}$/);
     const body = await res.text();
     expect(body).toContain("openflow_http_requests_total");
+    if (prevNode === undefined) delete process.env.NODE_ENV;
+    else process.env.NODE_ENV = prevNode;
   });
 
   it("returns 401 when a scrape token is configured and missing", async () => {
@@ -108,6 +112,8 @@ describe("GET /metrics", () => {
 
   it("returns Prometheus text even if Redis queue counts hang", async () => {
     vi.mocked(executionQueue.getJobCounts).mockImplementationOnce(() => new Promise(() => {}));
+    const prevNode = process.env.NODE_ENV;
+    process.env.NODE_ENV = "development";
     resetMetricsForTests();
     const app = new Hono<AppEnv>();
     metricsRoute(app);
@@ -116,5 +122,36 @@ describe("GET /metrics", () => {
     expect(res.status).toBe(200);
     expect(Date.now() - started).toBeLessThan(2000);
     expect(await res.text()).toContain("openflow_up");
+    if (prevNode === undefined) delete process.env.NODE_ENV;
+    else process.env.NODE_ENV = prevNode;
+  });
+
+  it("hides /metrics in production when OPENFLOW_METRICS_TOKEN is unset", async () => {
+    const prevNode = process.env.NODE_ENV;
+    const prevToken = process.env.OPENFLOW_METRICS_TOKEN;
+    const prevAlt = process.env.METRICS_TOKEN;
+    process.env.NODE_ENV = "production";
+    delete process.env.OPENFLOW_METRICS_TOKEN;
+    delete process.env.METRICS_TOKEN;
+    try {
+      const app = new Hono<AppEnv>();
+      metricsRoute(app);
+      const hidden = await app.request("/metrics");
+      expect(hidden.status).toBe(404);
+      process.env.OPENFLOW_METRICS_TOKEN = "secret-token";
+      const denied = await app.request("/metrics");
+      expect(denied.status).toBe(401);
+      const ok = await app.request("/metrics", {
+        headers: { authorization: "Bearer secret-token" },
+      });
+      expect(ok.status).toBe(200);
+    } finally {
+      if (prevNode === undefined) delete process.env.NODE_ENV;
+      else process.env.NODE_ENV = prevNode;
+      if (prevToken === undefined) delete process.env.OPENFLOW_METRICS_TOKEN;
+      else process.env.OPENFLOW_METRICS_TOKEN = prevToken;
+      if (prevAlt === undefined) delete process.env.METRICS_TOKEN;
+      else process.env.METRICS_TOKEN = prevAlt;
+    }
   });
 });

@@ -11,7 +11,8 @@ Deploys:
 ```bash
 helm install openflow ./deploy/helm/openflow \
   --set secrets.credentialsKey=$(openssl rand -hex 32) \
-  --set secrets.postgresPassword="$(openssl rand -hex 16)"
+  --set secrets.postgresPassword="$(openssl rand -hex 16)" \
+  --set secrets.redisPassword="$(openssl rand -hex 16)"
 ```
 
 Wait for the API:
@@ -22,6 +23,6 @@ kubectl port-forward svc/openflow-openflow-api 3000:3000
 curl -sS http://127.0.0.1:3000/health
 ```
 
-Production: set `ingress.enabled=true`, a real `credentialsKey`, and `secrets.authDisabled=false`. Do not keep placeholder secrets.
+Production: set `ingress.enabled=true`, a real `credentialsKey`, `secrets.redisPassword`, and `secrets.authDisabled=false`. `hotNodes` and `openRegister` default to false. `/metrics` is closed until `OPENFLOW_METRICS_TOKEN` is set (chart `extraEnv`). Do not keep placeholder secrets.
 
 Worker replicas show in Settings → Worker runtime after the API is up (`OPENFLOW_ROLE` / concurrency).

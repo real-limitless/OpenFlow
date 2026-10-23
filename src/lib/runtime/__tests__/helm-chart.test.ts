@@ -22,6 +22,14 @@ describe("Helm chart", () => {
     expect(pg).toMatch(/kind: StatefulSet/);
     const redis = readFileSync(resolve(root, "templates/redis.yaml"), "utf8");
     expect(redis).toMatch(/kind: Deployment/);
+    expect(redis).toMatch(/requirepass/);
+    expect(values).toMatch(/authDisabled: "false"/);
+    expect(values).toMatch(/hotNodes: false/);
+    expect(values).toMatch(/openRegister: false/);
+    expect(readFileSync(resolve(root, "templates/api.yaml"), "utf8")).toMatch(
+      /OPENFLOW_OPEN_REGISTER/,
+    );
+    expect(readFileSync(resolve(root, "templates/_helpers.tpl"), "utf8")).toMatch(/redisPassword/);
     const notes = readFileSync(resolve(root, "templates/NOTES.txt"), "utf8");
     expect(notes).toMatch(/helm|kubectl|OPENFLOW_ROLE/i);
   });

@@ -242,14 +242,15 @@ wizard_install() {
   if of_has_env_file; then
     local auth_ans key_ans
     local cur_auth
-    cur_auth="$(of_env_get AUTH_DISABLED 2>/dev/null || echo true)"
+    cur_auth="$(of_env_get AUTH_DISABLED 2>/dev/null || echo false)"
     print "  Auth is currently ${BOLD}AUTH_DISABLED=${cur_auth}${NC}"
-    print "  ${DIM}(true = open local try-out; false = require login — use for real deploys)${NC}"
-    if wizard_yes_no "Enable authentication now (AUTH_DISABLED=false)?" "N"; then
+    print "  ${DIM}(false = login required, the default. true = INSECURE try-out, no login.)${NC}"
+    if wizard_yes_no "Turn auth off for local try-out (INSECURE, AUTH_DISABLED=true)?" "N"; then
+      of_env_set AUTH_DISABLED "true"
+      of_ok "AUTH_DISABLED=true (INSECURE local try-out)"
+    else
       of_env_set AUTH_DISABLED "false"
       of_ok "AUTH_DISABLED=false"
-    else
-      of_info "Leaving AUTH_DISABLED as-is (default true for local)"
     fi
 
     print ""
@@ -319,7 +320,7 @@ wizard_install() {
     print "  Open:     ${BOLD}http://localhost:3000${NC}"
     print "  Logs:     ${BOLD}docker compose logs -f api${NC}"
     print "  Stop:     ${BOLD}docker compose down${NC}"
-    print "  Security: ${DIM}AUTH_DISABLED defaults true — not for public internet${NC}"
+    print "  Security: ${DIM}AUTH_DISABLED defaults false. true is an INSECURE local try-out${NC}"
   else
     print "  Stack pieces:"
     of_db_ready && of_ok "Postgres ready" || of_warn "Postgres not ready"

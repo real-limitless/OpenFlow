@@ -1,16 +1,18 @@
 # Production overlay — use with the base compose file:
 #   POSTGRES_PASSWORD=$(openssl rand -hex 24)
+#   REDIS_PASSWORD=$(openssl rand -hex 24)
 #   CREDENTIALS_KEY=$(node -e "console.log(require('crypto').randomBytes(32).toString('hex'))")
 #   docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
 #
-# POSTGRES_PASSWORD is required and must not be the dev default (openflow) or
-# CREDENTIALS_KEY. Compose builds DATABASE_URL from POSTGRES_USER, POSTGRES_PASSWORD,
-# and POSTGRES_DB. Do not set DATABASE_URL for this stack.
+# POSTGRES_PASSWORD and REDIS_PASSWORD are required and must not be dev defaults
+# or CREDENTIALS_KEY. Compose builds DATABASE_URL from POSTGRES_*. REDIS_URL is
+# built from REDIS_PASSWORD. Do not set DATABASE_URL for this stack.
+# db and redis are on the internal backend network and publish no host ports.
 #
 # Existing volumes keep the password they were initialized with. See docs/install.md
 # for the ALTER USER migration.
 #
-# Do not expose this stack on the public internet without TLS (Caddy/nginx/Traefik).
+# Do not expose this stack on the public internet without TLS in front of the API.
 
 services:
   api:
@@ -30,15 +32,15 @@ services:
       POSTGRES_DB: ${POSTGRES_DB:-openflow}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD to a non-default value}
       DATABASE_URL: postgresql://${POSTGRES_USER:-openflow}:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD to a non-default value}@db:5432/${POSTGRES_DB:-openflow}
+      REDIS_PASSWORD: ${REDIS_PASSWORD:?Set REDIS_PASSWORD}
       CREDENTIALS_KEY: ${CREDENTIALS_KEY:?Set CREDENTIALS_KEY}
       BINARY_STORAGE_DIR: /data/binary
       OPENFLOW_SECRETS_DIR: /data/secrets
       OPENFLOW_ROLE: main
       RUN_WORKER: "false"
     restart: unless-stopped
-    # Prefer binding only when behind a reverse proxy on the same host:
-    # ports:
-    #   - "127.0.0.1:3000:3000"
+    # No host port. Attach a reverse proxy to the `api` network, or add
+    # docker-compose.local-ports.yml for loopback-only local use.
 
   worker:
     environment:
@@ -48,14 +50,13 @@ services:
       POSTGRES_DB: ${POSTGRES_DB:-openflow}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD to a non-default value}
       DATABASE_URL: postgresql://${POSTGRES_USER:-openflow}:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD to a non-default value}@db:5432/${POSTGRES_DB:-openflow}
+      REDIS_PASSWORD: ${REDIS_PASSWORD:?Set REDIS_PASSWORD}
       CREDENTIALS_KEY: ${CREDENTIALS_KEY:?Set CREDENTIALS_KEY}
       OPENFLOW_ROLE: worker
       RUN_WORKER: "true"
     restart: unless-stopped
 
   db:
-    ports: !override
-      - "127.0.0.1:15432:5432"
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-openflow}
       POSTGRES_DB: ${POSTGRES_DB:-openflow}
@@ -76,8 +77,19 @@ services:
     restart: unless-stopped
 
   redis:
-    ports: !override
-      - "127.0.0.1:6379:6379"
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD:?Set REDIS_PASSWORD}
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        pw=$$(printf '%s' "$$REDIS_PASSWORD" | tr '[:upper:]' '[:lower:]' | tr -d '[:space:]')
+        case "$$pw" in
+          ""|openflow|redis|password|secret|changeme|change-me|replace-me|replace-with*)
+            echo "Refusing to start Redis: REDIS_PASSWORD is missing or a default." >&2
+            exit 1
+            ;;
+        esac
+        exec redis-server --appendonly yes --requirepass "$$REDIS_PASSWORD"
     restart: unless-stopped
 
   toolbox:
@@ -88,3 +100,4 @@ services:
       POSTGRES_DB: ${POSTGRES_DB:-openflow}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD to a non-default value}
       DATABASE_URL: postgresql://${POSTGRES_USER:-openflow}:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD to a non-default value}@db:5432/${POSTGRES_DB:-openflow}
+      REDIS_PASSWORD: ${REDIS_PASSWORD:?Set REDIS_PASSWORD}

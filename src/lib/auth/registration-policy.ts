@@ -1,8 +1,28 @@
+function envOn(name: string): boolean {
+  const v = process.env[name]?.trim().toLowerCase();
+  return v === "true" || v === "1";
+}
+
 /**
- * When an owner already exists, production closes public POST /register.
- * First-run setup (zero real users) stays open. Try-out (AUTH_DISABLED) does
- * not use this path. Tests keep open register unless OPENFLOW_OPEN_REGISTER=false
- * or OPENFLOW_INVITE_ONLY=true.
+ * Password login and SSO sign-in. Incident kill switch.
+ * Does not change AUTH_DISABLED (that bypasses login entirely).
+ */
+export function isLoginDisabled(): boolean {
+  return envOn("OPENFLOW_LOGIN_DISABLED");
+}
+
+/**
+ * Blocks every signup, including first-run owner setup and SSO account creation.
+ * OPENFLOW_OPEN_REGISTER=false does not do this: the first owner can still register.
+ */
+export function isRegistrationDisabled(): boolean {
+  return envOn("OPENFLOW_REGISTRATION_DISABLED");
+}
+
+/**
+ * After an owner exists, public POST /register is closed unless
+ * OPENFLOW_OPEN_REGISTER is explicitly true (or OPENFLOW_INVITE_ONLY is
+ * explicitly false). First-run setup (zero real users) stays open.
  */
 export function isInviteOnlyAfterOwner(): boolean {
   const open = process.env.OPENFLOW_OPEN_REGISTER?.trim().toLowerCase();
@@ -10,10 +30,12 @@ export function isInviteOnlyAfterOwner(): boolean {
   if (open === "false" || open === "0") return true;
   const invite = process.env.OPENFLOW_INVITE_ONLY?.trim().toLowerCase();
   if (invite === "true" || invite === "1") return true;
-  return process.env.NODE_ENV === "production";
+  if (invite === "false" || invite === "0") return false;
+  return true;
 }
 
 export function canPublicRegister(hasUsers: boolean): boolean {
+  if (isRegistrationDisabled()) return false;
   if (!hasUsers) return true;
   return !isInviteOnlyAfterOwner();
 }

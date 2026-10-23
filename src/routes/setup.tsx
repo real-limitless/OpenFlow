@@ -92,9 +92,10 @@ function SetupPage() {
         <div className="space-y-1">
           <h1 className="text-lg font-semibold tracking-tight">Create instance owner</h1>
           <p className="text-[13px] text-muted-foreground">
-            This first account owns secret providers and admin settings. Public registration closes
-            after this owner exists. Compose without the production overlay keeps AUTH_DISABLED=true
-            as a labeled try-out.
+            This first account owns secret providers and admin settings. Public registration stays
+            closed after this owner exists. With OPENFLOW_OPEN_REGISTER=false the first signup still
+            works: this page posts to /api/v1/auth/register while /api/v1/setup/status reports
+            needsOwner.
           </p>
         </div>
         <div className="space-y-1.5">

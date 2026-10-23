@@ -21,7 +21,13 @@ spec:
       containers:
         - name: redis
           image: {{ .Values.redis.image }}
-          args: ["--appendonly", "yes"]
+          command: ["sh", "-c", "exec redis-server --appendonly yes --requirepass \"$REDIS_PASSWORD\""]
+          env:
+            - name: REDIS_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "openflow.fullname" . }}
+                  key: REDIS_PASSWORD
           ports:
             - containerPort: 6379
               name: redis

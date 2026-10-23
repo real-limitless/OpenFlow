@@ -1,4 +1,5 @@
 import { databasePassword, isWeakDatabasePassword } from "./database-url";
+import { isWeakRedisPassword, redisPasswordFromUrl } from "./redis-url";
 
 export function isPlaceholderSecret(value: string | undefined): boolean {
   if (!value) return true;
@@ -33,6 +34,24 @@ export function productionSecretsIssues(env: NodeJS.ProcessEnv = process.env): s
     issues.push(
       "DATABASE_URL uses a missing or placeholder database password. Set POSTGRES_PASSWORD and build DATABASE_URL from it; do not reuse CREDENTIALS_KEY.",
     );
+  }
+
+  if (
+    env.REDIS_PASSWORD != null &&
+    env.REDIS_PASSWORD !== "" &&
+    isWeakRedisPassword(env.REDIS_PASSWORD)
+  ) {
+    issues.push("REDIS_PASSWORD is missing or still a default. Set a dedicated password.");
+  }
+  if (env.REDIS_URL != null && env.REDIS_URL !== "") {
+    const redisPass = redisPasswordFromUrl(env.REDIS_URL);
+    if (redisPass === null) {
+      issues.push("REDIS_URL is invalid");
+    } else if (isWeakRedisPassword(redisPass)) {
+      issues.push(
+        "REDIS_URL has no password or a default password. Set REDIS_PASSWORD and build REDIS_URL from it.",
+      );
+    }
   }
   return issues;
 }
