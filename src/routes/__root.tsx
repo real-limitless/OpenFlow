@@ -35,7 +35,11 @@ function NotFoundComponent() {
   );
 }
 
-function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
+function ErrorComponent({ error, reset }: { error: unknown; reset: () => void }) {
+  const reported =
+    error instanceof Error
+      ? error
+      : new Error(typeof error === "string" ? error : "Unhandled error");
   console.error(error);
   const router = useRouter();
 
@@ -44,10 +48,10 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
       const { openGeneralIssueUrl } = await import("@/lib/feedback/github-issue");
       const { prepareIssueReport } = await import("@/lib/feedback/debug-bundle");
       const diagnostics = {
-        title: `[bug] ${error.message?.slice(0, 80) || "Unhandled error"}`,
+        title: `[bug] ${reported.message.slice(0, 80) || "Unhandled error"}`,
         summary: "Unhandled UI error boundary",
-        errorMessage: error.message,
-        errorStack: error.stack,
+        errorMessage: reported.message,
+        errorStack: reported.stack,
       };
       const { bundleName } = await prepareIssueReport(diagnostics);
       window.open(
@@ -62,8 +66,8 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
       const { openGeneralIssueUrl } = await import("@/lib/feedback/github-issue");
       window.open(
         openGeneralIssueUrl({
-          errorMessage: error.message,
-          errorStack: error.stack,
+          errorMessage: reported.message,
+          errorStack: reported.stack,
         }),
         "_blank",
         "noopener,noreferrer",
@@ -81,9 +85,9 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
           Something went wrong on our end. You can try refreshing, report the issue, or head back
           home.
         </p>
-        {error.message && (
+        {reported.message && (
           <p className="mt-3 break-all font-mono text-[11px] text-muted-foreground/80">
-            {error.message}
+            {reported.message}
           </p>
         )}
         <div className="mt-6 flex flex-wrap justify-center gap-2">
