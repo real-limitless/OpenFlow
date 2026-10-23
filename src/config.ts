@@ -97,16 +97,15 @@ export const config = {
     },
     concurrency: Math.max(1, parseInt(process.env.WORKER_CONCURRENCY ?? "5", 10) || 5),
   },
-  /** Dev hot-load of node executors (POST /api/v1/dev/reload-nodes). */
+  /**
+   * Dev hot-load of node executors (POST /api/v1/dev/reload-nodes).
+   * Off unless OPENFLOW_HOT_NODES is explicitly true. Auth-off and
+   * NODE_ENV=development do not enable it.
+   */
   hotNodes: {
     get enabled() {
-      return (
-        process.env.OPENFLOW_HOT_NODES === "true" ||
-        process.env.OPENFLOW_HOT_NODES === "1" ||
-        process.env.NODE_ENV === "development" ||
-        process.env.AUTH_DISABLED === "true" ||
-        process.env.AUTH_DISABLED === "1"
-      );
+      const v = process.env.OPENFLOW_HOT_NODES?.trim().toLowerCase();
+      return v === "true" || v === "1";
     },
   },
   /** Public base URL for OAuth issuer / MCP metadata (no trailing slash). */

@@ -14,6 +14,10 @@ describe("setup status + first owner", () => {
 
   beforeAll(() => {
     delete process.env.AUTH_DISABLED;
+    // This case checks role assignment while public registration stays open.
+    // First-owner signup with OPENFLOW_OPEN_REGISTER=false is covered by
+    // registration-policy tests (canPublicRegister(false) stays true).
+    process.env.OPENFLOW_OPEN_REGISTER = "true";
     app = new Hono<AppEnv>();
     app.use("*", authMiddleware);
     setupRoute(app);
@@ -21,6 +25,7 @@ describe("setup status + first owner", () => {
   });
 
   afterAll(async () => {
+    delete process.env.OPENFLOW_OPEN_REGISTER;
     if (createdUserIds.length === 0) return;
     await prisma.session.deleteMany({ where: { userId: { in: createdUserIds } } });
     const memberships = await prisma.projectMember.findMany({
@@ -30,7 +35,9 @@ describe("setup status + first owner", () => {
     for (const m of memberships) createdProjectIds.push(m.projectId);
     const projectIds = [...new Set(createdProjectIds)];
     if (projectIds.length > 0) {
-      await prisma.environment.deleteMany({ where: { projectId: { in: projectIds } } }).catch(() => undefined);
+      await prisma.environment
+        .deleteMany({ where: { projectId: { in: projectIds } } })
+        .catch(() => undefined);
       await prisma.projectMember.deleteMany({ where: { projectId: { in: projectIds } } });
       await prisma.project.deleteMany({ where: { id: { in: projectIds }, type: "personal" } });
     }

@@ -1,10 +1,12 @@
 import { prisma } from "../db";
 import { buildAuditEvent, type AuditAction } from "../../lib/audit/events";
+import { requestIp as clientRequestIp } from "../../lib/security/client-ip";
 
-export function requestIp(c: { req: { header: (n: string) => string | undefined } }): string | null {
-  const xf = c.req.header("x-forwarded-for");
-  if (xf) return xf.split(",")[0]?.trim() || null;
-  return c.req.header("x-real-ip") ?? null;
+export function requestIp(c: {
+  req: { header: (n: string) => string | undefined };
+  env?: unknown;
+}): string | null {
+  return clientRequestIp(c);
 }
 
 export async function recordAudit(opts: {

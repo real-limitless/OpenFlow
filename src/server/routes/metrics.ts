@@ -63,7 +63,11 @@ async function refreshQueueGauges() {
 export default function metricsRoute(app: Hono<AppEnv>) {
   app.get("/metrics", async (c) => {
     const expected = metricsTokenFromEnv();
-    if (!tokenMatches(presentedMetricsToken(c), expected)) {
+    if (!expected) {
+      if (process.env.NODE_ENV === "production") {
+        return c.text("not found\n", 404);
+      }
+    } else if (!tokenMatches(presentedMetricsToken(c), expected)) {
       return c.text("unauthorized\n", 401);
     }
     await refreshQueueGauges();
