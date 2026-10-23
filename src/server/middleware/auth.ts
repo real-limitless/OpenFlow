@@ -15,6 +15,8 @@ import {
   type AgentAuth,
   type WorkflowPolicy,
 } from "../services/agent-policy";
+import { updateRequestContext } from "../../lib/observability/request-context";
+import { apiKeyPrefix } from "../lib/api-key-policy";
 
 export type AppEnv = {
   Variables: {
@@ -63,12 +65,13 @@ function extractBearer(header: string | undefined): string | null {
   return null;
 }
 
-function applyAgent(c: Context<AppEnv>, auth: AgentAuth) {
+function applyAgent(c: Context<AppEnv>, auth: AgentAuth, actor?: string) {
   c.set("userId", auth.userId);
   c.set("scopes", auth.scopes);
   c.set("authKind", auth.authKind);
   if (auth.agentId) c.set("agentId", auth.agentId);
   c.set("workflowPolicy", auth.workflowPolicy);
+  updateRequestContext({ actor: actor ?? auth.userId });
 }
 
 function sessionAuth(userId: string): AgentAuth {
@@ -108,7 +111,7 @@ export async function authMiddleware(c: Context<AppEnv>, next: Next) {
     if (rawKey?.startsWith("of_")) {
       const keyed = await resolveApiKeyAuth(rawKey);
       if (keyed) {
-        applyAgent(c, keyed);
+        applyAgent(c, keyed, apiKeyPrefix(rawKey));
         return next();
       }
     }
@@ -138,7 +141,7 @@ export async function authMiddleware(c: Context<AppEnv>, next: Next) {
     const raw = xApiKey.startsWith("Bearer ") ? xApiKey.slice(7) : xApiKey;
     const auth = await resolveApiKeyAuth(raw);
     if (auth) {
-      applyAgent(c, auth);
+      applyAgent(c, auth, apiKeyPrefix(raw));
       return next();
     }
   }
@@ -148,7 +151,7 @@ export async function authMiddleware(c: Context<AppEnv>, next: Next) {
     if (bearer.startsWith("of_")) {
       const auth = await resolveApiKeyAuth(bearer);
       if (auth) {
-        applyAgent(c, auth);
+        applyAgent(c, auth, apiKeyPrefix(bearer));
         return next();
       }
     }

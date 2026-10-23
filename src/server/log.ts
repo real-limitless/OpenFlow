@@ -1,14 +1,31 @@
 import { getRequestContext } from "../lib/observability/request-context";
+import { redactForLog, redactLogString } from "./lib/redact-log";
 
 export type LogLevel = "debug" | "info" | "warn" | "error";
 
 export type LogFields = Record<string, unknown>;
 
+export type LogEnv = "development" | "production";
+
+/** One JSON object per line. These fields are present on every record. */
 export type LogRecord = {
   ts: string;
   level: LogLevel;
   msg: string;
   service: string;
+  env: LogEnv;
+  project: string;
+  event: string;
+  request_id: string | null;
+  actor: string | null;
+  client_ip: string | null;
+  user_agent: string | null;
+  host: string | null;
+  path: string | null;
+  method: string | null;
+  status: number | null;
+  action: string;
+  outcome: string;
 } & LogFields;
 
 export type LogSink = (record: LogRecord) => void | Promise<void>;
@@ -34,6 +51,56 @@ const sinks: LogSink[] = [];
 let minLevel: LogLevel = parseLevel(process.env.LOG_LEVEL);
 let format: "json" | "pretty" = parseFormat(process.env.LOG_FORMAT);
 const service = process.env.LOG_SERVICE ?? "openflow";
+
+const STANDARD_KEYS = new Set([
+  "event",
+  "request_id",
+  "actor",
+  "client_ip",
+  "user_agent",
+  "host",
+  "path",
+  "method",
+  "status",
+  "action",
+  "outcome",
+  "env",
+  "project",
+  "ts",
+  "level",
+  "msg",
+  "service",
+]);
+
+export function logEnv(env: NodeJS.ProcessEnv = process.env): LogEnv {
+  const raw = (env.OPENFLOW_ENV || env.NODE_ENV || "development").trim().toLowerCase();
+  if (raw === "production" || raw === "prod") return "production";
+  return "development";
+}
+
+export function logProject(env: NodeJS.ProcessEnv = process.env): string {
+  const project = env.LOG_PROJECT?.trim();
+  return project || "real-limitless";
+}
+
+function asString(value: unknown): string {
+  if (typeof value === "string") return value;
+  if (value == null) return "";
+  return String(value);
+}
+
+function asNullableString(value: unknown): string | null {
+  if (value == null || value === "") return null;
+  return typeof value === "string" ? value : String(value);
+}
+
+function asNullableStatus(value: unknown): number | null {
+  if (typeof value === "number" && Number.isFinite(value)) return value;
+  if (typeof value === "string" && value.trim() !== "" && Number.isFinite(Number(value))) {
+    return Number(value);
+  }
+  return null;
+}
 
 /** Recent records for optional admin/debug (ring buffer). */
 const recent: LogRecord[] = [];
@@ -65,21 +132,9 @@ export function getRecentLogs(limit = 50): LogRecord[] {
 }
 
 function writeStdout(record: LogRecord): void {
-  const line =
-    format === "pretty"
-      ? `${record.ts} ${record.level.toUpperCase().padEnd(5)} ${record.msg}${
-          Object.keys(record).length > 4
-            ? " " +
-              JSON.stringify(
-                Object.fromEntries(
-                  Object.entries(record).filter(
-                    ([k]) => !["ts", "level", "msg", "service"].includes(k),
-                  ),
-                ),
-              )
-            : ""
-        }`
-      : JSON.stringify(record);
+  // One JSON object per line. LOG_FORMAT is retained for sinks; stdout stays JSON.
+  void format;
+  const line = JSON.stringify(record);
 
   if (record.level === "error") console.error(line);
   else if (record.level === "warn") console.warn(line);
@@ -90,13 +145,32 @@ function emit(level: LogLevel, msg: string, fields?: LogFields): void {
   if (LEVEL_RANK[level] < LEVEL_RANK[minLevel]) return;
 
   const ctx = getRequestContext();
+  const safe = (redactForLog(fields ?? {}) ?? {}) as LogFields;
+  const extra: LogFields = {};
+  for (const [key, value] of Object.entries(safe)) {
+    if (!STANDARD_KEYS.has(key)) extra[key] = value;
+  }
+
   const record: LogRecord = {
     ts: new Date().toISOString(),
     level,
-    msg,
+    msg: redactLogString(msg),
     service,
+    env: logEnv(),
+    project: logProject(),
+    event: asString(safe.event ?? ctx?.access?.event ?? ""),
+    request_id: asNullableString(safe.request_id ?? ctx?.requestId ?? null),
+    actor: asNullableString(safe.actor ?? ctx?.access?.actor ?? ctx?.actor ?? null),
+    client_ip: asNullableString(safe.client_ip ?? ctx?.clientIp ?? null),
+    user_agent: asNullableString(safe.user_agent ?? ctx?.userAgent ?? null),
+    host: asNullableString(safe.host ?? ctx?.host ?? null),
+    path: asNullableString(safe.path ?? ctx?.path ?? null),
+    method: asNullableString(safe.method ?? ctx?.method ?? null),
+    status: asNullableStatus(safe.status),
+    action: asString(safe.action ?? ctx?.access?.action ?? ""),
+    outcome: asString(safe.outcome ?? ctx?.access?.outcome ?? ""),
     ...(ctx ? { requestId: ctx.requestId, traceId: ctx.traceId } : {}),
-    ...fields,
+    ...extra,
   };
 
   recent.push(record);
@@ -159,14 +233,16 @@ export function createDatadogLogSink(opts: {
   const url = `https://http-intake.logs.${site}/api/v2/logs`;
   return (record) => {
     const payload = [
-      {
-        ddsource: opts.source ?? "openflow",
-        service: opts.service ?? record.service,
-        message: record.msg,
-        status: record.level,
-        timestamp: record.ts,
-        ...record,
-      },
+      Object.assign(
+        {
+          ddsource: opts.source ?? "openflow",
+          service: opts.service ?? record.service,
+          message: record.msg,
+          status: record.level,
+          timestamp: record.ts,
+        },
+        record,
+      ),
     ];
     void fetch(url, {
       method: "POST",

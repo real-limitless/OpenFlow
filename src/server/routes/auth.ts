@@ -21,6 +21,10 @@ import {
 import { issueCsrfCookie } from "../middleware/csrf";
 import { consumeInviteToken } from "../services/invites";
 import { recordAudit, requestIp } from "../services/audit";
+import { hashEmail } from "../lib/email-hash";
+import { noteAccessLog } from "../../lib/observability/request-context";
+import { loginBodySchema, registerBodySchema } from "../validation/auth";
+import { getRegistrationOpen, registrationAllowsPublic } from "../services/registration-setting";
 import { getOidcSettings, oidcFlowSecret } from "../services/oidc";
 import { publicOrigin } from "../oauth/public-url";
 import {
@@ -58,30 +62,89 @@ function setSessionCookie(
   });
 }
 
-function isValidEmail(email: string): boolean {
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+async function readJson(c: { req: { json: () => Promise<unknown> } }): Promise<unknown> {
+  try {
+    return await c.req.json();
+  } catch {
+    return {};
+  }
+}
+
+function emailFromUnknown(body: unknown): string {
+  if (!body || typeof body !== "object") return "";
+  const email = (body as { email?: unknown }).email;
+  return typeof email === "string" ? email : "";
 }
 
 export default function authRoute(app: Hono<AppEnv>) {
   app.post("/api/v1/auth/register", async (c) => {
     if (isRegistrationDisabled()) {
+      noteAccessLog({
+        event: "denial",
+        action: "admin.registration",
+        outcome: "denied",
+        audited: true,
+      });
+      void recordAudit({
+        actorId: "anonymous",
+        actorEmail: "",
+        action: "auth.register_denied",
+        resource: "user",
+        detail: { reason: "registration_disabled" },
+        ip: requestIp(c),
+        event: "denial",
+        outcome: "denied",
+      });
       return c.json({ error: "Registration is disabled", code: "registration_disabled" }, 403);
     }
-    const body = await c.req.json<{ email?: string; password?: string; inviteToken?: string }>();
-    const { email, password, inviteToken } = body ?? {};
-
-    if (!email || !isValidEmail(email)) {
-      return c.json({ error: "Invalid email format" }, 400);
+    const raw = await readJson(c);
+    const parsed = registerBodySchema.safeParse(raw);
+    if (!parsed.success) {
+      const field = parsed.error.issues[0]?.path[0];
+      const message =
+        field === "password" ? "Password must be at least 8 characters" : "Invalid email format";
+      noteAccessLog({
+        event: "auth_failure",
+        action: "auth.register",
+        outcome: "failure",
+        audited: true,
+      });
+      void recordAudit({
+        actorId: "anonymous",
+        actorEmail: "",
+        action: "auth.login_failure",
+        resource: "user",
+        detail: emailFromUnknown(raw) ? { emailHash: hashEmail(emailFromUnknown(raw)) } : {},
+        ip: requestIp(c),
+        event: "auth_failure",
+        outcome: "failure",
+      });
+      return c.json({ error: message }, 400);
     }
-    if (!password || password.length < 8) {
-      return c.json({ error: "Password must be at least 8 characters" }, 400);
-    }
+    const { email, password, inviteToken } = parsed.data;
 
     const realUsers = await countRealUsers();
     let role: string = realUsers === 0 ? "owner" : "member";
-    if (!canPublicRegister(realUsers > 0)) {
+    const storedOpen = await getRegistrationOpen();
+    if (!registrationAllowsPublic({ hasUsers: realUsers > 0, storedOpen })) {
       const consumed = await consumeInviteToken(inviteToken ?? "", email);
       if (!consumed.ok) {
+        noteAccessLog({
+          event: "denial",
+          action: "admin.registration",
+          outcome: "denied",
+          audited: true,
+        });
+        void recordAudit({
+          actorId: "anonymous",
+          actorEmail: "",
+          action: "auth.register_denied",
+          resource: "user",
+          detail: { emailHash: hashEmail(email), reason: "invite_only" },
+          ip: requestIp(c),
+          event: "denial",
+          outcome: "denied",
+        });
         return c.json(
           {
             error: consumed.error || "Registration is invite-only after the owner account exists",
@@ -109,13 +172,22 @@ export default function authRoute(app: Hono<AppEnv>) {
 
     await ensureUserWithProject(user.id);
 
+    noteAccessLog({
+      event: "auth_success",
+      action: "user.register",
+      outcome: "success",
+      actor: user.id,
+      audited: true,
+    });
     void recordAudit({
       actorId: user.id,
       action: "user.register",
       resource: "user",
       resourceId: user.id,
-      detail: { email: user.email, role: user.role },
+      detail: { role: user.role },
       ip: requestIp(c),
+      event: "admin_action",
+      outcome: "success",
     });
 
     const token = await createSession(user.id);
@@ -126,34 +198,107 @@ export default function authRoute(app: Hono<AppEnv>) {
 
   app.post("/api/v1/auth/login", async (c) => {
     if (isLoginDisabled()) {
+      noteAccessLog({
+        event: "denial",
+        action: "auth.login",
+        outcome: "denied",
+        audited: true,
+      });
+      void recordAudit({
+        actorId: "anonymous",
+        actorEmail: "",
+        action: "auth.login_denied",
+        resource: "session",
+        detail: { reason: "login_disabled" },
+        ip: requestIp(c),
+        event: "denial",
+        outcome: "denied",
+      });
       return c.json({ error: "Login is disabled", code: "login_disabled" }, 403);
     }
-    const body = await c.req.json<{ email?: string; password?: string }>();
-    const { email, password } = body ?? {};
-
-    if (!email || !password) {
+    const raw = await readJson(c);
+    const parsed = loginBodySchema.safeParse(raw);
+    if (!parsed.success) {
+      noteAccessLog({
+        event: "auth_failure",
+        action: "auth.login",
+        outcome: "failure",
+        audited: true,
+      });
+      void recordAudit({
+        actorId: "anonymous",
+        actorEmail: "",
+        action: "auth.login_failure",
+        resource: "session",
+        detail: emailFromUnknown(raw) ? { emailHash: hashEmail(emailFromUnknown(raw)) } : {},
+        ip: requestIp(c),
+        event: "auth_failure",
+        outcome: "failure",
+      });
       return c.json({ error: "Email and password are required" }, 400);
     }
+    const { email, password } = parsed.data;
+
+    const fail = (status: 401 | 403, body: Record<string, unknown>, actorId: string) => {
+      const outcome = status === 403 ? "denied" : "failure";
+      const event = status === 403 ? "denial" : "auth_failure";
+      noteAccessLog({
+        event,
+        action: "auth.login",
+        outcome,
+        actor: actorId === "anonymous" ? undefined : actorId,
+        audited: true,
+      });
+      void recordAudit({
+        actorId,
+        actorEmail: "",
+        action: status === 403 ? "auth.login_denied" : "auth.login_failure",
+        resource: "session",
+        resourceId: actorId === "anonymous" ? "" : actorId,
+        detail: { emailHash: hashEmail(email) },
+        ip: requestIp(c),
+        event,
+        outcome,
+      });
+      return c.json(body, status);
+    };
 
     const user = await prisma.user.findUnique({ where: { email } });
     if (!user || !user.passwordHash) {
-      return c.json({ error: "Invalid credentials" }, 401);
+      return fail(401, { error: "Invalid credentials" }, "anonymous");
     }
     if (isOidcPasswordHash(user.passwordHash)) {
-      return c.json({ error: "Use SSO to sign in", code: "oidc" }, 401);
+      return fail(401, { error: "Use SSO to sign in", code: "oidc" }, user.id);
     }
     if (user.role === "disabled") {
-      return c.json({ error: "Account disabled", code: "disabled" }, 403);
+      return fail(403, { error: "Account disabled", code: "disabled" }, user.id);
     }
 
     const valid = await bcrypt.compare(password, user.passwordHash);
     if (!valid) {
-      return c.json({ error: "Invalid credentials" }, 401);
+      return fail(401, { error: "Invalid credentials" }, user.id);
     }
 
     const token = await createSession(user.id);
     setSessionCookie(c, token);
     const csrfToken = issueCsrfCookie(c);
+    noteAccessLog({
+      event: "auth_success",
+      action: "auth.login",
+      outcome: "success",
+      actor: user.id,
+      audited: true,
+    });
+    void recordAudit({
+      actorId: user.id,
+      action: "auth.login_success",
+      resource: "session",
+      resourceId: user.id,
+      detail: {},
+      ip: requestIp(c),
+      event: "auth_success",
+      outcome: "success",
+    });
     return c.json({ id: user.id, email: user.email, role: user.role, csrfToken });
   });
 
@@ -312,13 +457,32 @@ export default function authRoute(app: Hono<AppEnv>) {
           action: "user.register",
           resource: "user",
           resourceId: user.id,
-          detail: { email, role: user.role, method: "oidc" },
+          detail: { role: user.role, method: "oidc" },
           ip: requestIp(c),
+          event: "admin_action",
+          outcome: "success",
         });
       }
       if (!user) {
         return c.json({ error: "OIDC login failed" }, 500);
       }
+      noteAccessLog({
+        event: "auth_success",
+        action: "auth.login",
+        outcome: "success",
+        actor: user.id,
+        audited: true,
+      });
+      void recordAudit({
+        actorId: user.id,
+        action: "auth.login_success",
+        resource: "session",
+        resourceId: user.id,
+        detail: { method: "oidc" },
+        ip: requestIp(c),
+        event: "auth_success",
+        outcome: "success",
+      });
       const token = await createSession(user.id);
       setSessionCookie(c, token);
       issueCsrfCookie(c);
