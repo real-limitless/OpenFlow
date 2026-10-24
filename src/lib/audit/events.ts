@@ -29,7 +29,14 @@ export function buildAuditEvent(
   if (detail && typeof detail === "object" && !Array.isArray(detail)) {
     for (const [k, v] of Object.entries(detail as Record<string, unknown>)) {
       const key = k.toLowerCase();
-      if (key.includes("password") || key.includes("secret") || key.includes("token") || key.includes("key")) {
+      if (
+        key.includes("password") ||
+        key.includes("secret") ||
+        key.includes("token") ||
+        key.includes("key") ||
+        key.includes("cookie") ||
+        key.includes("authorization")
+      ) {
         continue;
       }
       safe[k] = v;

@@ -51,7 +51,7 @@ External agents never see more than the **intersection** of:
 
 **UI**
 
-- **Settings → API keys** — scopes, restrict toggle, workflow grants, expiry  
+- **Settings → API keys** — owner, scopes, restrict toggle, workflow grants, required expiry (rotation due date). Maximum lifetime defaults to 90 days (`API_KEY_MAX_TTL_DAYS`).  
 - **Workflow editor → ⋯ → Share with AI (MCP)** — temporary token  
 - **OAuth `/authorize`** — pick workflows after login  
 
@@ -88,7 +88,7 @@ Authorization: Bearer of_...
 X-API-Key: of_...
 ```
 
-API keys receive full scopes.
+API keys receive the scopes selected at creation (`of_` prefix and SHA-256 hash are unchanged). Every key has an owner and an `expiresAt`. Omitting expiry sets it to the maximum lifetime. A later expiry is rejected. The key list shows that date as the rotation due date. Create, revoke, expiry, and rejected use are written to the audit log. See `docs/audit-log.md`.
 
 ### Local dev
 

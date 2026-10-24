@@ -7,6 +7,7 @@ import {
   type RetentionPolicy,
 } from "../../lib/privacy/retention";
 import { log } from "../log";
+import { auditRetentionDays, MIN_AUDIT_RETENTION_DAYS } from "../../lib/privacy/audit-retention";
 
 export const RETENTION_KEY = "privacy.retention";
 
@@ -78,6 +79,33 @@ export async function pruneExecutions(now = new Date()): Promise<{ deleted: numb
   return { deleted: result.count };
 }
 
+/**
+ * The app role cannot UPDATE, DELETE, or TRUNCATE audit_logs.
+ * This never issues a delete. Operators prune rows older than 90 days only
+ * through the maintenance path in docs/audit-log.md.
+ */
+export async function pruneAuditLogs(): Promise<{ deleted: number; skipped: string }> {
+  const days = auditRetentionDays();
+  if (days < MIN_AUDIT_RETENTION_DAYS) {
+    return {
+      deleted: 0,
+      skipped: "audit retention is off; the app role does not delete audit_logs",
+    };
+  }
+  log.info("audit retention prune skipped", {
+    event: "config_change",
+    action: "audit.retention",
+    outcome: "success",
+    component: "retention",
+    retentionDays: days,
+    reason: "audit_logs is append-only for the app role",
+  });
+  return {
+    deleted: 0,
+    skipped: "append-only; delete only via the maintenance role documented in docs/audit-log.md",
+  };
+}
+
 let pruneTimer: ReturnType<typeof setInterval> | null = null;
 
 export function startRetentionPruner(): void {
@@ -88,6 +116,7 @@ export function startRetentionPruner(): void {
       const locked = await connection.set("openflow:retention-prune", "1", "EX", 300, "NX");
       if (!locked) return;
       await pruneExecutions();
+      await pruneAuditLogs();
     } catch (err) {
       log.warn("retention prune skipped", {
         component: "retention",

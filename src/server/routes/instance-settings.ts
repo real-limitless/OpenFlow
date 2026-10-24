@@ -19,6 +19,12 @@ import { mcpResourceUrl, publicOrigin } from "../oauth/public-url";
 import { OPENFLOW_MCP_TOOLS } from "../mcp/tools";
 import { requireInstanceAdmin } from "../services/instance-admin";
 import { recordAudit, requestIp } from "../services/audit";
+import { noteAccessLog } from "../../lib/observability/request-context";
+import {
+  getRegistrationOpen,
+  registrationAllowsPublic,
+  setRegistrationOpen,
+} from "../services/registration-setting";
 
 /** Built-in allowlist roots (mirrors code-python-native bootstrap; display only). */
 const BUILTIN_PYTHON_IMPORT_ROOTS = [
@@ -284,7 +290,7 @@ export default function instanceSettingsRoute(app: Hono<AppEnv>) {
     const policy = await getRetentionPolicy();
     return c.json({
       ...policy,
-      note: "Backup Postgres before tightening retention. Prune deletes execution rows (runData) and does not touch workflow definitions. Waiting/running executions are kept unless pruneActive is on.",
+      note: "Backup Postgres before tightening retention. Prune deletes execution rows (runData) and does not touch workflow definitions or audit_logs. Audit rows are append-only; see docs/audit-log.md. Waiting/running executions are kept unless pruneActive is on.",
     });
   });
 
@@ -522,5 +528,56 @@ export default function instanceSettingsRoute(app: Hono<AppEnv>) {
       ...publicOidcSettings(settings),
       loginEnabled: publicOidcStatus(settings).enabled,
     });
+  });
+
+  app.get("/api/v1/settings/registration", async (c) => {
+    const userId = c.get("userId");
+    await ensureUser(userId);
+    const storedOpen = await getRegistrationOpen();
+    const { countRealUsers } = await import("./setup");
+    const hasUsers = (await countRealUsers()) > 0;
+    const open = registrationAllowsPublic({ hasUsers, storedOpen });
+    return c.json({
+      open,
+      storedOpen,
+      source: storedOpen === null ? "env" : "setting",
+      inviteOnly: hasUsers && !open,
+    });
+  });
+
+  app.put("/api/v1/settings/registration", async (c) => {
+    const userId = c.get("userId");
+    await ensureUser(userId);
+    const gate = await requireInstanceAdmin(userId);
+    if (gate !== true) return c.json({ error: gate.error }, gate.status);
+    let raw: unknown = {};
+    try {
+      raw = await c.req.json();
+    } catch {
+      raw = {};
+    }
+    const open = raw && typeof raw === "object" ? (raw as { open?: unknown }).open : undefined;
+    if (typeof open !== "boolean") {
+      return c.json({ error: "open (boolean) is required" }, 400);
+    }
+    await setRegistrationOpen(open);
+    noteAccessLog({
+      event: "admin_action",
+      action: "admin.registration",
+      outcome: "success",
+      actor: userId,
+      audited: true,
+    });
+    await recordAudit({
+      actorId: userId,
+      action: "admin.registration",
+      resource: "settings",
+      resourceId: "registration",
+      detail: { open },
+      ip: requestIp(c),
+      event: "admin_action",
+      outcome: "success",
+    });
+    return c.json({ open, storedOpen: open, source: "setting", inviteOnly: !open });
   });
 }

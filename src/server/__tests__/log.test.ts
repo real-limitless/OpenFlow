@@ -40,7 +40,9 @@ describe("E7 structured logging", () => {
   it("respects min level", () => {
     configureLogger({ level: "warn" });
     const captured: LogRecord[] = [];
-    addLogSink((r) => captured.push(r));
+    addLogSink((r) => {
+      captured.push(r);
+    });
 
     log.info("skip");
     log.warn("keep");
@@ -50,13 +52,78 @@ describe("E7 structured logging", () => {
 
   it("child logger merges base fields", () => {
     const captured: LogRecord[] = [];
-    addLogSink((r) => captured.push(r));
+    addLogSink((r) => {
+      captured.push(r);
+    });
     const child = log.child({ component: "worker", executionId: "e9" });
     child.error("failed", { error: "boom" });
 
     expect(captured[0].component).toBe("worker");
     expect(captured[0].executionId).toBe("e9");
     expect(captured[0].error).toBe("boom");
+  });
+
+  it("writes one JSON object with the standard fields", () => {
+    const spy = vi.spyOn(console, "log").mockImplementation(() => undefined);
+    log.info("hello-json", { executionId: "ex1" });
+    expect(spy).toHaveBeenCalled();
+    const line = String(spy.mock.calls.at(-1)?.[0]);
+    const parsed = JSON.parse(line) as Record<string, unknown>;
+    expect(parsed.msg).toBe("hello-json");
+    expect(parsed.ts).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/);
+    for (const field of [
+      "level",
+      "service",
+      "env",
+      "project",
+      "event",
+      "request_id",
+      "actor",
+      "client_ip",
+      "user_agent",
+      "host",
+      "path",
+      "method",
+      "status",
+      "action",
+      "outcome",
+    ]) {
+      expect(parsed).toHaveProperty(field);
+    }
+    expect(parsed.project).toBe(process.env.LOG_PROJECT?.trim() || "real-limitless");
+    expect(["development", "production"]).toContain(parsed.env);
+    spy.mockRestore();
+  });
+
+  it("redacts passwords, tokens, api keys, cookies, and authorization", () => {
+    const captured: LogRecord[] = [];
+    addLogSink((r) => {
+      captured.push(r);
+    });
+    const password = "sample-password-value";
+    const token = "sample-token-value";
+    const apiKey = "of_" + "ab".repeat(24);
+    const cookie = "session=sample-cookie";
+    const authorization = "Bearer sample-token-value";
+    log.info("sensitive", {
+      password,
+      token,
+      apiKey,
+      cookie,
+      authorization,
+      body: { client_secret: "sample-secret", nested: { passwd: password } },
+    });
+    const serialized = JSON.stringify(captured);
+    expect(serialized).not.toContain(password);
+    expect(serialized).not.toContain(token);
+    expect(serialized).not.toContain(apiKey);
+    expect(serialized).not.toContain(cookie);
+    expect(serialized).not.toContain(authorization);
+    expect(serialized).not.toContain("sample-secret");
+    expect(captured[0].password).toBe("[redacted]");
+    expect(captured[0].authorization).toBe("[redacted]");
+    expect(captured[0].cookie).toBe("[redacted]");
+    expect((captured[0].body as { client_secret: string }).client_secret).toBe("[redacted]");
   });
 
   it("keeps recent ring buffer", () => {
@@ -77,11 +144,24 @@ describe("E7 structured logging", () => {
       level: "info",
       msg: "stream-me",
       service: "openflow",
+      env: "development",
+      project: "real-limitless",
+      event: "",
+      request_id: null,
+      actor: null,
+      client_ip: null,
+      user_agent: null,
+      host: null,
+      path: null,
+      method: null,
+      status: null,
+      action: "",
+      outcome: "",
       executionId: "ex",
     });
 
     await vi.waitFor(() => expect(fetchMock).toHaveBeenCalled());
-    const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    const [url, init] = fetchMock.mock.calls[0] as unknown as [string, RequestInit];
     expect(url).toBe("https://logs.test/ingest");
     expect(init.method).toBe("POST");
     const body = JSON.parse(String(init.body));
@@ -100,10 +180,23 @@ describe("E7 structured logging", () => {
       level: "error",
       msg: "dd-msg",
       service: "openflow",
+      env: "development",
+      project: "real-limitless",
+      event: "",
+      request_id: null,
+      actor: null,
+      client_ip: null,
+      user_agent: null,
+      host: null,
+      path: null,
+      method: null,
+      status: null,
+      action: "",
+      outcome: "",
     });
 
     await vi.waitFor(() => expect(fetchMock).toHaveBeenCalled());
-    const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    const [url, init] = fetchMock.mock.calls[0] as unknown as [string, RequestInit];
     expect(url).toContain("http-intake.logs.datadoghq.com");
     const headers = init.headers as Record<string, string>;
     expect(headers["DD-API-KEY"]).toBe("dd-key");

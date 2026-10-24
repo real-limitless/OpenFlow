@@ -1,6 +1,12 @@
 import { prisma } from "../db";
 import { buildAuditEvent, type AuditAction } from "../../lib/audit/events";
 import { requestIp as clientRequestIp } from "../../lib/security/client-ip";
+import {
+  securityEventForAction,
+  type SecurityEvent,
+  type SecurityOutcome,
+} from "../lib/security-event";
+import { log } from "../log";
 
 export function requestIp(c: {
   req: { header: (n: string) => string | undefined };
@@ -11,22 +17,46 @@ export function requestIp(c: {
 
 export async function recordAudit(opts: {
   actorId: string;
+  /** Log-line actor when it differs from the stored user id (API key prefix). */
+  actor?: string | null;
   action: AuditAction | string;
   resource: string;
   resourceId?: string;
   detail?: unknown;
   ip?: string | null;
+  event?: SecurityEvent;
+  outcome?: SecurityOutcome;
+  /** Skip the user lookup and store this email (empty for anonymous attempts). */
+  actorEmail?: string;
 }): Promise<void> {
   const ev = buildAuditEvent(opts.action, opts.resource, opts.resourceId, opts.detail);
+  const inferred = securityEventForAction(String(opts.action));
+  const event = opts.event ?? inferred.event;
+  const outcome = opts.outcome ?? inferred.outcome;
+  const level = outcome === "success" ? "info" : "warn";
+  log[level](String(opts.action), {
+    event,
+    action: String(opts.action),
+    outcome,
+    actor: opts.actor ?? (opts.actorId && opts.actorId !== "anonymous" ? opts.actorId : null),
+    client_ip: opts.ip ?? null,
+    resource: ev.resource,
+    resource_id: ev.resourceId,
+    detail: ev.detail,
+  });
   try {
-    const actor = await prisma.user.findUnique({
-      where: { id: opts.actorId },
-      select: { email: true },
-    });
+    let actorEmail = opts.actorEmail;
+    if (actorEmail === undefined && opts.actorId && opts.actorId !== "anonymous") {
+      const actor = await prisma.user.findUnique({
+        where: { id: opts.actorId },
+        select: { email: true },
+      });
+      actorEmail = actor?.email ?? "";
+    }
     await prisma.auditLog.create({
       data: {
-        actorId: opts.actorId,
-        actorEmail: actor?.email ?? "",
+        actorId: opts.actorId || "anonymous",
+        actorEmail: actorEmail ?? "",
         action: ev.action,
         resource: ev.resource,
         resourceId: ev.resourceId,
