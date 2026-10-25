@@ -12,8 +12,9 @@
 #
 # Auth, hot-node reload, and public registration default off.
 # INSECURE local try-out (no login): set AUTH_DISABLED=true in .env.
-# First owner with auth on is not a public claim. Set
-# OPENFLOW_ALLOW_FIRST_OWNER=true for one bootstrap (or
+# Headless owner: OPENFLOW_BOOTSTRAP_OWNER_EMAIL and
+# OPENFLOW_BOOTSTRAP_OWNER_PASSWORD_FILE. That does not open public signup.
+# Public first owner remains OPENFLOW_ALLOW_FIRST_OWNER=true (or
 # OPENFLOW_OPEN_REGISTER=true), then POST /api/v1/auth/register.
 #
 # Toolbox (git/shell/RAG reindex) starts with the stack:
@@ -62,6 +63,13 @@ services:
       AUTH_DISABLED: ${AUTH_DISABLED:-false}
       OPENFLOW_OPEN_REGISTER: ${OPENFLOW_OPEN_REGISTER:-false}
       OPENFLOW_ALLOW_FIRST_OWNER: ${OPENFLOW_ALLOW_FIRST_OWNER:-false}
+      OPENFLOW_BOOTSTRAP_API_KEY: ${OPENFLOW_BOOTSTRAP_API_KEY:-}
+      OPENFLOW_BOOTSTRAP_API_KEY_FILE: ${OPENFLOW_BOOTSTRAP_API_KEY_FILE:-}
+      OPENFLOW_BOOTSTRAP_SCOPES: ${OPENFLOW_BOOTSTRAP_SCOPES:-}
+      OPENFLOW_BOOTSTRAP_OWNER_EMAIL: ${OPENFLOW_BOOTSTRAP_OWNER_EMAIL:-}
+      OPENFLOW_BOOTSTRAP_OWNER_PASSWORD_FILE: ${OPENFLOW_BOOTSTRAP_OWNER_PASSWORD_FILE:-}
+      OPENFLOW_IMPORT_DIR: ${OPENFLOW_IMPORT_DIR:-}
+      OPENFLOW_IMPORT_ACTIVATE: ${OPENFLOW_IMPORT_ACTIVATE:-}
       # Optional OIDC (authorization-code + PKCE). Also configurable in Settings → SSO.
       OPENFLOW_OIDC_ISSUER: ${OPENFLOW_OIDC_ISSUER:-}
       OPENFLOW_OIDC_CLIENT_ID: ${OPENFLOW_OIDC_CLIENT_ID:-}

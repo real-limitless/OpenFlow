@@ -41,6 +41,7 @@ import ansibleRoute from "./routes/ansible";
 import mcpGalleryRoute from "./routes/mcp-gallery";
 import mcpFlowRoute from "./routes/mcp-flow";
 import { startWorker } from "./worker";
+import { bootstrapInstance } from "./services/instance-bootstrap";
 import { startRetentionPruner } from "./services/retention";
 import { seedBuiltinExecutors } from "../lib/engine";
 import { seedBuiltinDescriptions } from "../lib/nodes/registry";
@@ -97,6 +98,13 @@ mcpFlowRoute(app);
 openflowMcpRoute(app);
 devRoute(app);
 
+if (config.worker.enabled) {
+  startWorker(config.worker.concurrency);
+  startRetentionPruner();
+}
+
+await bootstrapInstance();
+
 if (config.worker.scheduler) {
   initializeSchedules().catch((err) =>
     log.error("schedule init failed", {
@@ -104,11 +112,6 @@ if (config.worker.scheduler) {
       error: err instanceof Error ? err.message : String(err),
     }),
   );
-}
-
-if (config.worker.enabled) {
-  startWorker(config.worker.concurrency);
-  startRetentionPruner();
 }
 
 void import("./services/circuit-breakers")
