@@ -2,6 +2,18 @@ import { createHash } from "node:crypto";
 import bcrypt from "bcryptjs";
 import { prisma } from "../db";
 import { DEFAULT_AGENT_SCOPES, hasScope, parseScopes } from "../oauth/scopes";
+import { log } from "../log";
+import { recordAudit } from "./audit";
+import { apiKeyPrefix } from "../lib/api-key-policy";
+
+function logScopeDenial(action: string, detail: Record<string, unknown>): void {
+  log.warn(action, {
+    event: "denial",
+    action,
+    outcome: "denied",
+    ...detail,
+  });
+}
 
 export type WorkflowPerm = "read" | "write" | "execute";
 
@@ -57,11 +69,13 @@ export function assertAgentWorkflowAccess(
   const now = Date.now();
   const g = policy.grants.find((x) => x.workflowId === workflowId && grantActive(x, now));
   if (!g) {
+    logScopeDenial("scope.workflow_denied", { workflowId, need });
     throw new Error(
       `No MCP grant for workflow ${workflowId}. Add this workflow to the API key / token grants.`,
     );
   }
   if (!grantAllows(g, need)) {
+    logScopeDenial("scope.workflow_denied", { workflowId, need });
     throw new Error(`MCP grant for workflow ${workflowId} lacks ${need} permission.`);
   }
 }
@@ -127,6 +141,7 @@ export function assertAgentMayManageCredentials(
   auth: Pick<AgentAuth, "authKind" | "scopes">,
 ): void {
   if (!agentMayManageCredentials(auth)) {
+    logScopeDenial("scope.credentials_denied", { scope: "openflow:credentials" });
     throw new Error(
       'Missing scope openflow:credentials. Opt in when minting the API key / OAuth / temporary MCP token.',
     );
@@ -137,6 +152,7 @@ export function assertAgentMayManageVariables(
   auth: Pick<AgentAuth, "authKind" | "scopes">,
 ): void {
   if (!agentMayManageVariables(auth)) {
+    logScopeDenial("scope.variables_denied", { scope: "openflow:variables" });
     throw new Error(
       'Missing scope openflow:variables. Opt in when minting the API key / OAuth / temporary MCP token.',
     );
@@ -182,9 +198,31 @@ export async function resolveApiKeyAuth(rawKey: string): Promise<AgentAuth | nul
       }
     }
   }
-  if (!row) return null;
+  if (!row) {
+    void recordAudit({
+      actorId: "anonymous",
+      actor: apiKeyPrefix(rawKey),
+      actorEmail: "",
+      action: "api_key.use_denied",
+      resource: "api_key",
+      detail: { prefix: apiKeyPrefix(rawKey) },
+      event: "denial",
+      outcome: "denied",
+    });
+    return null;
+  }
 
   if (row.expiresAt && row.expiresAt.getTime() < Date.now()) {
+    void recordAudit({
+      actorId: row.userId,
+      actor: apiKeyPrefix(rawKey),
+      action: "api_key.expired",
+      resource: "api_key",
+      resourceId: row.id,
+      detail: { prefix: apiKeyPrefix(rawKey) },
+      event: "denial",
+      outcome: "denied",
+    });
     return null;
   }
 

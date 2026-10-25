@@ -433,7 +433,11 @@ model ApiKey {
   restrictWorkflows Boolean @default(true)
   /// When true, restricted agents may createWorkflow via MCP.
   canCreateWorkflows Boolean @default(false)
-  expiresAt DateTime?
+  /// Required for new keys. Backfilled to now + 90 days. Lifetime is capped by API_KEY_MAX_TTL_DAYS.
+  expiresAt DateTime @default(dbgenerated("(CURRENT_TIMESTAMP + INTERVAL '90 days')"))
+  /// Accountable owner. Backfilled from the creating user's email.
+  ownerEmail String @default("")
+  ownerName String @default("")
   lastUsedAt DateTime?
   createdAt DateTime  @default(now())
 

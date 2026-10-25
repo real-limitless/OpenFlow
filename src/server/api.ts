@@ -2,6 +2,7 @@ import { Hono } from "hono";
 import { config } from "../config";
 import { authMiddleware, type AppEnv } from "./middleware/auth";
 import { observabilityMiddleware } from "./middleware/observability";
+import { accessLogMiddleware } from "./middleware/access-log";
 import { rateLimitMiddleware } from "./middleware/rate-limit";
 import { securityHeadersMiddleware } from "./middleware/security-headers";
 import { csrfMiddleware } from "./middleware/csrf";
@@ -55,6 +56,7 @@ initBinaryStorage();
 const app = new Hono<AppEnv>();
 
 app.use("*", observabilityMiddleware);
+app.use("*", accessLogMiddleware);
 app.use("*", rateLimitMiddleware);
 app.use("*", securityHeadersMiddleware);
 app.use("*", authMiddleware);
