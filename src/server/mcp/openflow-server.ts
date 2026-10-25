@@ -2,12 +2,7 @@ import type { Context } from "hono";
 import type { Hono } from "hono";
 import type { AppEnv } from "../middleware/auth";
 import { callOpenflowTool, OPENFLOW_MCP_TOOLS } from "./tools";
-import {
-  createMcpSession,
-  deleteMcpSession,
-  getMcpSession,
-  type McpSessionState,
-} from "./session";
+import { createMcpSession, deleteMcpSession, getMcpSession, type McpSessionState } from "./session";
 import { ALL_MCP_SCOPES } from "../oauth/scopes";
 import { mcpResourceUrl, publicOrigin } from "../oauth/public-url";
 import { isMcpEnabled } from "../services/instance-settings";
@@ -70,8 +65,7 @@ async function handleRpc(
   const id = msg.id ?? null;
   const method = msg.method ?? "";
   const params = msg.params ?? {};
-  const isNotification =
-    msg.id === undefined || msg.id === null;
+  const isNotification = msg.id === undefined || msg.id === null;
 
   try {
     switch (method) {
@@ -166,14 +160,10 @@ async function handleMcp(c: Context<AppEnv>, requireWorkflowHeader: boolean) {
   if (!userId) {
     const origin = publicOrigin(c);
     const meta = `${origin}/.well-known/oauth-protected-resource`;
-    return c.json(
-      { error: "Authentication required" },
-      401,
-      {
-        ...headers,
-        "WWW-Authenticate": `Bearer realm="openflow", resource_metadata="${meta}"`,
-      },
-    );
+    return c.json({ error: "Authentication required" }, 401, {
+      ...headers,
+      "WWW-Authenticate": `Bearer realm="openflow", resource_metadata="${meta}"`,
+    });
   }
 
   const scopes = c.get("scopes") ?? [...ALL_MCP_SCOPES];

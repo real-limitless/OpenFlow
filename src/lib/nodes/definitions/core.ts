@@ -5551,6 +5551,7 @@ export const microsoftOneDrive: INodeTypeDescription = {
     { name: "microsoftOAuth2Api" },
     { name: "microsoftEntraServicePrincipal" },
   ],
+  properties: [],
 };
 
 export const twitter: INodeTypeDescription = {
@@ -5915,7 +5916,7 @@ export const googleDrive: INodeTypeDescription = {
       name: "deletePermanently",
       type: "boolean",
       default: false,
-      displayOptions: { show: { resource: ["file"], operation: ["delete"] }, show: { resource: ["folder"], operation: ["delete"] } },
+      displayOptions: { show: { resource: ["folder"], operation: ["delete"] } },
     },
     {
       displayName: "Output Field Name",

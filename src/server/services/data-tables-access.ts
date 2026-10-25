@@ -6,11 +6,7 @@ import {
   projectRowData,
   type DataTableColumn,
 } from "@/lib/data-tables/types";
-import type {
-  DataTableAccess,
-  DataTableRef,
-  LoadRowsOptions,
-} from "@/lib/data-tables/access";
+import type { DataTableAccess, DataTableRef, LoadRowsOptions } from "@/lib/data-tables/access";
 
 function cellEquals(a: unknown, b: unknown): boolean {
   if (a === b) return true;
@@ -224,7 +220,7 @@ function buildAccess(scope: { userId?: string; projectId?: string }): DataTableA
       const table = await resolveScoped(scope, ref);
       if (!table) throw new Error(`Data table not found: ${ref}`);
 
-      let columns = [...table.columns];
+      const columns = [...table.columns];
       let changed = false;
       for (const key of Object.keys(fields)) {
         if (key === "_rowId") continue;

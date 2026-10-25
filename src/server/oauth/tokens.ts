@@ -89,7 +89,14 @@ export async function exchangeAuthorizationCode(opts: {
   redirectUri: string;
   codeVerifier: string;
 }): Promise<
-  | { ok: true; accessToken: string; refreshToken: string; expiresIn: number; scopes: string[]; resource: string | null }
+  | {
+      ok: true;
+      accessToken: string;
+      refreshToken: string;
+      expiresIn: number;
+      scopes: string[];
+      resource: string | null;
+    }
   | { ok: false; error: string; status: number }
 > {
   const row = await prisma.oAuthAuthorizationCode.findUnique({
@@ -179,11 +186,15 @@ export async function issueTokens(opts: {
   };
 }
 
-export async function refreshAccessToken(opts: {
-  refreshToken: string;
-  clientId: string;
-}): Promise<
-  | { ok: true; accessToken: string; refreshToken: string; expiresIn: number; scopes: string[]; resource: string | null }
+export async function refreshAccessToken(opts: { refreshToken: string; clientId: string }): Promise<
+  | {
+      ok: true;
+      accessToken: string;
+      refreshToken: string;
+      expiresIn: number;
+      scopes: string[];
+      resource: string | null;
+    }
   | { ok: false; error: string; status: number }
 > {
   const row = await prisma.oAuthToken.findUnique({

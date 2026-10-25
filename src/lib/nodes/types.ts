@@ -23,11 +23,19 @@ export type NodePropertyType =
   /** Carried on the node but never rendered — see ParameterField's `hidden` case. */
   | "hidden"
   | "credentials"
-  | "assignmentCollection";
+  | "credentialsSelector"
+  | "assignmentCollection"
+  | "fixed"
+  | "multiString";
 
 export interface IDisplayOptions {
   show?: Record<string, Array<string | number | boolean>>;
   hide?: Record<string, Array<string | number | boolean>>;
+  /**
+   * A few catalogs place `operation` beside `show`/`hide`. Matching still
+   * reads only `show` and `hide`; the field is typed so those objects compile.
+   */
+  operation?: Array<string | number | boolean>;
 }
 
 /** Whether a property/credential should render given current parameter values. */
@@ -57,29 +65,45 @@ export interface INodePropertyCollectionEntry {
   name: string;
   displayName: string;
   values: INodeProperties[];
+  /** Present when a collection row is itself a property, not only a group. */
+  type?: string;
+  value?: string | number | boolean;
 }
 
 export interface INodeProperties {
   displayName: string;
   name: string;
   type: NodePropertyType;
-  default: unknown;
+  /** Omitted on notice/hidden fields and some nested collection rows. */
+  default?: unknown;
   description?: string;
   placeholder?: string;
   required?: boolean;
   noDataExpression?: boolean;
   options?: INodePropertyOption[] | INodePropertyCollectionEntry[] | INodeProperties[];
   displayOptions?: IDisplayOptions;
+  /** Collection editor modes carried by some node descriptions. */
+  modes?: unknown;
   typeOptions?: {
     multipleValues?: boolean;
     rows?: number;
     minValue?: number;
     maxValue?: number;
     numberPrecision?: number;
-    editor?: "code" | "json";
+    numberStep?: number;
+    editor?: "code" | "json" | "sqlEditor";
     password?: boolean;
     /** For resourceLocator: which resource list to load (e.g. dataTable). */
     resource?: "dataTable" | "workflow" | string;
+    loadOptionsMethod?: string;
+    loadOptions?: unknown;
+    searchListMethod?: string;
+    alwaysOpenEditWindow?: boolean;
+    alwaysOpenEditNode?: boolean;
+    multiValueOptions?: unknown;
+    inputFieldMaxLength?: number;
+    language?: string;
+    [key: string]: unknown;
   };
 }
 
@@ -95,7 +119,11 @@ export type NodeGroup =
   | "marketing"
   | "data"
   | "app"
-  | "ai";
+  | "ai"
+  | "action"
+  | "sales"
+  | "core"
+  | "data-extraction";
 
 /**
  * Palette grouping key. Every value here must also appear in NODE_CATEGORIES
@@ -127,7 +155,18 @@ export type NodeCategory =
   | "App"
   | "Core"
   | "Utility"
-  | "Miscellaneous";
+  | "Miscellaneous"
+  | "Action"
+  | "Integration"
+  | "Input"
+  | "Finance"
+  | "Commerce"
+  | "Core Nodes"
+  | "Data & Content"
+  | "Marketing & Sales"
+  | "Development, Developer Tools"
+  | "Development, Data & Storage"
+  | "Development, Productivity";
 
 export interface INodeTypeDescription {
   /** Fully-qualified type key, matching the public workflow JSON type string. */
@@ -150,14 +189,26 @@ export interface INodeTypeDescription {
   /** Number of outputs is dynamic (e.g. Switch) — derived from parameters. */
   dynamicOutputs?: (parameters: Record<string, unknown>) => string[];
   dynamicInputs?: (parameters: Record<string, unknown>) => string[];
-  credentials?: Array<{ name: string; required?: boolean; displayOptions?: IDisplayOptions }>;
+  credentials?: Array<{
+    name: string;
+    required?: boolean;
+    displayName?: string;
+    testedBy?: string | { request?: { method?: string; url?: string } };
+    displayOptions?: IDisplayOptions;
+  }>;
   properties: INodeProperties[];
   /** Lucide icon name used by the canvas + palette. */
   icon: string;
   /** Public documentation URLs this clean-room implementation was written from. */
-  sources: string[];
+  sources?: Array<string | { url: string; name?: string }>;
+  /** Editor hint. Ignored by execution. */
+  parameterPane?: string;
   /** Marks placeholder nodes created for unsupported imported types. */
   placeholder?: boolean;
+  /** Hide the node from the palette while keeping the description registered. */
+  hidden?: boolean;
+  deprecated?: boolean;
+  alias?: string | string[];
   /** Regular node that an agent may invoke as a tool. */
   usableAsTool?: boolean;
 }

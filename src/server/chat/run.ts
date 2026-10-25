@@ -11,7 +11,10 @@ import { notifyExecutionFinished, notifyExecutionStarted } from "../services/wor
 import { persistExecutionProgress } from "../services/persist-execution-progress";
 import { chatTriggerParams } from "../../lib/chat/path";
 import { extractChatWorkflowResponse } from "../../lib/chat/response";
-import { getWebhookResponse, clearWebhookResponse } from "../../lib/engine/executors/respond-to-webhook";
+import {
+  getWebhookResponse,
+  clearWebhookResponse,
+} from "../../lib/engine/executors/respond-to-webhook";
 import type { ExecutionRunData } from "../../lib/engine/types";
 
 export type ChatRunResult = {
@@ -66,7 +69,11 @@ export async function runChatWorkflow(opts: {
       mode,
     },
   });
-  notifyExecutionStarted(opts.workflowRow.id, execution.id, mode === "manual" ? "manual" : "webhook");
+  notifyExecutionStarted(
+    opts.workflowRow.id,
+    execution.id,
+    mode === "manual" ? "manual" : "webhook",
+  );
 
   const defaultEnv = await getDefaultEnvironment(opts.workflowRow.projectId);
   const environmentId = defaultEnv?.id;
@@ -111,7 +118,12 @@ export async function runChatWorkflow(opts: {
         error: runResult.success ? null : JSON.stringify({ message: errText ?? "Workflow failed" }),
       },
     });
-    notifyExecutionFinished(opts.workflowRow.id, execution.id, status, mode === "manual" ? "manual" : "webhook");
+    notifyExecutionFinished(
+      opts.workflowRow.id,
+      execution.id,
+      status,
+      mode === "manual" ? "manual" : "webhook",
+    );
 
     const webhook = getWebhookResponse(execution.id);
     clearWebhookResponse(execution.id);
@@ -140,7 +152,12 @@ export async function runChatWorkflow(opts: {
         error: JSON.stringify({ message }),
       },
     });
-    notifyExecutionFinished(opts.workflowRow.id, execution.id, "error", mode === "manual" ? "manual" : "webhook");
+    notifyExecutionFinished(
+      opts.workflowRow.id,
+      execution.id,
+      "error",
+      mode === "manual" ? "manual" : "webhook",
+    );
     return { success: false, output: "", executionId: execution.id, error: message };
   }
 }

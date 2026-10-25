@@ -19,11 +19,7 @@ export type {
 
 export { createExecutionContext } from "./context";
 export { defineNode, definitionToExecutor } from "./define-node";
-export {
-  createNodeRegistry,
-  executorMapFromRecord,
-  type NodeRegistry,
-} from "./registry";
+export { createNodeRegistry, executorMapFromRecord, type NodeRegistry } from "./registry";
 export { withAliases, type AliasContext } from "./aliases";
 
 export { getParam, getParams } from "./helpers/params";

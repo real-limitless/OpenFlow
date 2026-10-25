@@ -58,7 +58,7 @@ export function renderHostedChatPage(opts: {
         ? `<div id="gate"><button type="button" id="start">New Conversation</button></div>`
         : ""
     }
-    <div id="log" ${requireButton ? 'hidden' : ""}></div>
+    <div id="log" ${requireButton ? "hidden" : ""}></div>
     <form id="f" ${requireButton ? "hidden" : ""}>
       <textarea id="t" rows="2" placeholder="${escapeHtml(placeholder)}"></textarea>
       <button type="submit" id="send">Send</button>

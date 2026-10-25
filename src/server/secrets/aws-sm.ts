@@ -2,10 +2,7 @@ import { resolveAwsCredentials } from "../../lib/aws/credentials";
 import { signAwsV4 } from "../../lib/aws/sigv4";
 import type { AwsSmConfig, SecretBackend, SecretPayload } from "./types";
 
-export type AwsSmFetch = (
-  input: string,
-  init: RequestInit,
-) => Promise<Response>;
+export type AwsSmFetch = (input: string, init: RequestInit) => Promise<Response>;
 
 /**
  * AWS Secrets Manager JSON API with SigV4.
@@ -17,8 +14,7 @@ export function createAwsSmBackend(
 ): SecretBackend {
   const region = config.region || "us-east-1";
   const endpoint =
-    config.endpoint?.replace(/\/$/, "") ||
-    `https://secretsmanager.${region}.amazonaws.com`;
+    config.endpoint?.replace(/\/$/, "") || `https://secretsmanager.${region}.amazonaws.com`;
 
   async function call(action: string, body: Record<string, unknown>): Promise<unknown> {
     const payload = JSON.stringify(body);
@@ -90,8 +86,7 @@ export async function probeAwsSm(
     const credentials = await resolveAwsCredentials(config);
     const region = config.region || "us-east-1";
     const endpoint =
-      config.endpoint?.replace(/\/$/, "") ||
-      `https://secretsmanager.${region}.amazonaws.com`;
+      config.endpoint?.replace(/\/$/, "") || `https://secretsmanager.${region}.amazonaws.com`;
     const payload = JSON.stringify({ MaxResults: 1 });
     const signed = signAwsV4({
       method: "POST",

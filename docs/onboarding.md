@@ -77,6 +77,7 @@ Default library: [real-limitless/n8n-workflow-library](https://github.com/real-l
 ## First-run expectations
 
 - **Auth is on** by default (`AUTH_DISABLED=false`). `GET /api/v1/setup/status` reports `needsOwner` until a real user exists. Public `POST /api/v1/auth/register` creates that owner only when `OPENFLOW_OPEN_REGISTER=true` or `OPENFLOW_ALLOW_FIRST_OWNER=true`. With both false, the request is `403` `invite_only` and creates no user. A valid invite token can still register. `AUTH_DISABLED=true` is an INSECURE local try-out with no login.
+- **Headless boot** can skip the setup wizard without opening public signup. Set `OPENFLOW_BOOTSTRAP_OWNER_EMAIL` and `OPENFLOW_BOOTSTRAP_OWNER_PASSWORD_FILE` (password file only). Optional: `OPENFLOW_BOOTSTRAP_API_KEY` or `OPENFLOW_BOOTSTRAP_API_KEY_FILE` (`of_…`, hashed at rest), `OPENFLOW_BOOTSTRAP_SCOPES`, `OPENFLOW_IMPORT_DIR`, and `OPENFLOW_IMPORT_ACTIVATE=true`. The API process applies these before it logs ready. `OPENFLOW_REGISTRATION_DISABLED=true` blocks owner creation.
 - **`CREDENTIALS_KEY`** encrypts credential payloads in the database. Do not lose or commit it. Docker persists a generated key on the `secrets-data` volume if unset.
 - **`REDIS_PASSWORD`** is required. Compose does not ship a default.
 - **Ports**

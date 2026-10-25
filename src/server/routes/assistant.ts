@@ -203,7 +203,12 @@ export default function assistantRoute(app: Hono<AppEnv>) {
 
     let restored = false;
     if (checkpoint?.workflow) {
-      await saveWorkflow(workflowId, { ...checkpoint.workflow, id: workflowId }, userId, "assistant");
+      await saveWorkflow(
+        workflowId,
+        { ...checkpoint.workflow, id: workflowId },
+        userId,
+        "assistant",
+      );
       restored = true;
     }
 

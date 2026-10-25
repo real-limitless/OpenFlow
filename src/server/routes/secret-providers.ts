@@ -2,11 +2,7 @@ import type { Hono } from "hono";
 import { prisma } from "../db";
 import type { AppEnv } from "../middleware/auth";
 import { ensureUser } from "../services/users";
-import {
-  clearBackendCache,
-  encryptProviderConfig,
-  parseProviderConfig,
-} from "../secrets";
+import { clearBackendCache, encryptProviderConfig, parseProviderConfig } from "../secrets";
 
 const ALLOWED_TYPES = new Set(["local", "vault", "aws-sm"]);
 
@@ -54,11 +50,7 @@ export default function secretProvidersRoute(app: Hono<AppEnv>) {
       where: { id: userId },
       select: { role: true },
     });
-    if (
-      userId !== "local" &&
-      user?.role !== "owner" &&
-      user?.role !== "admin"
-    ) {
+    if (userId !== "local" && user?.role !== "owner" && user?.role !== "admin") {
       return c.json({ error: "Only instance admins can manage secret providers" }, 403);
     }
 
@@ -122,11 +114,7 @@ export default function secretProvidersRoute(app: Hono<AppEnv>) {
       where: { id: userId },
       select: { role: true },
     });
-    if (
-      userId !== "local" &&
-      user?.role !== "owner" &&
-      user?.role !== "admin"
-    ) {
+    if (userId !== "local" && user?.role !== "owner" && user?.role !== "admin") {
       return c.json({ error: "Only instance admins can manage secret providers" }, 403);
     }
 
@@ -179,11 +167,7 @@ export default function secretProvidersRoute(app: Hono<AppEnv>) {
       where: { id: userId },
       select: { role: true },
     });
-    if (
-      userId !== "local" &&
-      user?.role !== "owner" &&
-      user?.role !== "admin"
-    ) {
+    if (userId !== "local" && user?.role !== "owner" && user?.role !== "admin") {
       return c.json({ error: "Only instance admins can manage secret providers" }, 403);
     }
 

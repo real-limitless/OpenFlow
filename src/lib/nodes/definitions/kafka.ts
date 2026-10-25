@@ -10,6 +10,7 @@ export const kafka: INodeTypeDescription = {
   defaults: { name: "Kafka" },
   inputs: ["main"],
   outputs: ["main"],
+  icon: "Radio",
   credentials: [{ name: "kafka", required: true }],
   properties: [
     {

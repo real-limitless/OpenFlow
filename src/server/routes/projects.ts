@@ -51,7 +51,7 @@ export default function projectsRoute(app: Hono<AppEnv>) {
   app.post("/api/v1/projects", async (c) => {
     const userId = c.get("userId");
     await ensureUser(userId);
-    const body = await c.req.json<{ name?: string }>().catch(() => ({} as { name?: string }));
+    const body = await c.req.json<{ name?: string }>().catch(() => ({}) as { name?: string });
     const name = typeof body.name === "string" ? body.name.trim() : "";
     if (!name) return c.json({ error: "name required" }, 400);
 
@@ -124,7 +124,7 @@ export default function projectsRoute(app: Hono<AppEnv>) {
     const access = await requireProjectPermission(id, userId, "admin");
     if (!access.ok) return c.json({ error: access.error }, access.status);
 
-    const body = await c.req.json<{ name?: string }>().catch(() => ({} as { name?: string }));
+    const body = await c.req.json<{ name?: string }>().catch(() => ({}) as { name?: string });
     const update: { name?: string } = {};
     if (body.name !== undefined) {
       const name = typeof body.name === "string" ? body.name.trim() : "";

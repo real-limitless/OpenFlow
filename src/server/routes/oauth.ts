@@ -197,12 +197,18 @@ export default function oauthRoute(app: Hono<AppEnv>) {
     }
     if (!clientId || !redirectUri || !codeChallenge) {
       return c.html(
-        htmlPage("OAuth", `<p class="error">Missing client_id, redirect_uri, or code_challenge</p>`),
+        htmlPage(
+          "OAuth",
+          `<p class="error">Missing client_id, redirect_uri, or code_challenge</p>`,
+        ),
         400,
       );
     }
     if (codeChallengeMethod !== "S256") {
-      return c.html(htmlPage("OAuth", `<p class="error">code_challenge_method must be S256</p>`), 400);
+      return c.html(
+        htmlPage("OAuth", `<p class="error">code_challenge_method must be S256</p>`),
+        400,
+      );
     }
 
     const client = await prisma.oAuthClient.findUnique({ where: { clientId } });
@@ -276,7 +282,10 @@ export default function oauthRoute(app: Hono<AppEnv>) {
       prunePending();
       const pending = pendingConsents.get(pendingId);
       if (!pending || pending.expiresAt < Date.now()) {
-        return c.html(htmlPage("OAuth", `<p class="error">Consent session expired. Start again.</p>`), 400);
+        return c.html(
+          htmlPage("OAuth", `<p class="error">Consent session expired. Start again.</p>`),
+          400,
+        );
       }
       pendingConsents.delete(pendingId);
 
@@ -287,10 +296,7 @@ export default function oauthRoute(app: Hono<AppEnv>) {
           ? [selected]
           : [];
       if (ids.length === 0) {
-        return c.html(
-          htmlPage("OAuth", `<p class="error">Select at least one workflow.</p>`),
-          400,
-        );
+        return c.html(htmlPage("OAuth", `<p class="error">Select at least one workflow.</p>`), 400);
       }
 
       const grants: WorkflowGrant[] = [];
@@ -298,9 +304,7 @@ export default function oauthRoute(app: Hono<AppEnv>) {
         const canWrite = str(`w_${workflowId}`) === "on" || str(`w_${workflowId}`) === "1";
         const canExecute = str(`x_${workflowId}`) === "on" || str(`x_${workflowId}`) === "1";
         const canRead = true;
-        grants.push(
-          ...normalizeGrantInputs([{ workflowId, canRead, canWrite, canExecute }]),
-        );
+        grants.push(...normalizeGrantInputs([{ workflowId, canRead, canWrite, canExecute }]));
       }
 
       const code = await createAuthorizationCode({
@@ -413,7 +417,7 @@ export default function oauthRoute(app: Hono<AppEnv>) {
 
   app.post("/token", async (c) => {
     const contentType = c.req.header("content-type") ?? "";
-    let body: Record<string, string> = {};
+    const body: Record<string, string> = {};
     if (contentType.includes("application/json")) {
       const j = (await c.req.json()) as Record<string, unknown>;
       for (const [k, v] of Object.entries(j)) {

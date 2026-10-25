@@ -16,7 +16,10 @@ export function settingsRecord(
   return (settings ?? {}) as Record<string, unknown>;
 }
 
-export async function countActiveExecutions(workflowId: string, exceptId?: string): Promise<number> {
+export async function countActiveExecutions(
+  workflowId: string,
+  exceptId?: string,
+): Promise<number> {
   return prisma.execution.count({
     where: {
       workflowId,
@@ -67,7 +70,9 @@ export async function abortReasonFor(executionId: string): Promise<AbortReason |
   if (row.status === "cancelled") return "cancelled";
   if (row.status === "error") {
     try {
-      const parsed = row.error ? (JSON.parse(row.error) as { code?: string; message?: string }) : {};
+      const parsed = row.error
+        ? (JSON.parse(row.error) as { code?: string; message?: string })
+        : {};
       if (parsed.code === "timeout" || parsed.message?.toLowerCase().includes("timed out")) {
         return "timeout";
       }
@@ -112,7 +117,10 @@ export async function stampTimeoutDeadline(
   settings: IWorkflowSettings | Record<string, unknown> | null | undefined,
   startedAt = Date.now(),
 ): Promise<number | null> {
-  const row = await prisma.execution.findUnique({ where: { id: executionId }, select: { meta: true } });
+  const row = await prisma.execution.findUnique({
+    where: { id: executionId },
+    select: { meta: true },
+  });
   let meta: Record<string, unknown> = {};
   try {
     meta = row?.meta ? (JSON.parse(row.meta) as Record<string, unknown>) : {};
@@ -137,10 +145,12 @@ export async function finalizeIfActive(
   executionId: string,
   data: { status: string; runData?: string; error?: string | null },
 ): Promise<boolean> {
-  const row = await prisma.execution.findUnique({ where: { id: executionId }, select: { status: true } });
+  const row = await prisma.execution.findUnique({
+    where: { id: executionId },
+    select: { status: true },
+  });
   if (!row || !ACTIVE.includes(row.status as (typeof ACTIVE)[number])) return false;
-  const runData =
-    data.runData !== undefined ? await serializeRunData(data.runData) : undefined;
+  const runData = data.runData !== undefined ? await serializeRunData(data.runData) : undefined;
   await prisma.execution.update({
     where: { id: executionId },
     data: {

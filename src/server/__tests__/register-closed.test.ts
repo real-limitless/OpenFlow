@@ -6,8 +6,15 @@ const { userCount, userCreate, userFindUnique, createSession, consumeInviteToken
     userCount: vi.fn(),
     userCreate: vi.fn(),
     userFindUnique: vi.fn(),
-    createSession: vi.fn(async () => "session-token"),
-    consumeInviteToken: vi.fn(async () => ({ ok: false as const, error: "Invite token required" })),
+    createSession: vi.fn(async (..._args: unknown[]) => "session-token"),
+    consumeInviteToken: vi.fn(
+      async (
+        ..._args: unknown[]
+      ): Promise<{ ok: true; role: string } | { ok: false; error: string }> => ({
+        ok: false,
+        error: "Invite token required",
+      }),
+    ),
   }),
 );
 

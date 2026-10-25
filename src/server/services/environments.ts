@@ -51,10 +51,7 @@ export async function getDefaultEnvironment(projectId: string) {
 }
 
 /** Resolve environment by id or slug within a project. */
-export async function resolveEnvironment(
-  projectId: string,
-  idOrSlug?: string | null,
-) {
+export async function resolveEnvironment(projectId: string, idOrSlug?: string | null) {
   await ensureProjectEnvironments(projectId);
   if (!idOrSlug) {
     return getDefaultEnvironment(projectId);
@@ -69,7 +66,10 @@ export async function resolveEnvironment(
 }
 
 export function environmentIdFromRequest(c: {
-  req: { header: (name: string) => string | undefined; query: (name: string) => string | undefined };
+  req: {
+    header: (name: string) => string | undefined;
+    query: (name: string) => string | undefined;
+  };
 }): string | undefined {
   const header = c.req.header("X-OpenFlow-Environment")?.trim();
   if (header) return header;

@@ -1,11 +1,7 @@
 import type { Hono } from "hono";
 import type { AppEnv } from "../middleware/auth";
 import { config } from "../../config";
-import {
-  suggestNodes,
-  catalogStats,
-  reindexNodeCatalog,
-} from "../../lib/catalog";
+import { suggestNodes, catalogStats, reindexNodeCatalog } from "../../lib/catalog";
 import { getCatalogMetrics, recordCatalogInsert } from "../../lib/catalog/metrics";
 
 function requireUserId(c: { get: (k: "userId") => string | undefined }): string | null {
@@ -102,10 +98,7 @@ export default function catalogRoute(app: Hono<AppEnv>) {
       });
       return c.json({ ok: true, ...r });
     } catch (err) {
-      return c.json(
-        { ok: false, error: err instanceof Error ? err.message : String(err) },
-        500,
-      );
+      return c.json({ ok: false, error: err instanceof Error ? err.message : String(err) }, 500);
     }
   });
 }

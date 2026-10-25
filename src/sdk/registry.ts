@@ -9,9 +9,7 @@ export interface NodeRegistry {
   toExecutorMap(): Record<string, NodeExecutor>;
 }
 
-export function createNodeRegistry(
-  initial: NodeDefinition[] = [],
-): NodeRegistry {
+export function createNodeRegistry(initial: NodeDefinition[] = []): NodeRegistry {
   const byType = new Map<string, NodeDefinition>();
 
   const register = (definition: NodeDefinition) => {

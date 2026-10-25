@@ -16,9 +16,7 @@ export interface SdkHttpResponse {
  * Minimal HTTP helper for node authors.
  * Builtins may still use specialized logic in http-request executor.
  */
-export async function sdkHttpRequest(
-  options: SdkHttpRequestOptions,
-): Promise<SdkHttpResponse> {
+export async function sdkHttpRequest(options: SdkHttpRequestOptions): Promise<SdkHttpResponse> {
   const method = (options.method ?? "GET").toUpperCase();
   const init: RequestInit = {
     method,

@@ -1,8 +1,5 @@
 import { prisma } from "../db";
-import {
-  normalizeFolder,
-  tagNames,
-} from "../../lib/workflow/organization";
+import { normalizeFolder, tagNames } from "../../lib/workflow/organization";
 
 function parseJsonObject(raw: string | null): Record<string, unknown> {
   if (!raw) return {};

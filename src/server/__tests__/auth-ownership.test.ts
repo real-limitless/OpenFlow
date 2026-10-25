@@ -62,8 +62,12 @@ describe("E0 Gate: auth ownership isolation", () => {
     if (credentialAId) {
       await prisma.credential.deleteMany({ where: { id: credentialAId } });
     }
-    await prisma.apiKey.deleteMany({ where: { userId: { in: [userA?.id, userB?.id].filter(Boolean) } } });
-    await prisma.session.deleteMany({ where: { userId: { in: [userA?.id, userB?.id].filter(Boolean) } } });
+    await prisma.apiKey.deleteMany({
+      where: { userId: { in: [userA?.id, userB?.id].filter(Boolean) } },
+    });
+    await prisma.session.deleteMany({
+      where: { userId: { in: [userA?.id, userB?.id].filter(Boolean) } },
+    });
     if (userA?.id) await prisma.user.deleteMany({ where: { id: userA.id } });
     if (userB?.id) await prisma.user.deleteMany({ where: { id: userB.id } });
   });
@@ -83,7 +87,16 @@ describe("E0 Gate: auth ownership isolation", () => {
       body: JSON.stringify({
         name: `e0-wf-${suffix}`,
         active: false,
-        nodes: [{ id: "n1", name: "Manual", type: "n8n-nodes-base.manualTrigger", typeVersion: 1, position: [0, 0], parameters: {} }],
+        nodes: [
+          {
+            id: "n1",
+            name: "Manual",
+            type: "n8n-nodes-base.manualTrigger",
+            typeVersion: 1,
+            position: [0, 0],
+            parameters: {},
+          },
+        ],
         connections: {},
       }),
     });

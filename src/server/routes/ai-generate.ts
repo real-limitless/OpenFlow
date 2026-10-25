@@ -92,10 +92,7 @@ Write the transform JavaScript now.`;
       }
       return c.json({ code, codeGeneratedForPrompt: instructions });
     } catch (e) {
-      return c.json(
-        { error: e instanceof Error ? e.message : "Code generation failed" },
-        500,
-      );
+      return c.json({ error: e instanceof Error ? e.message : "Code generation failed" }, 500);
     }
   });
 }

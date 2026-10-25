@@ -64,7 +64,11 @@ export function deserializeJsonFields(row: Record<string, unknown>): IWorkflow {
   if (out.settings == null || typeof out.settings !== "object" || Array.isArray(out.settings)) {
     out.settings = {};
   }
-  if (out.connections == null || typeof out.connections !== "object" || Array.isArray(out.connections)) {
+  if (
+    out.connections == null ||
+    typeof out.connections !== "object" ||
+    Array.isArray(out.connections)
+  ) {
     out.connections = {};
   }
   if (!Array.isArray(out.nodes)) {

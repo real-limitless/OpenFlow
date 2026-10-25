@@ -133,7 +133,11 @@ export async function storeCredentialSecret(options: {
   secretProviderId?: string | null;
   externalRef?: string | null;
   credentialId?: string;
-}): Promise<{ dataEncrypted: string; secretProviderId: string | null; externalRef: string | null }> {
+}): Promise<{
+  dataEncrypted: string;
+  secretProviderId: string | null;
+  externalRef: string | null;
+}> {
   const providerId = options.secretProviderId ?? null;
   if (!providerId) {
     return {

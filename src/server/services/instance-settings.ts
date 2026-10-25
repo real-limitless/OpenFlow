@@ -60,9 +60,7 @@ export function invalidateInstanceSettingsCache(): void {
 }
 
 function envMcpKillSwitch(): boolean {
-  return (
-    process.env.OPENFLOW_MCP_ENABLED === "false" || process.env.OPENFLOW_MCP_ENABLED === "0"
-  );
+  return process.env.OPENFLOW_MCP_ENABLED === "false" || process.env.OPENFLOW_MCP_ENABLED === "0";
 }
 
 export async function getMcpInstanceSettings(): Promise<McpInstanceSettings> {

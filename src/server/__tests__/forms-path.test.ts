@@ -1,10 +1,5 @@
 import { describe, it, expect } from "vitest";
-import {
-  formNodeParams,
-  parseFormElements,
-  resolveFormPath,
-  slugify,
-} from "../../lib/forms/path";
+import { formNodeParams, parseFormElements, resolveFormPath, slugify } from "../../lib/forms/path";
 import type { INode } from "../../lib/workflow/types";
 
 function node(partial: Partial<INode> & { parameters?: Record<string, unknown> }): INode {
@@ -69,8 +64,7 @@ describe("form path helpers", () => {
             values: [
               {
                 fieldLabel: "Topic",
-                placeholder:
-                  'Provide a concise and clear title or main topic for your post',
+                placeholder: "Provide a concise and clear title or main topic for your post",
                 requiredField: true,
               },
               {

@@ -114,7 +114,7 @@ Set these in the environment and recreate `api` (and `worker` if it serves auth)
 | `OPENFLOW_LOGIN_DISABLED=true` | Rejects `POST /api/v1/auth/login` and SSO sign-in (`403`, `login_disabled`) |
 | `OPENFLOW_OPEN_REGISTER=false` | Default. Public signup, including the first owner, is rejected (`403`, `invite_only`) |
 | `OPENFLOW_ALLOW_FIRST_OWNER=true` | Opt-in. Allows one public first-owner signup while open register stays false. Set it back to false after |
-| `OPENFLOW_REGISTRATION_DISABLED=true` | Rejects every signup, including first-run `/setup` and SSO account creation (`403`, `registration_disabled`) |
+| `OPENFLOW_REGISTRATION_DISABLED=true` | Rejects every signup, including first-run `/setup`, SSO account creation, and `OPENFLOW_BOOTSTRAP_OWNER_*` (`403`, `registration_disabled`) |
 
 `AUTH_DISABLED=true` does the opposite of a lockout: it skips login. Do not set it during an incident.
 

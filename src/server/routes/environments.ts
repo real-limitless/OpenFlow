@@ -2,14 +2,8 @@ import type { Hono } from "hono";
 import { prisma } from "../db";
 import type { AppEnv } from "../middleware/auth";
 import { ensureUserWithProject } from "../services/users";
-import {
-  projectIdFromRequest,
-  requireProjectPermission,
-} from "../services/projects";
-import {
-  ensureProjectEnvironments,
-  isValidEnvSlug,
-} from "../services/environments";
+import { projectIdFromRequest, requireProjectPermission } from "../services/projects";
+import { ensureProjectEnvironments, isValidEnvSlug } from "../services/environments";
 
 function iso(d: Date): string {
   return d.toISOString();
@@ -64,7 +58,10 @@ export default function environmentsRoute(app: Hono<AppEnv>) {
     const slug =
       typeof body.slug === "string"
         ? body.slug.trim().toLowerCase()
-        : name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+        : name
+            .toLowerCase()
+            .replace(/[^a-z0-9]+/g, "-")
+            .replace(/^-|-$/g, "");
 
     if (!name) return c.json({ error: "name required" }, 400);
     if (!isValidEnvSlug(slug)) {

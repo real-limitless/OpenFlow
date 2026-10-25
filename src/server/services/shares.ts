@@ -64,7 +64,11 @@ export async function bestSharePermission(
 }
 
 export type ResourceAccess =
-  | { ok: true; via: "project" | "share"; permission: SharePermission | "owner" | "admin" | "editor" | "viewer" }
+  | {
+      ok: true;
+      via: "project" | "share";
+      permission: SharePermission | "owner" | "admin" | "editor" | "viewer";
+    }
   | { ok: false; status: 403 | 404; error: string };
 
 /**
@@ -80,8 +84,7 @@ export async function requireResourceAccess(
   projectId: string | null,
 ): Promise<ResourceAccess> {
   if (projectId) {
-    const minProject =
-      minShare === "edit" ? "editor" : minShare === "view" ? "viewer" : "viewer";
+    const minProject = minShare === "edit" ? "editor" : minShare === "view" ? "viewer" : "viewer";
     // "use" only needs viewer on project if resource is in project
     const projectMin = minShare === "use" ? "viewer" : minProject;
     const access = await requireProjectPermission(projectId, userId, projectMin);
@@ -157,7 +160,10 @@ export async function canManageShares(
 }
 
 /** Credential IDs the user may resolve at runtime (project membership or use+ share). */
-export async function listResolvableCredentialIds(userId: string, projectId?: string): Promise<string[]> {
+export async function listResolvableCredentialIds(
+  userId: string,
+  projectId?: string,
+): Promise<string[]> {
   const ids = new Set<string>();
 
   if (projectId) {

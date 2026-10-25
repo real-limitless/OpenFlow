@@ -43,9 +43,7 @@ export default function templateSourcesRoute(app: Hono<AppEnv>) {
     return c.json({
       templateCount,
       lastSyncedAt: last?.syncedAt?.toISOString() ?? null,
-      countsBySource: Object.fromEntries(
-        bySource.map((r) => [r.sourceId, r._count._all]),
-      ),
+      countsBySource: Object.fromEntries(bySource.map((r) => [r.sourceId, r._count._all])),
       defaultSource: {
         id: DEFAULT_TEMPLATE_SOURCE.id,
         name: DEFAULT_TEMPLATE_SOURCE.name,
@@ -132,10 +130,7 @@ export default function templateSourcesRoute(app: Hono<AppEnv>) {
       priority: typeof body.priority === "number" ? body.priority : 50,
     });
     if (!normalized) {
-      return c.json(
-        { error: "Invalid source (id cannot contain : or /, need url or dir)" },
-        400,
-      );
+      return c.json({ error: "Invalid source (id cannot contain : or /, need url or dir)" }, 400);
     }
 
     await upsertLocalSource(normalized);
@@ -177,18 +172,9 @@ export default function templateSourcesRoute(app: Hono<AppEnv>) {
     const next: TemplateSource = {
       ...existing,
       name: typeof body.name === "string" && body.name.trim() ? body.name.trim() : existing.name,
-      url:
-        typeof body.url === "string"
-          ? body.url.trim() || undefined
-          : existing.url,
-      dir:
-        typeof body.dir === "string"
-          ? body.dir.trim() || undefined
-          : existing.dir,
-      ref:
-        typeof body.ref === "string" && body.ref.trim()
-          ? body.ref.trim()
-          : existing.ref,
+      url: typeof body.url === "string" ? body.url.trim() || undefined : existing.url,
+      dir: typeof body.dir === "string" ? body.dir.trim() || undefined : existing.dir,
+      ref: typeof body.ref === "string" && body.ref.trim() ? body.ref.trim() : existing.ref,
       enabled: typeof body.enabled === "boolean" ? body.enabled : existing.enabled,
       priority:
         typeof body.priority === "number" && Number.isFinite(body.priority)
@@ -250,15 +236,11 @@ export default function templateSourcesRoute(app: Hono<AppEnv>) {
     const started = startTemplateLibrarySyncBackground(prisma, {
       sourceId: typeof body.sourceId === "string" ? body.sourceId : undefined,
       onlyNew: Boolean(body.onlyNew),
-      limit:
-        typeof body.limit === "number" && body.limit > 0 ? body.limit : undefined,
+      limit: typeof body.limit === "number" && body.limit > 0 ? body.limit : undefined,
     });
 
     if (!started) {
-      return c.json(
-        { error: "A sync is already running", sync: getTemplateSyncJobState() },
-        409,
-      );
+      return c.json({ error: "A sync is already running", sync: getTemplateSyncJobState() }, 409);
     }
 
     return c.json({

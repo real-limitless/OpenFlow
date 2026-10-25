@@ -46,7 +46,13 @@ export default function sharesRoute(app: Hono<AppEnv>) {
         });
         const shares = await prisma.share.findMany({
           where: { resourceType, resourceId: { in: ids } },
-          select: { id: true, resourceId: true, permission: true, granteeUserId: true, granteeProjectId: true },
+          select: {
+            id: true,
+            resourceId: true,
+            permission: true,
+            granteeUserId: true,
+            granteeProjectId: true,
+          },
         });
         for (const row of rows) {
           const share = shares.find((s) => s.resourceId === row.id);
@@ -217,18 +223,18 @@ export default function sharesRoute(app: Hono<AppEnv>) {
         });
 
     const payload = {
-        id: share.id,
-        resourceType: share.resourceType,
-        resourceId: share.resourceId,
-        permission: share.permission,
-        granteeUserId: share.granteeUserId,
-        granteeUserEmail: share.granteeUser?.email ?? null,
-        granteeProjectId: share.granteeProjectId,
-        granteeProjectName: share.granteeProject?.name ?? null,
-        createdByUserId: share.createdByUserId,
-        expiresAt: iso(share.expiresAt),
-        createdAt: iso(share.createdAt),
-      };
+      id: share.id,
+      resourceType: share.resourceType,
+      resourceId: share.resourceId,
+      permission: share.permission,
+      granteeUserId: share.granteeUserId,
+      granteeUserEmail: share.granteeUser?.email ?? null,
+      granteeProjectId: share.granteeProjectId,
+      granteeProjectName: share.granteeProject?.name ?? null,
+      createdByUserId: share.createdByUserId,
+      expiresAt: iso(share.expiresAt),
+      createdAt: iso(share.createdAt),
+    };
     void recordAudit({
       actorId: userId,
       action: "share.create",

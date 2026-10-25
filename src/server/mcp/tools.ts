@@ -202,7 +202,7 @@ export const OPENFLOW_MCP_TOOLS: McpToolDef[] = [
   {
     name: "update_node",
     description:
-      "Configure a node: merge parameters, bind credentials by id/name, notes, disabled, position. Required after almost every add_node. Parameter keys must match get_node_type properties[].name (e.g. operation, repository, clonePath, url, command, model, text, jsCode). credentials map: { \"openAiApi\": { \"id\": \"…\", \"name\": \"…\" } }.",
+      'Configure a node: merge parameters, bind credentials by id/name, notes, disabled, position. Required after almost every add_node. Parameter keys must match get_node_type properties[].name (e.g. operation, repository, clonePath, url, command, model, text, jsCode). credentials map: { "openAiApi": { "id": "…", "name": "…" } }.',
     inputSchema: {
       type: "object",
       properties: {
@@ -324,7 +324,7 @@ export const OPENFLOW_MCP_TOOLS: McpToolDef[] = [
   {
     name: "list_credentials",
     description:
-      "List credential ids/names/types (never secrets). Match type to get_node_type.credentials, then update_node credentials: { \"<slot>\": { \"id\", \"name\" } }. Never echo secret values.",
+      'List credential ids/names/types (never secrets). Match type to get_node_type.credentials, then update_node credentials: { "<slot>": { "id", "name" } }. Never echo secret values.',
     inputSchema: {
       type: "object",
       properties: {
@@ -402,8 +402,7 @@ export const OPENFLOW_MCP_TOOLS: McpToolDef[] = [
   },
   {
     name: "list_variables",
-    description:
-      "List project/instance variables. Secret values are redacted (••••••••).",
+    description: "List project/instance variables. Secret values are redacted (••••••••).",
     inputSchema: {
       type: "object",
       properties: {
@@ -476,16 +475,9 @@ export const OPENFLOW_MCP_TOOLS: McpToolDef[] = [
   },
 ];
 
-function resolveWorkflowId(
-  ctx: OpenflowToolContext,
-  args: Record<string, unknown>,
-): string {
+function resolveWorkflowId(ctx: OpenflowToolContext, args: Record<string, unknown>): string {
   const fromArgs = typeof args.workflowId === "string" ? args.workflowId : null;
-  const id =
-    fromArgs ||
-    ctx.workflowId ||
-    ctx.session?.defaultWorkflowId ||
-    null;
+  const id = fromArgs || ctx.workflowId || ctx.session?.defaultWorkflowId || null;
   if (!id) {
     throw new Error(
       "No workflow selected. Call open_workflow or list_workflows, or pass workflowId.",
@@ -557,9 +549,7 @@ export async function callOpenflowTool(
       );
     case "open_workflow": {
       const wid =
-        args.workflowId === null || args.workflowId === undefined
-          ? null
-          : String(args.workflowId);
+        args.workflowId === null || args.workflowId === undefined ? null : String(args.workflowId);
       if (wid) await gate(wid, "read");
       if (ctx.session) setSessionWorkflow(ctx.session, wid);
       return { workflowId: wid, sessionBound: Boolean(ctx.session) };
@@ -701,9 +691,7 @@ export async function callOpenflowTool(
         authKind: ctx.authKind ?? "session",
         scopes: ctx.scopes ?? [],
       });
-      return listCredentialTypeCatalog(
-        typeof args.query === "string" ? args.query : undefined,
-      );
+      return listCredentialTypeCatalog(typeof args.query === "string" ? args.query : undefined);
     }
     case "create_credential": {
       assertAgentMayManageCredentials({
@@ -775,8 +763,7 @@ export async function callOpenflowTool(
       const result = await listVariablesMeta(ctx.userId, {
         scope: args.scope === "instance" ? "instance" : "project",
         projectId: typeof args.projectId === "string" ? args.projectId : undefined,
-        environmentId:
-          typeof args.environmentId === "string" ? args.environmentId : undefined,
+        environmentId: typeof args.environmentId === "string" ? args.environmentId : undefined,
         layer:
           args.layer === "base" || args.layer === "env" || args.layer === "all"
             ? args.layer

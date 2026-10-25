@@ -80,10 +80,7 @@ export function assertAgentWorkflowAccess(
   }
 }
 
-export function filterWorkflowIdsByPolicy(
-  policy: WorkflowPolicy,
-  workflowIds: string[],
-): string[] {
+export function filterWorkflowIdsByPolicy(policy: WorkflowPolicy, workflowIds: string[]): string[] {
   if (policy.mode === "unrestricted") return workflowIds;
   const now = Date.now();
   const allowed = new Set(
@@ -122,7 +119,9 @@ function parseScopeList(raw: string): string[] {
 
 /** Session/UI and AUTH_DISABLED may manage secrets; restricted agents need opt-in scopes. */
 export function agentMayManageCredentials(
-  auth: Pick<AgentAuth, "authKind" | "scopes"> | { authKind?: AgentAuth["authKind"]; scopes?: string[] },
+  auth:
+    | Pick<AgentAuth, "authKind" | "scopes">
+    | { authKind?: AgentAuth["authKind"]; scopes?: string[] },
 ): boolean {
   const kind = auth.authKind ?? "session";
   if (kind === "session" || kind === "disabled") return true;
@@ -130,7 +129,9 @@ export function agentMayManageCredentials(
 }
 
 export function agentMayManageVariables(
-  auth: Pick<AgentAuth, "authKind" | "scopes"> | { authKind?: AgentAuth["authKind"]; scopes?: string[] },
+  auth:
+    | Pick<AgentAuth, "authKind" | "scopes">
+    | { authKind?: AgentAuth["authKind"]; scopes?: string[] },
 ): boolean {
   const kind = auth.authKind ?? "session";
   if (kind === "session" || kind === "disabled") return true;
@@ -143,18 +144,16 @@ export function assertAgentMayManageCredentials(
   if (!agentMayManageCredentials(auth)) {
     logScopeDenial("scope.credentials_denied", { scope: "openflow:credentials" });
     throw new Error(
-      'Missing scope openflow:credentials. Opt in when minting the API key / OAuth / temporary MCP token.',
+      "Missing scope openflow:credentials. Opt in when minting the API key / OAuth / temporary MCP token.",
     );
   }
 }
 
-export function assertAgentMayManageVariables(
-  auth: Pick<AgentAuth, "authKind" | "scopes">,
-): void {
+export function assertAgentMayManageVariables(auth: Pick<AgentAuth, "authKind" | "scopes">): void {
   if (!agentMayManageVariables(auth)) {
     logScopeDenial("scope.variables_denied", { scope: "openflow:variables" });
     throw new Error(
-      'Missing scope openflow:variables. Opt in when minting the API key / OAuth / temporary MCP token.',
+      "Missing scope openflow:variables. Opt in when minting the API key / OAuth / temporary MCP token.",
     );
   }
 }

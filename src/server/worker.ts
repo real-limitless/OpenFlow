@@ -14,11 +14,7 @@ import { initLogStreaming, log } from "./log";
 import { notifyExecutionFinished } from "./services/workflow-events";
 import { persistExecutionProgress } from "./services/persist-execution-progress";
 import { persistPausedExecution } from "./services/durable-wait";
-import {
-  observeHistogram,
-  recordExecution,
-  recordWorkerJob,
-} from "../lib/observability/metrics";
+import { observeHistogram, recordExecution, recordWorkerJob } from "../lib/observability/metrics";
 import {
   abortReasonFor,
   discardQueuedJobs,
@@ -180,7 +176,10 @@ export function startWorker(concurrency = 5): Worker<ExecutionJobData> {
         });
         recordExecution("waiting");
         notifyExecutionFinished(workflowId, executionId, "waiting");
-        wlog.info("execution waiting", { node: result.paused.nodeName, resume: result.paused.resume });
+        wlog.info("execution waiting", {
+          node: result.paused.nodeName,
+          resume: result.paused.resume,
+        });
         return { success: true, paused: true };
       }
 

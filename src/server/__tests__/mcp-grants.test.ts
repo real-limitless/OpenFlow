@@ -114,7 +114,9 @@ describe("MCP workflow grants", () => {
         userId: LOCAL_USER_ID,
         name: `test-${Date.now()}`,
         keyHash: hashKey(raw),
-        scopes: JSON.stringify(opts.scopes ?? ["openflow:read", "openflow:write", "openflow:execute"]),
+        scopes: JSON.stringify(
+          opts.scopes ?? ["openflow:read", "openflow:write", "openflow:execute"],
+        ),
         restrictWorkflows: opts.restrict,
         grants:
           opts.grants && opts.grants.length > 0

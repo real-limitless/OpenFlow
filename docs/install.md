@@ -264,6 +264,9 @@ See [`.env.example`](../.env.example) for the full list. Common vars:
 | `AUTH_DISABLED` | `false` | `true` is an INSECURE local try-out with no login |
 | `OPENFLOW_OPEN_REGISTER` | `false` | `true` keeps public signup open, including the first owner |
 | `OPENFLOW_ALLOW_FIRST_OWNER` | `false` | `true` allows one public first-owner signup while open register stays false |
+| `OPENFLOW_BOOTSTRAP_API_KEY` / `_FILE` | unset | Service key (`of_…`). `_FILE` wins. Stored as a SHA-256 hash. Scopes: `OPENFLOW_BOOTSTRAP_SCOPES` (default `read,write,execute`) |
+| `OPENFLOW_BOOTSTRAP_OWNER_EMAIL` | unset | With `OPENFLOW_BOOTSTRAP_OWNER_PASSWORD_FILE`, creates the first owner on an empty directory. Does not open public signup |
+| `OPENFLOW_IMPORT_DIR` | unset | Import `*.json` on API boot. `OPENFLOW_IMPORT_ACTIVATE=true` activates them |
 | `OPENFLOW_HOT_NODES` | `false` | Set `true` only to hot-load node executors |
 | `REDIS_PASSWORD` | required, no default | Compose builds `REDIS_URL`. Prod refuses placeholders |
 | `OPENFLOW_METRICS_TOKEN` | unset | Required in production or `GET /metrics` is 404 |

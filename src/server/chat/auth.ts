@@ -6,10 +6,7 @@ import { resolveCredential } from "../credentials";
 import type { INode } from "../../lib/workflow/types";
 import type { AppEnv } from "../middleware/auth";
 
-export function applyChatCors(
-  c: Context<AppEnv>,
-  allowedOrigins: string,
-): void {
+export function applyChatCors(c: Context<AppEnv>, allowedOrigins: string): void {
   const origin = c.req.header("Origin");
   const allowed = allowedOrigins
     .split(",")

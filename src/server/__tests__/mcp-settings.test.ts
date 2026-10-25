@@ -4,10 +4,7 @@ import { prisma } from "../db";
 import { authMiddleware, type AppEnv } from "../middleware/auth";
 import instanceSettingsRoute from "../routes/instance-settings";
 import openflowMcpRoute from "../mcp/openflow-server";
-import {
-  invalidateInstanceSettingsCache,
-  MCP_ENABLED_KEY,
-} from "../services/instance-settings";
+import { invalidateInstanceSettingsCache, MCP_ENABLED_KEY } from "../services/instance-settings";
 
 describe("MCP settings API", () => {
   let app: Hono<AppEnv>;
@@ -67,7 +64,11 @@ describe("MCP settings API", () => {
         jsonrpc: "2.0",
         id: 1,
         method: "initialize",
-        params: { protocolVersion: "2024-11-05", capabilities: {}, clientInfo: { name: "t", version: "0" } },
+        params: {
+          protocolVersion: "2024-11-05",
+          capabilities: {},
+          clientInfo: { name: "t", version: "0" },
+        },
       }),
     });
     expect(mcp.status).toBe(503);

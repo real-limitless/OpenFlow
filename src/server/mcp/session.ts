@@ -18,7 +18,10 @@ function prune() {
   }
 }
 
-export function createMcpSession(userId: string, defaultWorkflowId: string | null = null): McpSessionState {
+export function createMcpSession(
+  userId: string,
+  defaultWorkflowId: string | null = null,
+): McpSessionState {
   prune();
   const id = crypto.randomUUID().replace(/-/g, "");
   const now = Date.now();

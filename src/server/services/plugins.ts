@@ -5,7 +5,11 @@ import {
   validatePluginManifest,
   type PluginManifest,
 } from "../../lib/plugins/manifest";
-import { registerDescription, registerExecutor, unregisterType } from "../../lib/engine/node-runtime";
+import {
+  registerDescription,
+  registerExecutor,
+  unregisterType,
+} from "../../lib/engine/node-runtime";
 
 export const PLUGINS_KEY = "plugins.marketplace";
 
@@ -65,7 +69,10 @@ export function catalogPlugins(): PluginManifest[] {
   return BUILTIN_PLUGINS;
 }
 
-export function applyPluginSettings(settings: PluginSettings): { enabled: string[]; errors: string[] } {
+export function applyPluginSettings(settings: PluginSettings): {
+  enabled: string[];
+  errors: string[];
+} {
   const errors: string[] = [];
   const enabled = new Set(settings.enabledIds);
   for (const id of applied) {

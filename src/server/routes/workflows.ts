@@ -39,6 +39,7 @@ import {
   listWorkflowVersions,
   snapshotWorkflowVersion,
 } from "../services/workflow-versions";
+import { setWorkflowActive } from "../services/workflow-activation";
 
 function minShareForRole(minRole: ProjectRole): SharePermission {
   return minRole === "viewer" ? "view" : "edit";
@@ -56,11 +57,7 @@ type WorkflowPromoteBody = {
   toEnvironmentId?: string;
 };
 
-async function loadWorkflowIfAllowed(
-  id: string,
-  userId: string,
-  minRole: ProjectRole,
-) {
+async function loadWorkflowIfAllowed(id: string, userId: string, minRole: ProjectRole) {
   const row = await prisma.workflow.findUnique({ where: { id } });
   if (!row) return { status: 404 as const, error: "Not found" as const };
   const access = await requireResourceAccess(
@@ -511,7 +508,9 @@ export default function workflowsRoute(app: Hono<AppEnv>) {
     }
     let settings: Record<string, unknown> = {};
     try {
-      settings = result.row.settings ? (JSON.parse(result.row.settings) as Record<string, unknown>) : {};
+      settings = result.row.settings
+        ? (JSON.parse(result.row.settings) as Record<string, unknown>)
+        : {};
     } catch {
       settings = {};
     }
@@ -556,126 +555,15 @@ export default function workflowsRoute(app: Hono<AppEnv>) {
   app.patch("/api/v1/workflows/:id/activate", async (c) => {
     const userId = c.get("userId");
     const workflowId = c.req.param("id");
-    const { active } = (await c.req.json()) as { active: boolean };
+    const { active } = (await c.req.json()) as { active?: boolean };
+    if (typeof active !== "boolean") return c.json({ error: "active must be a boolean" }, 400);
 
     const result = await loadWorkflowIfAllowed(workflowId, userId, "editor");
     if ("error" in result) return c.json({ error: "Workflow not found" }, 404);
-    const workflow = result.row;
 
-    const nodes: any[] = (() => {
-      try {
-        return JSON.parse(workflow.nodes);
-      } catch {
-        return [];
-      }
-    })();
-
-    if (active) {
-      const webhookNodes = nodes.filter(
-        (n: any) =>
-          n.type === "n8n-nodes-base.webhook" || n.type === "openflow-node-base.webhook",
-      );
-      for (const node of webhookNodes) {
-        const path = node.parameters?.path ?? node.name.toLowerCase().replace(/\s+/g, "-");
-        const method = (node.parameters?.httpMethod as string) ?? "POST";
-        await prisma.webhookRoute.upsert({
-          where: { path },
-          create: { workflowId, nodeId: node.id, path, method, active: true },
-          update: { workflowId, active: true },
-        });
-      }
-
-      const scheduleNodes = nodes.filter(
-        (n: any) =>
-          n.type === "n8n-nodes-base.scheduleTrigger" ||
-          n.type === "openflow-node-base.scheduleTrigger",
-      );
-      for (const node of scheduleNodes) {
-        const cronExpr = (node.parameters?.rule?.interval?.[0]?.field as string) ?? "0 * * * *";
-        await prisma.scheduledTrigger.upsert({
-          where: { workflowId_nodeId: { workflowId, nodeId: node.id } },
-          create: { workflowId, nodeId: node.id, cronExpr, active: true },
-          update: { cronExpr, active: true },
-        });
-      }
-
-      // Form Trigger public routes
-      const { resolveFormPath, isFormTriggerNode } = await import("../forms/register");
-      const formNodes = nodes.filter((n: any) => isFormTriggerNode(n) && !n.disabled);
-      const claimedPaths = new Set<string>();
-      for (const node of formNodes) {
-        const formPath = resolveFormPath(node as import("../../lib/workflow/types").INode);
-        if (claimedPaths.has(formPath)) {
-          return c.json(
-            { error: `Duplicate form path “${formPath}” on this workflow` },
-            409,
-          );
-        }
-        claimedPaths.add(formPath);
-        const existing = await prisma.formRoute.findUnique({ where: { path: formPath } });
-        if (existing && existing.workflowId !== workflowId) {
-          return c.json(
-            {
-              error: `Form path “${formPath}” is already used by another workflow`,
-            },
-            409,
-          );
-        }
-        await prisma.formRoute.upsert({
-          where: { path: formPath },
-          create: {
-            path: formPath,
-            workflowId,
-            nodeId: node.id,
-            active: true,
-          },
-          update: {
-            workflowId,
-            nodeId: node.id,
-            active: true,
-          },
-        });
-      }
-      // Deactivate form routes no longer present on this workflow
-      const activeNodeIds = new Set(formNodes.map((n: any) => n.id as string));
-      const existingForms = await prisma.formRoute.findMany({ where: { workflowId } });
-      for (const fr of existingForms) {
-        if (!activeNodeIds.has(fr.nodeId)) {
-          await prisma.formRoute.update({
-            where: { id: fr.id },
-            data: { active: false },
-          });
-        }
-      }
-
-      const { syncChatRoutes } = await import("../chat/register");
-      const chatSync = await syncChatRoutes(workflowId, nodes, true);
-      if (chatSync.error) {
-        return c.json({ error: chatSync.error }, chatSync.status ?? 409);
-      }
-    } else {
-      await prisma.webhookRoute.updateMany({
-        where: { workflowId },
-        data: { active: false },
-      });
-      await prisma.scheduledTrigger.updateMany({
-        where: { workflowId },
-        data: { active: false },
-      });
-      await prisma.formRoute.updateMany({
-        where: { workflowId },
-        data: { active: false },
-      });
-      const { syncChatRoutes } = await import("../chat/register");
-      await syncChatRoutes(workflowId, nodes, false);
-    }
-
-    const updated = await prisma.workflow.update({
-      where: { id: workflowId },
-      data: { active },
-    });
-
-    return c.json({ id: updated.id, active: updated.active });
+    const outcome = await setWorkflowActive(workflowId, active);
+    if (!outcome.ok) return c.json({ error: outcome.error }, outcome.status);
+    return c.json({ id: outcome.id, active: outcome.active });
   });
 
   app.post("/api/v1/workflows/:id/execute", async (c) => {
@@ -713,9 +601,7 @@ export default function workflowsRoute(app: Hono<AppEnv>) {
         ? body.destinationNode.trim()
         : undefined);
     const stopBeforeDestination =
-      body.executePreviousOf != null
-        ? true
-        : body.stopBeforeDestination !== false;
+      body.executePreviousOf != null ? true : body.stopBeforeDestination !== false;
 
     let snapshot: IWorkflow | undefined = body.workflow
       ? { ...body.workflow, id: body.workflow.id || id }

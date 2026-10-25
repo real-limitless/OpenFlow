@@ -41,9 +41,7 @@ export async function getLifecycleSubscriptions(): Promise<LifecycleSubscription
   return value;
 }
 
-export async function setLifecycleSubscriptions(
-  rows: unknown,
-): Promise<LifecycleSubscription[]> {
+export async function setLifecycleSubscriptions(rows: unknown): Promise<LifecycleSubscription[]> {
   const value = parseLifecycleSubscriptions(rows);
   await prisma.instanceSetting.upsert({
     where: { key: LIFECYCLE_WEBHOOKS_KEY },

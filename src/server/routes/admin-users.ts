@@ -44,7 +44,9 @@ export default function adminUsersRoute(app: Hono<AppEnv>) {
     const gate = await requireInstanceAdmin(userId);
     if (gate !== true) return c.json({ error: gate.error }, gate.status);
 
-    const body = await c.req.json<{ email?: string; role?: string; days?: number }>().catch(() => ({}));
+    const body = await c.req
+      .json<{ email?: string; role?: string; days?: number }>()
+      .catch((): { email?: string; role?: string; days?: number } => ({}));
     const email = typeof body.email === "string" && body.email.trim() ? body.email.trim() : null;
     if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
       return c.json({ error: "Invalid email format" }, 400);
@@ -106,7 +108,7 @@ export default function adminUsersRoute(app: Hono<AppEnv>) {
     if (gate !== true) return c.json({ error: gate.error }, gate.status);
 
     const targetId = c.req.param("id");
-    const body = await c.req.json<{ role?: string }>().catch(() => ({}));
+    const body = await c.req.json<{ role?: string }>().catch((): { role?: string } => ({}));
     if (!isUserRole(body.role)) return c.json({ error: "Invalid role" }, 400);
 
     const target = await prisma.user.findUnique({

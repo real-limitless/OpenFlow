@@ -205,6 +205,7 @@ See [`.env.example`](.env.example) for the full list. Common variables:
 | `AUTH_DISABLED` | `false` by default. `true` is an INSECURE local try-out with no login |
 | `OPENFLOW_OPEN_REGISTER` | `false` by default. Public signup, including the first owner, stays closed |
 | `OPENFLOW_ALLOW_FIRST_OWNER` | `false` by default. `true` allows one public first-owner signup |
+| `OPENFLOW_BOOTSTRAP_*` / `OPENFLOW_IMPORT_DIR` | Headless owner, service API key, and workflow import. Does not open public signup. See [docs/install.md](docs/install.md) |
 | `REDIS_PASSWORD` | Required. No default. Compose builds `REDIS_URL` from it |
 | `CREDENTIALS_KEY` | 64 hex chars; AES key for stored credentials |
 | `POSTGRES_PASSWORD` | Dedicated database password. Dev compose defaults to `openflow`; production requires a non-default value and builds `DATABASE_URL` from it |
