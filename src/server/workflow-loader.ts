@@ -31,9 +31,7 @@ export function definitionFromRow(row: {
  * Load a workflow by primary id, or fall back to unique name match.
  * Used by Execute Workflow node for nested runs.
  */
-export async function resolveSubWorkflowFromDb(
-  idOrName: string,
-): Promise<IWorkflow | null> {
+export async function resolveSubWorkflowFromDb(idOrName: string): Promise<IWorkflow | null> {
   const key = idOrName.trim();
   if (!key) return null;
 
@@ -46,16 +44,16 @@ export async function resolveSubWorkflowFromDb(
   });
   if (byName.length === 1) return definitionFromRow(byName[0]);
   if (byName.length > 1) {
-    throw new Error(
-      `Multiple workflows named "${key}"; use the workflow id instead`,
-    );
+    throw new Error(`Multiple workflows named "${key}"; use the workflow id instead`);
   }
 
   return null;
 }
 
 /** Debug helper: list id+name for error messages. */
-export async function listWorkflowSummaries(limit = 25): Promise<Array<{ id: string; name: string }>> {
+export async function listWorkflowSummaries(
+  limit = 25,
+): Promise<Array<{ id: string; name: string }>> {
   const rows = await prisma.workflow.findMany({
     select: { id: true, name: true },
     orderBy: { updatedAt: "desc" },

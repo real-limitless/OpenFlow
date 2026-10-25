@@ -57,11 +57,7 @@ type WorkflowPromoteBody = {
   toEnvironmentId?: string;
 };
 
-async function loadWorkflowIfAllowed(
-  id: string,
-  userId: string,
-  minRole: ProjectRole,
-) {
+async function loadWorkflowIfAllowed(id: string, userId: string, minRole: ProjectRole) {
   const row = await prisma.workflow.findUnique({ where: { id } });
   if (!row) return { status: 404 as const, error: "Not found" as const };
   const access = await requireResourceAccess(
@@ -512,7 +508,9 @@ export default function workflowsRoute(app: Hono<AppEnv>) {
     }
     let settings: Record<string, unknown> = {};
     try {
-      settings = result.row.settings ? (JSON.parse(result.row.settings) as Record<string, unknown>) : {};
+      settings = result.row.settings
+        ? (JSON.parse(result.row.settings) as Record<string, unknown>)
+        : {};
     } catch {
       settings = {};
     }
@@ -603,9 +601,7 @@ export default function workflowsRoute(app: Hono<AppEnv>) {
         ? body.destinationNode.trim()
         : undefined);
     const stopBeforeDestination =
-      body.executePreviousOf != null
-        ? true
-        : body.stopBeforeDestination !== false;
+      body.executePreviousOf != null ? true : body.stopBeforeDestination !== false;
 
     let snapshot: IWorkflow | undefined = body.workflow
       ? { ...body.workflow, id: body.workflow.id || id }

@@ -4813,7 +4813,7 @@ export const chatHitlTool: INodeTypeDescription = {
     "Specialized sub-node for the AI Agent Tools Panel that provides a human-in-the-loop approval/rejection step using n8n's built-in chat interface.",
   defaults: { name: "Human review (Chat)" },
   inputs: ["ai_tool", "ai_memory"],
-  inputsNames: ["Tool", "Memory"],
+  inputNames: ["Tool", "Memory"],
   outputs: ["ai_tool"],
   outputNames: ["Tool"],
   icon: "MessageSquare",
@@ -5373,7 +5373,8 @@ export const ollamaApp: INodeTypeDescription = {
   description:
     "Multi-resource AI app node that interacts with a local or remote Ollama instance via its REST API. Supports text chat (with tool calling) and image analysis.",
   defaults: { name: "Ollama" },
-  inputs: (parameters: Record<string, unknown>) => {
+  inputs: ["main"],
+  dynamicInputs: (parameters: Record<string, unknown>) => {
     if (parameters.resource === "text" && parameters.operation === "message") {
       return ["main", "ai_tool"];
     }
@@ -5383,7 +5384,7 @@ export const ollamaApp: INodeTypeDescription = {
   icon: "Bot",
   usableAsTool: true,
   credentials: [{ name: "ollamaApi", required: true }],
-  aliases: ["LangChain", "image", "vision", "AI", "local"],
+  alias: ["LangChain", "image", "vision", "AI", "local"],
   sources: [
     "https://docs.n8n.io/integrations/builtin/credentials/ollama/",
     "https://docs.ollama.com/api/chat",

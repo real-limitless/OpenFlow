@@ -20,7 +20,9 @@ export default function chatHubRoute(app: Hono<AppEnv>) {
     } else {
       projectIds = await listAccessibleProjectIds(userId, "viewer");
     }
-    const sharedIds = filterProjectId ? [] : await listSharedResourceIds("workflow", userId, "view");
+    const sharedIds = filterProjectId
+      ? []
+      : await listSharedResourceIds("workflow", userId, "view");
 
     const routes = await prisma.chatRoute.findMany({
       where: {
@@ -92,7 +94,11 @@ export default function chatHubRoute(app: Hono<AppEnv>) {
 
     if (!result.success) {
       return c.json(
-        { error: result.error ?? "Workflow failed", output: result.output, executionId: result.executionId },
+        {
+          error: result.error ?? "Workflow failed",
+          output: result.output,
+          executionId: result.executionId,
+        },
         500,
       );
     }

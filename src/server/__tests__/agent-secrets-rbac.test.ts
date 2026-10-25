@@ -25,7 +25,8 @@ describe("Agent secrets RBAC (REST)", () => {
   beforeAll(async () => {
     process.env.AUTH_DISABLED = "false";
     process.env.CREDENTIALS_KEY =
-      process.env.CREDENTIALS_KEY || "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
+      process.env.CREDENTIALS_KEY ||
+      "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
 
     userId = `agent-rbac-${randomBytes(4).toString("hex")}`;
     await prisma.user.upsert({

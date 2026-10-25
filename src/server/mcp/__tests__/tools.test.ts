@@ -69,12 +69,9 @@ vi.mock("../../services/credentials-admin", () => ({
 vi.mock("../../services/variables", () => ({
   listVariablesMeta: (...a: unknown[]) =>
     (listVariablesMeta as (...args: unknown[]) => unknown)(...a),
-  createVariable: (...a: unknown[]) =>
-    (createVariable as (...args: unknown[]) => unknown)(...a),
-  updateVariable: (...a: unknown[]) =>
-    (updateVariable as (...args: unknown[]) => unknown)(...a),
-  deleteVariable: (...a: unknown[]) =>
-    (deleteVariable as (...args: unknown[]) => unknown)(...a),
+  createVariable: (...a: unknown[]) => (createVariable as (...args: unknown[]) => unknown)(...a),
+  updateVariable: (...a: unknown[]) => (updateVariable as (...args: unknown[]) => unknown)(...a),
+  deleteVariable: (...a: unknown[]) => (deleteVariable as (...args: unknown[]) => unknown)(...a),
   isVariableServiceError: (v: unknown) =>
     Boolean(v && typeof v === "object" && "error" in (v as object) && "status" in (v as object)),
 }));
@@ -193,11 +190,9 @@ describe("openflow MCP tools", () => {
 
   it("enforces scopes", async () => {
     await expect(
-      callOpenflowTool(
-        { userId: "u1", workflowId: "wf1", scopes: ["openflow:read"] },
-        "add_node",
-        { type: "x" },
-      ),
+      callOpenflowTool({ userId: "u1", workflowId: "wf1", scopes: ["openflow:read"] }, "add_node", {
+        type: "x",
+      }),
     ).rejects.toThrow(/Missing OAuth scope/);
   });
 

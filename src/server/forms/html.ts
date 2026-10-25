@@ -111,9 +111,7 @@ export function renderFormPage(opts: {
   error?: string;
   csrfToken: string;
 }): string {
-  const fieldsHtml = opts.elements
-    .map((f) => renderField(f))
-    .join("\n");
+  const fieldsHtml = opts.elements.map((f) => renderField(f)).join("\n");
 
   const desc = opts.formDescription
     ? `<div class="of-desc">${sanitizeHtml(opts.formDescription)}</div>`
@@ -121,9 +119,7 @@ export function renderFormPage(opts: {
   const err = opts.error ? `<p class="of-err">${escapeHtml(opts.error)}</p>` : "";
   const btn = escapeHtml(opts.buttonLabel?.trim() || "Submit");
   const foot =
-    opts.appendAttribution !== false
-      ? `<p class="of-foot">Form powered by OpenFlow</p>`
-      : "";
+    opts.appendAttribution !== false ? `<p class="of-foot">Form powered by OpenFlow</p>` : "";
   const css = DEFAULT_CSS + (opts.customCss ? `\n${opts.customCss}` : "");
 
   return `<!DOCTYPE html>
@@ -161,7 +157,7 @@ function renderField(f: FormField): string {
     return `<input type="hidden" name="${escapeHtml(f.fieldName)}" value="${escapeHtml(f.fieldValue ?? f.defaultValue ?? "")}"/>`;
   }
 
-  const req = f.requiredField ? ' required' : "";
+  const req = f.requiredField ? " required" : "";
   const reqMark = f.requiredField ? ' <span class="req">*</span>' : "";
   const ph = f.placeholder ? ` placeholder="${escapeHtml(f.placeholder)}"` : "";
   const def = f.defaultValue != null ? escapeHtml(f.defaultValue) : "";
@@ -222,9 +218,7 @@ export function renderThanksPage(opts: {
   appendAttribution?: boolean;
 }): string {
   const foot =
-    opts.appendAttribution !== false
-      ? `<p class="of-foot">Form powered by OpenFlow</p>`
-      : "";
+    opts.appendAttribution !== false ? `<p class="of-foot">Form powered by OpenFlow</p>` : "";
   return `<!DOCTYPE html>
 <html lang="en">
 <head>

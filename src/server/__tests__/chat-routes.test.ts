@@ -250,7 +250,9 @@ describe("Chat Trigger host routes", () => {
       body: JSON.stringify({
         startNode: "Chat Trigger",
         pinData: {
-          "Chat Trigger": [{ json: { chatInput: "from-pin", sessionId: "pin-1", action: "sendMessage" } }],
+          "Chat Trigger": [
+            { json: { chatInput: "from-pin", sessionId: "pin-1", action: "sendMessage" } },
+          ],
         },
       }),
     });

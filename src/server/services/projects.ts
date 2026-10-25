@@ -93,7 +93,10 @@ export async function listAccessibleProjectIds(
 }
 
 export function projectIdFromRequest(c: {
-  req: { header: (name: string) => string | undefined; query: (name: string) => string | undefined };
+  req: {
+    header: (name: string) => string | undefined;
+    query: (name: string) => string | undefined;
+  };
 }): string | undefined {
   const header = c.req.header("X-OpenFlow-Project")?.trim();
   if (header) return header;

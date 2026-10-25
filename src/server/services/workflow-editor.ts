@@ -104,7 +104,10 @@ async function withWorkflowLock<T>(workflowId: string, fn: () => Promise<T>): Pr
   const gate = new Promise<void>((resolve) => {
     release = resolve;
   });
-  const tail = prev.then(() => gate, () => gate);
+  const tail = prev.then(
+    () => gate,
+    () => gate,
+  );
   workflowMutationTails.set(workflowId, tail);
   await prev.catch(() => undefined);
   try {

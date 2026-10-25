@@ -14,7 +14,11 @@ export async function loadCredentialOverride(
     },
   });
   if (!row?.dataEncrypted) return null;
-  return loadCredentialSecret({ dataEncrypted: row.dataEncrypted, secretProviderId: null, externalRef: null });
+  return loadCredentialSecret({
+    dataEncrypted: row.dataEncrypted,
+    secretProviderId: null,
+    externalRef: null,
+  });
 }
 
 export async function upsertCredentialOverride(

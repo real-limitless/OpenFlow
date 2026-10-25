@@ -1,4 +1,4 @@
-import type { INodeTypeDescription } from "../types";
+import type { INodeProperties, INodeTypeDescription } from "../types";
 
 const CORE = "https://docs.n8n.io/integrations/builtin/core-nodes/";
 
@@ -17,7 +17,7 @@ const fieldTypeOptions = [
   { name: "Textarea", value: "textarea" },
 ];
 
-const fieldValues = [
+const fieldValues: INodeProperties[] = [
   {
     displayName: "Field Label",
     name: "fieldLabel",

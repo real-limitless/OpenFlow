@@ -9,10 +9,7 @@ import {
   serializeJsonFields,
 } from "../services/workflow-io";
 import { ensureUserWithProject } from "../services/users";
-import {
-  projectIdFromRequest,
-  requireProjectPermission,
-} from "../services/projects";
+import { projectIdFromRequest, requireProjectPermission } from "../services/projects";
 import {
   parseJsonStringArray,
   scoreTemplateCompatibility,
@@ -195,10 +192,7 @@ export default function templatesRoute(app: Hono<AppEnv>) {
     const compat = (c.req.query("compat") ?? "any") as CompatLevel | "any";
     const certified = c.req.query("certified") === "1" || c.req.query("certified") === "true";
     const page = Math.max(1, parseInt(c.req.query("page") ?? "1", 10) || 1);
-    const pageSize = Math.min(
-      48,
-      Math.max(1, parseInt(c.req.query("pageSize") ?? "24", 10) || 24),
-    );
+    const pageSize = Math.min(48, Math.max(1, parseInt(c.req.query("pageSize") ?? "24", 10) || 24));
 
     const where: {
       AND?: Array<Record<string, unknown>>;
@@ -230,8 +224,7 @@ export default function templatesRoute(app: Hono<AppEnv>) {
         ? [{ publishedAt: "desc" as const }, { syncedAt: "desc" as const }]
         : [{ views: "desc" as const }, { name: "asc" as const }];
 
-    const needsCompatFilter =
-      compat === "ready" || compat === "partial" || compat === "limited";
+    const needsCompatFilter = compat === "ready" || compat === "partial" || compat === "limited";
 
     if (!needsCompatFilter) {
       const [total, rows] = await Promise.all([

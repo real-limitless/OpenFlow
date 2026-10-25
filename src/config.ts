@@ -32,7 +32,7 @@ function resolveCredentialsKey(): string | undefined {
   console.warn(
     "[openflow] CREDENTIALS_KEY was missing; generated an ephemeral key for this process. " +
       "Set CREDENTIALS_KEY in .env so encrypted credentials survive restarts " +
-      '(node -e "console.log(require(\'crypto\').randomBytes(32).toString(\'hex\'))").',
+      "(node -e \"console.log(require('crypto').randomBytes(32).toString('hex'))\").",
   );
   return resolvedCredentialsKey;
 }
@@ -110,18 +110,14 @@ export const config = {
   },
   /** Public base URL for OAuth issuer / MCP metadata (no trailing slash). */
   get publicUrl() {
-    const raw =
-      process.env.OPENFLOW_PUBLIC_URL?.trim() ||
-      process.env.PUBLIC_URL?.trim() ||
-      "";
+    const raw = process.env.OPENFLOW_PUBLIC_URL?.trim() || process.env.PUBLIC_URL?.trim() || "";
     return raw.replace(/\/$/, "");
   },
   /** Remote MCP server for third-party chatbots (tools + OAuth). */
   mcp: {
     get enabled() {
       return (
-        process.env.OPENFLOW_MCP_ENABLED !== "false" &&
-        process.env.OPENFLOW_MCP_ENABLED !== "0"
+        process.env.OPENFLOW_MCP_ENABLED !== "false" && process.env.OPENFLOW_MCP_ENABLED !== "0"
       );
     },
   },
@@ -130,11 +126,7 @@ export const config = {
    * Docker Compose mounts this at /data/workspace on api + toolbox.
    */
   get workspaceDir() {
-    return (
-      process.env.OPENFLOW_WORKSPACE_DIR?.trim() ||
-      process.env.WORKSPACE_DIR?.trim() ||
-      ""
-    );
+    return process.env.OPENFLOW_WORKSPACE_DIR?.trim() || process.env.WORKSPACE_DIR?.trim() || "";
   },
   /** Semantic node catalog (RAG) for MCP / palette / agent discovery. */
   catalog: {
@@ -180,17 +172,11 @@ export const config = {
       return Boolean(process.env.OPENFLOW_CATALOG_EMBED_BASE_URL?.trim());
     },
     get embedModel() {
-      return (
-        process.env.OPENFLOW_CATALOG_EMBED_MODEL?.trim() ||
-        "text-embedding-3-small"
-      );
+      return process.env.OPENFLOW_CATALOG_EMBED_MODEL?.trim() || "text-embedding-3-small";
     },
     /** Fixed pgvector dimension (must match embed model / hash fallback). */
     get dimensions() {
-      return Math.max(
-        32,
-        parseInt(process.env.OPENFLOW_CATALOG_EMBED_DIMS ?? "1536", 10) || 1536,
-      );
+      return Math.max(32, parseInt(process.env.OPENFLOW_CATALOG_EMBED_DIMS ?? "1536", 10) || 1536);
     },
     /** Texts per embeddings API request (higher = fewer round-trips on remote GPU). */
     get embedBatchSize() {

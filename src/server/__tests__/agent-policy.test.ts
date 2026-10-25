@@ -12,9 +12,7 @@ import {
 
 describe("agent-policy", () => {
   it("normalizeGrantInputs defaults read on", () => {
-    const g = normalizeGrantInputs([
-      { workflowId: "w1", canWrite: true, canExecute: false },
-    ]);
+    const g = normalizeGrantInputs([{ workflowId: "w1", canWrite: true, canExecute: false }]);
     expect(g[0].canRead).toBe(true);
     expect(g[0].canWrite).toBe(true);
   });

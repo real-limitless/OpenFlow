@@ -20,7 +20,9 @@ export async function ensureUser(userId: string): Promise<void> {
 }
 
 /** User + default personal project id. */
-export async function ensureUserWithProject(userId: string): Promise<{ userId: string; projectId: string }> {
+export async function ensureUserWithProject(
+  userId: string,
+): Promise<{ userId: string; projectId: string }> {
   await ensureUser(userId);
   const projectId = await ensurePersonalProject(userId);
   return { userId, projectId };

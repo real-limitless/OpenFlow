@@ -10,11 +10,7 @@ import {
 
 describe("oauth scopes", () => {
   it("defaults to classic agent scopes when empty (no secret write)", () => {
-    expect(parseScopes("")).toEqual([
-      "openflow:read",
-      "openflow:write",
-      "openflow:execute",
-    ]);
+    expect(parseScopes("")).toEqual(["openflow:read", "openflow:write", "openflow:execute"]);
     expect(parseScopes("")).toEqual([...DEFAULT_AGENT_SCOPES]);
     expect(parseScopes("")).not.toContain("openflow:credentials");
     expect(parseScopes("")).not.toContain("openflow:variables");

@@ -59,7 +59,11 @@ function toRowDto(row: {
   };
 }
 
-async function findAccessibleTable(id: string, userId: string, minRole: "viewer" | "editor" = "viewer") {
+async function findAccessibleTable(
+  id: string,
+  userId: string,
+  minRole: "viewer" | "editor" = "viewer",
+) {
   const table = await prisma.dataTable.findUnique({ where: { id } });
   if (!table) return null;
   const access = await requireProjectPermission(table.projectId, userId, minRole);

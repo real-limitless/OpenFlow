@@ -33,7 +33,9 @@ export async function getRetentionPolicy(): Promise<RetentionPolicy> {
   return value;
 }
 
-export async function setRetentionPolicy(patch: Partial<RetentionPolicy>): Promise<RetentionPolicy> {
+export async function setRetentionPolicy(
+  patch: Partial<RetentionPolicy>,
+): Promise<RetentionPolicy> {
   const current = await getRetentionPolicy();
   const next = parseRetentionPolicy({ ...current, ...patch }, {});
   await prisma.instanceSetting.upsert({

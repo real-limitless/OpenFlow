@@ -1,4 +1,4 @@
-import type { INodeTypeDescription } from "../types";
+import type { INodeProperties, INodeTypeDescription } from "../types";
 
 const MAILERLITE_DOCS = "https://docs.n8n.io/integrations/builtin/app-nodes/n8n-nodes-base.mailerlite/";
 const MAILERLITE_CRED_DOCS = "https://docs.n8n.io/integrations/builtin/credentials/mailerlite/";
@@ -1059,13 +1059,7 @@ const perplexityResources = [
   { name: "Search", value: "search" },
 ];
 
-const perplexityOptions: Array<{
-  displayName: string;
-  name: string;
-  type: string;
-  default: unknown;
-  [k: string]: unknown;
-}> = [
+const perplexityOptions: INodeProperties[] = [
   { displayName: "Disable Search", name: "disableSearch", type: "boolean", default: false },
   { displayName: "Enable Search Classifier", name: "enableSearchClassifier", type: "boolean", default: false },
   { displayName: "Frequency Penalty", name: "frequencyPenalty", type: "number", default: 0 },
@@ -3329,7 +3323,7 @@ export const disqus: INodeTypeDescription = {
   inputs: ["main"],
   outputs: ["main"],
   icon: "MessageCircle",
-  credential: { name: "disqusApi" },
+  credentials: [{ name: "disqusApi" }],
   sources: [DISQUS_DOCS, DISQUS_CRED_DOCS],
   properties: [
     {

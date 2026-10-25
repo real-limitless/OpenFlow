@@ -58,9 +58,7 @@ export function createVaultBackend(config: VaultConfig): SecretBackend {
     async delete(ref: string): Promise<void> {
       const p = ref.replace(/^\//, "");
       const delUrl =
-        kvVersion === 2
-          ? `${address}/v1/${mount}/metadata/${p}`
-          : `${address}/v1/${mount}/${p}`;
+        kvVersion === 2 ? `${address}/v1/${mount}/metadata/${p}` : `${address}/v1/${mount}/${p}`;
       const res = await fetch(delUrl, {
         method: "DELETE",
         headers: { "X-Vault-Token": token },

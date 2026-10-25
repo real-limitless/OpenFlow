@@ -1,9 +1,5 @@
 import { config } from "../config";
-import {
-  createFsBinaryStore,
-  createS3BinaryStore,
-  setBinaryStore,
-} from "../lib/engine/binary";
+import { createFsBinaryStore, createS3BinaryStore, setBinaryStore } from "../lib/engine/binary";
 
 /**
  * Configure engine binary storage from env.

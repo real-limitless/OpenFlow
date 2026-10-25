@@ -10,6 +10,7 @@ export const mqtt: INodeTypeDescription = {
   defaults: { name: "MQTT" },
   inputs: ["main"],
   outputs: ["main"],
+  icon: "Radio",
   credentials: [{ name: "mqtt", required: true }],
   properties: [
     {

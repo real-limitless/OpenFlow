@@ -38,7 +38,12 @@ export default function chatRoute(app: Hono<AppEnv>) {
     if (!ctx) return c.json({ error: "Chat not found" }, 404);
 
     applyChatCors(c, ctx.params.allowedOrigins);
-    const auth = await authorizeChatRequest(c, ctx.node, ctx.params.authentication, ctx.workflowRow);
+    const auth = await authorizeChatRequest(
+      c,
+      ctx.node,
+      ctx.params.authentication,
+      ctx.workflowRow,
+    );
     if (!auth.ok) return c.json({ error: auth.message }, auth.status);
 
     if (c.req.query("format") === "json") {
@@ -68,7 +73,12 @@ export default function chatRoute(app: Hono<AppEnv>) {
     if (!ctx) return c.json({ error: "Chat not found" }, 404);
 
     applyChatCors(c, ctx.params.allowedOrigins);
-    const auth = await authorizeChatRequest(c, ctx.node, ctx.params.authentication, ctx.workflowRow);
+    const auth = await authorizeChatRequest(
+      c,
+      ctx.node,
+      ctx.params.authentication,
+      ctx.workflowRow,
+    );
     if (!auth.ok) return c.json({ error: auth.message }, auth.status);
 
     let body: {
@@ -100,7 +110,11 @@ export default function chatRoute(app: Hono<AppEnv>) {
 
     if (!result.success) {
       return c.json(
-        { error: result.error ?? "Workflow failed", output: result.output, executionId: result.executionId },
+        {
+          error: result.error ?? "Workflow failed",
+          output: result.output,
+          executionId: result.executionId,
+        },
         500,
       );
     }

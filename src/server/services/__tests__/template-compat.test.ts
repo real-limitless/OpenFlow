@@ -1,8 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-  parseJsonStringArray,
-  scoreTemplateCompatibility,
-} from "../template-compat";
+import { parseJsonStringArray, scoreTemplateCompatibility } from "../template-compat";
 
 describe("template-compat", () => {
   it("parses JSON string arrays", () => {

@@ -46,9 +46,7 @@ export async function persistPausedExecution(opts: {
     return;
   }
 
-  const delay = paused.resumeAt
-    ? Math.max(0, new Date(paused.resumeAt).getTime() - Date.now())
-    : 0;
+  const delay = paused.resumeAt ? Math.max(0, new Date(paused.resumeAt).getTime() - Date.now()) : 0;
   const pinData: Record<string, INodeExecutionData[]> = {
     [paused.nodeName]: paused.items,
   };

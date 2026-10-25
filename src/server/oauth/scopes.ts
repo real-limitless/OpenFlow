@@ -1,18 +1,11 @@
 /** Classic workflow MCP scopes (safe default for agents). */
-export const CLASSIC_MCP_SCOPES = [
-  "openflow:read",
-  "openflow:write",
-  "openflow:execute",
-] as const;
+export const CLASSIC_MCP_SCOPES = ["openflow:read", "openflow:write", "openflow:execute"] as const;
 
 /**
  * Opt-in agent scopes for managing secrets/config.
  * Not included in empty/default agent scope lists.
  */
-export const OPT_IN_MCP_SCOPES = [
-  "openflow:credentials",
-  "openflow:variables",
-] as const;
+export const OPT_IN_MCP_SCOPES = ["openflow:credentials", "openflow:variables"] as const;
 
 /** All scopes advertised for OAuth / discovery (classic + opt-in). */
 export const MCP_SCOPES = [...CLASSIC_MCP_SCOPES, ...OPT_IN_MCP_SCOPES] as const;

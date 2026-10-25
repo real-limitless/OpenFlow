@@ -1,8 +1,6 @@
 import type { Hono } from "hono";
 import type { AppEnv } from "../middleware/auth";
-import {
-  agentMayManageCredentials,
-} from "../services/agent-policy";
+import { agentMayManageCredentials } from "../services/agent-policy";
 import {
   createCredential,
   deleteCredential,
@@ -141,7 +139,13 @@ export default function credentialsRoute(app: Hono<AppEnv>) {
     const { id } = c.req.param();
     const credential = await prisma.credential.findUnique({ where: { id } });
     if (!credential) return c.json({ error: "Not found" }, 404);
-    const access = await requireResourceAccess("credential", id, userId, "view", credential.projectId);
+    const access = await requireResourceAccess(
+      "credential",
+      id,
+      userId,
+      "view",
+      credential.projectId,
+    );
     if (!access.ok) return c.json({ error: "Not found" }, 404);
     return c.json({ overrides: await listCredentialOverrides(id) });
   });
@@ -151,10 +155,19 @@ export default function credentialsRoute(app: Hono<AppEnv>) {
     const { id, environmentId } = c.req.param();
     const credential = await prisma.credential.findUnique({ where: { id } });
     if (!credential) return c.json({ error: "Not found" }, 404);
-    const access = await requireResourceAccess("credential", id, userId, "edit", credential.projectId);
+    const access = await requireResourceAccess(
+      "credential",
+      id,
+      userId,
+      "edit",
+      credential.projectId,
+    );
     if (!access.ok) return c.json({ error: "Not found" }, 404);
-    const body = await c.req.json<{ data?: Record<string, unknown> }>().catch(() => ({}));
-    if (!body.data || typeof body.data !== "object") return c.json({ error: "data object required" }, 400);
+    const body = await c.req
+      .json<{ data?: Record<string, unknown> }>()
+      .catch((): { data?: Record<string, unknown> } => ({}));
+    if (!body.data || typeof body.data !== "object")
+      return c.json({ error: "data object required" }, 400);
     await upsertCredentialOverride(id, environmentId, body.data);
     void recordAudit({
       actorId: userId,
@@ -172,7 +185,13 @@ export default function credentialsRoute(app: Hono<AppEnv>) {
     const { id, environmentId } = c.req.param();
     const credential = await prisma.credential.findUnique({ where: { id } });
     if (!credential) return c.json({ error: "Not found" }, 404);
-    const access = await requireResourceAccess("credential", id, userId, "edit", credential.projectId);
+    const access = await requireResourceAccess(
+      "credential",
+      id,
+      userId,
+      "edit",
+      credential.projectId,
+    );
     if (!access.ok) return c.json({ error: "Not found" }, 404);
     await deleteCredentialOverride(id, environmentId);
     return c.json({ ok: true });
@@ -202,10 +221,7 @@ export default function credentialsRoute(app: Hono<AppEnv>) {
 
     const result = await updateCredential(userId, id, {
       name: body.name,
-      data:
-        body.data !== undefined
-          ? (body.data as Record<string, unknown>)
-          : undefined,
+      data: body.data !== undefined ? (body.data as Record<string, unknown>) : undefined,
       secretProviderId: body.secretProviderId,
       externalRef: body.externalRef,
     });

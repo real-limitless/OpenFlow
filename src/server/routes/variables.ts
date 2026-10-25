@@ -8,9 +8,7 @@ import {
   listVariablesMeta,
   updateVariable,
 } from "../services/variables";
-import {
-  environmentIdFromRequest,
-} from "../services/environments";
+import { environmentIdFromRequest } from "../services/environments";
 import { projectIdFromRequest } from "../services/projects";
 import { ensureUserWithProject } from "../services/users";
 

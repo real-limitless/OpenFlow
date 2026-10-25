@@ -2,10 +2,7 @@ import { listCredentialTypes, getCredentialTypeDef } from "../../lib/credentials
 import { prisma } from "../db";
 import { getDefaultSecretProvider, storeCredentialSecret } from "../secrets";
 import { ensureUserWithProject } from "./users";
-import {
-  listAccessibleProjectIds,
-  requireProjectPermission,
-} from "./projects";
+import { listAccessibleProjectIds, requireProjectPermission } from "./projects";
 import { listSharedResourceIds, requireResourceAccess } from "./shares";
 
 export type CredentialMetaOut = {
@@ -54,8 +51,7 @@ function toMeta(row: {
     external: Boolean(row.secretProviderId && row.externalRef),
     shared: row.shared,
     sharePermission: row.sharePermission,
-    createdAt:
-      row.createdAt instanceof Date ? row.createdAt.toISOString() : String(row.createdAt),
+    createdAt: row.createdAt instanceof Date ? row.createdAt.toISOString() : String(row.createdAt),
   };
 }
 
@@ -88,10 +84,9 @@ export async function listCredentialsMeta(
   }
 
   const includeUse = opts?.includeUse !== false;
-  const sharedIds =
-    opts?.projectId
-      ? []
-      : await listSharedResourceIds("credential", userId, includeUse ? "use" : "view");
+  const sharedIds = opts?.projectId
+    ? []
+    : await listSharedResourceIds("credential", userId, includeUse ? "use" : "view");
 
   const credentials = await prisma.credential.findMany({
     where: {
@@ -138,8 +133,7 @@ export function listCredentialTypeCatalog(query?: string) {
   if (query?.trim()) {
     const q = query.trim().toLowerCase();
     types = types.filter(
-      (t) =>
-        t.name.toLowerCase().includes(q) || t.displayName.toLowerCase().includes(q),
+      (t) => t.name.toLowerCase().includes(q) || t.displayName.toLowerCase().includes(q),
     );
   }
   return {
@@ -228,13 +222,7 @@ export async function updateCredential(
   const existing = await prisma.credential.findUnique({ where: { id } });
   if (!existing) return { error: "Not found", status: 404 };
 
-  const access = await requireResourceAccess(
-    "credential",
-    id,
-    userId,
-    "edit",
-    existing.projectId,
-  );
+  const access = await requireResourceAccess("credential", id, userId, "edit", existing.projectId);
   if (!access.ok) return { error: "Not found", status: 404 };
 
   const update: {
@@ -250,14 +238,11 @@ export async function updateCredential(
       return { error: "data must be an object", status: 400 };
     }
     const providerId =
-      input.secretProviderId !== undefined
-        ? input.secretProviderId
-        : existing.secretProviderId;
+      input.secretProviderId !== undefined ? input.secretProviderId : existing.secretProviderId;
     const stored = await storeCredentialSecret({
       data: input.data,
       secretProviderId: providerId,
-      externalRef:
-        input.externalRef !== undefined ? input.externalRef : existing.externalRef,
+      externalRef: input.externalRef !== undefined ? input.externalRef : existing.externalRef,
       credentialId: id,
     });
     update.dataEncrypted = stored.dataEncrypted;
@@ -284,13 +269,7 @@ export async function deleteCredential(
   const existing = await prisma.credential.findUnique({ where: { id } });
   if (!existing) return { error: "Not found", status: 404 };
 
-  const access = await requireResourceAccess(
-    "credential",
-    id,
-    userId,
-    "edit",
-    existing.projectId,
-  );
+  const access = await requireResourceAccess("credential", id, userId, "edit", existing.projectId);
   if (!access.ok) return { error: "Not found", status: 404 };
 
   await prisma.credential.delete({ where: { id } });

@@ -3,9 +3,7 @@ import { config } from "../../config";
 import { prisma } from "../db";
 import type { AppEnv } from "../middleware/auth";
 import { LOCAL_USER_ID } from "../services/users";
-import {
-  canPublicRegister,
-} from "../../lib/auth/registration-policy";
+import { canPublicRegister } from "../../lib/auth/registration-policy";
 
 /** Count real accounts (exclude AUTH_DISABLED synthetic local user). */
 export async function countRealUsers(): Promise<number> {

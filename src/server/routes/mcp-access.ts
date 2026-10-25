@@ -21,14 +21,16 @@ export default function mcpAccessRoute(app: Hono<AppEnv>) {
     const access = await loadWorkflowIfAllowed(workflowId, userId, "editor");
     if ("error" in access) return c.json({ error: "Not found" }, 404);
 
-    const body = await c.req.json<{
-      canRead?: boolean;
-      canWrite?: boolean;
-      canExecute?: boolean;
-      expiresInSec?: number;
-      name?: string;
-      scopes?: string[];
-    }>().catch(() => ({} as Record<string, unknown>));
+    const body = await c.req
+      .json<{
+        canRead?: boolean;
+        canWrite?: boolean;
+        canExecute?: boolean;
+        expiresInSec?: number;
+        name?: string;
+        scopes?: string[];
+      }>()
+      .catch(() => ({}) as Record<string, unknown>);
 
     const canWrite = Boolean(body.canWrite);
     const canExecute = Boolean(body.canExecute);

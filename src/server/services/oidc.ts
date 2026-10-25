@@ -1,9 +1,6 @@
 import { prisma } from "../db";
 import { config } from "../../config";
-import {
-  parseOidcSettings,
-  type OidcSettings,
-} from "../../lib/auth/oidc";
+import { parseOidcSettings, type OidcSettings } from "../../lib/auth/oidc";
 
 export const OIDC_SETTINGS_KEY = "auth.oidc";
 
@@ -22,8 +19,7 @@ export async function setOidcSettings(patch: Record<string, unknown>): Promise<O
   const prev = await getOidcSettings();
   const next: OidcSettings = {
     enabled: typeof patch.enabled === "boolean" ? patch.enabled : prev.enabled,
-    issuer:
-      typeof patch.issuer === "string" ? patch.issuer.trim().replace(/\/$/, "") : prev.issuer,
+    issuer: typeof patch.issuer === "string" ? patch.issuer.trim().replace(/\/$/, "") : prev.issuer,
     clientId: typeof patch.clientId === "string" ? patch.clientId.trim() : prev.clientId,
     clientSecret:
       typeof patch.clientSecret === "string" &&
@@ -31,7 +27,8 @@ export async function setOidcSettings(patch: Record<string, unknown>): Promise<O
       patch.clientSecret !== "********"
         ? patch.clientSecret
         : prev.clientSecret,
-    redirectUri: typeof patch.redirectUri === "string" ? patch.redirectUri.trim() : prev.redirectUri,
+    redirectUri:
+      typeof patch.redirectUri === "string" ? patch.redirectUri.trim() : prev.redirectUri,
     jitProvisioning:
       typeof patch.jitProvisioning === "boolean" ? patch.jitProvisioning : prev.jitProvisioning,
   };

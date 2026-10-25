@@ -1,4 +1,4 @@
-import type { INodeTypeDescription } from "../types";
+import type { INodeProperties, INodeTypeDescription } from "../types";
 
 const CORE = "https://docs.n8n.io/integrations/builtin/core-nodes/";
 
@@ -10847,7 +10847,7 @@ const SESSION_IDS_PARAMS = {
   windowId: { name: "windowId", displayName: "Window ID", type: "string", default: "={{ $json[\"windowId\"] }}", description: "Airtop window identifier" } as const,
 };
 
-const SESSION_MODE_PARAMS = [
+const SESSION_MODE_PARAMS: INodeProperties[] = [
   { displayName: "Session Mode", name: "sessionMode", type: "options", default: "existing", options: [{ name: "New", value: "new" }, { name: "Existing", value: "existing" }] },
   { displayName: "Session ID", name: "sessionId", type: "string", default: "={{ $json[\"sessionId\"] }}", displayOptions: { show: { sessionMode: ["existing"] } }, description: "Airtop session identifier" },
   { displayName: "Window ID", name: "windowId", type: "string", default: "={{ $json[\"windowId\"] }}", displayOptions: { show: { sessionMode: ["existing"] } }, description: "Airtop window identifier" },

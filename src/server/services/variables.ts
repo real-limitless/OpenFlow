@@ -229,7 +229,11 @@ export async function createVariable(
   const projectId = scope === "project" ? input.projectId || personalId : null;
 
   let environmentId: string | null = null;
-  if (input.environmentId !== undefined && input.environmentId !== null && input.environmentId !== "") {
+  if (
+    input.environmentId !== undefined &&
+    input.environmentId !== null &&
+    input.environmentId !== ""
+  ) {
     if (scope === "project" && projectId) {
       const env = await resolveEnvironment(projectId, input.environmentId);
       if (!env) return { error: "Environment not found", status: 404 };

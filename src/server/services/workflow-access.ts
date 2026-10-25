@@ -1,14 +1,6 @@
 import { prisma } from "../db";
-import {
-  listAccessibleProjectIds,
-  requireProjectPermission,
-  type ProjectRole,
-} from "./projects";
-import {
-  listSharedResourceIds,
-  requireResourceAccess,
-  type SharePermission,
-} from "./shares";
+import { listAccessibleProjectIds, requireProjectPermission, type ProjectRole } from "./projects";
+import { listSharedResourceIds, requireResourceAccess, type SharePermission } from "./shares";
 import {
   assertAgentWorkflowAccess,
   canAgentCreateWorkflows,
@@ -26,11 +18,7 @@ function roleForPerm(need: WorkflowPerm): ProjectRole {
   return need === "read" ? "viewer" : "editor";
 }
 
-export async function loadWorkflowIfAllowed(
-  id: string,
-  userId: string,
-  minRole: ProjectRole,
-) {
+export async function loadWorkflowIfAllowed(id: string, userId: string, minRole: ProjectRole) {
   const row = await prisma.workflow.findUnique({ where: { id } });
   if (!row) return { status: 404 as const, error: "Not found" as const };
   const access = await requireResourceAccess(
@@ -146,9 +134,7 @@ export async function editorListWorkflows(
     projectIds = await listAccessibleProjectIds(userId, "viewer");
   }
 
-  const sharedIds = opts?.projectId
-    ? []
-    : await listSharedResourceIds("workflow", userId, "view");
+  const sharedIds = opts?.projectId ? [] : await listSharedResourceIds("workflow", userId, "view");
 
   const where = {
     OR: [

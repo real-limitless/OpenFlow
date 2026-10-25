@@ -124,7 +124,9 @@ export default function instanceSettingsRoute(app: Hono<AppEnv>) {
       );
     }
 
-    const body = await c.req.json<{ enabled?: unknown }>().catch(() => ({} as { enabled?: unknown }));
+    const body = await c.req
+      .json<{ enabled?: unknown }>()
+      .catch(() => ({}) as { enabled?: unknown });
     if (typeof body.enabled !== "boolean") {
       return c.json({ error: "enabled (boolean) is required" }, 400);
     }
@@ -166,7 +168,9 @@ export default function instanceSettingsRoute(app: Hono<AppEnv>) {
       return c.json({ error: "python.allowImports is required" }, 400);
     }
 
-    const python = await setCodePythonSettings({ allowImports });
+    const python = await setCodePythonSettings({
+      allowImports: normalizeImportList(allowImports),
+    });
     void recordAudit({
       actorId: userId,
       action: "settings.code",
@@ -199,7 +203,9 @@ export default function instanceSettingsRoute(app: Hono<AppEnv>) {
       idempotency: {
         header: "Idempotency-Key",
         alternateHeader: "X-Idempotency-Key",
-        windowSec: (await import("../../lib/security/webhook-idempotency")).defaultIdempotencyWindowSec(),
+        windowSec: (
+          await import("../../lib/security/webhook-idempotency")
+        ).defaultIdempotencyWindowSec(),
       },
     });
   });
@@ -211,7 +217,7 @@ export default function instanceSettingsRoute(app: Hono<AppEnv>) {
     if (gate !== true) return c.json({ error: gate.error }, gate.status);
     const body = await c.req
       .json<{ required?: boolean | null; mode?: string; secret?: string }>()
-      .catch(() => ({}));
+      .catch((): { required?: boolean | null; mode?: string; secret?: string } => ({}));
     const stored = await setWebhookAuthSettings({
       required: body.required === undefined ? undefined : body.required,
       mode:
@@ -238,7 +244,9 @@ export default function instanceSettingsRoute(app: Hono<AppEnv>) {
       idempotency: {
         header: "Idempotency-Key",
         alternateHeader: "X-Idempotency-Key",
-        windowSec: (await import("../../lib/security/webhook-idempotency")).defaultIdempotencyWindowSec(),
+        windowSec: (
+          await import("../../lib/security/webhook-idempotency")
+        ).defaultIdempotencyWindowSec(),
       },
     });
   });
@@ -391,9 +399,8 @@ export default function instanceSettingsRoute(app: Hono<AppEnv>) {
   app.get("/api/v1/settings/lifecycle-webhooks", async (c) => {
     const userId = c.get("userId");
     await ensureUser(userId);
-    const { getLifecycleSubscriptions, recentLifecycleDeliveries } = await import(
-      "../services/lifecycle-webhooks"
-    );
+    const { getLifecycleSubscriptions, recentLifecycleDeliveries } =
+      await import("../services/lifecycle-webhooks");
     const { LIFECYCLE_EVENTS } = await import("../../lib/lifecycle/webhooks");
     const subscriptions = (await getLifecycleSubscriptions()).map((s) => ({
       ...s,
@@ -414,9 +421,8 @@ export default function instanceSettingsRoute(app: Hono<AppEnv>) {
     const gate = await requireInstanceAdmin(userId);
     if (gate !== true) return c.json({ error: gate.error }, gate.status);
     const body = await c.req.json<{ subscriptions?: unknown[] }>();
-    const { getLifecycleSubscriptions, setLifecycleSubscriptions } = await import(
-      "../services/lifecycle-webhooks"
-    );
+    const { getLifecycleSubscriptions, setLifecycleSubscriptions } =
+      await import("../services/lifecycle-webhooks");
     const prev = await getLifecycleSubscriptions();
     const prevById = new Map(prev.map((s) => [s.id, s]));
     const incoming = Array.isArray(body.subscriptions) ? body.subscriptions : [];
@@ -424,7 +430,8 @@ export default function instanceSettingsRoute(app: Hono<AppEnv>) {
       const o = row && typeof row === "object" ? (row as Record<string, unknown>) : {};
       const id = typeof o.id === "string" ? o.id : "";
       const secretRaw = typeof o.secret === "string" ? o.secret : "";
-      const keep = secretRaw === "" || secretRaw === "********" ? prevById.get(id)?.secret ?? "" : secretRaw;
+      const keep =
+        secretRaw === "" || secretRaw === "********" ? (prevById.get(id)?.secret ?? "") : secretRaw;
       return { ...o, secret: keep };
     });
     const subscriptions = await setLifecycleSubscriptions(merged);
@@ -521,7 +528,11 @@ export default function instanceSettingsRoute(app: Hono<AppEnv>) {
       action: "settings.sso",
       resource: "settings",
       resourceId: "sso",
-      detail: { enabled: settings.enabled, issuer: settings.issuer, jitProvisioning: settings.jitProvisioning },
+      detail: {
+        enabled: settings.enabled,
+        issuer: settings.issuer,
+        jitProvisioning: settings.jitProvisioning,
+      },
       ip: requestIp(c),
     });
     return c.json({

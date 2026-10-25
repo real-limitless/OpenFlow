@@ -118,9 +118,7 @@ void import("./services/circuit-breakers")
   .then((m) => m.loadCircuitBreakerConfig())
   .catch(() => undefined);
 
-void import("./services/plugins")
-  .then((m) => m.bootPlugins())
-  .catch(() => undefined);
+void import("./services/plugins").then((m) => m.bootPlugins()).catch(() => undefined);
 
 log.info("api ready", {
   component: "api",

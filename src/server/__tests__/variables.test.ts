@@ -167,12 +167,15 @@ describe("E3 Gate: custom variables", () => {
     });
 
     expect(result.success).toBe(true);
-    const setData = result.runData["Set"];
+    const setData = result.runData["Set"] as
+      | {
+          status?: string;
+          items?: Array<Array<{ json?: { msg?: string } }>>;
+          data?: { main?: Array<Array<{ json?: { msg?: string } }>> };
+        }
+      | undefined;
     expect(setData?.status).toBe("success");
-    const items =
-      (setData as { items?: Array<Array<{ json?: { msg?: string } }>> })?.items?.[0] ??
-      setData?.data?.main?.[0] ??
-      [];
+    const items = setData?.items?.[0] ?? setData?.data?.main?.[0] ?? [];
     expect(items[0]?.json?.msg).toBe("hello-e3");
   });
 });

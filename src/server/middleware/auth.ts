@@ -86,14 +86,10 @@ function sessionAuth(userId: string): AgentAuth {
 function unauthorizedMcp(c: Context<AppEnv>) {
   const origin = publicOrigin(c);
   const meta = `${origin}/.well-known/oauth-protected-resource`;
-  return c.json(
-    { error: "Authentication required" },
-    401,
-    {
-      "WWW-Authenticate": `Bearer realm="openflow", resource_metadata="${meta}", scope="${ALL_MCP_SCOPES.join(" ")}"`,
-      "Access-Control-Expose-Headers": "WWW-Authenticate",
-    },
-  );
+  return c.json({ error: "Authentication required" }, 401, {
+    "WWW-Authenticate": `Bearer realm="openflow", resource_metadata="${meta}", scope="${ALL_MCP_SCOPES.join(" ")}"`,
+    "Access-Control-Expose-Headers": "WWW-Authenticate",
+  });
 }
 
 export async function authMiddleware(c: Context<AppEnv>, next: Next) {

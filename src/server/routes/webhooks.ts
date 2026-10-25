@@ -341,7 +341,9 @@ export default function webhooksRoute(app: Hono<AppEnv>) {
       include: { workflow: true },
     });
     if (!existing) return c.json({ error: "Not found" }, 404);
-    const body = await c.req.json<{ secret?: string; mode?: string }>().catch(() => ({}));
+    const body = await c.req
+      .json<{ secret?: string; mode?: string }>()
+      .catch((): { secret?: string; mode?: string } => ({}));
     let settings: Record<string, unknown> = {};
     try {
       settings = existing.workflow.settings
