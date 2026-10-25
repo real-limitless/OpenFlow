@@ -360,7 +360,7 @@ run_tui() {
       print "  Home:     ${OPENFLOW_HOME}"
       print "  Port:     ${OPENFLOW_PORT}"
       print "  Image:    ${OPENFLOW_IMAGE}"
-      print "  Auth:     ${GREEN}enabled${NC} → /setup owner account"
+      print "  Auth:     ${GREEN}enabled${NC} → set OPENFLOW_ALLOW_FIRST_OWNER=true for the first owner"
       ;;
     build)
       print "  Clone:    ${CLONE_DIR}"
@@ -413,6 +413,7 @@ write_compose_stack() {
 # AUTH_DISABLED=true is an INSECURE local try-out (no login).
 AUTH_DISABLED=${auth_default}
 OPENFLOW_OPEN_REGISTER=false
+OPENFLOW_ALLOW_FIRST_OWNER=false
 OPENFLOW_HOT_NODES=false
 CREDENTIALS_KEY=${key}
 REDIS_PASSWORD=${redis_pass}
@@ -463,9 +464,10 @@ services:
       REDIS_HOST: redis
       REDIS_PORT: "6379"
       REDIS_URL: redis://:\${REDIS_PASSWORD:?Set REDIS_PASSWORD}@redis:6379
-      # true is an INSECURE local try-out (no login). false requires /setup.
+      # true is an INSECURE local try-out (no login). false does not open public signup.
       AUTH_DISABLED: \${AUTH_DISABLED:-${auth_default}}
       OPENFLOW_OPEN_REGISTER: \${OPENFLOW_OPEN_REGISTER:-false}
+      OPENFLOW_ALLOW_FIRST_OWNER: \${OPENFLOW_ALLOW_FIRST_OWNER:-false}
       OPENFLOW_HOT_NODES: \${OPENFLOW_HOT_NODES:-false}
       CREDENTIALS_KEY: \${CREDENTIALS_KEY:-}
       BINARY_STORAGE_DIR: /data/binary

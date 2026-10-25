@@ -31,7 +31,7 @@ Never commit or paste these into issues, PRs, or logs:
 Docker Compose uses a local-only Postgres password until the prod overlay:
 
 - Postgres user/password/db: `openflow` / `openflow` / `openflow`
-- `AUTH_DISABLED=false`, `OPENFLOW_HOT_NODES=false`, `OPENFLOW_OPEN_REGISTER=false`
+- `AUTH_DISABLED=false`, `OPENFLOW_HOT_NODES=false`, `OPENFLOW_OPEN_REGISTER=false`, `OPENFLOW_ALLOW_FIRST_OWNER=false`
 - `REDIS_PASSWORD` is required and has no default
 
 `AUTH_DISABLED=true` is an INSECURE local try-out (no login). Do not expose that mode, or the dev Postgres password, past your own machine. For production, see [docs/install.md](docs/install.md).
@@ -112,7 +112,8 @@ Set these in the environment and recreate `api` (and `worker` if it serves auth)
 | Variable | Effect |
 | --- | --- |
 | `OPENFLOW_LOGIN_DISABLED=true` | Rejects `POST /api/v1/auth/login` and SSO sign-in (`403`, `login_disabled`) |
-| `OPENFLOW_OPEN_REGISTER=false` | Default. Public signup closes after the owner exists. The first owner can still use `/setup` |
+| `OPENFLOW_OPEN_REGISTER=false` | Default. Public signup, including the first owner, is rejected (`403`, `invite_only`) |
+| `OPENFLOW_ALLOW_FIRST_OWNER=true` | Opt-in. Allows one public first-owner signup while open register stays false. Set it back to false after |
 | `OPENFLOW_REGISTRATION_DISABLED=true` | Rejects every signup, including first-run `/setup` and SSO account creation (`403`, `registration_disabled`) |
 
 `AUTH_DISABLED=true` does the opposite of a lockout: it skips login. Do not set it during an incident.

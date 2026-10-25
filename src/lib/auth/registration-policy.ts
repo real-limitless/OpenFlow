@@ -13,16 +13,16 @@ export function isLoginDisabled(): boolean {
 
 /**
  * Blocks every signup, including first-run owner setup and SSO account creation.
- * OPENFLOW_OPEN_REGISTER=false does not do this: the first owner can still register.
+ * OPENFLOW_ALLOW_FIRST_OWNER does not bypass this kill switch.
  */
 export function isRegistrationDisabled(): boolean {
   return envOn("OPENFLOW_REGISTRATION_DISABLED");
 }
 
 /**
- * After an owner exists, public POST /register is closed unless
- * OPENFLOW_OPEN_REGISTER is explicitly true (or OPENFLOW_INVITE_ONLY is
- * explicitly false). First-run setup (zero real users) stays open.
+ * Public signup is closed unless OPENFLOW_OPEN_REGISTER is explicitly true
+ * or 1, or OPENFLOW_INVITE_ONLY is explicitly false or 0. The default is
+ * closed. This env decision applies with zero users and after an owner exists.
  */
 export function isInviteOnlyAfterOwner(): boolean {
   const open = process.env.OPENFLOW_OPEN_REGISTER?.trim().toLowerCase();
@@ -34,9 +34,16 @@ export function isInviteOnlyAfterOwner(): boolean {
   return true;
 }
 
+/**
+ * Unauthenticated POST /api/v1/auth/register without an invite token.
+ * Zero users is not a bypass: OPENFLOW_OPEN_REGISTER=false/0 (and the default
+ * invite-only policy) rejects that request. First owner on a closed instance
+ * requires OPENFLOW_ALLOW_FIRST_OWNER=true, OPENFLOW_OPEN_REGISTER=true, or a
+ * valid invite token. AUTH_DISABLED is not read here.
+ */
 export function canPublicRegister(hasUsers: boolean): boolean {
   if (isRegistrationDisabled()) return false;
-  if (!hasUsers) return true;
+  if (!hasUsers && envOn("OPENFLOW_ALLOW_FIRST_OWNER")) return true;
   return !isInviteOnlyAfterOwner();
 }
 

@@ -44,6 +44,7 @@ describe("single compose worker", () => {
     expect(compose).toContain("AUTH_DISABLED: ${AUTH_DISABLED:-false}");
     expect(compose).toContain("OPENFLOW_HOT_NODES: ${OPENFLOW_HOT_NODES:-false}");
     expect(compose).toContain("OPENFLOW_OPEN_REGISTER: ${OPENFLOW_OPEN_REGISTER:-false}");
+    expect(compose).toContain("OPENFLOW_ALLOW_FIRST_OWNER: ${OPENFLOW_ALLOW_FIRST_OWNER:-false}");
     expect(compose).toContain("REDIS_PASSWORD: ${REDIS_PASSWORD:?Set REDIS_PASSWORD}");
     expect(compose).toContain("internal: true");
     expect(compose).not.toMatch(/^\s+-\s+"127\.0\.0\.1:/m);
@@ -76,6 +77,7 @@ describe("deploy compose", () => {
     expect(api).not.toMatch(/^\s+ports:/m);
     expect(api).toContain("AUTH_DISABLED: ${AUTH_DISABLED:-false}");
     expect(api).toContain("OPENFLOW_OPEN_REGISTER: ${OPENFLOW_OPEN_REGISTER:-false}");
+    expect(api).toContain("OPENFLOW_ALLOW_FIRST_OWNER: ${OPENFLOW_ALLOW_FIRST_OWNER:-false}");
     expect(api).toContain("OPENFLOW_HOT_NODES: ${OPENFLOW_HOT_NODES:-false}");
     expect(deploy).toContain("REDIS_PASSWORD: ${REDIS_PASSWORD:?Set REDIS_PASSWORD}");
     expect(deploy).toContain("internal: true");

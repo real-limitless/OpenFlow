@@ -20,6 +20,8 @@ services:
       # Literals so a try-out .env (AUTH_DISABLED=true) cannot silently win
       AUTH_DISABLED: "false"
       OPENFLOW_OPEN_REGISTER: "false"
+      # Opt in for one first-owner bootstrap, then set it back to false.
+      OPENFLOW_ALLOW_FIRST_OWNER: ${OPENFLOW_ALLOW_FIRST_OWNER:-false}
       OPENFLOW_HOT_NODES: "false"
       NODE_ENV: production
       OPENFLOW_CORS_ORIGINS: ${OPENFLOW_CORS_ORIGINS:-}

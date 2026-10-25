@@ -145,9 +145,13 @@ export default function authRoute(app: Hono<AppEnv>) {
           event: "denial",
           outcome: "denied",
         });
+        const error =
+          realUsers === 0 && !inviteToken
+            ? "Public registration is closed. The first owner is not created from an open signup."
+            : consumed.error || "Registration is invite-only after the owner account exists";
         return c.json(
           {
-            error: consumed.error || "Registration is invite-only after the owner account exists",
+            error,
             code: "invite_only",
           },
           403,

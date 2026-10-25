@@ -14,9 +14,9 @@ describe("setup status + first owner", () => {
 
   beforeAll(() => {
     delete process.env.AUTH_DISABLED;
-    // This case checks role assignment while public registration stays open.
-    // First-owner signup with OPENFLOW_OPEN_REGISTER=false is covered by
-    // registration-policy tests (canPublicRegister(false) stays true).
+    // Role assignment while public registration stays open.
+    // OPENFLOW_OPEN_REGISTER=false (including zero users) is covered by
+    // registration-policy and register-closed tests.
     process.env.OPENFLOW_OPEN_REGISTER = "true";
     app = new Hono<AppEnv>();
     app.use("*", authMiddleware);

@@ -33,6 +33,8 @@ spec:
               value: {{ .Values.hotNodes | default false | quote }}
             - name: OPENFLOW_OPEN_REGISTER
               value: {{ .Values.openRegister | default false | quote }}
+            - name: OPENFLOW_ALLOW_FIRST_OWNER
+              value: {{ .Values.allowFirstOwner | default false | quote }}
             - name: OPENFLOW_ROLE
               value: {{ .Values.api.role | quote }}
             - name: RUN_WORKER

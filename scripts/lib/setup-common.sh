@@ -371,7 +371,7 @@ of_setup_all_dev() {
   echo -e "  Full stack:      ${BOLD}docker compose up -d${NC}"
   echo -e "  Menu:            ${BOLD}npm run tui${NC}"
   echo ""
-  echo -e "${DIM}Auth is on by default (AUTH_DISABLED=false). First open uses /setup for the owner account.${NC}"
+  echo -e "${DIM}Auth is on by default (AUTH_DISABLED=false). Public first-owner signup needs OPENFLOW_ALLOW_FIRST_OWNER=true or OPENFLOW_OPEN_REGISTER=true.${NC}"
   echo -e "${DIM}INSECURE local try-out only: set AUTH_DISABLED=true. Do not expose that mode.${NC}"
   echo ""
   return 0

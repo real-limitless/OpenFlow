@@ -41,9 +41,11 @@ redis:
   enabled: true
   image: redis:7-alpine
 
-# Secure defaults. Set hotNodes or openRegister true only for a private dev cluster.
+# Secure defaults. Public register is closed, including the first owner.
+# Set openRegister true to leave signup open, or allowFirstOwner true for one bootstrap.
 hotNodes: false
 openRegister: false
+allowFirstOwner: false
 
 ingress:
   enabled: false

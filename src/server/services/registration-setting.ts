@@ -13,8 +13,11 @@ export function registrationAllowsPublic(opts: {
   storedOpen: boolean | null;
 }): boolean {
   if (isRegistrationDisabled()) return false;
-  if (!opts.hasUsers) return true;
-  if (opts.storedOpen === null) return canPublicRegister(opts.hasUsers);
+  // No owner yet: a stored toggle is not an admin action, and must not reopen
+  // a public first-owner claim. Env policy decides (open register or
+  // OPENFLOW_ALLOW_FIRST_OWNER).
+  if (!opts.hasUsers) return canPublicRegister(false);
+  if (opts.storedOpen === null) return canPublicRegister(true);
   return opts.storedOpen;
 }
 

@@ -23,6 +23,7 @@ function RegisterPage() {
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
   const [inviteOnly, setInviteOnly] = useState(false);
+  const [needsOwner, setNeedsOwner] = useState(false);
   const [tryOut, setTryOut] = useState(false);
   const [checking, setChecking] = useState(true);
   const hasInvite = Boolean(invite?.trim());
@@ -34,6 +35,7 @@ function RegisterPage() {
       if (cancelled) return;
       setTryOut(Boolean(status.tryOut || status.authDisabled));
       setInviteOnly(Boolean(status.inviteOnly));
+      setNeedsOwner(Boolean(status.needsOwner));
       setChecking(false);
     });
     return () => {
@@ -79,8 +81,9 @@ function RegisterPage() {
           </p>
         ) : inviteOnly ? (
           <p className="text-[13px] text-muted-foreground">
-            Public registration is closed. This instance is invite-only after the owner exists.
-            Sign in, or ask an owner to send an invite link.
+            {needsOwner
+              ? "Public registration is closed, including the first owner. An operator can set OPENFLOW_ALLOW_FIRST_OWNER=true for one bootstrap, or send an invite link."
+              : "Public registration is closed. Sign in, or ask an owner to send an invite link."}
           </p>
         ) : (
           <p className="text-[13px] text-muted-foreground">

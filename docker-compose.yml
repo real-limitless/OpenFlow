@@ -12,9 +12,9 @@
 #
 # Auth, hot-node reload, and public registration default off.
 # INSECURE local try-out (no login): set AUTH_DISABLED=true in .env.
-# First owner with auth on: open /setup (GET /api/v1/setup/status, then
-# POST /api/v1/auth/register). OPENFLOW_OPEN_REGISTER=false still allows that
-# first account.
+# First owner with auth on is not a public claim. Set
+# OPENFLOW_ALLOW_FIRST_OWNER=true for one bootstrap (or
+# OPENFLOW_OPEN_REGISTER=true), then POST /api/v1/auth/register.
 #
 # Toolbox (git/shell/RAG reindex) starts with the stack:
 #   docker compose exec toolbox bash
@@ -61,6 +61,7 @@ services:
       # Auth on by default. INSECURE local try-out only: AUTH_DISABLED=true
       AUTH_DISABLED: ${AUTH_DISABLED:-false}
       OPENFLOW_OPEN_REGISTER: ${OPENFLOW_OPEN_REGISTER:-false}
+      OPENFLOW_ALLOW_FIRST_OWNER: ${OPENFLOW_ALLOW_FIRST_OWNER:-false}
       # Optional OIDC (authorization-code + PKCE). Also configurable in Settings → SSO.
       OPENFLOW_OIDC_ISSUER: ${OPENFLOW_OIDC_ISSUER:-}
       OPENFLOW_OIDC_CLIENT_ID: ${OPENFLOW_OIDC_CLIENT_ID:-}
@@ -142,6 +143,7 @@ services:
       <<: [*postgres-app, *redis-app]
       AUTH_DISABLED: ${AUTH_DISABLED:-false}
       OPENFLOW_OPEN_REGISTER: ${OPENFLOW_OPEN_REGISTER:-false}
+      OPENFLOW_ALLOW_FIRST_OWNER: ${OPENFLOW_ALLOW_FIRST_OWNER:-false}
       OPENFLOW_HOT_NODES: ${OPENFLOW_HOT_NODES:-false}
       CREDENTIALS_KEY: ${CREDENTIALS_KEY:-}
       BINARY_STORAGE_DIR: /data/binary
