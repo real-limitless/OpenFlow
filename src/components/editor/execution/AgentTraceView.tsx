@@ -141,7 +141,7 @@ export function AgentTraceView({
           <div
             key={turn.iteration}
             className={`rounded border px-2 py-1.5 ${
-              turn.status === "running" ? "border-blue-500/50 bg-blue-500/5" : "border-border/60"
+              turn.status === "running" ? "border-action/50 bg-action/5" : "border-border/60"
             }`}
           >
             <div className="mb-1 text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
@@ -180,7 +180,7 @@ export function AgentTraceView({
                   <span className="text-muted-foreground">{call.name}</span>{" "}
                   <span>{preview(call.args, 160)}</span>
                   {call.status === "running" ? (
-                    <span className="ml-1 animate-pulse text-blue-500">
+                    <span className="ml-1 animate-pulse text-action">
                       running{toolDur != null ? ` · ${formatDuration(toolDur)}` : ""}
                     </span>
                   ) : toolDur != null ? (

@@ -332,10 +332,11 @@ function BaseNodeInner({ data, selected, id }: NodeProps<OpenFlowNode>) {
           node.disabled && "opacity-45 grayscale",
           connecting && nodeHasCompatible && "ring-1 ring-offset-1 ring-offset-background",
           isRunning &&
-            "border-blue-500/60 shadow-[0_0_0_2px_rgba(59,130,246,0.35),0_0_20px_rgba(59,130,246,0.25)]",
-          isSuccess && "border-emerald-500/50 shadow-[0_0_0_2px_rgba(16,185,129,0.25)]",
+            "border-action/60 shadow-[0_0_0_2px_color-mix(in_oklab,var(--action)_35%,transparent),0_0_20px_color-mix(in_oklab,var(--action)_25%,transparent)]",
+          isSuccess &&
+            "border-success/50 shadow-[0_0_0_2px_color-mix(in_oklab,var(--success)_25%,transparent)]",
           isError &&
-            "border-red-500/60 shadow-[0_0_0_2px_rgba(239,68,68,0.35)] animate-[shake_0.4s_ease-in-out]",
+            "border-destructive/60 shadow-[0_0_0_2px_color-mix(in_oklab,var(--destructive)_35%,transparent)] animate-[shake_0.4s_ease-in-out]",
           isPending && "opacity-70",
           isSkipped && "opacity-50 grayscale",
         )}
@@ -350,8 +351,8 @@ function BaseNodeInner({ data, selected, id }: NodeProps<OpenFlowNode>) {
       >
         {isRunning && (
           <div className="pointer-events-none absolute inset-0 overflow-hidden">
-            <div className="absolute inset-0 animate-pulse bg-blue-500/10" />
-            <div className="absolute inset-y-0 w-1/2 animate-[shimmer_1.4s_ease-in-out_infinite] bg-gradient-to-r from-transparent via-blue-400/20 to-transparent" />
+            <div className="absolute inset-0 animate-pulse bg-action/10" />
+            <div className="absolute inset-y-0 w-1/2 animate-[shimmer_1.4s_ease-in-out_infinite] bg-gradient-to-r from-transparent via-action/20 to-transparent" />
           </div>
         )}
 
@@ -359,15 +360,15 @@ function BaseNodeInner({ data, selected, id }: NodeProps<OpenFlowNode>) {
           className={cn(
             "relative grid size-9 shrink-0 place-items-center rounded-md",
             styles.bg,
-            isRunning && "ring-2 ring-blue-400/60 ring-offset-1 ring-offset-surface",
+            isRunning && "ring-2 ring-action/60 ring-offset-1 ring-offset-surface",
           )}
         >
           {isRunning ? (
-            <Icons.Loader2 className={cn("size-[18px] animate-spin text-blue-500")} />
+            <Icons.Loader2 className={cn("size-[18px] animate-spin text-action")} />
           ) : isSuccess ? (
-            <Icons.CheckCircle2 className="size-[18px] text-emerald-500" />
+            <Icons.CheckCircle2 className="size-[18px] text-success" />
           ) : isError ? (
-            <Icons.XCircle className="size-[18px] text-red-500" />
+            <Icons.XCircle className="size-[18px] text-destructive" />
           ) : (
             <NodeIcon name={description.icon} className={cn("size-[18px]", styles.text)} />
           )}
@@ -394,8 +395,8 @@ function BaseNodeInner({ data, selected, id }: NodeProps<OpenFlowNode>) {
         )}
 
         {isRunning && (
-          <div className="absolute bottom-0 left-0 right-0 h-0.5 overflow-hidden bg-blue-500/20">
-            <div className="h-full w-1/3 animate-[progress_1.2s_ease-in-out_infinite] bg-blue-500" />
+          <div className="absolute bottom-0 left-0 right-0 h-0.5 overflow-hidden bg-action/20">
+            <div className="h-full w-1/3 animate-[progress_1.2s_ease-in-out_infinite] bg-action" />
           </div>
         )}
       </div>

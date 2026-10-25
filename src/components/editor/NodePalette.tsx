@@ -259,7 +259,7 @@ export function NodePalette({ onAdd }: Props) {
                           variant="outline"
                           className={cn(
                             "h-4 shrink-0 px-1 text-[9px]",
-                            it.isShell && "border-amber-500/40 text-amber-700 dark:text-amber-400",
+                            it.isShell && "border-warning/40 text-warning",
                           )}
                         >
                           {it.rankTier}

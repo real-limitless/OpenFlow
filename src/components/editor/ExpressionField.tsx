@@ -20,7 +20,48 @@ const MonacoEditor = lazy(() =>
 let providersRegistered = false;
 let currentNodeNames: string[] = [];
 
+function cssVarToHex(name: string, fallback: string): string {
+  if (typeof document === "undefined") return fallback;
+  const value = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+  if (!value) return fallback;
+
+  try {
+    const canvas = document.createElement("canvas");
+    canvas.width = 1;
+    canvas.height = 1;
+    const ctx = canvas.getContext("2d", { willReadFrequently: true });
+    if (!ctx) return fallback;
+    // fillStyle may serialise modern colours (e.g. oklch) as-is, so paint a
+    // pixel and read it back to get a hex value Monaco accepts.
+    ctx.fillStyle = fallback;
+    ctx.fillStyle = value;
+    ctx.fillRect(0, 0, 1, 1);
+    const [r, g, b] = ctx.getImageData(0, 0, 1, 1).data;
+    return `#${[r, g, b].map((n) => (n ?? 0).toString(16).padStart(2, "0")).join("")}`;
+  } catch {
+    return fallback;
+  }
+}
+
 function handleEditorWillMount(monaco: Monaco) {
+  monaco.editor.defineTheme("openflow", {
+    base: "vs-dark",
+    inherit: true,
+    rules: [],
+    colors: {
+      "editor.background": cssVarToHex("--background", "#151a23"),
+      "editor.foreground": cssVarToHex("--foreground", "#eef0f4"),
+      "editorLineNumber.foreground": cssVarToHex("--muted-foreground", "#9aa1ad"),
+      "editorCursor.foreground": cssVarToHex("--primary", "#84cc16"),
+      "editor.selectionBackground": cssVarToHex("--accent", "#343a46"),
+      "editorWidget.background": cssVarToHex("--popover", "#1c2129"),
+      "editorWidget.border": cssVarToHex("--border", "#2f3540"),
+      "editorSuggestWidget.background": cssVarToHex("--popover", "#1c2129"),
+      "editorSuggestWidget.border": cssVarToHex("--border", "#2f3540"),
+      "editorSuggestWidget.selectedBackground": cssVarToHex("--accent", "#343a46"),
+    },
+  });
+
   if (providersRegistered) return;
   providersRegistered = true;
 
@@ -161,7 +202,7 @@ function CodeArea({
           <MonacoEditor
             height={rows * 19 + 16}
             language={language}
-            theme="vs-dark"
+            theme="openflow"
             value={value}
             onChange={(v) => onChange(v ?? "")}
             beforeMount={handleEditorWillMount}

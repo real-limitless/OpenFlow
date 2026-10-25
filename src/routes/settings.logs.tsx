@@ -105,7 +105,7 @@ function LogsPage() {
                           l.level === "error"
                             ? "text-destructive"
                             : l.level === "warn"
-                              ? "text-amber-600"
+                              ? "text-warning"
                               : ""
                         }
                       >
