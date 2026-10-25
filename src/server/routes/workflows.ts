@@ -44,6 +44,18 @@ function minShareForRole(minRole: ProjectRole): SharePermission {
   return minRole === "viewer" ? "view" : "edit";
 }
 
+/** Empty `.catch(() => ({}))` must share this type. A bare `{}` is a union member and hides these fields. */
+type WorkflowOrganizationBody = {
+  ids?: string[];
+  tags?: unknown;
+  addTags?: unknown;
+  folder?: unknown;
+};
+
+type WorkflowPromoteBody = {
+  toEnvironmentId?: string;
+};
+
 async function loadWorkflowIfAllowed(
   id: string,
   userId: string,
@@ -212,8 +224,8 @@ export default function workflowsRoute(app: Hono<AppEnv>) {
     const userId = c.get("userId");
     await ensureUser(userId);
     const body = await c.req
-      .json<{ ids?: string[]; tags?: unknown; addTags?: unknown; folder?: unknown }>()
-      .catch(() => ({}));
+      .json<WorkflowOrganizationBody>()
+      .catch((): WorkflowOrganizationBody => ({}));
     const ids = Array.isArray(body.ids) ? body.ids.filter((id) => typeof id === "string") : [];
     if (ids.length === 0) return c.json({ error: "ids required" }, 400);
     const out: Array<{ id: string; tags: string[]; folder: string }> = [];
@@ -236,8 +248,8 @@ export default function workflowsRoute(app: Hono<AppEnv>) {
     const result = await loadWorkflowIfAllowed(id, userId, "editor");
     if ("error" in result) return c.json({ error: result.error }, result.status);
     const body = await c.req
-      .json<{ tags?: unknown; folder?: unknown; addTags?: unknown }>()
-      .catch(() => ({}));
+      .json<WorkflowOrganizationBody>()
+      .catch((): WorkflowOrganizationBody => ({}));
     const next = await applyWorkflowOrganization(id, {
       tags: body.tags,
       addTags: body.addTags,
@@ -251,7 +263,7 @@ export default function workflowsRoute(app: Hono<AppEnv>) {
     const { id } = c.req.param();
     const result = await loadWorkflowIfAllowed(id, userId, "editor");
     if ("error" in result) return c.json({ error: result.error }, result.status);
-    const body = await c.req.json<{ toEnvironmentId?: string }>().catch(() => ({}));
+    const body = await c.req.json<WorkflowPromoteBody>().catch((): WorkflowPromoteBody => ({}));
     const toId = body.toEnvironmentId?.trim();
     if (!toId) return c.json({ error: "toEnvironmentId required" }, 400);
     const env = await resolveEnvironment(result.row.projectId, toId);
