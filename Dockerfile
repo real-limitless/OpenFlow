@@ -4,6 +4,8 @@ RUN apt-get update \
   && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
 COPY package.json package-lock.json ./
+# package.json depends on file:vendor/xlsx-0.20.3.tgz; npm ci fails without it.
+COPY vendor/xlsx-0.20.3.tgz vendor/xlsx-0.20.3.tgz
 COPY scripts/postinstall-prisma.mjs scripts/postinstall-prisma.mjs
 RUN npm ci
 
