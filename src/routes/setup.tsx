@@ -21,6 +21,7 @@ function SetupPage() {
   const [loadTemplates, setLoadTemplates] = useState(true);
   const [busy, setBusy] = useState(false);
   const [checking, setChecking] = useState(true);
+  const [registrationOpen, setRegistrationOpen] = useState(false);
   const submittingRef = useRef(false);
 
   useEffect(() => {
@@ -35,6 +36,7 @@ function SetupPage() {
         });
         return;
       }
+      setRegistrationOpen(status.registrationOpen === true);
       setChecking(false);
     })();
     return () => {
@@ -44,7 +46,7 @@ function SetupPage() {
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (submittingRef.current) return;
+    if (submittingRef.current || !registrationOpen) return;
     submittingRef.current = true;
     setBusy(true);
     try {
@@ -91,60 +93,70 @@ function SetupPage() {
       >
         <div className="space-y-1">
           <h1 className="text-lg font-semibold tracking-tight">Create instance owner</h1>
-          <p className="text-[13px] text-muted-foreground">
-            This first account owns secret providers and admin settings. Public registration stays
-            closed after this owner exists. With OPENFLOW_OPEN_REGISTER=false the first signup still
-            works: this page posts to /api/v1/auth/register while /api/v1/setup/status reports
-            needsOwner.
-          </p>
+          {registrationOpen ? (
+            <p className="text-[13px] text-muted-foreground">
+              This first account owns secret providers and admin settings. Public registration stays
+              closed after this owner exists unless OPENFLOW_OPEN_REGISTER=true.
+            </p>
+          ) : (
+            <p className="text-[13px] text-muted-foreground">
+              Public registration is closed, so this page cannot create the first owner. Set
+              OPENFLOW_ALLOW_FIRST_OWNER=true for one bootstrap, then set it back to false, or set
+              OPENFLOW_OPEN_REGISTER=true. A valid invite can still register.
+            </p>
+          )}
         </div>
-        <div className="space-y-1.5">
-          <Label htmlFor="email">Email</Label>
-          <Input
-            id="email"
-            type="email"
-            autoComplete="email"
-            required
-            disabled={busy}
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-          />
-        </div>
-        <div className="space-y-1.5">
-          <Label htmlFor="password">Password (min 8)</Label>
-          <Input
-            id="password"
-            type="password"
-            autoComplete="new-password"
-            required
-            disabled={busy}
-            minLength={8}
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-          />
-        </div>
-        <div className="flex items-start gap-2 rounded-md border border-border p-3 text-[12px] leading-snug">
-          <Checkbox
-            id="load-templates"
-            checked={loadTemplates}
-            disabled={busy}
-            className="mt-0.5"
-            onCheckedChange={(value) => setLoadTemplates(value === true)}
-          />
-          <Label
-            htmlFor="load-templates"
-            className="cursor-pointer text-[12px] font-normal leading-snug"
-          >
-            <span className="font-medium text-foreground">Load community templates</span>
-            <span className="mt-0.5 block text-muted-foreground">
-              Sync <span className="text-foreground">n8n-workflow-library</span> into the
-              marketplace after setup. You can add more repos later under Settings → Templates.
-            </span>
-          </Label>
-        </div>
-        <Button type="submit" className="relative z-10 w-full" disabled={busy}>
-          {busy ? "Creating…" : "Create owner account"}
-        </Button>
+        {registrationOpen ? (
+          <>
+            <div className="space-y-1.5">
+              <Label htmlFor="email">Email</Label>
+              <Input
+                id="email"
+                type="email"
+                autoComplete="email"
+                required
+                disabled={busy}
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="password">Password (min 8)</Label>
+              <Input
+                id="password"
+                type="password"
+                autoComplete="new-password"
+                required
+                disabled={busy}
+                minLength={8}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+              />
+            </div>
+            <div className="flex items-start gap-2 rounded-md border border-border p-3 text-[12px] leading-snug">
+              <Checkbox
+                id="load-templates"
+                checked={loadTemplates}
+                disabled={busy}
+                className="mt-0.5"
+                onCheckedChange={(value) => setLoadTemplates(value === true)}
+              />
+              <Label
+                htmlFor="load-templates"
+                className="cursor-pointer text-[12px] font-normal leading-snug"
+              >
+                <span className="font-medium text-foreground">Load community templates</span>
+                <span className="mt-0.5 block text-muted-foreground">
+                  Sync <span className="text-foreground">n8n-workflow-library</span> into the
+                  marketplace after setup. You can add more repos later under Settings → Templates.
+                </span>
+              </Label>
+            </div>
+            <Button type="submit" className="relative z-10 w-full" disabled={busy}>
+              {busy ? "Creating…" : "Create owner account"}
+            </Button>
+          </>
+        ) : null}
       </form>
     </div>
   );

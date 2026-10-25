@@ -21,7 +21,7 @@ After the stack is healthy:
 
 1. Open the UI (loopback **http://127.0.0.1:3000** when the local-ports file is included).
 2. **Auth on** (default, `AUTH_DISABLED=false`): if no real users exist, the UI redirects to **`/setup`** to create the **instance owner**.
-3. **First owner with registration closed**: `OPENFLOW_OPEN_REGISTER=false` (the default) still allows that first account. `GET /api/v1/setup/status` returns `needsOwner: true` until a real user exists. The setup form calls `POST /api/v1/auth/register`. The zero-user account receives the global `owner` role. Later public signups get `403` with `invite_only` unless you set `OPENFLOW_OPEN_REGISTER=true` or issue an invite.
+3. **First owner**: `GET /api/v1/setup/status` returns `needsOwner: true` until a real user exists. Public `POST /api/v1/auth/register` creates that owner only when `OPENFLOW_OPEN_REGISTER=true`, or when `OPENFLOW_ALLOW_FIRST_OWNER=true` (one-time bootstrap; set it back to false after). With both false (the default), that request returns `403` and `invite_only` and does not create a user, even when no real users exist. A valid invite token can still register. The zero-user account receives the global `owner` role.
 4. **INSECURE local try-out** (`AUTH_DISABLED=true` in `.env` only): no login. On the home page use **Run sample workflow**, then **Execute**. Do not expose that mode past your own machine.
 5. Dismiss the welcome checklist anytime; it is stored in browser `localStorage` (`openflow:onboarding.v1`).
 
@@ -197,7 +197,7 @@ docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
 | Item | Recommendation |
 | --- | --- |
 | Auth | `AUTH_DISABLED=false` (default) |
-| Registration | `OPENFLOW_OPEN_REGISTER=false` (default). First owner still uses `/setup` |
+| Registration | `OPENFLOW_OPEN_REGISTER=false` (default). First owner needs `OPENFLOW_ALLOW_FIRST_OWNER=true` or an invite |
 | Secrets | Stable `CREDENTIALS_KEY`; back up `secrets-data` volume |
 | Database | Dedicated `POSTGRES_PASSWORD`. Optional `POSTGRES_USER` / `POSTGRES_DB` |
 | Redis | Dedicated `REDIS_PASSWORD`. No default. Compose builds `REDIS_URL` |
@@ -262,7 +262,8 @@ See [`.env.example`](../.env.example) for the full list. Common vars:
 | Variable | Default (Docker try-out) | Notes |
 | --- | --- | --- |
 | `AUTH_DISABLED` | `false` | `true` is an INSECURE local try-out with no login |
-| `OPENFLOW_OPEN_REGISTER` | `false` | First owner via `/setup` still works. `true` keeps public signup open |
+| `OPENFLOW_OPEN_REGISTER` | `false` | `true` keeps public signup open, including the first owner |
+| `OPENFLOW_ALLOW_FIRST_OWNER` | `false` | `true` allows one public first-owner signup while open register stays false |
 | `OPENFLOW_HOT_NODES` | `false` | Set `true` only to hot-load node executors |
 | `REDIS_PASSWORD` | required, no default | Compose builds `REDIS_URL`. Prod refuses placeholders |
 | `OPENFLOW_METRICS_TOKEN` | unset | Required in production or `GET /metrics` is 404 |
